@@ -13,10 +13,11 @@ The design is in the Wikipedia spec of math2 (WP01 to WP15). The tools that fill
 | `manifests/wikipedia/texvc.yaml` | the texvc macros and their standard TeX (WP3.3) |
 | `manifests/wikipedia/classes.yaml` | the Wikidata classes and identifiers of signal S5 (WP1.2) |
 | `manifests/wikipedia/waivers.yaml` | the waivers of the census (WP4.8) |
+| `manifests/wikipedia/pilot.txt` | the titles of the 20 articles of the group theory pilot (WP-M0) |
 | `metadata/<shard>.jsonl` | one record for each article in scope |
 | `content/wikitext/<shard>/<pageid>.wiki` | the wikitext of the revision of record, with a header |
 | `content/markdown/<shard>/<pageid>.md` | the Markdown rendering, with the licence header |
-| `analysis/objects/<shard>/<pageid>.jsonl` | the object records (WP3.13) |
+| `analysis/objects/<shard>/<pageid>-r<revision>.jsonl` | the object records (WP3.13) |
 | `analysis/census/<shard>/<pageid>-r<revision>.json` | the census records (WP4.5) |
 | `scripts/research/` | the scripts that made the measurements of the spec |
 | `work/` | the downloads and the table store. This directory is not committed |
@@ -39,6 +40,23 @@ Each file in `content/` starts with a header that gives the source and the licen
 ```
 
 The history link lists the authors of the article.
+
+## Extraction
+
+`m2 wp extract` fetches an article, writes its content file, and writes its objects file and its census file. The census file names the version of `m2` that made it. Use a release build of `m2`, not a development build, for the files that you commit.
+
+```
+$ m2 wp extract -corpus . -list manifests/wikipedia/pilot.txt
+$ m2 wp extract -corpus .            # extract the content plane again
+```
+
+Run the audit from a checkout of tamnd/math2, because it writes its report there:
+
+```
+$ m2 audit -wikipedia ../wikipedia-math -group Y -hard
+```
+
+The group theory pilot has 20 articles. With m2 v0.3.8 it gives 1183 objects and 263 counted cues, and each cue has an object. The Y rules of the audit give no finding.
 
 ## Licence
 
