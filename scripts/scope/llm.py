@@ -16,6 +16,9 @@ and write their name as the marker. The marks of gold set S must not come
 only from the model, because the model pass is one of the things that gold
 set S measures.
 
+When chatgpt-tool fails, the script stops. Log the session in again (for
+example with chatgpt-tool heal-sessions) and run the script again.
+
 The script keeps the extracts and the answers in WORKDIR, so a second run
 continues where the first run stopped.
 """
@@ -32,6 +35,9 @@ UA = "math2-agent-scope/0.1 (https://github.com/tamnd/math2-agent)"
 API = "https://en.wikipedia.org/w/api.php"
 TOOL = os.environ.get("CHATGPT_TOOL", "chatgpt-tool")
 BATCH = 80
+# PAUSE is the wait in seconds after each question. A session that asks
+# without a pause is signed out sooner.
+PAUSE = int(os.environ.get("PAUSE", "0"))
 MARKS = ("math", "uses-math", "not-math")
 CONFIDENCE = {"high": 0.9, "low": 0.65}
 
@@ -83,8 +89,10 @@ def ask(batch, text, work, n):
                 f.write("%s\t%s\t%s\n" % (pid, title.replace("_", " "), text.get(pid, "")))
         r = subprocess.run([TOOL, "ask", "--prompt-file", prompt, "--out", answer, "--no-verbose"])
         if r.returncode != 0:
-            print("batch %d: chatgpt-tool failed" % n, flush=True)
-            return {}
+            # The session is often signed out. Stop, so that the caller can
+            # log it in again, and run the script again to continue.
+            sys.exit("batch %d: chatgpt-tool failed" % n)
+        time.sleep(PAUSE)
     out = {}
     for line in open(answer):
         f = [x.strip().strip("`") for x in line.strip().split("\t")]
