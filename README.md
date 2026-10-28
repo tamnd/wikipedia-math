@@ -13,6 +13,14 @@ The design is in the Wikipedia spec of math2 (WP01 to WP15). The tools that fill
 | `manifests/wikipedia/texvc.yaml` | the texvc macros and their standard TeX (WP3.3) |
 | `manifests/wikipedia/classes.yaml` | the Wikidata classes and identifiers of signal S5 (WP1.2) |
 | `manifests/wikipedia/waivers.yaml` | the waivers of the census (WP4.8) |
+| `manifests/wikipedia/categories.yaml` | the category roots, the exclusions and the keywords of signal S6 (WP1.2) |
+| `manifests/wikipedia/candidates.tsv` | each candidate page with its signals, its verdict and its rule (WP1.3) |
+| `manifests/wikipedia/scope.tsv` | the state of each page in scope (WP1.4) |
+| `manifests/wikipedia/verdicts.tsv` | the verdicts of the scope model pass for the candidates that the rules do not decide (WP7.2) |
+| `manifests/wikipedia/stopped.tsv` | the pages that left the scope, with the reason (WP1.4) |
+| `manifests/wikipedia/gold/scope.tsv` | gold set S, the marked sample that measures the scope list (WP11.2) |
+| `reports/scope.md` and `reports/gold-s.md` | the reports of `m2 wp scope` and `m2 wp gold measure` |
+| `scripts/scope/llm.py` | the script of the scope model pass and of the draft marks of gold set S |
 | `manifests/wikipedia/pilot.txt` | the titles of the 20 articles of the group theory pilot (WP-M0) |
 | `metadata/<shard>.jsonl` | one record for each article in scope |
 | `content/wikitext/<shard>/<pageid>.wiki` | the wikitext of the revision of record, with a header |
