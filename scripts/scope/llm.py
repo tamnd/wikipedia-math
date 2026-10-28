@@ -78,7 +78,7 @@ def extracts(ids, cache):
     return out
 
 
-def ask(batch, text, work, n):
+def ask(batch, text, work, n, again=True):
     """batch is a list of (page id, title). It gives page id -> (verdict, sure, reason)."""
     answer = os.path.join(work, "answer-%04d.txt" % n)
     if not os.path.exists(answer) or os.path.getsize(answer) == 0:
@@ -99,6 +99,12 @@ def ask(batch, text, work, n):
         if len(f) >= 2 and f[1] in MARKS:
             sure = f[2].lower() if len(f) > 2 and f[2].lower() in CONFIDENCE else "low"
             out[f[0]] = (f[1], sure, f[3] if len(f) > 3 else "")
+    if again and sum(p in out for p, _ in batch) < 0.9 * len(batch):
+        # The answer is often cut short. Ask one more time for the rows that
+        # it does not give.
+        os.remove(answer)
+        rest = [t for t in batch if t[0] not in out]
+        out.update(ask(rest, text, work, n, False))
     return out
 
 

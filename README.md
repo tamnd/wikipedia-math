@@ -22,13 +22,15 @@ The design is in the Wikipedia spec of math2 (WP01 to WP15). The tools that fill
 | `reports/scope.md` and `reports/gold-s.md` | the reports of `m2 wp scope` and `m2 wp gold measure` |
 | `scripts/scope/llm.py` | the script of the scope model pass and of the draft marks of gold set S |
 | `manifests/wikipedia/pilot.txt` | the titles of the 20 articles of the group theory pilot (WP-M0) |
-| `metadata/<shard>.jsonl` | one record for each article in scope |
+| `metadata/<shard>/<pageid>.md` | one file for each article in scope, with a YAML header |
 | `content/wikitext/<shard>/<pageid>.wiki` | the wikitext of the revision of record, with a header |
 | `content/markdown/<shard>/<pageid>.md` | the Markdown rendering, with the licence header |
-| `analysis/objects/<shard>/<pageid>-r<revision>.jsonl` | the object records (WP3.13) |
-| `analysis/census/<shard>/<pageid>-r<revision>.json` | the census records (WP4.5) |
+| `analysis/objects/<shard>/<pageid>-r<revision>.md` | the object records (WP3.13) |
+| `analysis/census/<shard>/<pageid>-r<revision>.md` | the census records (WP4.5) |
 | `scripts/research/` | the scripts that made the measurements of the spec |
 | `work/` | the downloads and the table store. This directory is not committed |
+
+The data files are Markdown with a YAML header, so that a person can read each file on GitHub. In an objects file, the header gives the fields of each object, and the body gives the text of each object under a heading with its ref. In a census file, the header gives the census, and the body gives a summary table.
 
 `<shard>` is the page id divided by 10,000, with zeros in front to 4 digits. For example, page 53993 is in shard `0005`. Page ids do not change, so an article stays in its shard.
 
@@ -64,7 +66,7 @@ Run the audit from a checkout of tamnd/math2, because it writes its report there
 $ m2 audit -wikipedia ../wikipedia-math -group Y -hard
 ```
 
-The group theory pilot has 20 articles. With m2 v0.3.8 it gives 1183 objects and 263 counted cues, and each cue has an object. The Y rules of the audit give no finding.
+The group theory pilot has 20 articles. With m2 v0.4.4 it gives 1183 objects and 263 counted cues, and each cue has an object. The Y rules of the audit give no finding.
 
 ## Licence
 
