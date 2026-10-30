@@ -17,14 +17,14 @@ The Wikipedia part of the textbook layer is complete only when each number is 0 
 
 | Type | In scope | Parsed | Objects | Items | Gaps | Strong | Normal | Weak |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| biography | 10088 | 10088 | 202536 | 647 | 0 | 9838 | 108 | 142 |
-| concept | 22584 | 22582 | 602218 | 51204 | 0 | 19246 | 2381 | 955 |
-| field | 456 | 456 | 21598 | 985 | 0 | 332 | 94 | 30 |
-| list | 507 | 507 | 63637 | 45402 | 0 | 453 | 43 | 11 |
-| method | 1081 | 1081 | 27329 | 1843 | 0 | 947 | 75 | 59 |
-| object | 575 | 575 | 11760 | 1770 | 0 | 493 | 71 | 11 |
-| problem | 687 | 687 | 19781 | 1226 | 0 | 589 | 51 | 47 |
-| statement | 2876 | 2876 | 57840 | 6987 | 0 | 2611 | 136 | 129 |
+| biography | 10088 | 10088 | 202536 | 647 | 0 | 9930 | 110 | 48 |
+| concept | 22584 | 22582 | 602218 | 51204 | 0 | 19856 | 2538 | 188 |
+| field | 456 | 456 | 21598 | 985 | 0 | 352 | 101 | 3 |
+| list | 507 | 507 | 63637 | 45402 | 0 | 457 | 44 | 6 |
+| method | 1081 | 1081 | 27329 | 1843 | 0 | 992 | 82 | 7 |
+| object | 575 | 575 | 11760 | 1770 | 0 | 499 | 72 | 4 |
+| problem | 687 | 687 | 19781 | 1226 | 0 | 623 | 59 | 5 |
+| statement | 2876 | 2876 | 57840 | 6987 | 0 | 2706 | 149 | 21 |
 
 ## By MSC code
 
@@ -36,9 +36,9 @@ A census is strong when W-text, W-html and W-in were read and agree, normal when
 
 | Strength | Articles |
 |---|---:|
-| strong | 34509 |
-| normal | 2959 |
-| weak | 1384 |
+| strong | 35415 |
+| normal | 3155 |
+| weak | 282 |
 
 ## Gaps by pattern
 
@@ -48,13 +48,13 @@ The censuses have 69682 incoming pointers. 12648 of them point to an anchor that
 
 ## Differences of the readings
 
-1384 of the 38845 articles with the witness W-html have a difference of rule Y07, which is 3.6%. The target is below 2%.
+282 of the 38845 articles with the witness W-html have a difference of rule Y07, which is 0.7%. The target is below 2%.
 
 | Cause | Articles | Articles | Examples |
 |---|---:|---:|---|
-| math text | 676 | 676 | Algorithms_for_calculating_variance, Church–Turing_thesis, Convolution |
-| math count | 664 | 664 | Advanced_Encryption_Standard, Kolmogorov_complexity, Absolute_magnitude |
 | sections | 107 | 107 | Avicenna, Circle, Calculator |
+| math text | 103 | 103 | Electromagnetic_radiation, Estimator, Golden_ratio |
+| math count | 85 | 85 | Complex_number, Cardinal_number, Carmichael_number |
 | {{dfni}} | 1 | 1 | Lexell's_theorem |
 | {{math proof}} | 1 | 1 | Kac's_lemma |
 
