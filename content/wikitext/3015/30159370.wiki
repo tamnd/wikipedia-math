@@ -1,0 +1,190 @@
+<!-- wikipedia: en
+     page: 30159370
+     title: FKT algorithm
+     revision: 1250833495
+     timestamp: 2024-10-12T19:55:35Z
+     history: https://en.wikipedia.org/w/index.php?curid=30159370&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1250833495 -->
+{{short description|Algorithm for counting perfect matchings in planar graphs}}
+{{CS1 config|mode=cs1}}
+The '''Fisher–Kasteleyn–Temperley''' ('''FKT''') '''algorithm''', named after [[Michael Fisher]], [[Pieter Kasteleyn]], and [[Harold Neville Vazeille Temperley|Neville Temperley]], counts the number of [[perfect matching]]s in a [[planar graph|planar]] graph in polynomial time. This same task is [[Sharp-P-complete|#P-complete]] for general graphs. For [[Matching (graph theory)|matching]]s that are not required to be perfect, counting them remains #P-complete even for planar graphs. The key idea of the FKT algorithm is to convert the problem into a [[Pfaffian]] computation of a [[skew-symmetric matrix]] derived from a planar embedding of the graph. The Pfaffian of this matrix is then computed efficiently using standard [[Determinant#Algorithmic implementation|determinant algorithms]].
+
+==History==
+The problem of counting planar perfect matchings has its roots in [[statistical mechanics]] and [[chemistry]], where the original question was: If [[diatomic molecule]]s are adsorbed on a surface, forming a single layer, how many ways can they be arranged?<ref>{{Citation
+  | last = Hayes
+  | first = Brian
+  | author-link = Brian Hayes (scientist)
+  | title = Accidental Algorithms
+  | newspaper = [[American Scientist]]
+  | date = January–February 2008
+  | url = https://www.americanscientist.org/article/accidental-algorithms}}</ref> The [[Partition function (statistical mechanics)|partition function]] is an important quantity that encodes the statistical properties of a system at equilibrium and can be used to answer the previous question. However, trying to compute the partition function from its definition is not practical. Thus to exactly solve a physical system is to find an alternate form of the partition function for that particular physical system that is sufficiently simple to calculate exactly.<ref>{{cite book
+| last       = Baxter
+| first      = R. J.
+| author-link = Rodney J. Baxter
+| title      = Exactly Solved Models in Statistical Mechanics
+| url        = http://tpsrv.anu.edu.au/Members/baxter/book
+| edition   = Third
+| orig-year  = 1982
+| year      = 2008
+| publisher = Dover Publications
+| isbn      = 978-0-486-46271-4
+| page      = 11
+}}</ref> In the early 1960s, the definition of ''exactly solvable'' was not rigorous.<ref name=CLX>{{cite conference
+  | last1 = Cai
+  | first1 = Jin-Yi
+  | last2 = Lu
+  | first2 = Pinyan
+  | last3 = Xia
+  | first3 = Mingji
+  | title = Holographic Algorithms with Matchgates Capture Precisely Tractable Planar #CSP
+  | conference = Foundations of Computer Science (FOCS), 2010 51st Annual IEEE Symposium on   
+  | conference-url = http://www.egr.unlv.edu/~larmore/FOCS/focs2010/
+  | publisher = IEEE
+  | location = Las Vegas, NV, USA 
+  | year = 2010
+  | arxiv = 1008.0683| bibcode = 2010arXiv1008.0683C
+  }}</ref> Computer science provided a rigorous definition with the introduction of [[P (complexity)|polynomial time]], which dates to 1965. Similarly, the notation of not ''exactly solvable'', for a [[Counting problem (complexity)|counting problem]] such as this one, should correspond to [[Sharp-P-complete|#P-hardness]], which was defined in 1979.
+
+Another type of physical system to consider is composed of [[Dimer (chemistry)|dimers]], which is a polymer with two atoms. The dimer model counts the number of dimer coverings of a graph.<ref>{{cite journal |last1=Kenyon |first1=Richard |last2=Okounkov |first2=Andrei |year=2005 |title=What is a Dimer? |journal=AMS |volume=52 |issue=3 |pages=342–343 |url=https://www.ams.org/notices/200503/what-is.pdf}}</ref> Another physical system to consider is the bonding of [[H2O|H<sub>2</sub>O]] molecules in the form of ice. This can be modelled as a directed, 3-[[regular graph|regular]] graph where the orientation of the edges at each vertex cannot all be the same. How many edge orientations does this model have?
+
+Motivated by physical systems involving dimers, in 1961, Pieter Kasteleyn<ref>{{citation
+ | title = The statistics of dimers on a lattice. I. The number of dimer arrangements on a quadratic lattice
+ | journal = Physica
+ | volume = 27 | issue = 12 | year = 1961 | pages = 1209–1225
+ | first = P. W. | last = Kasteleyn
+ | author-link = Pieter Kasteleyn
+ | doi = 10.1016/0031-8914(61)90063-5| bibcode = 1961Phy....27.1209K}}</ref> and Neville Temperley and Michael Fisher<ref>{{cite journal |last1=Temperley |first1=H. N. V. |author-link1=Harold Neville Vazeille Temperley |last2=Fisher |first2=Michael E. |author-link2=Michael Fisher |year=1961 |title=Dimer problem in statistical mechanics-an exact result |journal=Philosophical Magazine |volume=6 |issue=68 |pages=1061–1063 |doi=10.1080/14786436108243366|bibcode=1961PMag....6.1061T }}</ref> independently found the number of [[Domino tiling#Counting tilings of regions|domino tilings]] for the ''m''-by-''n'' rectangle. This is equivalent to counting the number of perfect matchings for the ''m''-by-''n'' [[lattice graph]]. By 1967, Kasteleyn had generalized this result to all planar graphs.<ref>{{cite journal
+| last         = Kasteleyn
+| first        = P. W.
+| author-link   = Pieter Kasteleyn
+| year         = 1963
+| title        = Dimer Statistics and Phase Transitions
+| journal      = Journal of Mathematical Physics
+| volume       = 4
+| issue        = 2
+| pages        = 287–293
+| doi          = 10.1063/1.1703953| bibcode= 1963JMP.....4..287K
+}}</ref><ref>{{citation
+ | last = Kasteleyn | first = P. W.
+ | author-link  = Pieter Kasteleyn
+ | contribution = Graph theory and crystal physics
+ | editor-last = Harary | editor-first = F. | editor-link = Frank Harary
+ | location = New York
+ | pages = 43–110
+ | publisher = Academic Press
+ | title = Graph Theory and Theoretical Physics
+ | year = 1967}}</ref>
+
+== Algorithm ==
+
+=== Explanation ===
+The main insight is that every non-zero term in the [[Pfaffian]] of the [[adjacency matrix]] of a graph ''G'' corresponds to a perfect matching. Thus, if one can find an [[Orientation (graph theory)|orientation]] of ''G'' to align all signs of the terms in [[Pfaffian]] (no matter ''+'' or ''-'' ), then the absolute value of the [[Pfaffian]] is just the number of perfect matchings in ''G''. The FKT algorithm does such a task for a planar graph ''G''. The orientation it finds is called a [[Pfaffian orientation]].
+
+Let ''G'' = (''V'', ''E'') be an undirected graph with [[adjacency matrix]] ''A''. Define ''PM''(''n'') to be the set of partitions of ''n'' elements into pairs, then the number of perfect matchings in ''G'' is
+:<math>\operatorname{PerfMatch}(G) = \sum_{M \in PM(|V|)} \prod_{(i,j) \in M} A_{i j}.</math>
+Closely related to this is the [[Pfaffian]] for an ''n'' by ''n'' matrix ''A''
+:<math>\operatorname{pf}(A) = \sum_{M \in PM(n)} \operatorname{sgn}(M) \prod_{(i,j) \in M} A_{i j},</math>
+where sgn(''M'') is the [[Parity of a permutation|sign of the permutation]] ''M''. A Pfaffian orientation of ''G'' is a directed graph ''H'' with [[Adjacency matrix#Directed graphs|adjacency matrix]] ''B'' such that pf(''B'') = PerfMatch(''G'').<ref>{{cite conference
+| url           = http://people.math.gatech.edu/~thomas/PAP/pfafsurv.pdf
+| title         = A survey of Pfaffian orientations of graphs
+| first         = Robin
+| last          = Thomas
+| author-link    = Robin Thomas (mathematician)
+| year          = 2006
+| conference    = International Congress of Mathematicians
+| conference-url = http://www.icm2006.org/
+| volume        = III
+| publisher     = European Mathematical Society
+| location      = Zurich
+| pages         = 963–984}}</ref> In 1967, Kasteleyn proved that planar graphs have an efficiently computable Pfaffian orientation. Specifically, for a planar graph ''G'', let ''H'' be a directed version of ''G'' where an odd number of edges are oriented clockwise for every face in a planar embedding of ''G''. Then ''H'' is a Pfaffian orientation of ''G''.
+
+Finally, for any [[skew-symmetric matrix]] ''A'',
+:<math>\operatorname{pf}(A)^2 = \det(A),</math>
+where det(''A'') is the [[determinant]] of ''A''.  This result is due to [[Arthur Cayley]].<ref>{{cite journal
+ | last1 = Cayley
+ | first1 = Arthur
+ | author-link1 = Arthur Cayley
+ | year = 1847
+ | title = Sur les determinants gauches
+ |trans-title= On skew determinants
+ | journal = Crelle's Journal
+ | volume = 38
+ | pages = 93–96
+}}</ref> Since [[Determinant#Algorithmic implementation|determinants]] are efficiently computable, so is PerfMatch(''G'').
+
+===High-level description===
+[[File:Pfaffian orientation via FKT algorithm example.gif|thumb|An example showing how the FKT algorithm finds a Pfaffian orientation.]]
+# Compute a planar [[Graph embedding|embedding]] of ''G''.
+# Compute a [[spanning tree]] ''T''<sub>1</sub> of the input graph ''G''.
+# Give an arbitrary orientation to each edge in ''G'' that is also in ''T''<sub>1</sub>.
+# Use the planar embedding to create an (undirected) graph ''T''<sub>2</sub> with the same vertex set as the [[dual graph]] of ''G''.
+# Create an edge in ''T''<sub>2</sub> between two vertices if their corresponding faces in ''G'' share an edge in ''G'' that is not in ''T''<sub>1</sub>. (Note that ''T''<sub>2</sub> is a tree.)
+# For each leaf ''v'' in ''T''<sub>2</sub> (that is not also the root):
+## Let ''e'' be the lone edge of ''G'' in the face corresponding to ''v'' that does not yet have an orientation.
+## Give ''e'' an orientation such that the number of edges oriented clock-wise is odd.
+## Remove ''v'' from ''T''<sub>2</sub>.
+# Return the absolute value of the [[Pfaffian]] of the [[Adjacency matrix#Directed graphs|adjacency matrix]] of ''G'', which is the square root of the determinant.
+
+==Generalizations==
+The sum of weighted perfect matchings can also be computed by using the [[Tutte matrix]] for the adjacency matrix in the last step.
+
+[[Kuratowski's theorem]] states that 
+: a [[finite graph]] is planar [[if and only if]] it contains no [[Glossary of graph theory#Subgraphs|subgraph]] [[Homeomorphism (graph theory)|homeomorphic]] to ''K''<sub>5</sub> ([[complete graph]] on five vertices) or ''K''<sub>3,3</sub> ([[complete bipartite graph]] on two partitions of size three).
+[[Vijay Vazirani]] generalized the FKT algorithm to graphs that do not contain a subgraph homeomorphic to ''K''<sub>3,3</sub>.<ref>{{cite journal
+| last = Vazirani
+| first = Vijay V.
+| author-link = Vijay Vazirani
+| year         = 1989
+| title        = NC algorithms for computing the number of perfect matchings in K<sub>3,3</sub>-free graphs and related problems
+| journal      = Information and Computation
+| volume       = 80
+| issue        = 2
+| pages        = 152–164
+| doi          = 10.1016/0890-5401(89)90017-5
+| issn         = 0890-5401
+| doi-access= free
+| hdl= 1813/6700
+| hdl-access= free
+}}</ref> More generally the complexity of counting perfect matchings has been completely characterized for families of graphs that are closed under [[graph minor]]s. There exists a family of graphs, the ''shallow vortex grids'', such that for a minor-closed family that does not include all shallow vortex grids, this counting problem is polynomially solvable. But for a minor-closed family that includes all shallow vortex grids, such as the <math>K_8</math>-minor-free graphs, the problem of counting perfect matchings is [[Sharp-P-complete|#P-complete]].<ref>{{cite journal
+ | last1 = Thilikos | first1 = Dimitrios M.
+ | last2 = Wiederrecht | first2 = Sebastian
+ | arxiv = 2207.04923
+ | doi = 10.1145/3664648
+ | issue = 4
+ | journal = Journal of the ACM
+ | pages = 27:1–27:56
+ | title = Killing a vortex
+ | volume = 71
+ | year = 2024}}</ref>
+Since counting the number of perfect matchings in a general graph is also #P-complete, some restriction on the input graph is required unless [[FP (complexity)|FP]], the function version of [[P (complexity)|P]], is equal to [[Sharp-P|#P]]. Counting matchings, which is known as the [[Hosoya index]], is also #P-complete even for planar graphs.<ref>{{citation
+ | last = Jerrum | first = Mark | author-link = Mark Jerrum
+ | doi = 10.1007/BF01010403
+ | issue = 1
+ | journal = Journal of Statistical Physics
+ | pages = 121–134
+ | title = Two-dimensional monomer-dimer systems are computationally intractable
+ | volume = 48
+ | year = 1987| bibcode = 1987JSP....48..121J| s2cid = 189854401 }}.</ref>
+
+==Applications==
+The FKT algorithm has seen extensive use in [[holographic algorithm]]s on planar graphs via [[matchgates]].<ref name=CLX/> For example, consider the planar version of the ice model mentioned above, which has the technical name #[[planar graph|PL]]-3-NAE-[[Boolean satisfiability problem|SAT]] (where NAE stands for "not all equal"). Valiant found a polynomial time algorithm for this problem which uses matchgates.<ref>{{cite journal
+ | last = Valiant | first = Leslie G. | author-link = Leslie G. Valiant
+ | doi = 10.1137/070682575
+ | issue = 5
+ | journal = [[SIAM Journal on Computing]]
+ | mr = 2386281
+ | pages = 1565–1594
+ | title = Holographic algorithms
+ | url = http://people-aws.seas.harvard.edu/~valiant/holographic11-07.pdf
+ | volume = 37
+ | year = 2008}}</ref>
+
+==References==
+{{reflist}}
+
+==External links==
+*More history, information, and examples can be found in chapter 2 and section 5.3.2 of Dmitry Kamenetsky's [https://digitalcollections.anu.edu.au/bitstream/1885/49338/2/02whole.pdf PhD thesis]
+
+[[Category:Graph algorithms]]
+[[Category:Planar graphs]]

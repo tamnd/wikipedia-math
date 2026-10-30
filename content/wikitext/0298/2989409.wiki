@@ -1,0 +1,1170 @@
+<!-- wikipedia: en
+     page: 2989409
+     title: Church encoding
+     revision: 1374213277
+     timestamp: 2026-09-10T15:22:06Z
+     history: https://en.wikipedia.org/w/index.php?curid=2989409&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374213277 -->
+{{Short description|Representation of data of various types in lambda calculus}}
+
+In [[mathematics]], '''Church encoding''' is a way of representing various [[data type|types]] of [[Value (computer science)|data]] in the [[lambda calculus]].
+
+In the untyped lambda calculus the only primitive data type are functions, represented by lambda abstraction terms. Types that are usually considered primitive in other notations (such as [[integer]]s, [[Boolean data type|Booleans]], pairs, lists, and [[tagged union]]s) are not natively present.
+
+Hence the need arises to have ways to represent the data of these varying types by lambda terms, that is, by [[higher-order function|functions]] that are taking functions as their arguments and are returning functions as their results.
+
+The '''Church numerals''' are a representation of the natural numbers using lambda notation. The method is named for [[Alonzo Church]], who first encoded data in the lambda calculus this way. It can also be extended to represent other data types in the similar spirit.
+
+This article makes occasional use of the [[Lambda calculus#Notation|alternative syntax]] for lambda abstraction terms, where λ''x''.λ''y''.λ''z''.''N'' is abbreviated as λ''xyz''.''N'', as well as the two standard combinators, <math>I \equiv \lambda x. x</math> and <math>K \equiv \lambda x y. x</math>, as needed.
+
+==Church pairs==
+{{See also|Cons}}
+
+Church pairs are the Church encoding of the [[cons|pair]] (two-[[tuple]]) type.  To have two things is to be able to supply them to any observer expecting of two things.  The pair is thus represented as a function that takes a function argument. The pair itself does not decide what to do with the elements of the tuple.  When given its argument it will apply the argument to the two components of the pair.  The definition of the pair ''constructor'', the ''select first element'' and the ''select second element'' functions in [[lambda calculus]] are,
+
+: <math>\begin{align}
+\operatorname{pair} &\equiv \lambda x y.\lambda z.z\ x\ y \\
+\operatorname{first} &\equiv \lambda p.p\ (\lambda x y.x) \\
+\operatorname{second} &\equiv \lambda p.p\ (\lambda x y.y)
+\end{align}
+</math>
+
+For example,
+: <math>\begin{align}
+   & \operatorname{first}\ (\operatorname{pair}\ a\ b) \\
+ =& \ (\lambda p.p\ (\lambda x y.x))\ ((\lambda x y z.z\ x\ y)\ a\ b) \\
+ =& \ (\lambda p.p\ (\lambda x y.x))\ (\lambda z.z\ a\ b) \\
+ =& \ (\lambda z.z\ a\ b)\ (\lambda x y.x) \\
+ =& \ (\lambda x y.x)\ a\ b \\
+ =& \  a
+\end{align}
+</math>
+
+==Church Booleans==
+
+''Church Booleans'' encode  the Boolean values ''true'' and ''false.'' Some programming languages use these as an implementation model for Boolean arithmetic; examples are [[Smalltalk]] and Pico.
+
+Boolean logic embodies a ''choice'' between ''two'' alternatives.  Thus the Church encodings of ''true'' and ''false'' are functions of two parameters:
+* ''true'' chooses the first parameter ;
+* ''false'' chooses the second parameter.
+
+The two definitions in lambda calculus are:
+: <math>\begin{align}
+\operatorname{true} &\equiv \lambda a.\lambda b.a \ \ \ \ \ = \lambda a.\lambda b. \operatorname{first}\, (\operatorname{pair} a\ b) \\
+\operatorname{false} &\equiv \lambda a.\lambda b.b \ \ \ \ \ \, =  \lambda a.\lambda b. \operatorname{second}\, (\operatorname{pair} a\ b)
+\end{align}</math>
+
+These definitions allow predicates (i.e. functions returning [[Truth value|logical values]]) to directly act as ''if-test'' clauses, so that ''if'' operator is just an identity function, and thus can be omitted. Each logical value already acts as an ''if'', performing a choice between its two arguments.  A Boolean value applied to two values returns either the first or the second value. The expression
+: <math>\operatorname{test-clause}\ \operatorname{then-clause}\ \operatorname{else-clause} </math>
+returns ''then-clause'' if ''test-clause'' is ''true'', and  ''else-clause'' if ''test-clause'' is ''false''.
+
+Because logical values like ''true'' and ''false'' choose their first or second argument, they can be combined to provide logical operators. Several implementations are usually possible, whether by directly manipulating parameters or by reducing to the more basic logical values. Here are the definitions, using the shortened notation as mentioned at the start of the article (''p'',''q'' are predicates; ''a'',''b'' are general values):
+: <math>\begin{align}
+\operatorname{if} &= \lambda p a b.p\ a\ b && \ \\
+\operatorname{and} &= \lambda p q.p\ q\ p &&= \lambda p q a b.p\ (q\ a\ b)\ b\\
+\operatorname{or} &= \lambda p q.p\ p\ q &&= \lambda p q a b.p\ a\ (q\ a\ b)\\
+\operatorname{not} &= \lambda p.p \operatorname{false} \operatorname{true} &&= \lambda p a b\ \  .p\ b\ a \\
+\operatorname{xor} &= \lambda p q.p\ (\operatorname{not}\ q)\ q &&= \lambda p q a b.p\ (q\ b\ a)\ (q\ a\ b) \\
+\operatorname{nand} &= \lambda p q. \operatorname{not}\ (\operatorname{and} p\ q) &&= \lambda p q a b.p\ (q\ b\ a)\ a \\
+\operatorname{implies} &= \lambda p q. \operatorname{or}\ (\operatorname{not} p)\ q &&= \lambda p q a b.p\ (q\ a\ b)\ a \\
+\end{align}</math>
+
+Some examples:
+
+: <math>\begin{align}
+\operatorname{and}\ & \operatorname{true}\  \operatorname{false}\\
+ &= (\lambda p.\lambda q.p\ q\ p)\ \operatorname{true}\ \operatorname{false} \\
+&= \operatorname{true} \operatorname{false} \operatorname{true} \\
+&= (\lambda a.\lambda b.a) \operatorname{false} \operatorname{true}  \\
+&= \operatorname{false} 
+\end{align}</math>
+
+: <math>\begin{align}
+\operatorname{not}\ & \operatorname{true} \\ 
+&= (\lambda p.\lambda a.\lambda b.p\ b\ a)\ (\lambda a.\lambda b.a) \\
+&= \lambda a.\lambda b.(\lambda a.\lambda b.a)\ b\ a \\
+&= \lambda a.\lambda b.(\lambda c.b)\ a \\
+&= \lambda a.\lambda b.b \\
+&= \operatorname{false} \\
+\end{align}</math>
+
+==Optional values==
+
+An Optional value is represented as 
+
+: <math>\begin{align}
+\operatorname{none}\ \equiv\ \ \ \ \ &\lambda f.\lambda s.\ f \\
+\operatorname{val}\ \equiv\ \lambda v.\ &\lambda f.\lambda s.\ s\ v
+\end{align}</math>
+
+Using such a value means supplying it with two arguments – one, <math>f</math>, for the "failure" case, i.e. lack of a value, and the other, <math>s</math>, in case of "success," is a handler function which is presented with that value.  
+
+The optional value itself "knows" which case it is, and selects which argument to use, accordingly.  It "knows" this by virtue of being created that way – either it was created as <math>\operatorname{none}</math>, or as <math>\operatorname{val}\, v </math>.  
+
+The user of an optional value has no way of knowing which case it is except by supplying it with the two arguments, one for each of the two possible cases.
+
+==Church numerals==
+
+Church numerals are the representations of [[natural number]]s under Church encoding.  The [[higher-order function]] that represents natural number ''n'' is a function that maps any function <math>f</math> to its ''n''-fold [[function composition|composition]]. In simpler terms, a numeral represents the number by applying any given function that number of times in sequence, starting from any given starting value:
+
+:<math>n : f \mapsto f^{\circ n}</math>
+
+: <math>f^{\circ n} (x) = (\underbrace{f \circ f \circ \ldots \circ f}_{n\text{ times}})\,(x) = \underbrace{f ( f ( \ldots ( f}_{n\text{ times}}\,(x))\ldots ))</math>
+
+Church encoding is thus a [[Unary numeral system|''unary'']] encoding of natural numbers,<ref>{{citation
+ | last = Jansen | first = Jan Martin
+ | title = The Beauty of Functional Code
+ | contribution = Programming in the λ-calculus: from Church to Scott and back
+ | doi = 10.1007/978-3-642-40355-2_12
+ | pages = 168–180
+ | publisher = Springer-Verlag
+ | series = Lecture Notes in Computer Science
+ | volume = 8106
+ | year = 2013| isbn = 978-3-642-40354-5
+ }}.</ref> corresponding to simple [[counting]]. Each Church numeral achieves this by construction.
+
+All Church numerals are functions that take two parameters.  Church numerals '''0''', '''1''', '''2''', ..., are defined as follows in the [[lambda calculus]]:
+
+: ''Starting with'' '''0''' ''not applying the function at all, proceed with'' '''1''' ''applying the function once, '''2''' applying the function twice in a row,'' '''3''' ''applying the function three times in a row, etc.'':
+
+:<math>
+\begin{array}{r|l|l}
+\text{Number} & \text{Function definition} & \text{Lambda expression} \\
+\hline
+0 & 0\ f\ x = x & 0 = \lambda f.\lambda x.x
+\\
+1 & 1\ f\ x = f\ x & 1 = \lambda f.\lambda x.f\ x
+\\
+2 & 2\ f\ x = f\ (f\ x) & 2 = \lambda f.\lambda x.f\ (f\ x)
+\\
+3 & 3\ f\ x = f\ (f\ (f\ x)) & 3 = \lambda f.\lambda x.f\ (f\ (f\ x))
+\\
+\vdots & \vdots & \vdots
+\\
+n & n\ f\ x = f^{\circ n}\ x & n = \lambda f.\lambda x.f^{\circ n}\ x
+\end{array}
+</math>
+
+The Church numeral '''3''' is a chain of three applications of any given function in sequence, starting from some value.  The supplied function is first applied to a supplied argument and then successively to its own result.  The end result is not the number 3 (unless the supplied parameter happens to be 0 and the function is a [[successor function]]).  The function itself, and not its end result, is the Church numeral '''3'''.  The Church numeral '''3''' means simply to do something three times.  It is an [[Ostensive definition|ostensive]] demonstration of what is meant by "three times".
+
+===Calculation with Church numerals===
+
+[[Arithmetic]] operations on numbers produce numbers as their results.  In Church encoding, these operations are represented by [[Lambda calculus#lambdaAbstr|lambda abstractions]] which, when applied to Church numerals representing the operands, beta-reduce to the Church numerals representing the results. <!-- note: lambda calculus is not part of any programming language, it is a mathematical formalism in itself
+
+These functions may be defined in [[lambda calculus]], or implemented in most functional programming languages  (see [[Lambda lifting#Conversion without lifting|converting lambda expressions to functions]]).  -->
+
+Church representation of addition, <math>\operatorname{plus}(m, n)= m+n</math>, uses the identity <math>f^{\circ (m+n)}(x)=(f^{\circ m}\circ f^{\circ n})(x) =f^{\circ m}(f^{\circ n}(x))</math>:
+
+: <math>\operatorname{plus} \equiv \lambda m n.\lambda f x. m\ f\ (n\ f\ x)</math>
+
+The successor operation, <math>\operatorname{succ}(n)=n+1</math>, is obtained by [[Beta reduction#.CE.B2-reduction|β-reducing]] the expression "<math>\operatorname{plus}\ 1</math>":
+
+: <math>\operatorname{succ} \equiv \lambda n.\lambda f x. f\ (n\ f\ x)</math>
+
+Multiplication, <math>\operatorname{mult}(m, n) = m*n</math>, uses the identity <math>f^{\circ (m*n)}(x) = (f^{\circ n})^{\circ m}(x)</math>:
+
+: <math>\operatorname{mult} \equiv \lambda m n.\lambda f x. m\ (n\ f)\ x</math>
+
+Thus <math>b\ (b\ f) \equiv (\operatorname{mult} b\ b)\ f</math> and  <math>b\ (b\ (b\ f)) \equiv (\operatorname{mult} b\ (\operatorname{mult} b\ b))\ f</math>, and so by the virtue of Church encoding expressing the ''n''-fold composition, the exponentiation operation <math>\operatorname{exp}(b, n) = b^n</math> is given by
+: <math>\operatorname{exp} \equiv \lambda b n. n\ b \equiv \lambda b n f x. n\ b\ f\ x</math>
+
+The predecessor operation <math>\operatorname{pred}(n)</math> is a little bit more involved. We need to devise an operation that when repeated <math>n+1</math> times will result in <math>n</math> applications of the given function <math>f</math>. This is achieved by using the identity function instead, one time only, and then switching back to <math>f</math>:
+
+: <math>\operatorname{pred} \equiv \lambda n f x. n\ (\lambda r i. i\ (r\ f))\ (\lambda f. x)\ I</math>
+
+As previously mentioned, <math>I</math> is the identity function, <math>\lambda x. x</math>. The variable name <math>r</math> is chosen as a mnemonic for "recursive result." This definition employs an additional argument to use the state-passing paradigm, since lambda calculus lacks mutation (so nothing can be changed, only replaced). See  [[#Predecessor function|below]] for the detailed explanation.
+
+This suggests implementing e.g. halving and factorial functions in the similar state-passing fashion,
+
+: <math> \begin{align}
+\operatorname{half} &\equiv \lambda n f x. n\ (\lambda r a b. a\ (r\ b\ a))\ (\lambda a b. x)\ I\ f \\
+\operatorname{fact} &\equiv \lambda n f. n\ (\lambda r a. a\ (r\ (\operatorname{succ} a)))\ (\lambda a. f)\ 1
+\end{align}</math>
+
+For example, <math>\operatorname{pred} 4\ f\ x\,</math> beta-reduces to <math>I (f\ (f\ (f\ x)))</math>, <math>\operatorname{half}\ 5\ f\ x\,</math> beta-reduces to <math>I\ (f\ (I\ (f\ (I\ x))))</math>, and  <math>\operatorname{fact} 4\,f\,</math> beta-reduces to <math>1\ (2\ (3\ (4\ f)))</math>.
+
+Subtraction, <math>minus(m,n) = m-n</math>, is expressed by repeated application of the predecessor operation a given number of times, just like addition can be expressed by repeated application of the successor operation a given number of times, etc.:
+
+: <math>\begin{align}
+(-) & \equiv  \lambda m n. n\, \operatorname{pred}\, m \\
+(+) & \equiv  \lambda m n. n\, \operatorname{succ}\, m \\
+(\times) & \equiv  \lambda m n. n\ ((+)\  m)\ 0 \\
+\operatorname{exp} & \equiv  \lambda m n. n\ ((\times)\ m)\ 1 \ \ \ \ \ \ \ \ \ \ \ \{- \ \ m^n\ -\} \\
+(\uparrow\uparrow) & \equiv  \lambda m n. n\ (\operatorname{exp}\, m)\ 1 \ \ \ \ \ \ \ \{-\ m \uparrow\uparrow n\ -\} \\
+\uparrow^k & \equiv k\ (\lambda f m n. n\ (f\ m)\ 1 )\ (\times) \\
+ & \equiv \lambda m. k\ (\lambda f n. n\, f\ 1 )\ (\times\ m)
+\end{align}
+</math>
+
+<math>(\uparrow\uparrow)</math> is the  [[tetration]] operation, <math>m \uparrow\uparrow 3 = m^{(m^{(m^1)})}</math>, and <math>\uparrow^k</math> is [[Knuth's up-arrow notation|Knuth's <math>k</math>&hairsp;th arrow]]<ref>Dan Doel (https://math.stackexchange.com/users/590896/dan-doel), ''Tetration of Church numerals?'', URL (version: 2026-02-27): https://math.stackexchange.com/q/4601054</ref> in general.
+
+Similarly to the factorial definition above, tetration can also be defined by using the intrinsic properties of the Church encoding,  creating the "code" expression for it and letting the Church numerals themselves do the rest:
+
+: <math>\begin{align}
+\operatorname{tet} & \equiv  \lambda m n. n\ (\lambda r. r\ m)\ 1
+\end{align}
+</math>
+Here, again, <math>\operatorname{tet}\, m\ 3 = 1\ m\ m\ m = m^{(m^{(m^1)})}</math>.
+
+=== Direct subtraction and division ===
+
+Just as addition as repeated successor has its counterpart in the direct style, so can subtraction be expressed directly and more efficiently as well:
+: <math> \begin{align}
+\operatorname{minus} \equiv \lambda & mnfx. \\
+   &m\ (\lambda rq. q\ r)\ (\lambda q. x) \\
+   &(n\ (\lambda qr. r\ q)\  (\operatorname{Y}
+      \ (\lambda qr. f\ (r\ q))))
+\end{align} </math>
+
+For example, <math>\operatorname{minus}\ 6\ 3\ f\ x</math> reduces to an equivalent of <math>f\ (2\ f\ x)</math>.
+
+This also gives another predecessor version, beta-reducing <math>\lambda m. \operatorname{minus}\ m\ 1</math> :
+
+: <math> \begin{align}
+\operatorname{pred'} \equiv \lambda mfx.
+    m\ &(\lambda rq. q\ r)\ (\lambda q. x) \\
+       &(\lambda r. r\ (\operatorname{Y}\ (\lambda qr. f\ (r\ q))))
+\end{align} </math>
+<!--
+try at  cruzgodar.com/applets/lambda-calculus/
+pred:
+(lm.lf.lx.m(lr.lq.qr)(lq.x)(lr.r(Y(lq.lr.f(rq)))))7
+(lm.lf.lx.m(lr.lq.qr)(lq.x)(lr.r(m(lq.lr.f(rq))x)))7
+minus:
+(lm.ln.lf.lx.m(lr.lq.qr)(lq.x)(n(lq.lr.rq)(Y(lq.lr.f(rq)))))92
+(lm.ln.lf.lx.m(lr.lq.qr)(lq.x)(n(lq.lr.rq)(m(lq.lr.f(rq))x)))92
+div:
+(lm.ln.lf.lx.m(lr.lq.qr)(lq.x)(Y(lq.n(lq.lr.rq)(lr.f(rq))(lx.x))))92
+(lm.ln.lf.lx.m(lr.lq.qr)(lq.x)(m(lq.n(lq.lr.rq)(lr.f(rq))(lx.x))x))92
+-->
+Direct definition of division is given quite similarly as
+: <math> \begin{align}
+\operatorname{div} \equiv \lambda & mnfx. \\
+   &m\ (\lambda rq. q\ r)\ (\lambda q. x) \\
+   &(\operatorname{Y}\ (\lambda q. n\ (\lambda qr. r\ q)\ 
+       (\lambda r. f\ (r\ q))\ (\lambda x. x)))
+\end{align} </math>
+The application to <math>(\lambda x. x)</math> achieves subtraction by <math>1</math> while creating a cycle of actions repeatedly emitting an <math>f</math> after <math>n-1</math> steps.
+
+Instead of <math>\operatorname{Y}</math>, <math>(\lambda q. m\,q\,x)</math> can also be used in each of the three definitions above.
+
+=== Table of functions on Church numerals ===
+
+{| class="wikitable"
+|-
+! Function !! Algebra !! Identity !! Function definition
+! colspan="2" | Lambda expressions
+|-
+| [[Successor function|Successor]] || <math>n + 1</math> || <math>f^{\circ (n+1)} = f \circ f^{\circ n} </math> ||  <math>\operatorname{succ}\ n\ f\ x = f\ (n\ f\ x) </math> || <math>\lambda n f x.f\ (n\ f\ x) </math> || ...
+|-
+| [[Addition]] || <math>m + n</math> || <math>f^{\circ (m+n)} = f^{\circ m} \circ f^{\circ n} </math> || <math>\operatorname{plus}\ m\ n\ f\ x = m\ f\ (n\ f\ x) </math> || <math> \lambda m n f x.m\ f\ (n\ f\ x) </math> || <math>\lambda m n.n \operatorname{succ} m</math>
+|-
+| [[Multiplication]] || <math>m * n </math> || <math> f^{\circ (m*n)} = (f^{\circ m})^{\circ n} </math> ||<math>\operatorname{multiply}\ m\ n\ f\ x = m\ (n\ f) \ x </math> || <math>\lambda m n f x.m\ (n\ f) \ x </math> || <math>\lambda m n f.m\ (n\ f) </math>
+|-
+| [[Exponentiation]] || <math>b^n </math> || <math>b^{\circ n} = (\operatorname{mult} b)^{\circ n} </math> ||<math>\operatorname{exp} \ b\ n\ f\ x = n\ b\ f\ x </math> || <math> \lambda b n f x.n\ b\ f\ x </math> || <math> \lambda b n.n\ b </math>
+|-
+| [[Successor function|Predecessor]]{{efn|name=ce}} || <math>n - 1</math> || <math>first((\langle i,j\rangle \mapsto \langle j,f \circ j\rangle)^{\circ n}\langle I,I\rangle) =  f^{\circ (n-1)} </math> || <math>\operatorname{pred} (n+1)\ f\ x = I\ (n\ f\ x)</math>
+| colspan="2" |
+<math>\lambda n f x.n\ (\lambda r i.i\ (r\ f))\ (\lambda f.x)\ (\lambda u.u) </math>
+|-
+| [[Subtraction]]{{efn|name=ce}} ([[Monus]]) || <math> m - n </math> || <math>m-n = pred^{\circ n}(m)</math> || <math>\operatorname{minus}\ m\ n = n \operatorname{pred} m</math>  || ... ||  <math>\lambda m n.n \operatorname{pred} m</math>
+|}
+
+'''Notes''': {{notelist|refs={{efn|name=ce|In the Church encoding,
+* <math> \operatorname{pred}(0) = 0 </math>
+* <math> m \le n \to m - n = 0 </math>
+}}}}
+
+=== Predecessor function ===
+The predecessor function is given as
+
+: <math>\operatorname{pred} \equiv \lambda n f x. n\ (\lambda r i. i\ (r\ f))\ (\lambda f. x)\ (\lambda u. u)</math>
+
+This encoding essentially uses the identity
+
+:<math>first(\ (\langle i,j\rangle \mapsto \langle j,f \circ j\rangle)^{\circ n}\langle I,I\rangle\ ) = \begin{cases} I & \mbox{if }n=0, \\ f^{\circ (n-1)} & \mbox{otherwise}\end{cases}</math>
+
+or
+
+:<math>first(\ (\langle x,y\rangle \mapsto \langle y,f(y)\rangle)^{\circ n}\langle x,x\rangle\ ) = \begin{cases} x & \mbox{if }n=0, \\ f^{\circ (n-1)}(x) & \mbox{otherwise}\end{cases}</math>
+
+==== An explanation of pred ====
+The idea here is as follows. The only thing known to the Church numeral <math>\operatorname{pred} n</math> is the numeral <math>n</math> itself. Given two arguments <math>f</math> and <math>x</math>, as usual, the only thing it can do is to apply that numeral to the two arguments, somehow modified so that the ''n''-long chain of applications thus created will have one (specifically, leftmost) <math>f</math> in the chain replaced by the identity function:
+
+:<math> \begin{align}
+f^{\circ (n-1)} (x) &= \underbrace{I\ (\underbrace{f ( f ( \ldots ( f}_{{n-1}\text{ times}}}_{n\text{ times}}\,(x))\ldots ))) = (Xf)^{\circ n} (Z\,x)\ A \\
+ &= \underbrace{X f\ (X f\ ( \ldots (X f}_{{n}\text{ times}}\,(Z\,x))\ldots ))\ A \\
+  &= X\ f\ r_1\ A_1 \,\,\, \{-\ and\ it\ must\ be\ equal\ to:\ -\} \\
+  &= I\ (X\ f\ r_2\ A_2) \\
+  &= I\ (f\ (X\ f\ r_3\ A_3)) \\
+  &= I\ (f\ (f\ (X\ f\ r_4\ A_4))) \\
+  & \ldots \\
+  &= I\ (f\ (f\ \ldots (X\ f\ r_n\ A_n) \ldots )) \\
+  &= \underbrace{I\ (f\ (f\ \ldots (f}_{n\text{ times}}\ (Z\ x\ A_{n+1})) \ldots )) \\
+\end{align}</math>
+
+Here <math>X f</math> is the modified <math>f</math>, and <math>Z\,x</math> is the modified <math>x</math>. Since <math>Xf</math> itself can not be changed, its behavior can only be modified through an additional argument, <math>A</math>.
+
+The goal is achieved, then, by passing that additional argument <math>A</math> along ''from the outside in'', while modifying it as necessary, with the definitions
+:<math> \begin{align}
+ A_1 \,\,\,\,\, \,\,\,\,\, &=\, I  \\
+ A_{\,i>1}\,\,\,\,\, & =\,f \\
+ Z\ x\ f\,\,\,\,  &= x = K\ x\ f\\
+ X\ f\ r\ A_i &= A_i\ (r\ A_{i+1})
+    \,\,\,\,\,\, \{-\ i.e.,\ -\} \\
+ X\ f\ r\ i \,\,\,\,\,  &= i\ (r\ f)
+\end{align}</math>
+
+Which is exactly what we have in the <math>\operatorname{pred}</math> definition's lambda expression.
+
+Now it is easy enough to see that
+: <math>\begin{align}
+\operatorname{pred}\ (\operatorname{succ}\ n)\ f\ x &= \operatorname{succ}\ n\ (X f)\ (K\ x)\ I \\
+ &= X\ f\ (n\ (X\ f)\ (K\ x))\ I \\
+ &= I\ (n\ (X f)\ (K\ x)\ \,\, f\,\,\, ) \\
+ &=\ \ldots \\
+ &= I\ (f\ (f\ \ldots (f\ (K\ x \,\, f\,\, )) \ldots)) \\
+ &= I\ (n\ f\ x) \\
+ &= n\ f\ x\ \end{align}</math>
+: <math>\begin{align}
+\operatorname{pred}\ 0\ f\ x &=\ 0\ (X f)\ (K\ x)\ I \\
+ &=\ K\ x\ I \\
+ &=\ x \\
+ &=\ 0\ f\ x
+\end{align}</math>
+i.e. by eta-contraction and then by induction, it holds that
+: <math>\begin{align}
+ &\operatorname{pred}\ (\operatorname{succ}\ n) &&=\ n \\
+ &\operatorname{pred}\ 0 &&=\ 0 \\
+ &\operatorname{pred}\ (\operatorname{pred}\ 0) &&=\ \operatorname{pred}\ 0\ =\ 0 \\
+ & \ldots
+\end{align}</math>
+and so on.
+
+==== Defining pred through pairs ====
+The identity [[#Predecessor function|above]] may be coded with the explicit use of pairs. It can be done in several ways, for instance,
+:<math>\begin{align}
+\operatorname{f} =&\ \lambda p.\ \operatorname{pair}\ (\operatorname{second}\ p)\ (\operatorname{succ}\ (\operatorname{second}\ p)) \\
+\operatorname{pred}_2 =&\ \lambda n.\ \operatorname{first}\ (n\ \operatorname{f}\ (\operatorname{pair}\ 0\ 0)) \\
+\end{align}</math>
+
+The expansion for <math>\operatorname{pred}_2 3</math> is:
+:<math>\begin{align}
+\operatorname{pred}_2 3 =&\ \operatorname{first}\ (\operatorname{f}\ (\operatorname{f}\ (\operatorname{f}\ (\operatorname{pair}\ 0\ 0)))) \\
+=&\ \operatorname{first}\ (\operatorname{f}\ (\operatorname{f}\ (\operatorname{pair}\ 0\ 1))) \\
+=&\ \operatorname{first}\ (\operatorname{f}\ (\operatorname{pair}\ 1\ 2)) \\
+=&\ \operatorname{first}\ (\operatorname{pair}\ 2\ 3) \\
+=&\ 2
+\end{align}</math>
+
+This is a simpler definition to devise but leads to a more complex lambda expression,
+
+:<math> \begin{align}
+\operatorname{pred}_2 \equiv \lambda n. 
+    n\ &(\lambda p. p\ (\lambda a b h. h\ b\ (\operatorname{succ}\ b))  ) \,\,
+     (\lambda h. h\ 0\ 0) \,\,
+     (\lambda a b. a)
+\end{align}</math>
+
+Pairs in the lambda calculus are essentially just extra arguments, whether passing them inside out like here, or from the outside in as in the original <math>\operatorname{pred}</math> definition. Another encoding follows the second variant of the predecessor identity directly,
+
+:<math> \begin{align}
+\operatorname{pred}_3 \equiv \lambda n f x. 
+    n\ &(\lambda p. p\ (\lambda a b h. h\ b\ (f\ b))  ) \,\,
+     (\lambda h. h\ x\ x) \,\,
+     (\lambda a b. a)
+\end{align}</math>
+
+This way, it is already close to the original, "outside-in" <math>\operatorname{pred}</math> definition, also creating the chain of <math>f</math>s like it does, in a more wasteful way. But it is much less wasteful than the previous, <math>\operatorname{pred}_2</math> definition here. Indeed, if we trace its execution, we arrive at the new, even more streamlined, yet fully equivalent, definition
+<!--
+    PRED n f x = n (^p. p (^abh. h b (f b)))  (^h. h x x)  (^ab. a)
+ PRED n f x = n (G f) (P x x) K
+ P a b h = h a b
+ G f p = p (^abh. h b (f b))
+ G f (P a b) = P a b (^abh. h b (f b))
+             = (^abh. h b (f b)) a b
+             = (^h. h b (f b))
+             = P b (f b)               ==== G f:  a, b  ―――→  b, (f b)  !!
+
+ PRED 3 f x = G f (G f (G f (P x             x    ))) K
+            = G f (G f (P      x          (f x)    )) K
+            = G f (P        (f x)      (f (f x))    ) K
+            = P          (f (f x))  (f (f (f x)))     K
+
+ PRED 3 f x = H f (H f (H f K)) x x
+            =      H f (H f K)    x (f x)
+            =           H f K       (f x)  (f (f x))
+            =               K              (f (f x))   (f (f (f x)))
+            =                              (f (f x))
+
+-->
+
+:<math> \begin{align}
+\operatorname{pred}_4 \equiv \lambda n f x. 
+    n\ &(\lambda r a b. r\ b\ (f\ b)) \,
+     K\ x\ x
+\end{align}</math>
+which makes it fully clear and apparent that this is all about just argument modification and passing. Its reduction proceeds as
+:<math>\begin{align}
+\operatorname{pred}_4 3\ f\ x
+ &=\ (.. (.. (.. K)))\ x\ \, x \\
+ &=\ (.. (.. K)) \,\,\,\,\,\,\,   x\ \,\,(f\ x) \\
+ &=\ (.. K) \,\,\,\,\,\,   (f\ x)\ \,\,(f\ (f\ x)) \\
+ &=\  K \,\,\,\, (f\ (f\ x))\ \,\,(f\ (f\ (f\ x))) \\
+ &=\  f\ (f\ x) \\
+\end{align} </math>
+clearly showing what is going on. Still, the original <math>\operatorname{pred}</math> is much preferable since it's working in the top-down manner and is thus able to stop right away if the user-supplied function <math>f</math> is short-circuiting. The top-down approach is also used with other definitions like
+
+:<math> \begin{align}
+\operatorname{pred}_5 \equiv \lambda n f x. 
+    n\ &(\lambda r a b. a\ (r\ b\ b)) \,
+     (\lambda a b. x)\ I\ f \\
+\operatorname{third} \equiv \lambda n f x. 
+    n\ &(\lambda r a b c. a\ (r\ b\ c\ a)) \,
+     (\lambda a b c. x)\ I\ I\ f \\
+\operatorname{thirdRounded} \equiv \lambda n f x. 
+    n\ &(\lambda r a b c. a\ (r\ b\ c\ a)) \,
+     (\lambda a b c. x)\ I\ f\ I \\
+\operatorname{twoThirds} \equiv \lambda n f x. 
+    n\ &(\lambda r a b c. a\ (r\ b\ c\ a)) \,
+     (\lambda a b c. x)\ I\ f\ f \\
+\operatorname{factorial} \equiv \lambda n f x. 
+    n\ &(\lambda r a. a\ (r\ (\operatorname{succ} a))) \,
+     (\lambda a. f)\ 1\ x \\
+\end{align}</math>
+
+=== Division via general recursion ===
+
+[[Division (mathematics)|Division]] of natural numbers may be implemented by,<ref>
+{{cite web
+|last=Allison
+|first=Lloyd
+|title=Lambda Calculus Integers
+|url=http://www.csse.monash.edu.au/~lloyd/tildeFP/Lambda/Examples/const-int/}}
+</ref>
+
+: <math> n/m = \operatorname{if}\ n \ge m\ \operatorname{then}\ 1 + (n-m)/m\ \operatorname{else}\ 0 </math>
+
+Calculating <math>n-m</math> with <math>\lambda n m. m\, \operatorname{pred}\, n</math> takes many beta reductions.  Unless doing the reduction by hand, this doesn't matter that much, but it is preferable to not have to do this calculation twice (unless the direct subtraction definition is used, see above).  The simplest predicate for testing numbers is ''IsZero'' so consider the condition.
+: <math> \operatorname{IsZero}\ (\operatorname{minus}\ n\ m) </math>
+But this condition is equivalent to <math> n \le m </math>, not <math> n<m </math>.  If this expression is used then the mathematical definition of division given above is translated into function on Church numerals as,
+: <math> \operatorname{divide1}\ n\ m\ f\ x = (\lambda d.\operatorname{IsZero}\ d\ (0\ f\ x)\ (f\ (\operatorname{divide1}\ d\ m\ f\ x)))\ (\operatorname{minus}\ n\ m) </math>
+
+As desired, this definition has a single call to <math> \operatorname{minus}\ n\ m </math>. However the result is that this formula gives the value of <math>(n-1)/ m</math>.
+
+This problem may be corrected by adding 1 to ''n'' before calling ''divide''. The definition of ''divide'' is then,
+: <math> \operatorname{divide}\ n = \operatorname{divide1}\ (\operatorname{succ}\ n) </math>
+
+''divide1'' is a recursive definition.  The [[Fixed-point combinator|Y combinator]] may  be used to implement the recursion.  Create a new function called ''div'' by;
+* In the left hand side <math> \operatorname{divide1} \rightarrow \operatorname{div} \ c</math>
+* In the right hand side <math> \operatorname{divide1} \rightarrow c </math>
+to get,
+: <math> \operatorname{div} = \lambda c.\lambda n.\lambda m.\lambda f.\lambda x.(\lambda d.\operatorname{IsZero}\ d\ (0\ f\ x)\ (f\ (c\ d\ m\ f\ x)))\ (\operatorname{minus}\ n\ m) </math>
+
+Then,
+:<math> \operatorname{divide} = \lambda n.\operatorname{divide1}\ (\operatorname{succ}\ n) </math>
+where,
+: <math>\begin{align}
+ \operatorname{divide1} &= Y\ \operatorname{div} \\
+ \operatorname{succ} &= \lambda n.\lambda f.\lambda x. f\ (n\ f\ x) \\
+ Y &= \lambda f.(\lambda x.f\ (x\ x))\ (\lambda x.f\ (x\ x)) \\
+ 0 &= \lambda f.\lambda x.x\\
+ \operatorname{IsZero} &= \lambda n.n\ (\lambda x.\operatorname{false})\ \operatorname{true}
+\end{align}</math>
+:: <math>\begin{align}
+\operatorname{true} &\equiv \lambda a.\lambda b.a\\
+\operatorname{false} &\equiv \lambda a.\lambda b.b
+\end{align}</math>
+: <math>\begin{align}
+\operatorname{minus} &= \lambda m.\lambda n.n \operatorname{pred} m\\
+\operatorname{pred} &= \lambda n.\lambda f.\lambda x.n\ (\lambda g.\lambda h.h\ (g\ f))\ (\lambda u.x)\ (\lambda u.u)
+\end{align}</math>
+Gives,
+: <math>\scriptstyle \operatorname{divide} = \lambda n.((\lambda f.(\lambda x.x\ x)\ (\lambda x.f\ (x\ x)))\ (\lambda c.\lambda n.\lambda m.\lambda f.\lambda x.(\lambda d.(\lambda n.n\ (\lambda x.(\lambda a.\lambda b.b))\ (\lambda a.\lambda b.a))\ d\ ((\lambda f.\lambda x.x)\ f\ x)\ (f\ (c\ d\ m\ f\ x)))\ ((\lambda m.\lambda n.n (\lambda n.\lambda f.\lambda x.n\ (\lambda g.\lambda h.h\ (g\ f))\ (\lambda u.x)\ (\lambda u.u)) m)\ n\ m)))\ ((\lambda n.\lambda f.\lambda x. f\ (n\ f\ x))\ n) </math>
+
+Or as text, using \ for {{mvar|λ}},
+ divide = (\n.((\f.(\x.x x) (\x.f (x x))) (\c.\n.\m.\f.\x.(\d.(\n.n (\x.(\a.\b.b)) (\a.\b.a)) d ((\f.\x.x) f x) (f (c d m f x))) ((\m.\n.n (\n.\f.\x.n (\g.\h.h (g f)) (\u.x) (\u.u)) m) n m))) ((\n.\f.\x. f (n f x)) n))
+
+For example, 9/3 is represented by
+ divide (\f.\x.f (f (f (f (f (f (f (f (f x))))))))) (\f.\x.f (f (f x)))
+
+Using a lambda calculus calculator, the above expression reduces to 3, using normal order.
+ \f.\x.f (f (f (x)))
+
+=== Predicates ===
+
+A ''predicate'' is a function that returns a Boolean value. The most fundamental predicate on Church numerals is <math>\operatorname{IsZero}</math>, which returns <math>\operatorname{true}</math> if its argument is the Church numeral <math>0</math>, and <math>\operatorname{false}</math> otherwise:
+: <math>\operatorname{IsZero} = \lambda n.n\ (\lambda x.\operatorname{false})\ \operatorname{true}</math>
+
+The following predicate tests whether the first argument is less-than-or-equal-to the second:
+: <math>\operatorname{LEQ} = \lambda m.\lambda n.\operatorname{IsZero}\ (\operatorname{minus}\ m\ n)</math>
+
+Because of the identity
+: <math> x = y \equiv (x \le y \land y \le x) </math>
+the test for equality can be implemented as
+: <math>\operatorname{EQ} = \lambda m.\lambda n.\operatorname{and}\ (\operatorname{LEQ}\ m\ n)\ (\operatorname{LEQ}\ n\ m) </math>
+
+===In programming languages===
+
+Most real-world languages have support for machine-native integers; the ''church'' and ''unchurch'' functions convert between nonnegative integers and their corresponding Church numerals. The functions are given here in [[Haskell (programming language)|Haskell]], where the <code>\</code> corresponds to the λ of Lambda calculus. Implementations in other languages are similar.
+
+<syntaxhighlight lang="haskell">
+
+type Church a = (a -> a) -> a -> a
+
+church :: Integer -> Church Integer
+church 0 = \f -> \x -> x
+church n = \f -> \x -> f (church (n-1) f x)
+
+unchurch :: Church Integer -> Integer
+unchurch cn = cn (+ 1) 0
+</syntaxhighlight>
+
+== Signed numbers ==
+
+One simple approach for extending Church Numerals to [[Integer|signed numbers]] is to use a Church pair, containing Church numerals representing a positive and a negative value.<ref>
+{{cite web
+|last=Bauer
+|first=Andrej
+|title=Andrej's answer to a question; "Representing negative and complex numbers using lambda calculus"
+|url=https://cs.stackexchange.com/q/2272
+}}</ref>  The integer value is the difference between the two Church numerals.
+
+A natural number is converted to a signed number by,
+
+:<math>\operatorname{convert}_s = \lambda x.\operatorname{pair}\ x\ 0 </math>
+
+Negation is performed by swapping the values.
+
+:<math>\operatorname{neg}_s = \lambda x.\operatorname{pair}\ (\operatorname{second}\ x)\ (\operatorname{first}\ x) </math>
+
+The integer value is more naturally represented if one of the pair is zero.  The ''OneZero'' function achieves this condition,
+
+:<math>\operatorname{OneZero} = \lambda x.\operatorname{IsZero}\ (\operatorname{first}\ x)\ x\ (\operatorname{IsZero}\ (\operatorname{second}\ x)\ x\ (\operatorname{OneZero}\ (\operatorname{pair}\ (\operatorname{pred}\ (\operatorname{first}\ x))\ (\operatorname{pred}\ (\operatorname{second}\ x)))))</math>
+
+The recursion may be implemented using the Y combinator,
+:<math>\operatorname{OneZ} = \lambda c.\lambda x.\operatorname{IsZero}\ (\operatorname{first}\ x)\ x\ (\operatorname{IsZero}\ (\operatorname{second}\ x)\ x\ (c\ (\operatorname{pair}\ (\operatorname{pred}\ (\operatorname{first}\ x))\ (\operatorname{pred}\ (\operatorname{second}\ x)))))</math>
+
+:<math>\operatorname{OneZero} = Y \operatorname{OneZ}</math>
+
+=== Plus and minus ===
+
+Addition is defined mathematically on the pair by,
+:<math>x + y = [x_p, x_n] + [y_p, y_n] = x_p - x_n + y_p - y_n = (x_p + y_p) - (x_n + y_n) = [x_p + y_p, x_n + y_n] </math>
+
+The last expression is translated into lambda calculus as,
+:<math>\operatorname{plus}_s = \lambda x.\lambda y.\operatorname{OneZero}\ (\operatorname{pair}\ (\operatorname{plus}\ (\operatorname{first}\ x)\ (\operatorname{first}\ y))\ (\operatorname{plus}\ (\operatorname{second}\ x)\ (\operatorname{second}\ y))) </math>
+
+Similarly subtraction is defined,
+:<math>x - y = [x_p, x_n] - [y_p, y_n] = x_p - x_n - y_p + y_n = (x_p + y_n) - (x_n + y_p) = [x_p + y_n, x_n + y_p] </math>
+
+giving,
+:<math>\operatorname{minus}_s = \lambda x.\lambda y.\operatorname{OneZero}\ (\operatorname{pair}\ (\operatorname{plus}\ (\operatorname{first}\ x)\ (\operatorname{second}\ y))\ (\operatorname{plus}\ (\operatorname{second}\ x)\ (\operatorname{first}\ y))) </math>
+
+=== Multiply and divide ===
+
+Multiplication may be defined by,
+:<math>x*y = [x_p, x_n]*[y_p, y_n] =(x_p - x_n)*(y_p - y_n) = (x_p*y_p + x_n*y_n) - (x_p*y_n + x_n*y_p) = [x_p*y_p + x_n*y_n, x_p*y_n + x_n*y_p]</math>
+The last expression is translated into lambda calculus as,
+:<math>\operatorname{mult}_s = \lambda x.\lambda y.\operatorname{pair}\ 
+(\operatorname{plus}\ 
+(\operatorname{mult}\ (\operatorname{first}\ x)\ (\operatorname{first}\ y))\ 
+(\operatorname{mult}\ (\operatorname{second}\ x)\ (\operatorname{second}\ y)))\ 
+(\operatorname{plus}\ 
+(\operatorname{mult}\ (\operatorname{first}\ x)\ (\operatorname{second}\ y))\ 
+(\operatorname{mult}\ (\operatorname{second}\ x)\ (\operatorname{first}\ y))) </math>
+
+A similar definition is given here for division, except in this definition, one value in each pair must be zero (see ''OneZero'' above).  The ''divZ'' function allows us to ignore the value that has a zero component.
+:<math>\operatorname{divZ} = \lambda x.\lambda y.\operatorname{IsZero}\ y\ 0 \ (\operatorname{divide}\ x\ y) </math>
+
+''divZ'' is then used in the following formula, which is the same as for multiplication, but with ''mult'' replaced by ''divZ''.
+
+:<math>\operatorname{divide}_s = \lambda x.\lambda y.\operatorname{pair}\ 
+(\operatorname{plus}\ 
+(\operatorname{divZ}\ (\operatorname{first}\ x)\ (\operatorname{first}\ y))\ 
+(\operatorname{divZ}\ (\operatorname{second}\ x)\ (\operatorname{second}\ y)))\ 
+(\operatorname{plus}\ 
+(\operatorname{divZ}\ (\operatorname{first}\ x)\ (\operatorname{second}\ y))\ 
+(\operatorname{divZ}\ (\operatorname{second}\ x)\ (\operatorname{first}\ y))) </math>
+
+== Rational and real numbers ==
+
+Rational and [[computable number|computable real numbers]] may also be encoded in lambda calculus.  Rational numbers may be encoded as a pair of signed numbers.  Computable real numbers may be encoded by a limiting process that guarantees that the difference from the real value differs by a number which may be made as small as we need.<ref>
+{{cite web|url=https://wiki.haskell.org/Exact_real_arithmetic|title=Exact real arithmetic|last=|first=|date=|website=Haskell|url-status=live|archive-url=https://web.archive.org/web/20150326164041/https://wiki.haskell.org/Exact_real_arithmetic |archive-date=2015-03-26 |access-date=}}
+</ref>
+<ref>
+{{cite web
+|last=Bauer
+|first=Andrej
+|title=Real number computational software|website=[[GitHub]]
+|date=26 September 2022
+|url=https://github.com/andrejbauer/marshall}}
+</ref>  The references given describe software that could, in theory, be translated into lambda calculus.  Once real numbers are defined, complex numbers are naturally encoded as a pair of real numbers.
+
+The data types and functions described above demonstrate that any data type or calculation may be encoded in lambda calculus.  This is the [[Church–Turing thesis]].
+
+==List encodings==
+
+A [[list (computing)|list]] contains some items in order. The basic [[List (abstract data type)#Operations|operations]] on lists are:
+
+{| class="wikitable"
+|-
+! Function !! Description
+|-
+| ''nil'' || Construct an empty list
+|-
+| ''isnil'' || Test if list is empty
+|-
+| ''cons'' || Prepend a given value to a (possibly empty) list
+|-
+| ''head'' || Get the first element of the list
+|-
+| ''tail'' || Get the rest of the list
+|-
+| ''singleton'' || Create a list containing one given element
+|-
+| ''append'' || Append two lists together
+|-
+| ''foldr'' || Fold the list with the given "plus" and "zero"
+|}
+A representation of lists should provide ways to implement these operations.  Some of these operations can be defined in terms of others, like 
+
+: <math>
+\begin{align}
+\operatorname{singleton} &\equiv \lambda\, v.\ 
+\operatorname{cons}\ v\ \operatorname{nil}
+\\
+\operatorname{cons} &\equiv \lambda\, h.\ \operatorname{append}\ (\operatorname{singleton}\ h)
+\\
+\operatorname{append} &\equiv \lambda\,l\,r.\ \operatorname{foldr}\ \operatorname{cons}\ r\,\ l\ 
+\\
+\operatorname{isnil} &\equiv \operatorname{foldr}\ 
+(\lambda\, h\, r.\operatorname{false})\ 
+ \operatorname{true}
+\\
+\operatorname{head} &\equiv  
+\operatorname{foldr}\ (\lambda\, h\, r.h)\  \operatorname{nil}
+\\
+\operatorname{map} &\equiv \lambda f.\  
+\operatorname{foldr}\ (\lambda h. \operatorname{cons}\ (f\ h)) 
+\ \operatorname{nil}
+\\
+\end{align}</math>
+
+Like this definition of <math>\operatorname{map}</math>, [[#General_list_manipulation|many more functions]] can be defined in terms of structural recursion (right fold, i.e. catamorphism, also paramorphism, etc.), or general recursion using fixpoint recursion.
+
+The archetypal lambda calculus representation of lists is Church List encoding. It represents lists as [[Fold (higher-order function)|right folds]], as functions to return the results of folding over the list with user-supplied arguments. 
+
+It follows the paradigm of "a thing is something that can be observed". No matter the concrete implementation, folding a given list of values results in the same result. This provides an abstract view at what a list is. Church List encoding is such a mechanism.
+
+On the other hand, seen more concretely, lists can be represented as a sequence of [[Linked list|linked]] list [[Node (computer science)|nodes]]. Two possible encodings use either two Church pairs for each list node, or just one pair per each node.
+
+Seen as an algebraic data type, lists are represented via Scott encoding. 
+
+=== Church lists – ''right fold'' representation ===
+
+This is the original Church encoding for lists. A list is represented by a binary function, that, when supplied with two arguments, – a "combining function" and a "sentinel value", – will perform the [[Fold (higher-order function)|right fold]] of the encoded list using those two arguments. 
+
+For an empty list the sentinel value is returned as the folding's result. The result of folding a non-empty list with ''head'' h and ''tail'' t is the result of combining, by the supplied function, of the ''head'' h with the ''result'' of folding the tail t with the supplied two arguments.  Thus the combining function's two arguments are, conceptually, the ''current element'' and the ''result'' of folding the ''rest'' of the list.
+
+For example, a list of three elements ''x'', ''y'' and ''z'' is represented by a term that when applied to ''c'' and ''n'' returns ''c x'' (''c y'' (''c z n'')). Equivalently, it is an application of the chain of [[functional composition]]s ( <math>\circ</math> ) of partial applications, ((''c x'') <math>\circ</math> (''c y'') <math>\circ</math> (''c z'')) ''n''.
+
+: <math>
+\begin{align}
+\operatorname{nil} &\equiv \lambda\, c\,n.n
+\\
+\operatorname{cons} &\equiv \lambda\, h\,t.\lambda\, c\,n.c\ h\ (t\ c\ n)
+\\
+\operatorname{singleton} &\equiv \lambda\, h.\lambda\, c\,n.c\ h\ n\   
+\\
+\operatorname{foldr} &\equiv \lambda\,c\,n\,l.l\ c\ n
+\\
+\operatorname{isnil} &\equiv \lambda\, l.l\ (\lambda\, h\,r.\operatorname{false})\ \operatorname{true} 
+\\
+\operatorname{append} &\equiv \lambda\, l\,m.\lambda\, c\,n.l\ c\ (m\ c\ n)
+\\
+&\equiv \lambda\, l\,m.\lambda\, c\, n.\, 
+\operatorname{foldr}\ c\ \, (\operatorname{foldr}\ c\ n\ m)\,
+\ l
+\\
+\operatorname{head} &\equiv \lambda\, l.l\ (\lambda\, h\, r.h)\ \operatorname{nil}
+\\
+\operatorname{safehead}  &\equiv \lambda\,l\,e\,s.l\ (\lambda\, h\, r.s\ h)\ e
+\\
+\operatorname{map} &\equiv \lambda f\,l.\lambda\, c\, n.l\ (\lambda\, h\, r.c\ (f\ h)\ r)\ n
+\\
+\operatorname{tail}  &\equiv \lambda\, l.\lambda\, c\, n.l\ (\lambda\, h\, r\, g.g\ h\ (r\ c))\ (\lambda\, g.n)\ (\lambda\, h\, t.t)
+\end{align}</math>
+
+This encoding follows the following logic: the equations
+ foldr c n [  ]     =  n
+ foldr c n [x ]     =  c x n
+ foldr c n [x,y,z]  =  c x (foldr c n [y,z])
+                    =  c x (c y (c z n))
+mean that
+: <math>
+\begin{align}
+ &\{\  [\ \ \ \ ]\ \} &&\equiv \lambda\, c\,n.n\\
+ &\{\  [\ x\ \ \ ]\ \} &&\equiv \lambda\, c\,n.c\ x\ n\\
+ &\{\  [\ x,\, y,\, z\ ]\ \} &&\equiv \lambda\, c\,n.c\ x\ (c\ y\ (c\ z\ n))
+\end{align}</math>
+where <math>\{ \ l\ \} = \lambda\, c\, n. \operatorname{foldr}\ c\ n\ l</math> denotes the Church List representation of the list <math>l</math>.
+
+Since Church encoded list is its own folding function,  folding it just means applying that function to the supplied arguments.
+
+This list representation can be given type in [[System F]].
+
+The evident correspondence to Church numerals is non-coincidental, as that can be seen as a unary encoding, with natural numbers represented by lists of unit (i.e. non-important) values, e.g. [() () ()], with the list's length serving as the representation of the natural number. Right folding over such lists uses functions which necessarily ignore the element's value, and is equivalent to the chained functional composition, i.e. ( (c ()) <math>\circ</math> (c ()) <math>\circ</math> (c ()) ) n = (f <math>\circ</math> f <math>\circ</math> f) n, as is used in Church numerals.
+
+=== Two pairs as a list node ===
+
+A nonempty list can be represented by a Church pair, where
+* ''first'' contains the list's head
+* ''second'' contains the list's tail
+
+However this does not give a representation of the empty list, because there is no "null" pointer.  To represent null, the pair can be wrapped in another pair, giving three values:
+* ''first'' - the null list indicator (a Boolean).
+* ''first of second'' contains the head (''car'').
+* ''second of second'' contains the tail (''cdr'').
+
+Using this idea the basic list operations can be defined like this:<ref>{{cite book
+  | last = Pierce
+  | first = Benjamin C.
+  | authorlink = Benjamin C. Pierce
+  | title = [[Types and Programming Languages]]
+  | publisher = [[MIT Press]]
+  | year = 2002
+  | pages = 500
+  | isbn = 978-0-262-16209-8}}</ref>
+
+{| class="wikitable"
+|-
+! Expression !! Description
+|-
+| <math> \operatorname{nil} \equiv \operatorname{pair}\ \operatorname{true}\ \operatorname{true} </math>
+| The first element of the pair is ''true'' meaning the list is null.
+|-
+| <math> \operatorname{isnil} \equiv \operatorname{first} </math>
+| Retrieve the null (or empty list) indicator.
+|-
+| <math> \operatorname{cons}  \equiv \lambda h.\lambda t.\operatorname{pair} \operatorname{false}\  (\operatorname{pair} h\ t) </math>
+| Create a list node, which is not null, and give it a head ''h'' and a tail ''t''.
+|-
+|<math> \operatorname{head}  \equiv \lambda z.\operatorname{first}\ (\operatorname{second} z) </math>
+| ''second.first'' is the head.
+|-
+| <math> \operatorname{tail}  \equiv \lambda z.\operatorname{second}\ (\operatorname{second} z) </math>
+| ''second.second'' is the tail.
+|}
+
+In a ''nil'' node ''second'' is never accessed, provided that '''head''' and '''tail''' are only applied to nonempty lists.
+
+=== One pair as a list node ===
+
+Alternatively, define<ref>{{cite book |first=John |last=Tromp |chapter=14. Binary Lambda Calculus and Combinatory Logic |editor-last=Calude |editor-first=Cristian S |title=Randomness And Complexity, From Leibniz To Chaitin |chapter-url=https://books.google.com/books?id=flPICgAAQBAJ&pg=PP1 |date=2007 |publisher=World Scientific |isbn=978-981-4474-39-9 |pages=237–262}}<br />As PDF: {{cite web |first=John |last=Tromp |title=Binary Lambda Calculus and Combinatory Logic |date=14 May 2014 |publisher= |url=https://tromp.github.io/cl/LC.pdf |access-date=2017-11-24}}</ref>
+: <math>\begin{align}
+\operatorname{cons}  &\equiv \operatorname{pair} \\
+\operatorname{nil}   &\equiv \operatorname{false} \\
+\operatorname{isnil} &\equiv \lambda l.\ l\ (\lambda h t d. \operatorname{false})\ \operatorname{true} \\
+\operatorname{head}  &\equiv \lambda l.\ l\ (\lambda h t d.\ h)\ \operatorname{nil} \\
+\operatorname{tail}  &\equiv \lambda l.\ l\ (\lambda h t d.\ t)\ \operatorname{nil} \\
+\end{align}</math>
+
+where the definitions like the last one all follow the same general pattern for the safe use of a list, with <math>h</math> and <math>t</math> referring to the list's head and tail, and <math>d</math> being discarded, as an artificial device:
+: <math>\begin{align}
+\lambda l.l\ (\lambda h t d. \langle \operatorname{head-and-tail-clause}\rangle )\ \langle \operatorname{nil-clause}\rangle \\
+\end{align}</math>
+
+Other operations in this encoding are:
+: <math>\begin{align}
+
+\operatorname{lfold} &\equiv \lambda g.\ \operatorname{Y}\ (\lambda r.\lambda a l.\ l\ (\lambda h t d.\ r\ (g\ a\ h)\ t)\ a) \\
+
+\operatorname{foldr} &\equiv \lambda g z.\ \operatorname{Y}\ (\lambda r.\lambda l.\ l\ (\lambda h t d.\ g\ h\ (r\ t))\ z)
+ \\
+
+\operatorname{zip} &\equiv Y\ (\lambda r l m.\ l\ (\lambda h t d.\ m\ (\lambda e s z.\\
+& \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 
+ \operatorname{cons}\ (\operatorname{pair}\ h\ e)\ (r\ t\ s))\ \operatorname{nil})\ \operatorname{nil}) \\
+
+\end{align}</math>
+
+----
+: <math>\begin{align}
+
+\operatorname{drop} \equiv\ & \lambda n.\ n\ 
+(\lambda r l.\ l\ (\lambda h t d. r\ t)\ \operatorname{nil})\ (\lambda l.\ l) \\
+
+\operatorname{drop-while} \equiv\ & \lambda p.\ \operatorname{Y}\ (\lambda r l.\ l\ (\lambda h t d.\ p\ h\ (r\ t)\ l)\ \operatorname{nil}) 
+\\
+
+\operatorname{drop-until} \equiv\ & \lambda p.\ \operatorname{Y}\ (\lambda r l.\ l\ (\lambda h t d.\ p\ h\ t\ (r\ t))\ \operatorname{nil}) 
+\\
+
+\operatorname{take}
+
+\equiv\ & \lambda n.\ n\ (\lambda r l.\ l\ (\lambda h t d.\ \operatorname{cons}\ h\ (r\ t) )\ \operatorname{nil}) 
+\ (\lambda l. \operatorname{nil})
+ \\
+
+
+\operatorname{take-last} 
+
+\equiv\ & \lambda n l.\ Y\ (\lambda r l m.\ l\ (\lambda h t d.\ m\ (\lambda e s z. r\ t\ s)\,\ l)\ 
+   \operatorname{nil})\,\ l\,\ (\operatorname{drop}\ n\ l) 
+
+\end{align}</math>
+
+----
+: <math>\begin{align}
+
+\operatorname{element-at} &\equiv \lambda n l.\ \operatorname{drop}\ n\ l\ (\lambda h t d.\ \operatorname{val}\ h)\ \operatorname{none} \\
+
+\operatorname{insert-at} 
+
+&\equiv \lambda n v.\ 
+
+   n\ (\lambda r l.\ l\ (\lambda h t d.\ \operatorname{cons}\ h\ (r\ t))\ 
+                           ( \operatorname{cons}\ v\ \operatorname{nil}))\ 
+      (\operatorname{cons}\ v) \\
+
+\operatorname{remove-at} 
+
+&\equiv \lambda n.\ 
+
+   n\ (\lambda r l.\ l\ (\lambda h t d.\ \operatorname{cons}\ h\ (r\ t))\ \operatorname{nil})\ 
+      \operatorname{tail} \\
+
+
+\operatorname{replace-at} &\equiv \lambda n v.\ 
+
+   n\ (\lambda r l.\ l\ (\lambda h t d.\ \operatorname{cons}\ h\ (r\ t))\ \operatorname{nil})\\
+   & \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \  
+ (\lambda\ \ l.\ l\ (\lambda h t d.\  \operatorname{cons}\ v\ t)\ \operatorname{nil}) \\
+
+\operatorname{last-index-of} &\equiv \lambda p.\ \operatorname{Y}\ (\lambda r n l.\ l\ (\lambda h t d.\ 
+(\lambda i.\ i\ (p\ h\ (\operatorname{val}\ n)\ i)\ (\lambda n.\ i) ) \\
+ & \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 
+ (r\ (\operatorname{succ}\ n)\ t))\ \operatorname{none})\ \operatorname{zero} \\
+
+\end{align}</math>
+
+For some of the definitions the general fold-based ones (found below) are efficient enough.
+
+It is important for the successor function on Church numerals to be defined in the lazy fashion, {{Mono|1=succ := λ''nfx''.''f(nfx)''}}, as opposed to {{Mono|1=succ := λ''nfx''.''nf(fx)''}}, so that the function {{Mono|''length''}} produces lazy numerals, for overall most lazy operation of reductions under the topmost leftmost reduction strategy. In other words, we don't need to know the final length value if all we need to know is whether it is non-zero or not.
+
+=== Scott lists ===
+
+Scott encoding for data types follows their surface syntax without regard to recursion in the data type. In the disjunction of conjunctions a.k.a. sum of products style of algebraic data type definitions, it represents a given datum as a function which expects as many arguments as there are alternatives in its data type definition, where each such argument is expected to be a "handler" function that must be able to handle the given number of data arguments that will correspond to the data fields for that alternative.
+
+Given all the handlers as arguments, the datum representation function will then call the appropriate handler with the corresponding internal data. Scott encoded values can thus be said to embody the pattern matching case handling for their data type.
+
+For lists, it means the data type definition of
+
+<math>\qquad List := \operatorname{NIL}\ | \, \operatorname{Cons}\, \langle val \rangle \, List</math>
+
+and lists being represented as
+
+: <math>\quad \begin{align}
+\operatorname{nil} =\ & \lambda n c. n  \\
+\operatorname{cons} =\ & \lambda a d. \lambda n c. c\ a\ d \\
+\operatorname{isnil} =\ & \lambda l. l\,\operatorname{true}\, (\lambda a d.\operatorname{false} ) 
+ \\
+\operatorname{head} =\ & \lambda l. l\, \operatorname{nil} \,(\lambda a d. a) 
+ \\
+\operatorname{tail} =\ & \lambda l. l\, \operatorname{nil} \,(\lambda a d. d)
+ \\
+\operatorname{foldr} 
+ =\ & \lambda g z. \operatorname{Y} \lambda r l. l\ z\ (\lambda a d. g\, a\ (r\ d))
+\\
+=\ & \lambda g z. \operatorname{U} \lambda s l. l\ z\ (\lambda a d. g\, a\ (s\ s\ d))
+\\
+=\ & \lambda g z. (\lambda h. \operatorname{U} \lambda s. h\ (s\ s))\ \lambda r l. l\ z\ (\lambda a d. g\, a\ (r\ d))
+\\
+=\ & \lambda g z. \operatorname{U}\, (\lambda s h. h\ (s\ s\ h))\ \lambda r l. l\ z\ (\lambda a d. g\, a\ (r\ d))
+\\
+=\ & \lambda g z. (\lambda s h. s\ s\ h)\ (\lambda s h. h\ (s\ s\ h))\ \lambda r l. l\ z\ (\lambda a d. g\, a\ (r\ d))
+\\
+=\ & \lambda g z. (\lambda s h. s\ h\ s)\ (\lambda h s. h\ (s\ h\ s))\  \lambda r l. l\ z\ (\lambda a d. g\, a\ (r\ d))
+\\
+
+\operatorname{foldr2}  =\ & \lambda gz. \operatorname{Y} \lambda r p q.\, p\ z\ (\lambda a d. 
+\\ & \ \ \ \ \ \ \ \ \ \ \ \ \ 
+\ \ \ \ \ \ \ \ \ 
+\ q\ z\ (\lambda b e.\, 
+  g\ a\ b\ (r\ d\ e))) 
+\\ 
+
+\operatorname{map2} =\ & \lambda f. \operatorname{Y} \lambda r p q.\, p\  \operatorname{nil}\ (\lambda a d. 
+\\ & \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 
+q\ \operatorname{nil}\ (\lambda b e.\, 
+ \operatorname{cons}\, (f\ a\ b)\  (r\ d\ e)))
+ \\
+\end{align}</math>
+<!--
+
+\operatorname{Map} &= \lambda f. \operatorname{fold}\, (\lambda h r n c. c\,(f\,h)\,r)\,  \operatorname{NIL}\\
+
+\operatorname{Map2} &= \lambda f. \operatorname{Y} \lambda r p q n c. p\, n\, (\lambda a d. \\ & \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ q\, n\, (\lambda b g.
+ c\, (f\,a\,b) (r\ d\ g\ ??? n\ c))) \\
+
+\operatorname{Map2} &= \lambda f. \operatorname{Y} \lambda r p q. p\, \operatorname{NIL}\, (\lambda a d. \\ & \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ q\, \operatorname{NIL}\, (\lambda b g n c.
+ c\, (f\,a\,b) (r\ d\ g))) \\
+
+\operatorname{Append} &= \operatorname{Y} \lambda r p q. p\ q\ (\lambda a d. \operatorname{Cons}\, a\ (r\ d\ q)) \\
+
+\operatorname{Append} &= \operatorname{Y} \lambda r p q. p\ q\ (\lambda a d n c. c\, a\ (r\ d\ q)) \\
+-->
+
+Recursive operations on Scott lists typically require explicit use of recursion, e.g. using <math>\operatorname{Y}</math> combinator, or explicit self-application definitions making use of the <math>\operatorname{U}</math> combinator, <math>\operatorname{U}x\,=\,x\,x</math>. One such example is ''foldr'', unlike the no-op that it is under Church encoding. But ''tail'' is immediately available, and so its definition is much simpler here, in comparison. See [[Mogensen–Scott encoding|Scott encoding]] for more.
+
+Scott encoding can be seen as using the idea of [[continuation]]s, which can lead to simpler code<ref>{{cite book
+ | last = Jansen | first = Jan Martin
+ | editor1-last = Achten | editor1-first = Peter
+ | editor2-last = Koopman | editor2-first = Pieter W. M.
+ | contribution = Programming in the λ-Calculus: From Church to Scott and Back
+ | doi = 10.1007/978-3-642-40355-2_12
+ | pages = 168–180
+ | publisher = Springer
+ | series = Lecture Notes in Computer Science
+ | title = The Beauty of Functional Code - Essays Dedicated to Rinus Plasmeijer on the Occasion of His 61st Birthday
+ | volume = 8106
+ | year = 2013| isbn = 978-3-642-40354-5
+ }}</ref>. In this approach, we use the fact that lists can be observed using [[pattern matching]] expression. For example, using [[Scala (programming language)|Scala]] notation, if <code>list</code> denotes a value of type <code>List</code> with empty list <code>Nil</code> and constructor <code>Cons(h, t)</code> we can inspect the list and compute <code>nilCode</code> in case the list is empty and {{code|consCode(h, t)}} when the list is not empty:
+<syntaxhighlight lang="scala">
+list match {
+  case Nil        => nilCode
+  case Cons(h, t) => consCode(h,t)
+}
+</syntaxhighlight>
+The {{code|list}} is given by how it acts upon {{code|nilCode}} and {{code|consCode}}. We therefore define a list as a function that accepts such {{code|nilCode}} and {{code|consCode}} as arguments, so that instead of the above pattern match we may simply write:
+: <math>
+\operatorname{list}\ \operatorname{nilCode}\ \operatorname{consCode}
+</math>
+
+Let us denote by {{code|n}} the parameter corresponding to {{code|nilCode}} and by {{code|c}} the parameter corresponding to {{code|consCode}}.
+The empty list is then the  one that returns the nil argument:
+: <math>
+\operatorname{nil} \equiv \lambda n. \lambda c.\ n
+</math>
+The non-empty list with head {{code|h}} and tail {{code|t}} is given by
+: <math>
+\operatorname{cons}\ h\ t\ \equiv\ \lambda n.\lambda c. c\ h\ t
+</math>
+
+More generally, an [[algebraic data type]] with <math>m</math> alternatives becomes a function with <math>m</math> parameters, each being an observer / handler function for its corresponding alternative. When the <math>i</math>th alternative's constructor has <math>n_i</math> arguments, the corresponding handler function takes <math>n_i</math> arguments as well.
+
+Scott encoding can be done in untyped lambda calculus, whereas its use with types requires a type system with recursion and type polymorphism. A list with element type E in this representation that is used to compute values of type C would have the following recursive type definition, where '=>' denotes [[function type]]:
+<syntaxhighlight lang="scala">
+type List =
+  C =>                    // nil argument
+  (E => List => C) =>     // cons argument
+  C                       // result of pattern matching
+</syntaxhighlight>
+A list that can be used to compute arbitrary types would have a type that quantifies over <code>C</code>. A list generic {{Clarification needed|reason=|date=December 2019}} in <code>E</code> would also take <code>E</code> as the type argument.
+
+=== General list manipulation ===
+
+Whatever the representation in use, a plethora of general functions can be defined using just the few basic definitions, as mentioned at the top of this section, in terms of structural recursion via right fold i.e. catamorphism, or using paramorphism, etc.; or with general recursion via fixed points.
+
+: <math>
+\begin{align}
+\operatorname{safehead}  &\equiv  \operatorname{foldr}\ (\lambda h r. \operatorname{val}\ h)\ \operatorname{none}
+\\
+\operatorname{tail}  &\equiv \lambda\, l.\  \operatorname{foldr}\ (\lambda h r g. g\ h\ (r\, \operatorname{cons}))\ (\lambda g. \operatorname{nil})\,\ l\,\ (\lambda h t. t)
+\\
+\operatorname{safetail}  &\equiv \lambda\, l.\  \operatorname{foldr}\ (\lambda h r.
+\operatorname{val}\ (\operatorname{tail}\ l))
+\ \operatorname{none}\ l
+\\
+\operatorname{length} &\equiv \operatorname{foldr}\ (\lambda h r.\ \operatorname{succ}\ r)\ \operatorname{zero} \\
+  &\equiv \lambda l f x.\  \operatorname{foldr}\ (\lambda h.\, f)\ x\ l \\
+
+\operatorname{map} &\equiv \lambda f.\  
+\operatorname{foldr}\ (\lambda h. \operatorname{cons}\ (f\ h)) 
+\ \operatorname{nil}
+\\
+
+\operatorname{filter} &\equiv \lambda p.\ \operatorname{foldr}\ (\lambda h r.\ p\ h\ (\operatorname{cons}\ h\ r)\ r)\ \operatorname{nil} 
+\\
+
+\operatorname{all} &\equiv \lambda p.\ \operatorname{foldr}\ (\lambda h r.\ p\ h\ r\ \operatorname{false})\ \operatorname{true} \\
+
+\operatorname{any} &\equiv \lambda p.\ \operatorname{foldr}\ (\lambda h r.\ p\ h\ \operatorname{true}\ r)\ \operatorname{false}  \\
+\end{align}
+</math>
+
+------
+: <math>
+\begin{align}
+\operatorname{lfold} &\equiv \lambda g a l.\ 
+\operatorname{foldr}\ (\lambda h r a.\ 
+r\ (g\ a\ h))\ (\lambda a. a)\ \, l\, \ a
+\\
+
+\operatorname{reverse} &\equiv \operatorname{lfold}\ (\lambda a h.\ \operatorname{cons}\ h\ a)\ \operatorname{nil} 
+\\
+
+ &\equiv \lambda l.\ 
+\operatorname{foldr}\ (\lambda h r a.\ r\ (
+\operatorname{cons}\ h\ a))\ (\lambda a. a)\ \, l \ \operatorname{nil}
+\\
+
+
+\operatorname{conj} &\equiv \lambda l v.\ \operatorname{append}\ l\ \ (\operatorname{cons}\ v\ \operatorname{nil}) \\
+
+\operatorname{concat} &\equiv \operatorname{foldr}\ \operatorname{append}\ \operatorname{nil} \\
+
+\operatorname{replicate} &\equiv \lambda n v.\ n\ (\operatorname{cons}\ v)\ \operatorname{nil} \\
+
+\operatorname{repeat} &\equiv \lambda v.\, \operatorname{Y}\  (\lambda r.\, \operatorname{cons}\ v\ r) \\
+
+\operatorname{iterate} &\equiv \lambda f.\, \operatorname{Y}\  (\lambda r a.\, \operatorname{cons}\ a\ (r\ (f\ a) )) \\
+
+\end{align}</math>
+
+------
+: <math>
+\begin{align}
+
+
+\operatorname{zip} =\ & \operatorname{map2}\, \operatorname{pair} 
+\\
+
+\operatorname{map2} =\ & \lambda f.\  \operatorname{foldr2}\ (\lambda a b.\  \operatorname{cons}\ (f\ a\ b))\, \operatorname{nil}
+\\
+
+=\ & \lambda f p q.\  \operatorname{map}\ (\lambda t.\ t\ f)\,\  (\operatorname{zip}\ p\,\ q)
+\\
+
+\operatorname{foldr2} =\ & \lambda g z p q.\  \operatorname{foldr}\ (\lambda a r k.\ k\ a\ r)\ (\lambda k.\ z)\ p\\
+&\ \ \ \ \ \ \ \ \ \ \ \ (\operatorname{foldr}\ 
+(\lambda bsar.\ g\ a\ b\ (r\ s))
+\ (\lambda a r.\ z)\ q)
+\\
+ =\ & \lambda g z p q.\ \operatorname{foldr}\ (\lambda t.\ t\ g)\ z\ (\operatorname{zip}\ p\ q )
+\\
+
+
+\end{align}</math>
+
+------
+: <math>
+\begin{align}
+
+\operatorname{drop}  \equiv\ &  \lambda n.\ n\ \operatorname{tail}
+\\
+
+\operatorname{drop-last} 
+
+ \equiv\ & \lambda n l.\ \operatorname{map2}
+\ (\lambda h e.\ h)
+\,\ l\,\ (\operatorname{drop}\ n\ l)
+\\
+
+\operatorname{take-last} \equiv\ & \lambda n l.\ \operatorname{foldr}\ (\lambda h r q.\ q\ r\ h )\ (\lambda q.\ \operatorname{nil})\,\ l \\
+    & \ \ \ \ \ \ \ \  ( \operatorname{foldr} \ (\lambda e q r h.\ r\ q )\ 
+  (\operatorname{Y} \ (\lambda q r h.\ \operatorname{cons}\ h\ (r\ q)))\  (\operatorname{drop}\ n\ l)) 
+\\
+
+\equiv\ &  \lambda n l.\ \operatorname{drop}\ (\operatorname{length}\ (\operatorname{drop}\ n\ \, l))\ l 
+\\
+
+\operatorname{take}  
+
+\equiv\ &  \lambda n l.\ \operatorname{map2}\ 
+(\lambda h e.\ h)\,\ l\ \, (\operatorname{replicate}\ n\ \, \operatorname{nil})
+ \\
+
+\equiv\ &  \lambda n.\ n\,\  
+(\lambda r l.\ \operatorname{isnil}\ l\ 
+\operatorname{nil}\ 
+(\operatorname{cons}\ 
+(\operatorname{head}\ l)\ (r\ (\operatorname{tail}\ l))) )\ 
+(\lambda l.\, \operatorname{nil}) 
+ \\
+
+\equiv\ &  \lambda n l.\ \operatorname{foldr}\ 
+(\lambda h r n.\ \operatorname{isZero}\ 
+n\ \operatorname{nil}\ 
+ (\operatorname{cons}\ h\ (r\ 
+   (\operatorname{pred}\ n)))
+) \\ 
+ & \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 
+ (\lambda n.\, \operatorname{nil})\,\ 
+ l\ \, n
+ \\
+
+\operatorname{take-while} \equiv\ & \lambda p.\ \operatorname{foldr}\ 
+(\lambda h r.\ p\ h\ (\operatorname{cons}\ h\ r)\ \operatorname{nil} )\ \operatorname{nil} \\
+
+\operatorname{take-until} \equiv\ & \lambda p.\ \operatorname{foldr}\ 
+(\lambda h r.\ p\ h\ (\operatorname{cons}\ h\ \operatorname{nil})\ (\operatorname{cons}\ h\ r) )\ \operatorname{nil} 
+\\
+
+\end{align}</math>
+
+------
+: <math>
+\begin{align}
+
+\operatorname{insert-at} &\equiv \lambda n v l.\ \operatorname{append}\ (\operatorname{take}\ n\ l)\ (\operatorname{cons}\ v\ (\operatorname{drop}\ n\ l)) \\
+
+\operatorname{remove-at} &\equiv \lambda n l.\ \operatorname{append}\ (\operatorname{take}\ n\ l)\ (\operatorname{drop}\ (\operatorname{succ}\ n)\ l) \\
+
+\operatorname{index-of} &\equiv  \lambda p l.\ \operatorname{foldr}\ (\lambda h r n.\ p\ h\ (\operatorname{val}\ n)\ (r\ (\operatorname{succ}\ n))) \\
+ & \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 
+ (\lambda\ \ \ \ n.\  \operatorname{none})\,\ l\,\  \operatorname{zero}
+\\
+
+\operatorname{last-index-of} 
+
+&\equiv  \lambda p l.\ \operatorname{foldr}\ (\lambda h r n a.\ p\ h\ (r\ (\operatorname{succ}\ n)\ (\operatorname{val}\ n ))\ 
+(r\ (\operatorname{succ}\ n)\ a)) \\
+ & \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 
+ (\lambda\ \ \ n a.\ a)\,\ l\,\ \operatorname{zero}\ \operatorname{none}
+\\
+
+&\equiv  \lambda p l.\ \operatorname{index-of}\ p\ (\operatorname{reverse}\ l)\ (\lambda m.\ m\ \operatorname{none}\ \\
+  & \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 
+       (\lambda i.\ \operatorname{val}\ (\operatorname{minus}\ (\operatorname{length}\ l)\ (\operatorname{succ}\ i))))
+\\
+
+\operatorname{range} &\equiv \lambda f z.\ \operatorname{Y}\ (\lambda r s n.\ \operatorname{IsZero}\ n\ \operatorname{nil}\ (\operatorname{cons}\ (s\ f\ z) \\
+ & \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 
+\ \ \ \ \ \ \ \ \ \ 
+ (r\ (\operatorname{succ}\ s)\ (\operatorname{pred}\ n))))\ \operatorname{zero} \\
+
+ &\equiv \lambda f z n.\ n\ (\lambda r a.\ \operatorname{cons}\ a\ (r\ (f\ a)))\ (\lambda a.\ \operatorname{nil})\ z \\
+
+\end{align}
+</math>
+
+These definitions are given in a general, fold-based form which works for any encoding that provides its <math>foldr</math> definition. The more specific definitions provided by the specific encodings can be more efficient.
+
+== General remarks ==
+
+A straightforward implementation of Church encoding slows some access operations from <math>O(1)</math> to <math>O(n)</math>, where <math>n</math> is the size of the [[data structure]], making Church encoding impractical.<ref name=Widemann>{{cite conference <!-- Citation bot no --> |last1=Trancón y Widemann |first1=Baltasar |last2=Parnas |first2=David Lorge |chapter=Tabular Expressions and Total Functional Programming |title=Implementation and Application of Functional Languages |series=Lecture Notes in Computer Science |date=2008 |volume=5083 |pages=228–229 |doi=10.1007/978-3-540-85373-2_13|isbn=978-3-540-85372-5 |url=https://books.google.com/books?id=E1zuY1Q6sOsC&pg=PA228| conference=19th International Workshop, IFL 2007, Freiburg, Germany, September 27–29, 2007 Revised Selected Papers|editor1= Olaf Chitil|editor2= Zoltán Horváth|editor3= Viktória Zsók }}</ref> Research has shown that this can be addressed by targeted optimizations, but most [[functional programming]] languages instead expand their intermediate representations to contain [[algebraic data type]]s.<ref>{{cite book |last1=Jansen |first1=Jan Martin |last2=Koopman |first2=Pieter W. M. |last3=Plasmeijer |first3=Marinus J. |editor1-last=Nilsson |editor1-first=Henrik |title=Trends in functional programming. Volume 7 |date=2006 |publisher=Intellect |location=Bristol |isbn=978-1-84150-188-8 |chapter=Efficient interpretation by transforming data types and patterns to functions|pages=73–90|citeseerx=10.1.1.73.9841}}</ref> Nonetheless Church encoding is often used in theoretical arguments, as it is a natural representation for partial evaluation and theorem proving.<ref name=Widemann/> Operations can be typed using [[higher-ranked type]]s,<ref>{{cite web |work=Lambda Calculus and Lambda Calculators |url=https://okmij.org/ftp/Computation/lambda-calc.html#predecessor |publisher=okmij.org|title=Predecessor and lists are not representable in simply typed lambda calculus}}</ref> and primitive recursion is easily accessible.<ref name=Widemann/> The assumption that functions are the only primitive data types streamlines many proofs.
+
+Church encoding is complete but only representationally.  Additional functions are needed to translate the representation into common data types, for display to people.  It is not possible in general to decide if two functions are [[Extensionality|extensionally]] equal due to the [[Lambda calculus#Undecidability of equivalence|undecidability of equivalence]] from [[Church's theorem]].  The translation may apply the function in some way to retrieve the value it represents, or look up its value as a literal lambda term. Lambda calculus is usually interpreted as using [[Deductive lambda calculus#Intensional versus extensional equality|intensional equality]].  There are [[Deductive lambda calculus#Intensional versus extensional equality|potential problems]] with the interpretation of results because of the difference between the intensional and extensional definition of equality.
+
+==See also==
+* [[Lambda calculus]]
+* [[System F]] for Church numerals in a typed calculus
+* [[Mogensen–Scott encoding]]
+* [[Ordinal number#Von Neumann definition of ordinals|Von Neumann definition of ordinals]] — another way to encode natural numbers: as sets
+
+== References ==
+<references/>
+* {{cite journal |first=A. |last=Stump |title=Directly reflective meta-programming |journal=High-Order Symb Comput |volume=22 |issue= 2|pages=115–144 |date=2009 |doi=10.1007/s10990-007-9022-0 |url=https://www.cs.uiowa.edu/~astump/papers/archon.pdf |citeseerx=10.1.1.489.5018|s2cid=16124152 }}
+* {{cite web |url=https://www.cs.rice.edu/~javaplt/311/Readings/supplemental.pdf |title=Church numerals and booleans explained |first=Robert |last=Cartwright |work=Comp 311 — Review 2 |publisher=[[Rice University]]}}
+* {{cite thesis |first=Colin |last=Kemp |title=Theoretical Foundations for Practical 'Totally Functional Programming' |date=2007 |type=PhD |publisher=School of Information Technology and Electrical Engineering, The University of Queensland |chapter-url=https://espace.library.uq.edu.au/view/UQ:171001 |citeseerx=10.1.1.149.3505 |chapter=§2.4.1 Church Naturals, §2.4.2 Church Booleans, Ch. 5 Derivation techniques for TFP |pages=14–17, 93–145}}  All about Church and other similar encodings, including how to derive them and operations on them, from first principles
+* [http://www.csse.monash.edu.au/~lloyd/tildeFP/Lambda/Examples/const-int/ Some interactive examples of Church numerals]
+* [https://blog.klipse.tech/lambda/2016/07/24/lambda-calculus-2.html Lambda Calculus Live Tutorial: Boolean Algebra]
+
+{{Mathematical logic}}
+{{Alonzo Church}}
+
+[[Category:Lambda calculus]]

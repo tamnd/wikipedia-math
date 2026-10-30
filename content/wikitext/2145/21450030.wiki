@@ -1,0 +1,307 @@
+<!-- wikipedia: en
+     page: 21450030
+     title: Matrix multiplication algorithm
+     revision: 1374704248
+     timestamp: 2026-09-13T16:54:46Z
+     history: https://en.wikipedia.org/w/index.php?curid=21450030&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374704248 -->
+{{short description|Algorithm to multiply matrices}}
+Because [[matrix multiplication]] is such a central operation in many [[numerical algorithm]]s, much work has been invested in making '''matrix multiplication algorithms''' efficient. Applications of matrix multiplication in computational problems are found in many fields including [[scientific computing]] and [[pattern recognition]] and in seemingly unrelated problems such as counting the paths through a [[Graph (graph theory)|graph]].<ref name="skiena"/> Many different algorithms have been designed for multiplying matrices on different types of hardware, including [[parallel computing|parallel]] and [[distributed computing|distributed]] systems, where the computational work is spread over multiple processors (perhaps over a network).
+
+Directly applying the mathematical definition of matrix multiplication gives an algorithm that [[Analysis of algorithms|takes time]] on the order of {{math|''n''<sup>3</sup>}} [[Field (mathematics)|field]] operations to multiply two {{math|''n'' × ''n''}} matrices over that field ({{math|Θ(''n''<sup>3</sup>)}} in [[big O notation]]). Better [[Asymptotic bound|asymptotic bounds]] on the time required to multiply matrices have been known since the [[Strassen algorithm|Strassen's algorithm]] in the 1960s, but the optimal time (that is, the [[computational complexity of matrix multiplication]]) remains unknown. {{As of|2025|09}}, the best bound on the [[time complexity|asymptotic complexity]] of a matrix multiplication algorithm is {{math|O(''n''<sup>2.371339</sup>)}} time, given by Alman, Duan, [[Virginia Vassilevska Williams|Williams]], Xu, Xu, and Zhou.<ref name="alman2025">
+{{Cite conference
+ | last1 = Alman
+ | first1 = Josh
+ | last2 = Duan
+ | first2 = Ran
+ | last3 = Williams
+ | first3 = Virginia Vassilevska
+ | last4 = Xu
+ | first4 = Yinzhan
+ | last5 = Xu
+ | first5 = Zixuan
+ | last6 = Zhou
+ | first6 = Renfei
+ | title = More Asymmetry Yields Faster Matrix Multiplication
+ | book-title = Proceedings of the 2025 Annual ACM-SIAM Symposium on Discrete Algorithms (SODA)
+ | pages = 2005–2039
+ | year = <!-- assumed September?! --> 2025
+ | publisher = SIAM
+ | url = https://epubs.siam.org/doi/10.1137/1.9781611978322.63
+ | doi = 10.1137/1.9781611978322.63
+| url-access = subscription
+ }}
+</ref> However, this algorithm is a [[galactic algorithm]] because of the large constants and cannot be realized practically.
+
+==Iterative algorithm==
+The [[Matrix multiplication#Definition|definition of matrix multiplication]] is that if {{math|''C'' {{=}} ''AB''}} for an {{math|''n'' × ''m''}} matrix {{mvar|A}} and an {{math|''m'' × ''p''}} matrix {{mvar|B}}, then {{mvar|C}} is an {{math|''n'' × ''p''}} matrix with entries
+
+:<math>c_{ij} = \sum_{k=1}^m a_{ik} b_{kj}.</math>
+
+From this, a [[SIMPLE algorithm|simple algorithm]] can be constructed which loops over the indices {{mvar|i}} from 1 through {{mvar|n}} and {{mvar|j}} from 1 through {{mvar|p}}, computing the above using a nested loop:
+
+{{framebox|blue|margin-left=35px|width=400px}}
+* Input: matrices {{mvar|A}} and {{mvar|B}}
+* Let {{mvar|C}} be a new matrix of the appropriate size
+* For {{mvar|i}} from 1 to {{mvar|n}}:
+** For {{mvar|j}} from 1 to {{mvar|p}}:
+*** Let {{math|sum {{=}} 0}}
+*** For {{mvar|k}} from 1 to {{mvar|m}}:
+**** Set {{math|sum ← sum + ''A<sub>ik</sub>'' × ''B<sub>kj</sub>''}}
+*** Set {{math|''C<sub>ij</sub>'' ← sum}}
+* Return {{mvar|C}}
+{{frame-footer}}
+
+This algorithm takes [[time complexity|time]] {{math|Θ(''nmp'')}} (in [[asymptotic notation]]).<ref name="skiena"/> A common simplification for the purpose of [[analysis of algorithms|algorithm analysis]] is to assume that the inputs are all square matrices of size {{math|''n'' × ''n''}}, in which case the running time is {{math|Θ(''n''<sup>3</sup>)}}, i.e., cubic in the size of the dimension.<ref name="clrs">{{Introduction to Algorithms|3|pages=75–79}}</ref>
+
+===Cache behavior===
+[[File:Row_and_column_major_order.svg|thumb|upright|Illustration of [[row- and column-major order]] ]]
+The three loops in iterative matrix multiplication can be arbitrarily swapped with each other without an effect on correctness or asymptotic running time. However, the order can have a considerable impact on practical performance due to the [[locality of reference|memory access patterns]] and [[CPU cache|cache]] use of the algorithm;<ref name="skiena">{{cite book |first=Steven |last=Skiena |date=2012 |author-link=Steven Skiena |title=The Algorithm Design Manual |url=https://archive.org/details/algorithmdesignm00skie_772 |url-access=limited |publisher=Springer |pages=[https://archive.org/details/algorithmdesignm00skie_772/page/n56 45]–46, 401–3 |doi=10.1007/978-1-84800-070-4_4|chapter=Sorting and Searching |isbn=978-1-84800-069-8 }}</ref>
+which order is best also depends on whether the matrices are stored in [[row- and column-major order|row-major order, column-major order]], or a mix of both.
+
+In particular, in the idealized case of a [[CPU cache#Associativity|fully associative cache]] consisting of {{mvar|M}} bytes and {{mvar|b}} bytes per cache line (i.e. {{sfrac|''M''|''b''}} cache lines), the above algorithm is sub-optimal for {{mvar|A}} and {{mvar|B}} stored in row-major order. When {{math|''n'' > {{sfrac|''M''|''b''}}}}, every iteration of the inner loop (a simultaneous sweep through a row of {{mvar|A}} and a column of {{mvar|B}}) incurs a cache miss when accessing an element of {{mvar|B}}. This means that the algorithm incurs {{math|Θ(''n''<sup>3</sup>)}} cache misses in the worst case. {{As of|2010}}, the speed of memories compared to that of processors is such that the cache misses, rather than the actual calculations, dominate the running time for sizable matrices.<ref name="ocw">{{cite web|url=http://aka-ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-172-performance-engineering-of-software-systems-fall-2010/video-lectures/lecture-8-cache-efficient-algorithms/|title=6.172 Performance Engineering of Software Systems, Lecture 8|last1=Amarasinghe|first1=Saman|last2=Leiserson|first2=Charles|author2-link=Charles E. Leiserson|year=2010|website=MIT OpenCourseWare|publisher=Massachusetts Institute of Technology|access-date=27 January 2015|archive-date=7 October 2019|archive-url=https://web.archive.org/web/20191007160029/http://aka-ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-172-performance-engineering-of-software-systems-fall-2010/video-lectures/lecture-8-cache-efficient-algorithms/}}</ref>
+
+The optimal variant of the iterative algorithm for {{mvar|A}} and {{mvar|B}} in row-major layout is a ''[[loop tiling|tiled]]'' version, where the matrix is implicitly divided into square tiles of size {{math|{{radic|''M''}}}} by {{math|{{radic|''M''}}}}:<ref name="ocw"/><ref>{{cite conference |first1=Monica S. |last1=Lam |author1-link=Monica S. Lam|first2=Edward E. |last2=Rothberg |first3=Michael E. |last3=Wolf |title=The Cache Performance and Optimizations of Blocked Algorithms |conference=ASPLOS91: 4th Int'l Conference on Architecture Support for Programming Languages & Operating Systems |isbn=978-0-89791-380-5 |year=1991 |doi=10.1145/106972.106981}}</ref>
+
+{{framebox|blue|margin-left=35px|width=400px}}
+* Input: matrices {{mvar|A}} and {{mvar|B}}
+* Let {{mvar|C}} be a new matrix of the appropriate size
+* Pick a tile size {{math|''T'' {{=}} Θ({{radic|''M''}})}}
+* For {{mvar|I}} from 1 to {{mvar|n}} in steps of {{mvar|T}}:
+** For {{mvar|J}} from 1 to {{mvar|p}} in steps of {{mvar|T}}:
+*** For {{mvar|K}} from 1 to {{mvar|m}} in steps of {{mvar|T}}:
+**** Multiply {{math|''A''<sub>''I'':''I''+''T'', ''K'':''K''+''T''</sub>}} and {{math|''B''<sub>''K'':''K''+''T'', ''J'':''J''+''T''</sub>}} into {{math|''C''<sub>''I'':''I''+''T'', ''J'':''J''+''T''</sub>}}, that is:
+**** For {{mvar|i}} from {{mvar|I}} to {{math|min(''I'' + ''T'', ''n'')}}:
+***** For {{mvar|j}} from {{mvar|J}} to {{math|min(''J'' + ''T'', ''p'')}}:
+****** Let {{math|sum {{=}} 0}}
+****** For {{mvar|k}} from {{mvar|K}} to {{math|min(''K'' + ''T'', ''m'')}}:
+******* Set {{math|sum ← sum + ''A<sub>ik</sub>'' × ''B<sub>kj</sub>''}}
+****** Set {{math|''C<sub>ij</sub>'' ← ''C<sub>ij</sub>'' + sum}}
+* Return {{mvar|C}}
+{{frame-footer}}
+
+In the idealized cache model, this algorithm incurs only {{math|Θ({{sfrac|''n''<sup>3</sup>|''b'' {{radic|''M''}}}})}} cache misses; the divisor {{math|''b'' {{radic|''M''}}}} amounts to several orders of magnitude on modern machines, so that the actual calculations dominate the running time, rather than the cache misses.<ref name="ocw"/>
+
+==Divide-and-conquer algorithm==
+An alternative to the iterative algorithm is the [[divide-and-conquer algorithm]] for matrix multiplication. This relies on the [[block matrix|block partitioning]]
+
+:<math>C = \begin{pmatrix}
+C_{11} & C_{12} \\
+C_{21} & C_{22} \\
+\end{pmatrix},\,
+A = \begin{pmatrix}
+A_{11} & A_{12} \\
+A_{21} & A_{22} \\
+\end{pmatrix},\,
+B = \begin{pmatrix}
+B_{11} & B_{12} \\
+B_{21} & B_{22} \\
+\end{pmatrix},</math>
+
+which works for all square matrices whose dimensions are powers of two, i.e., the shapes are {{math|2<sup>''n''</sup> × 2<sup>''n''</sup>}} for some {{mvar|n}}. The matrix product is now
+
+:<math>\begin{pmatrix}
+C_{11} & C_{12} \\
+C_{21} & C_{22} \\
+\end{pmatrix} =
+\begin{pmatrix}
+A_{11} & A_{12} \\
+A_{21} & A_{22} \\
+\end{pmatrix} \begin{pmatrix}
+B_{11} & B_{12} \\
+B_{21} & B_{22} \\
+\end{pmatrix} = \begin{pmatrix}
+A_{11} B_{11} + A_{12} B_{21} & A_{11} B_{12} + A_{12} B_{22}\\
+A_{21} B_{11} + A_{22} B_{21} & A_{21} B_{12} + A_{22} B_{22}\\
+\end{pmatrix}
+</math>
+
+which consists of eight multiplications of pairs of submatrices, followed by an addition step. The divide-and-conquer algorithm computes the smaller multiplications [[recursion|recursively]], using the [[scalar multiplication]] {{math|''c''<sub>11</sub> {{=}} ''a''<sub>11</sub>''b''<sub>11</sub>}} as its base case.
+
+The complexity of this algorithm as a function of {{mvar|n}} is given by the recurrence<ref name="clrs"/>
+
+:<math>T(1) = \Theta(1);</math>
+:<math>T(n) = 8T(n/2) + \Theta(n^2),</math>
+
+accounting for the eight recursive calls on matrices of size {{math|''n''/2}} and {{math|Θ(''n''<sup>2</sup>)}} to sum the four pairs of resulting matrices element-wise. Application of the [[master theorem (analysis of algorithms)|master theorem for divide-and-conquer recurrences]] shows this recursion to have the solution {{math|Θ(''n''<sup>3</sup>)}}, the same as the iterative algorithm.<ref name="clrs"/>
+
+===Non-square matrices===
+A variant of this algorithm that works for matrices of arbitrary shapes and is faster in practice<ref name="ocw"/> splits matrices in two instead of four submatrices, as follows.<ref name="prokop">{{cite thesis |type=Master's |first=Harald |last=Prokop |author-link=Harald Prokop |title=Cache-Oblivious Algorithms |publisher=MIT |year=1999 |url=http://supertech.csail.mit.edu/papers/Prokop99.pdf |hdl=1721.1/80568 |archive-date=2023-11-22 |access-date=2015-01-28 |archive-url=https://web.archive.org/web/20231122003937/http://supertech.csail.mit.edu/papers/Prokop99.pdf }}</ref>
+Splitting a matrix now means dividing it into two parts of equal size, or as close to equal sizes as possible in the case of odd dimensions.
+
+{{framebox|blue|margin-left=35px|width=400px}}
+* Inputs: matrices {{mvar|A}} of size {{math|''n'' × ''m''}}, {{mvar|B}} of size {{math|''m'' × ''p''}}.
+* Base case: if {{math|max(''n'', ''m'', ''p'')}} is below some threshold, use an [[loop unrolling|unrolled]] version of the iterative algorithm.
+* Recursive cases:
+
+:* If {{math|max(''n'', ''m'', ''p'') {{=}} ''n''}}, split {{mvar|A}} horizontally:
+
+::<math>C = \begin{pmatrix} A_1 \\ A_2 \end{pmatrix} {B}
+          = \begin{pmatrix} A_1 B \\ A_2 B \end{pmatrix}</math>
+
+:* Else, if {{math|max(''n'', ''m'', ''p'') {{=}} ''p''}}, split {{mvar|B}} vertically:
+
+::<math>C = A \begin{pmatrix} B_1 & B_2 \end{pmatrix}
+          = \begin{pmatrix} A B_1 & A B_2 \end{pmatrix}  </math>
+
+:* Otherwise, {{math|max(''n'', ''m'', ''p'') {{=}} ''m''}}. Split {{mvar|A}} vertically and {{mvar|B}} horizontally:
+
+::<math>C = \begin{pmatrix} A_1 & A_2 \end{pmatrix} \begin{pmatrix} B_1 \\ B_2 \end{pmatrix}
+          = A_1 B_1 + A_2 B_2</math>
+{{frame-footer}}
+
+===Cache behavior===
+The cache miss rate of recursive matrix multiplication is the same as that of a [[Loop tiling|tiled]] iterative version, but unlike that algorithm, the recursive algorithm is [[Cache-oblivious algorithm|cache-oblivious]]:<ref name="prokop"/> there is no tuning parameter required to get optimal cache performance, and it behaves well in a [[multiprogramming]] environment where cache sizes are effectively dynamic due to other processes taking up cache space.<ref name="ocw"/>
+(The simple iterative algorithm is cache-oblivious as well, but much slower in practice if the matrix layout is not adapted to the algorithm.)
+
+The number of cache misses incurred by this algorithm, on a machine with {{mvar|M}} lines of ideal cache, each of size {{mvar|b}} bytes, is bounded by{{r|prokop}}{{rp|13}}
+
+:<math>\Theta \left(m + n + p + \frac{mn + np + mp}{b} + \frac{mnp}{b\sqrt{M}} \right)</math>
+
+==Sub-cubic algorithms==
+{{further|Computational complexity of matrix multiplication}}
+
+[[File:MatrixMultComplexity svg.svg|thumb|400px|right|Improvement of estimates of exponent {{math|ω}} over time for the computational complexity of matrix multiplication <math>O(n^\omega)</math>.]]
+
+Algorithms exist that provide better running times than the straightforward ones. The first to be discovered was [[Strassen algorithm|Strassen's algorithm]], devised by [[Volker Strassen]] in 1969 and often referred to as "fast matrix multiplication". It is based on a way of multiplying two 2×2 matrices which requires only 7 multiplications (instead of the usual 8), at the expense of several additional addition and [[subtraction]] operations. Applying this recursively gives an algorithm with a multiplicative cost of <math>O( n^{\log_{2}7}) \approx O(n^{2.807})</math>. Strassen's algorithm is more complex, and the [[numerical stability]] is reduced compared to the naïve algorithm,<ref>{{Citation | last1=Miller | first1=Webb|author1-link=Webb Miller | title=Computational complexity and numerical stability | year=1975 | journal=SIAM News | volume=4 | issue=2 | pages=97–107 | doi=10.1137/0204009}}</ref> but it is faster in cases where {{math|''n'' > 100}} or so<ref name="skiena"/> and appears in several libraries, such as [[Basic Linear Algebra Subprograms|BLAS]].<ref>{{cite book |last1=Press |first1=William H. |last2=Flannery |first2=Brian P. |last3=Teukolsky |first3=Saul A. |author3-link=Saul Teukolsky |last4=Vetterling |first4=William T. |title=Numerical Recipes: The Art of Scientific Computing |publisher=[[Cambridge University Press]] |edition=3rd |isbn=978-0-521-88068-8 |year=2007 |page=[https://archive.org/details/numericalrecipes00pres_033/page/n131 108]|title-link=Numerical Recipes }}</ref> It is very useful for large matrices over exact domains such as [[finite field]]s, where numerical stability is not an issue.
+
+Since Strassen's algorithm is actually used in practical numerical software and [[Computer algebra system|computer algebra systems]], improving on the constants hidden in the [[big O notation|big-O notation]] has its merits. A table that compares key aspects of the improved version based on recursive multiplication of 2×2-block matrices via 7 block matrix multiplications follows. As usual, <math>n</math> gives the dimensions of the matrix and <math>M</math> designates the memory size.
+
+{| class="wikitable"
+|+ Progress for Strassen-like recursive 2x2-block matrix multiplication
+|-
+! Year !! Reference !! #matrix multiplications per step !! #matrix additions per step  !! total arithmetic operations !! total I/O-complexity
+|-
+| 1969 || Strassen<ref>{{cite journal |last=Strassen |first=Volker |author-link=Volker Strassen|title=Gaussian Elimination is not Optimal |journal=Numer. Math. |volume=13 |issue= 4 |pages=354–356 |year=1969 |doi=10.1007/BF02165411 |s2cid=121656251 }}</ref> || 7 || 18 || <math>7n^{\log_2 7}-6n^2</math> || <math>6\left(\frac{\sqrt{3}n}{\sqrt{M}}\right)^{\log_2 7}\cdot M-18n^2 +3M</math>
+|-
+| 1971 || Winograd<ref>Private communication with {{cite journal |last=Probert|first=Robert L|title=On the additive complexity of matrix multiplication |journal=SIAM Journal on Computing |volume=5 |issue= 2 |pages=187–203 |year=1976 |doi=10.1137/0205016|doi-access=free }}</ref> || 7 || 15 || <math>6n^{\log_2 7}-5n^2</math> || <math>5\left(\frac{\sqrt{3}n}{\sqrt{M}}\right)^{\log_2 7}\cdot M-15n^2 +3M</math>
+|-
+| 2017 || Karstadt, Schwartz<ref>{{cite conference |url=https://dl.acm.org/doi/10.1145/3087556.3087579 |title=Matrix Multiplication, a Little Faster |last1=Karstadt |first1=Elaye |last2=Schwartz |first2=Oded |date=July 2017 |publisher= |book-title=Proceedings of the 29th ACM Symposium on Parallelism in Algorithms and Architectures |pages=101–110 |conference=SPAA '17 |doi=10.1145/3087556.3087579|url-access=subscription }}</ref> || 7 || 12 || <math>5n^{\log_2 7}-4n^2+3n^2\log_2n</math> || <math>4\left(\frac{\sqrt{3}n}{\sqrt{M}}\right)^{\log_2 7}\cdot M-12n^2 +3n^2\cdot\log_2\left(\frac{\sqrt{2}n}{\sqrt{M}}\right) +5M</math>
+|-
+| 2023 || Schwartz, Vaknin<ref>{{cite conference |title=Pebbling Game and Alternative Basis for High Performance Matrix Multiplication |last1=Schwartz |first1=Oded |last2=Vaknin |first2=Noa |date=2023 |publisher= |book-title=SIAM Journal on Scientific Computing |pages=C277–C303 |doi=10.1137/22M1502719}}</ref> || 7 || 12 || <math>5n^{\log_2 7}-4n^2+1.5n^2\log_2n</math> || <math>4\left(\frac{\sqrt{3}n}{\sqrt{M}}\right)^{\log_2 7}\cdot M-12n^2 +1.5n^2\cdot\log_2\left(\frac{\sqrt{2}n}{\sqrt{M}}\right) +5M</math>
+|}
+
+It is known that a Strassen-like algorithm with a 2×2-block matrix step requires at least 7 block matrix multiplications. In 1976 Probert<ref>{{cite journal |last=Probert |first=Robert L. |title=On the additive complexity of matrix multiplication |journal=SIAM J. Comput. |volume=5 |issue= 2 |pages=187–203 |year=1976 |doi=10.1137/0205016}}</ref> showed that such an algorithm requires at least 15 additions (including subtractions); however, a hidden assumption was that the blocks and the 2×2-block matrix are represented in the same basis. Karstadt and Schwartz computed in different bases and traded 3 additions for less expensive basis transformations. They also proved that one cannot go below 12 additions per step using different bases. In subsequent work Beniamini et el.<ref>{{cite arXiv|eprint=2008.03759 |last1=Beniamini |first1=Gal |last2=Cheng |first2=Nathan |last3=Holtz |first3=Olga |author3-link=Olga Holtz|last4=Karstadt |first4=Elaye |last5=Schwartz |first5=Oded |title=Sparsifying the Operators of Fast Matrix Multiplication Algorithms |date=2020 |class=cs.DS }}</ref> applied this base-change trick to more general decompositions than 2×2-block matrices and improved the leading constant for their run times.
+
+It is an open question in [[theoretical computer science]] how well Strassen's algorithm can be improved in terms of [[Time complexity|asymptotic complexity]]. The ''matrix multiplication exponent'', usually denoted <math>\omega</math>, is the smallest [[real number]] for which any <math>n\times n</math> matrix over a field can be multiplied together using <math>n^{\omega + o(1)}</math> field operations. The current best bound on <math>\omega</math> is <math>\omega < 2.371339</math>, by Alman, Duan, [[Virginia Vassilevska Williams|Williams]], Xu, Xu, and Zhou.<ref name="alman2025"/> This algorithm, like all other recent algorithms in this line of research, is a generalization of the Coppersmith–Winograd algorithm, which was given by [[Don Coppersmith]] and [[Shmuel Winograd]] in 1990.<ref name="coppersmith">{{Citation|doi=10.1016/S0747-7171(08)80013-2 |title=Matrix multiplication via arithmetic progressions |url=http://www.cs.umd.edu/~gasarch/TOPICS/ramsey/matrixmult.pdf |year=1990 |last1=Coppersmith |first1=Don |author1-link=Don Coppersmith|last2=Winograd |first2=Shmuel|author2-link=Shmuel Winograd |journal=Journal of Symbolic Computation |volume=9|issue=3|page=251|doi-access=free }}</ref> The conceptual idea of these algorithms is similar to Strassen's algorithm: a way is devised for multiplying two {{math|''k'' × ''k''}}-matrices with fewer than {{math|''k''<sup>3</sup>}} multiplications, and this technique is applied recursively. However, the constant coefficient hidden by the [[Big O notation|big-O notation]] is so large that these algorithms are only worthwhile for matrices that are too large to handle on present-day computers.<ref>{{citation
+ | last = Iliopoulos
+ | first = Costas S.
+ | doi = 10.1137/0218045
+ | issue = 4
+ | journal = SIAM Journal on Computing
+ | mr = 1004789
+ | quote = The Coppersmith–Winograd algorithm is not practical, due to the very large hidden constant in the upper bound on the number of multiplications required.
+ | pages = 658–669
+ | title = Worst-case complexity bounds on algorithms for computing the canonical structure of finite abelian groups and the Hermite and Smith normal forms of an integer matrix
+ | url = http://www.williamstein.org/home/wstein/www/home/pernet/Papers/Hermite/Iliopoulos88.pdf
+ | volume = 18
+ | year = 1989
+ | access-date = 2015-01-16
+ | archive-url = https://web.archive.org/web/20140305182030/http://www.williamstein.org/home/wstein/www/home/pernet/Papers/Hermite/Iliopoulos88.pdf
+ | archive-date = 2014-03-05
+ }}</ref><ref name="robinson">{{Citation | last=Robinson | first=Sara | title=Toward an Optimal Algorithm for Matrix Multiplication | url=https://archive.siam.org/pdf/news/174.pdf | date=November 2005 | journal=SIAM News | volume=38 | issue=9 | quote=Even if someone manages to prove one of the conjectures—thereby demonstrating that {{math|1=''ω'' = 2}}—the wreath product approach is unlikely to be applicable to the large matrix problems that arise in practice. [...] the input matrices must be astronomically large for the difference in time to be apparent.}}</ref> [[Victor Pan]] proposed so-called feasible sub-cubic matrix multiplication algorithms with an exponent slightly above 2.77, but in return with a much smaller hidden constant coefficient.<ref>{{Citation | last1=Laderman | first1=Julian | last2=Pan  | first2=Victor  |last3=Sha | first3=Xuan-He | title=On practical algorithms for accelerated matrix multiplication | year=1992 | journal=Linear Algebra and Its Applications | volume=162-164 | pages=557–588 | doi=10.1016/0024-3795(92)90393-O}}</ref>
+ 
+[[Freivalds' algorithm]] is a simple [[Monte Carlo algorithm]] that, given matrices {{mvar|A}}, {{mvar|B}} and {{mvar|C}}, verifies in {{math|Θ(''n''<sup>2</sup>)}} time if {{math|''AB'' {{=}} ''C''}}.
+
+=== AlphaTensor ===
+
+In 2022, [[DeepMind]] introduced AlphaTensor, a [[neural network]] that used a single-player game analogy to invent thousands of matrix multiplication algorithms, including some previously discovered by humans and some that were not.<ref>{{Cite web |title=Discovering novel algorithms with AlphaTensor |url=https://www.deepmind.com/blog/discovering-novel-algorithms-with-alphatensor |access-date=2022-11-01 |website=www.deepmind.com |date=5 October 2022 |language=en}}</ref> Operations were restricted to the {{Clarify|reason= which field is that?|text= non-commutative ground field|date= May 2025}} (normal arithmetic) and [[GF(2)|finite field <math>\mathbb Z/2\mathbb Z</math>]] (mod 2 arithmetic). The best "practical" (explicit low-rank decomposition of a matrix multiplication tensor) algorithm found ran in O(n<sup>2.778</sup>).<ref name="alphatensor">{{Cite journal |last1=Fawzi |first1=Alhussein |last2=Balog |first2=Matej |last3=Huang |first3=Aja |last4=Hubert |first4=Thomas |last5=Romera-Paredes |first5=Bernardino |last6=Barekatain |first6=Mohammadamin |last7=Novikov |first7=Alexander |last8=R. Ruiz |first8=Francisco J. |last9=Schrittwieser |first9=Julian |last10=Swirszcz |first10=Grzegorz |last11=Silver |first11=David |last12=Hassabis |first12=Demis |last13=Kohli |first13=Pushmeet |date=October 2022 |title=Discovering faster matrix multiplication algorithms with reinforcement learning |journal=Nature |volume=610 |issue=7930 |pages=47–53 |doi=10.1038/s41586-022-05172-4 |pmid=36198780 |pmc=9534758 |bibcode=2022Natur.610...47F |issn=1476-4687}}</ref> Finding low-rank decompositions of such tensors (and beyond) is NP-hard; optimal multiplication even for 3×3 matrices [[Computational complexity of matrix multiplication#Minimizing number of multiplications|remains unknown]], even in commutative field.<ref name="alphatensor"/> On 4×4 matrices, AlphaTensor unexpectedly discovered a solution with 47 multiplication steps, an improvement over the 49 required with Strassen's algorithm of 1969, albeit restricted to mod 2 arithmetic. Similarly, AlphaTensor solved 5×5 matrices with 96 rather than Strassen's 98 steps. Based on the surprising discovery that such improvements exist, other researchers were quickly able to find a similar independent 4×4 algorithm, and separately tweaked Deepmind's 96-step 5×5 algorithm down to 95 steps in mod 2 arithmetic and to 97<ref>{{Cite arXiv |last1=Kauers |first1=Manuel |last2=Moosbauer |first2=Jakob |date=2022-12-02 |title=Flip Graphs for Matrix Multiplication |class=cs.SC |eprint=2212.01175 }}</ref> in normal arithmetic.<ref>{{cite news |last1=Brubaker |first1=Ben |title=AI Reveals New Possibilities in Matrix Multiplication |url=https://www.quantamagazine.org/ai-reveals-new-possibilities-in-matrix-multiplication-20221123/ |access-date=26 November 2022 |work=Quanta Magazine |date=23 November 2022 |language=en}}</ref> Some algorithms were completely new: for example, (4, 5, 5) was improved to 76 steps from a baseline of 80 in both normal and mod 2 arithmetic.
+
+==Parallel and distributed algorithms==
+
+===Shared-memory parallelism===
+The [[#Divide-and-conquer algorithm|divide-and-conquer algorithm]] sketched earlier can be [[parallel algorithm|parallelized]] in two ways for [[shared-memory multiprocessor]]s. These are based on the fact that the eight recursive matrix multiplications in
+
+:<math>\begin{pmatrix}
+A_{11} B_{11} + A_{12} B_{21} & A_{11} B_{12} + A_{12} B_{22}\\
+A_{21} B_{11} + A_{22} B_{21} & A_{21} B_{12} + A_{22} B_{22}\\
+\end{pmatrix}
+</math>
+
+can be performed independently of each other, as can the four summations (although the algorithm needs to "join" the multiplications before doing the summations). Exploiting the full parallelism of the problem, one obtains an algorithm that can be expressed in [[fork–join model|fork–join style]] [[pseudocode]]:<ref name="cilk"/>
+
+{{framebox|blue|margin-left=35px|width=400px}}
+'''Procedure''' {{math|multiply(''C'', ''A'', ''B'')}}:
+
+* Base case: if {{math|''n'' {{=}} 1}}, set {{math|''c''<sub>11</sub> ← ''a''<sub>11</sub> × ''b''<sub>11</sub>}} (or multiply a small block matrix).
+* Otherwise, allocate space for a new matrix {{mvar|T}} of shape {{math|''n'' × ''n''}}, then:
+** Partition {{mvar|A}} into {{math|''A''<sub>11</sub>}}, {{math|''A''<sub>12</sub>}}, {{math|''A''<sub>21</sub>}}, {{math|''A''<sub>22</sub>}}.
+** Partition {{mvar|B}} into {{math|''B''<sub>11</sub>}}, {{math|''B''<sub>12</sub>}}, {{math|''B''<sub>21</sub>}}, {{math|''B''<sub>22</sub>}}.
+** Partition {{mvar|C}} into {{math|''C''<sub>11</sub>}}, {{math|''C''<sub>12</sub>}}, {{math|''C''<sub>21</sub>}}, {{math|''C''<sub>22</sub>}}.
+** Partition {{mvar|T}} into {{math|''T''<sub>11</sub>}}, {{math|''T''<sub>12</sub>}}, {{math|''T''<sub>21</sub>}}, {{math|''T''<sub>22</sub>}}.
+** Parallel execution:
+*** ''Fork'' {{math|multiply(''C''<sub>11</sub>, ''A''<sub>11</sub>, ''B''<sub>11</sub>)}}.
+*** ''Fork'' {{math|multiply(''C''<sub>12</sub>, ''A''<sub>11</sub>, ''B''<sub>12</sub>)}}.
+*** ''Fork'' {{math|multiply(''C''<sub>21</sub>, ''A''<sub>21</sub>, ''B''<sub>11</sub>)}}.
+*** ''Fork'' {{math|multiply(''C''<sub>22</sub>, ''A''<sub>21</sub>, ''B''<sub>12</sub>)}}.
+*** ''Fork'' {{math|multiply(''T''<sub>11</sub>, ''A''<sub>12</sub>, ''B''<sub>21</sub>)}}.
+*** ''Fork'' {{math|multiply(''T''<sub>12</sub>, ''A''<sub>12</sub>, ''B''<sub>22</sub>)}}.
+*** ''Fork'' {{math|multiply(''T''<sub>21</sub>, ''A''<sub>22</sub>, ''B''<sub>21</sub>)}}.
+*** ''Fork'' {{math|multiply(''T''<sub>22</sub>, ''A''<sub>22</sub>, ''B''<sub>22</sub>)}}.
+** ''Join'' (wait for parallel forks to complete).
+** {{math|add(''C'', ''T'')}}.
+** Deallocate {{mvar|T}}.
+
+'''Procedure''' {{math|add(''C'', ''T'')}} adds {{mvar|T}} into {{mvar|C}}, element-wise:
+
+* Base case: if {{math|''n'' {{=}} 1}}, set {{math|''c''<sub>11</sub> ← ''c''<sub>11</sub> + ''t''<sub>11</sub>}} (or do a short loop, perhaps unrolled).
+* Otherwise:
+** Partition {{mvar|C}} into {{math|''C''<sub>11</sub>}}, {{math|''C''<sub>12</sub>}}, {{math|''C''<sub>21</sub>}}, {{math|''C''<sub>22</sub>}}.
+** Partition {{mvar|T}} into {{math|''T''<sub>11</sub>}}, {{math|''T''<sub>12</sub>}}, {{math|''T''<sub>21</sub>}}, {{math|''T''<sub>22</sub>}}.
+** In parallel:
+*** ''Fork'' {{math|add(''C''<sub>11</sub>, ''T''<sub>11</sub>)}}.
+*** ''Fork'' {{math|add(''C''<sub>12</sub>, ''T''<sub>12</sub>)}}.
+*** ''Fork'' {{math|add(''C''<sub>21</sub>, ''T''<sub>21</sub>)}}.
+*** ''Fork'' {{math|add(''C''<sub>22</sub>, ''T''<sub>22</sub>)}}.
+** ''Join''.
+{{frame-footer}}
+
+Here, ''fork'' is a keyword that signal a computation may be run in parallel with the rest of the function call, while ''join'' waits for all previously "forked" computations to complete. {{math|partition}} achieves its goal by pointer manipulation only.
+
+This algorithm has a [[critical path length]] of {{math|Θ(log<sup>2</sup> ''n'')}} steps, meaning it takes that much time on an ideal machine with an infinite number of processors; therefore, it has a maximum possible [[speedup]] of {{math|Θ(''n''<sup>3</sup>/log<sup>2</sup> ''n'')}} on any real computer. The algorithm isn't practical due to the communication cost inherent in moving data to and from the temporary matrix {{mvar|T}}, but a more practical variant achieves {{math|Θ(''n''<sup>2</sup>)}} speedup, without using a temporary matrix.<ref name="cilk">{{cite thesis |type=Ph.D. |last=Randall |first=Keith H. |title=Cilk: Efficient Multithreaded Computing |publisher=Massachusetts Institute of Technology |year=1998 |pages=54–57 |url=http://supertech.csail.mit.edu/papers/randall-phdthesis.pdf |hdl=1721.1/47519 |archive-date=2020-11-06 |access-date=2015-01-16 |archive-url=https://web.archive.org/web/20201106232735/http://supertech.csail.mit.edu/papers/randall-phdthesis.pdf }}</ref>
+
+[[File:Block matrix multiplication.svg|thumb|Block matrix multiplication. In the 2D algorithm, each processor is responsible for one submatrix of {{mvar|C}}. In the 3D algorithm, every pair of submatrices from {{mvar|A}} and {{mvar|B}} that is multiplied is assigned to one processor.]]
+
+===Communication-avoiding and distributed algorithms===
+On modern architectures with hierarchical memory, the cost of loading and storing input matrix elements tends to dominate the cost of arithmetic. On a single machine this is the amount of data transferred between RAM and cache, while on a [[distributed memory]] multi-node machine it is the amount transferred between nodes; in either case it is called the ''communication bandwidth''. The naïve algorithm using three nested loops uses {{math|Ω(''n''<sup>3</sup>)}} communication bandwidth.
+
+[[Cannon's algorithm]], also known as the ''2D algorithm'', is a [[communication-avoiding algorithm]] that partitions each input matrix into a block matrix whose elements are submatrices of size {{math|{{sqrt|''M''/3}}}} by {{math|{{sqrt|''M''/3}}}}, where {{math|''M''}} is the size of fast memory.<ref>{{cite thesis |first=Lynn Elliot |last=Cannon |title=A cellular computer to implement the Kalman Filter Algorithm |date=14 July 1969 |type=Ph.D. |publisher=Montana State University |url=https://dl.acm.org/doi/abs/10.5555/905686 }}</ref> The naïve algorithm is then used over the block matrices, computing products of submatrices entirely in fast memory. This reduces communication bandwidth to {{math|''O''(''n''<sup>3</sup>/{{sqrt|''M''}})}}, which is asymptotically optimal (for algorithms performing {{math|Ω(''n''<sup>3</sup>)}} computation).<ref>{{cite book|last1=Hong|first1=J. W.|first2=H. T. |last2=Kung|author2-link=H. T. Kung|chapter=I/O complexity: The red-blue pebble game |title=Proceedings of the thirteenth annual ACM symposium on Theory of computing - STOC '81 |year=1981|pages=326–333|chapter-url=https://apps.dtic.mil/dtic/tr/fulltext/u2/a104739.pdf|archive-url=https://web.archive.org/web/20191215182754/https://apps.dtic.mil/dtic/tr/fulltext/u2/a104739.pdf|url-status=live|archive-date=December 15, 2019 |doi=10.1145/800076.802486|s2cid=8410593 }}</ref><ref name=irony>{{cite journal|last1=Irony|first1=Dror|first2=Sivan |last2=Toledo |first3=Alexander |last3=Tiskin |title=Communication lower bounds for distributed-memory matrix multiplication|journal=J. Parallel Distrib. Comput.|date=September 2004|volume=64|issue=9|pages=1017–26|doi=10.1016/j.jpdc.2004.03.021}}</ref>
+
+In a distributed setting with {{mvar|p}} processors arranged in a {{math|{{sqrt|''p''}}}} by {{math|{{sqrt|''p''}}}} 2D mesh, one submatrix of the result can be assigned to each processor, and the product can be computed with each processor transmitting {{math|''O''(''n''<sup>2</sup>/{{sqrt|''p''}})}} words, which is asymptotically optimal assuming that each node stores the minimum {{math|''O''(''n''<sup>2</sup>/''p'')}} elements.<ref name=irony/> This can be improved by the ''3D algorithm,'' which arranges the processors in a 3D cube mesh, assigning every product of two input submatrices to a single processor. The result submatrices are then generated by performing a reduction over each row.<ref name="Agarwal">{{cite journal|last1=Agarwal|first1=R.C.|first2=S. M. |last2=Balle |first3=F. G. |last3=Gustavson |first4=M. |last4=Joshi |first5=P. |last5=Palkar |title=A three-dimensional approach to parallel matrix multiplication|journal=IBM J. Res. Dev.|date=September 1995|volume=39|issue=5|pages=575–582|doi=10.1147/rd.395.0575}}</ref> This algorithm transmits {{math|''O''(''n''<sup>2</sup>/''p''<sup>2/3</sup>)}} words per processor, which is asymptotically optimal.<ref name=irony/> However, this requires replicating each input matrix element {{math|''p''<sup>1/3</sup>}} times, and so requires a factor of {{math|''p''<sup>1/3</sup>}} more memory than is needed to store the inputs. This algorithm can be combined with Strassen to further reduce runtime.<ref name="Agarwal"/> "2.5D" algorithms provide a continuous tradeoff between memory usage and communication bandwidth.<ref>{{cite conference|last1=Solomonik|first1=Edgar|first2=James |last2=Demmel|author2-link=James Demmel|title=Communication-optimal parallel 2.5D matrix multiplication and LU factorization algorithms|book-title=Proceedings of the 17th International Conference on Parallel Processing|year=2011|volume=Part II|pages=90–109 |doi=10.1007/978-3-642-23397-5_10 |isbn=978-3-642-23397-5 |url=https://solomonik.cs.illinois.edu/talks/europar-sep-2011.pdf}}</ref> On modern distributed computing environments such as [[MapReduce]], specialized multiplication algorithms have been developed.<ref>{{cite web |last1=Bosagh Zadeh|first1=Reza|last2=Carlsson|first2=Gunnar|title=Dimension Independent Matrix Square Using MapReduce|year=2013|arxiv=1304.1467|bibcode=2013arXiv1304.1467B|url=https://stanford.edu/~rezab/papers/dimsum.pdf|access-date=12 July 2014}}</ref>
+
+===Algorithms for meshes===
+[[File:Matrix multiplication on a cross-wire two-dimensional array.png|thumb|240px|Matrix multiplication completed in 2n-1 steps for two n×n matrices on a cross-wired  mesh.]]
+
+There are a variety of algorithms for multiplication on [[Mesh networking|meshes]]. For multiplication of two ''n''×''n'' on a standard two-dimensional mesh using the 2D [[Cannon's algorithm]], one can complete the multiplication in 3''n''-2 steps although this is reduced to half this number for repeated computations.<ref>{{cite journal | last1 = Bae | first1 = S.E. | last2 = Shinn | first2 = T.-W. | last3 = Takaoka | first3 = T. | year = 2014 | title = A faster parallel algorithm for matrix multiplication on a mesh array | url = https://www.sciencedirect.com/science/article/pii/S1877050914003858/pdf  | journal = Procedia Computer Science | volume = 29 | pages = 2230–40 | doi = 10.1016/j.procs.2014.05.208 | doi-access = free }}</ref> The standard array is inefficient because the data from the two matrices does not arrive simultaneously and it must  be padded with zeroes.
+
+The result is even faster on a two-layered cross-wired mesh, where only 2''n''-1 steps are needed.<ref>{{cite journal | last1 = Kak | first1 = S | year = 1988 | title = A two-layered mesh array for matrix multiplication | journal = Parallel Computing | volume = 6 | issue = 3| pages = 383–5 | doi = 10.1016/0167-8191(88)90078-6 }}</ref> The performance improves further for repeated computations leading to 100% efficiency.<ref>{{cite arXiv |last=Kak |first=S. |date=2014 |title=Efficiency of matrix multiplication on the cross-wired mesh array |class=cs.DC |eprint=1411.3273}}</ref> The cross-wired mesh array may be seen as a special case of a non-planar (i.e. multilayered) processing structure.<ref>{{cite journal | last1 = Kak | first1 = S | year = 1988 | title = Multilayered array computing | journal = Information Sciences | volume = 45 | issue = 3| pages = 347–365 | doi = 10.1016/0020-0255(88)90010-2 }}</ref>
+
+In a 3D mesh with ''n''<sup>3</sup> processing elements, two matrices can be multiplied in <math>\mathcal{O}(\log n)</math> using the DNS algorithm.<ref>{{cite journal | last1 = Dekel | first1 = Eliezer | last2 = Nassimi | first2 = David | last3 = Sahni | first3 = Sartaj | year = 1981 | title = Parallel Matrix and Graph Algorithms | journal = SIAM Journal on Computing | volume = 10 | issue = 4  | pages=657–675 | doi = 10.1137/0210049}}</ref>
+
+==See also==
+* [[Computational complexity of mathematical operations]]
+* [[Computational complexity of matrix multiplication]]
+* [[CYK algorithm#Valiant's algorithm|CYK algorithm § Valiant's algorithm]]
+* [[Matrix chain multiplication]]
+* [[Method of Four Russians]]
+* [[Multiplication algorithm]]
+* [[Sparse matrix–vector multiplication]]
+
+==References==
+{{reflist|30em}}
+
+==Further reading==
+{{refbegin}}
+* {{Cite journal| doi = 10.1016/j.parco.2008.10.002| title = A class of parallel tiled linear algebra algorithms for multicore architectures| journal = Parallel Computing| volume = 35| pages = 38–53| year = 2009| last1 = Buttari | first1 = Alfredo| last2 = Langou | first2 = Julien| last3 = Kurzak | first3 = Jakub| last4 = Dongarra | first4 = Jack |author-link4=Jack Dongarra| arxiv = 0709.1272| s2cid = 955}}
+* {{Cite journal | doi = 10.1145/1356052.1356053| title = Anatomy of high-performance matrix multiplication| journal = ACM Transactions on Mathematical Software| volume = 34| issue = 3| pages =1–25| year = 2008| last1 = Goto | first1 = Kazushige| last2 = van de Geijn | first2 = Robert A.| s2cid = 9359223}}
+* {{Cite journal | doi = 10.1145/2764454 | title = BLIS: A Framework for Rapidly Instantiating BLAS Functionality| journal = ACM Transactions on Mathematical Software| volume = 41| issue = 3| pages =1–33| year = 2015| last1 = Van Zee  | first1 = Field G.| last2 = van de Geijn | first2 = Robert A.| s2cid = 1242360}}
+* [https://github.com/flame/how-to-optimize-gemm How To Optimize GEMM]
+{{refend}}
+
+{{Numerical linear algebra}}
+
+[[Category:Numerical linear algebra]]
+[[Category:Matrix theory]]
+[[Category:Matrix multiplication algorithms| ]]
+[[Category:Articles with example pseudocode]]

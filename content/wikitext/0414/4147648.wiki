@@ -1,0 +1,368 @@
+<!-- wikipedia: en
+     page: 4147648
+     title: Petrick's method
+     revision: 1332755926
+     timestamp: 2026-01-13T17:44:56Z
+     history: https://en.wikipedia.org/w/index.php?curid=4147648&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1332755926 -->
+{{short description|Minimization algorithm for Boolean algebra}}
+{{redirect-distinguish|Branch-and-bound method|Branch and bound}}
+{{Use dmy dates|date=May 2019|cs1-dates=y}}
+{{Use list-defined references|date=January 2022}}
+In [[Boolean algebra (logic)|Boolean algebra]], '''Petrick's method'''<ref name="Lind_1977"/> (also known as ''Petrick function''<ref name="Svoboda_1979_Petrick"/> or ''branch-and-bound'' method) is a technique described by [[Stanley R. Petrick]] (1931<!-- *1931-08-16 or 1931-08-06 Cedar Rapids, Iowa -->–2006<!-- +2006-07-27 Denver, Colorado -->)<ref name="Petrick_Bio"/><ref name="Petrick_Obit"/> in 1956<ref name="Petrick_1956"/><ref name="Lewin_1974"/> for determining all minimum sum-of-products solutions from a [[Quine–McCluskey algorithm|prime implicant chart]].<ref name="Roth_1992"/> Petrick's method is very tedious for large charts, but it is easy to implement on a computer.<ref name="Roth_1992"/> The method was improved by [[Insley B. Pyne]] and [[Edward Joseph McCluskey]] in 1962.<ref name="Pyne_1962"/><ref name="Choudhury_1968"/>
+
+==Algorithm==
+# Reduce the prime implicant chart by eliminating the essential prime implicant rows and the corresponding columns.<ref name="Roth_1992"/>
+# Label the rows of the reduced prime implicant chart <math>P_1</math>, <math>P_2</math>, <math>P_3</math>, <math>P_4</math>, etc.<ref name="Roth_1992"/>
+# Form a logical function <math>P</math> which is true when all the columns are covered. ''P'' consists of a product of sums where each sum term has the form <math>(P_{i0} + P_{i1} + </math><math>\cdots</math><math> + P_{iN})</math>, where each <math>P_{ij}</math> represents a row covering column <math>i</math>.<ref name="Roth_1992"/>
+# Apply [[De Morgan's Laws]] to expand <math>P</math> into a sum of products<ref group="nb" name="NB_Exponential"/> and minimize by applying the [[absorption law]] <math>X + XY = X</math>.<ref name="Roth_1992"/>
+# Each term in the result represents a solution, that is, a set of rows which covers all of the minterms in the table. To determine the minimum solutions, first find those terms which contain a minimum number of prime implicants.<ref name="Roth_1992"/>
+# Next, for each  of the terms found in step five, count the number of literals in each prime implicant and find the total number of literals.<ref name="Roth_1992" />
+# Choose the term or terms composed of the minimum total number of literals, and write out the corresponding sums of prime implicants.<ref name="Roth_1992"/>
+
+== Pseudocode ==
+The algorithm above can be implemented with the [[C Sharp (programming language)|C#]] as shown below:<syntaxhighlight lang="csharp" line="1">
+private string DoPetriksMethod(
+    Dictionary<string, string> PIchart,
+    List<string> epis,
+    List<string> primeImplicants,
+    List<string> minterms)
+{
+    PIchart = RemoveEPIs(PIchart, epis, minterms);
+    string minimisedExpression;
+    Dictionary<char, string> termsImplicantMapping = MapTermsToImplicants(primeImplicants);
+    List<Bracket> productOfSums = GetProductOfSums(termsImplicantMapping, PIchart);
+    string[] sumOfproducts = GetSumOfProducts(productOfSums);
+    string minProduct = GetMinProduct(sumOfproducts);
+    minimisedExpression = GetFinalExpression(termsImplicantMapping, minProduct);
+    return minimisedExpression;
+}
+
+private static Dictionary<char, string> MapTermsToImplicants(List<string> primeImplicants)
+{
+    var mapping = new Dictionary<char, string>();
+    char minChar = (char)(primeImplicants[0].Length + 65);
+    for (var i = 0; i < primeImplicants.Count; i++)
+    {
+        mapping.Add(minChar, primeImplicants[i]);
+        minChar++;
+    }
+    return mapping;
+}
+
+private static List<Bracket> GetProductOfSums(Dictionary<char, string> termToImplicantMap, Dictionary<string, string> primeImplicantChart)
+{
+    var productOfSums = new List<Bracket>();
+    List<Bracket> sumsToAdd;
+    string primeImplicant;
+    foreach (string key in primeImplicantChart.Keys)
+    {
+        primeImplicant = primeImplicantChart[key];
+        for (var i = 0; i < primeImplicant.Length; i++)
+        {
+            if (primeImplicant[i] == '1')
+            {
+                sumsToAdd = GetSumsToAdd(primeImplicantChart, termToImplicantMap, key, i);
+                AddSumsToList(productOfSums, sumsToAdd);
+            }
+        }
+    }
+    return productOfSums;
+}
+
+private static void AddSumsToList(List<Bracket> productOfSums, List<Bracket> sumsToAdd)
+{
+    foreach (Bracket s in sumsToAdd)
+    {
+        if (!productOfSums.Contains(s))
+        {
+            productOfSums.Add(s);
+        }
+    }
+}
+
+private static List<Bracket> GetSumsToAdd(Dictionary<string, string> PIchart, Dictionary<char, string> termToImplicantMap, string key, int positionWithinKey)
+{
+    var sumsToAdd = new List<Bracket>();
+    Bracket sum;
+    string implicant;
+    char term1;
+    char term2;
+    for (var i = 0; i < PIchart.Keys.Count; i++)
+    {
+        implicant = PIchart.Keys.ToArray()[i];
+        if (PIchart[implicant][positionWithinKey] == '1')
+        {
+            term1 = GetTermFromImplicant(termToImplicantMap, key);
+            term2 = GetTermFromImplicant(termToImplicantMap, implicant);
+            if (term1 != term2)
+            {
+                sum = new Bracket(term1, term2);
+                sumsToAdd.Add(sum);
+            }
+        }
+    }
+    return sumsToAdd;
+}
+
+private static char GetTermFromImplicant(Dictionary<char, string> termToImplicantMap, string implicant)
+{
+    string[] implicants = termToImplicantMap.Values.ToArray();
+    char[] keys = termToImplicantMap.Keys.ToArray();
+    for (var i = 0; i < termToImplicantMap.Values.Count; i++)
+    {
+        if (implicants[i] == implicant)
+        {
+            return keys[i];
+        }
+    }
+    throw new Exception("Could not map implicant to key");
+}
+
+private static string[] GetSumOfProducts(List<Bracket> productOfSums)
+{
+    Bracket b1;
+    Bracket b2;
+    Bracket mergedTerm;
+    bool merged = true;
+    while (merged)
+    {
+        merged = false;
+        for (var i = 0; i < productOfSums.Count - 1; i++)
+        {
+            for (var c = i + 1; c < productOfSums.Count; c++)
+            {
+                b1 = productOfSums[i];
+                b2 = productOfSums[c];
+                if (b1.term1 == b2.term1 != (b1.term2 == b2.term2) != (b1.term1 == b2.term2) != (b1.term2 == b2.term1))
+                {
+                    mergedTerm = MergeBrackets(b1, b2);
+                    productOfSums.Add(mergedTerm);
+                    productOfSums.Remove(b1);
+                    productOfSums.Remove(b2);
+                    merged = true;
+                    i = c + 1;
+                    c = i + 1;
+                }
+            }
+        }
+    }
+    List<List<string>> stringProducts = ConvertBracketsToString(productOfSums);
+    List<List<string>> sumOfProducts = RecursiveDistributiveLaw(stringProducts);
+    return sumOfProducts[0].ToArray();
+}
+
+private static Bracket MergeBrackets(Bracket b1, Bracket b2)
+{
+    var b = new Bracket();
+    if (b1.term1 == b2.term1)
+    {
+        b.term1 = b1.term1;
+        b.term2 = b1.term2 + b2.term2;
+        return b;
+    }
+    else
+    {
+        b.term1 = b1.term2;
+        b.term2 = b1.term1 + b2.term2;
+        return b;
+    }
+}
+
+private static List<List<string>> ConvertBracketsToString(List<Bracket> brackets)
+{
+    var result = new List<List<string>>();
+    List<string> tmp;
+    foreach (Bracket b in brackets)
+    {
+        tmp = new List<string> { b.term1, b.term2 };
+        result.Add(tmp);
+    }
+    return result;
+}
+
+private static List<List<string>> RecursiveDistributiveLaw(List<List<string>> brackets)
+{
+    var lls = new List<List<string>>();
+    if (brackets.Count > 1)
+    {
+        lls.Add(SingleDistributiveLaw(brackets[0], brackets[1]));
+        brackets.RemoveAt(0);
+        brackets.RemoveAt(0);
+        lls.AddRange(brackets);
+        return RecursiveDistributiveLaw(lls);
+    }
+    else
+    {
+        return brackets;
+    }
+}
+
+private static List<string> SingleDistributiveLaw(List<string> b1, List<string> b2)
+{
+    var lls = new List<string>();
+    for (var i = 0; i < b1.Count; i++)
+    {
+        for (var j = 0; j < b2.Count; j++)
+        {
+            lls.Add(ApplyDistributiveLaw(b1[i], b2[j]));
+        }
+    }
+    return lls;
+}
+
+private static string ApplyDistributiveLaw(string a, string b)
+{
+    string tempResult = a + b;
+    string finalResult = "";
+    foreach (char c in tempResult)
+    {
+        if (!finalResult.Contains(c))
+        {
+            finalResult += c;
+        }
+    }
+    return finalResult;
+}
+
+private static string GetMinProduct(string[] sumOfProducts)
+{
+    string minProduct = sumOfProducts[0];
+    foreach (string p in sumOfProducts)
+    {
+        if (p.Length < minProduct.Length)
+        {
+            minProduct = p;
+        }
+    }
+    return minProduct;
+}
+
+private string GetFinalExpression(Dictionary<char, string> termToImplicantMap, string minProduct)
+{
+    string subExpression;
+    string implicant;
+    string result = "";
+    for (var i = 0; i < minProduct.Length; i++)
+    {
+        implicant = termToImplicantMap[minProduct[i]];
+        subExpression = ConvertImplicantToExpression(implicant);
+        result += subExpression;
+        if (i < minProduct.Length - 1)
+        {
+            result += " + ";
+        }
+    }
+    return result;
+}
+
+</syntaxhighlight>The following code snippet assumes access to the <code>bracket</code> struct.<syntaxhighlight lang="csharp" line="1">
+    struct Bracket
+    {
+        public Bracket(char term1, char term2)
+        {
+            // Sorting into alphabetical order. This can be done as OR is commutative. 
+            if (term1 < term2)
+            {
+                this.term1 = term1.ToString();
+                this.term2 = term2.ToString();
+            }
+            else
+            {
+                this.term1 = term2.ToString();
+                this.term2 = term1.ToString();
+            }
+        }
+        // The two terms that make up the brackets. These are assigned to when the
+        // product of sums is created in Petrick's method. 
+        public string term1;
+        public string term2;
+    }
+
+</syntaxhighlight>
+
+==Example of Petrick's method==
+
+Following is the function we want to reduce:<ref name="Frenzel_2007"/>
+
+:<math>f(A,B,C) =\sum m(0,1,2,5,6,7) = A'B'C' + A'B'C + A'BC' + AB'C + ABC' + ABC</math>
+
+The prime implicant chart from the [[Quine-McCluskey algorithm]] is as follows:
+
+:{| class="wikitable" style="text-align:center;"
+|-
+!                        || 0         || 1        || 2        || 5        || 6       || 7        || ⇒ || A         || B         || C
+|-
+| style="a1;" | K = m(0,1) || {{Ya|✓}} || {{Ya|✓}} ||          ||          ||         ||          || ⇒ || 0         || 0         || {{sdash}}
+|-
+| style="a1;" | L = m(0,2) || {{Ya|✓}} ||          || {{Ya|✓}} ||          ||          ||          || ⇒ || 0         || {{sdash}} || 0
+|-
+| style="a1;" | M = m(1,5) ||          || {{Ya|✓}} ||          || {{Ya|✓}} ||          ||          || ⇒ || {{sdash}} || 0         || 1
+|-
+| style="a1;" | N = m(2,6) ||          ||          || {{Ya|✓}} ||          || {{Ya|✓}} ||          || ⇒ || {{sdash}} || 1         || 0
+|-
+| style="a1;" | P = m(5,7) ||          ||          ||          || {{Ya|✓}} ||          || {{Ya|✓}} || ⇒ || 1         || {{sdash}}  || 1
+|-
+| style="a1;" | Q = m(6,7) ||          ||          ||          ||          || {{Ya|✓}} || {{Ya|✓}} || ⇒ || 1         || 1         || {{sdash}}
+|}
+
+Based on the ✓ marks in the table above, build a product of sums of the rows. Each column of the table makes a product term which adds together the rows having a ✓ mark in that column:
+
+  (K+L)(K+M)(L+N)(M+P)(N+Q)(P+Q)
+
+Use the distributive law to turn that expression into a sum of products.  Also use the following equivalences to simplify the final expression:     X + XY = X         and         XX = X       and       X + X = X
+
+  = (K+L)(K+M)(L+N)(M+P)(N+Q)(P+Q)
+  = (K+LM)(N+LQ)(P+MQ)
+  = (KN+KLQ+LMN+LMQ)(P+MQ)
+  = KNP + KLPQ + LMNP + LMPQ + KMNQ + KLMQ + LMNQ + LMQ
+
+Now use again the following equivalence to further reduce the equation:    X + XY = X
+
+  = KNP + KLPQ + LMNP + LMQ + KMNQ
+
+Choose products with fewest terms, in this example, there are two products with three terms:
+
+  KNP
+  LMQ
+
+Referring to the prime implicant table, transform each product by replacing prime implicants with their expression as boolean variables, and substitute a sum for the product. Then choose the result which contains the fewest total literals (boolean variables and their complements). Referring to our example:
+
+ KNP    expands to    A'B' + BC' + AC   where K converts to A'B', N converts to BC', etc.
+ LMQ    expands to    A'C' + B'C + AB
+
+Both products expand to six literals each, so either one can be used. In general, application of Petrick's method is tedious for large charts, but it is easy to implement on a computer.<ref name="Roth_1992"/>
+
+==Notes==
+{{reflist|group="nb"|refs=
+<ref group="nb" name="NB_Exponential">This causes exponential blow-up in the number of columns: expanding the product of <math>k</math> sums that have <math>n_1,n_2,...,n_k</math> terms generally results in a sum with <math>n_1n_2...n_k</math> terms.</ref>
+}}
+
+==References==
+<references>
+
+<ref name="Lind_1977">{{cite book |title=Analysis and Design of Sequential Digital Systems |chapter=2.3.6. Selection of required prime implicants |author-first1=Larry Frederick |author-last1=Lind |author-first2=John Christopher Cunliffe |author-last2=Nelson |edition=1 |date=1977-04-01 |series=Electrical and Electronic Engineering |publisher=[[The Macmillan Press Ltd.]] |location=London & Basingstoke, UK |isbn=0-333-19266-4 |doi=10.1007/978-1-349-15757-0 |pages=19, 77 |url=https://archive.org/details/AnalysisDesignOfSequentialDigitalSystems/ |chapter-url=https://books.google.com/books?id=fj1dDwAAQBAJ&pg=PA19 |access-date=2020-04-30 |url-status=live |archive-url=https://web.archive.org/web/20200430004534/https://books.google.de/books?id=fj1dDwAAQBAJ&pg=PA19&lpg=PA20&focus=viewport&vq=don%2527t+care+alarm&hl=de |archive-date=2020-04-30}} (4+viii+146+6 pages)</ref>
+<ref name="Roth_1992">{{cite book |author-last=Roth, Jr. |author-first=Charles H. |title=Fundamentals of Logic Design |date=1992 |publisher=West Publishing Company |edition=4 |isbn=0-31492218-0}}</ref>
+<ref name="Petrick_1956">{{cite book |author-last=Petrick |author-first=Stanley R. |date=1956-04-10 |title=A Direct Determination of the Irredundant Forms of a Boolean Function from the Set of Prime Implicants |id=AFCRC Technical Report TR-56-110 |publisher=[[Air Force Cambridge Research Center]] |location=Bedford, Cambridge, Massachusetts, USA}}</ref>
+<ref name="Petrick_Bio">{{cite web |title=Biographical note |author= |publisher= |date= |url=https://i.stack.imgur.com/3GGYU.png |access-date=2017-04-12 |url-status=live |archive-url=https://web.archive.org/web/20170413070810/https://i.stack.imgur.com/3GGYU.png |archive-date=2017-04-13 |quote=Stanley R. Petrick was born in [[Cedar Rapids, Iowa]] on August 16, 1931. He attended the [[Theodore Roosevelt High School (Des Moines)|Roosevelt High School]] and received a B.&nbsp;S. degree in Mathematics from the [[Iowa State University]] in 1953. During 1953 to 1955 he attended [[MIT]] while on active duty as an Air Force officer and received the S.&nbsp;M. degree from the Department of Electrical Engineering in 1955. He was elected to [[Sigma Xi]] in 1955.<br/>Mr. Petrick has been associated with the Applied Mathematics Board of the Data Sciences Laboratory at the [[Air Force Cambridge Research Laboratories]] since 1955 and his recent studies at MIT have been partially supported by AFCRL. During 1959–1962 he held the position of Lecturer in Mathematics in the Evening Graduate Division of [[Northeastern University]].<br/>Mr. Petrick is currently a member of the [[Linguistic Society of America]], [[The Linguistic Circle of New York]], [[The American Mathematical Association]], [[The Association for Computing Machinery]], and the [[Association for Machine Translation and Computational Linguistics]].}}</ref>
+<ref name="Petrick_Obit">{{cite web |title=Obituaries - Cedar Rapids - Stanley R. Petrick |publisher=[[The Gazette (Cedar Rapids)|The Gazette]] |date=2006-08-05 |url=https://newspaperarchive.com/cedar-rapids-gazette-aug-05-2006-p-16/ |access-date=2017-04-12 |url-status=live |archive-url=https://web.archive.org/web/20170413070853/https://newspaperarchive.com/cedar-rapids-gazette-aug-05-2006-p-16/ |archive-date=2017-04-13 |page=16 |quote=[...] CEDAR RAPIDS Stanley R. Petrick, 74, formerly of Cedar Rapids, died July 27, 2006, in Presbyterian/St. Luke's Hospital, Denver, Colo., following a 13-year battle with leukemia. A memorial service will be held Aug. 14 at the United Presbyterian Church in Laramie, Wyo., where he lived for many years. <!-- <br/>Survivors include his wife, Mary Ethel, his daughters, Susan Petrick, Ellen Petrick, Cathleen Petrick and husband Paul Zeitz, and Jane Lavino and husband Ed; six grandchildren; his mother Catherine Dawson; his sisters, Evelyn Clifford, Pam Colgate, Joan Green and Janice Carson; and his brother, John Elliott.<br/>He was preceded in death by his father, Fred Petrick (Mombo), and his stepmother, Emma Elliott Petrick.<br/> -->[...] Stan Petrick was born in Cedar Rapids on Aug. 6, 1931 to Catherine Hunt Petrick and Fred Petrick. He graduated from Roosevelt High School in 1949 and received a B.S. degree in mathematics from [[Iowa State University]]. Stan married Mary Ethel Buxton in 1953.<br/>He joined the U.S. Air Force and was assigned as a student officer studying digital computation at [[MIT]], where he earned an M.S. degree. He was then assigned to the Applied Mathematics Branch of the [[Air Force Cambridge Research Laboratory]] and while there earned a Ph.D. in linguistics.<br/>He spent 20 years in the Theoretical and Computational Linguistics Group of the Mathematical Sciences Department at [[IBM]]'s [[T. J. Watson Research Center]], conducting research in formal language theory. He had served as an assistant director of the Mathematical Sciences Department, chairman of the Special Interest Group on Symbolic and Algebraic Manipulation of the [[Association for Computing Machinery]] and president of the [[Association for Computational Linguistics]]. He authored many technical publications.<br/>He taught three years at [[Northeastern University]] and 13 years at the Pratt Institute. Dr. Petrick joined the [[University of Wyoming]] in 1987, where he was instrumental in developing and implementing the Ph.D. program in the department and served as a thesis adviser for many graduate students. He retired in 1995. <!-- <br/>Stan served as an elder and choir member in the Presbyterian Church, was a former treasurer of the University of Wyoming Symphony Association Board, and was a member of [[Sigma Xi]], [[Phi Eta Sigma]], [[Pi Mu Epsilon]] and [[Phi Kappa Phi]] honorary societies. He was a distance runner in both cross country and track in high school and college. He continued to run for fitness for many years and also loved tennis and table tennis. -->[...]}} (NB. Includes a photo of Stanley R. Petrick.)</ref>
+<ref name="Frenzel_2007">{{cite web |title=Lecture #10: Petrick's Method |author-first=James "Jim" F. |author-last=Frenzel |work=ECE 349 – Background Study in Digital Computer Fundamentals |publisher=Department of Electrical and Computer Engineering, [[University of Idaho]] |location=Moscow, Idaho, USA |date=2007 |url=http://www.mrc.uidaho.edu/mrc/people/jff/349/lect.10 |access-date=2019-08-08 |url-status=live |archive-url=https://web.archive.org/web/20170412071126/http://www.mrc.uidaho.edu/mrc/people/jff/349/lect.10 |archive-date=2017-04-12}} [https://web.archive.org/web/20200412082034/http://www.mrc.uidaho.edu/mrc/people/jff/349/handouts/K-Map_Procedures.pdf]</ref>
+<ref name="Lewin_1974">{{cite book |title=Logical Design of Switching Functions |author-first=Douglas |author-last=Lewin |date=1974<!-- original date of second edition --> |orig-date=1968<!-- 1968 is the date of the first edition --> |edition=1981 7th reprinted edition of the 2nd |page=60 |isbn=0-442-30747-0 |id=<!-- Don't remove! The following ISBN is the one originally printed on the book, later covered by a sticker stating a newer ISBN given further above -->{{ISBN|0-17-771044-6}}. NCN 420-5805-4. |publisher=[[Thomas Nelson and Sons Ltd]] / [[Van Nostrand Reinhold Co., Ltd.]]}}</ref>
+<ref name="Pyne_1962">{{cite journal |author-last1=Pyne |author-first1=Insley B. |author-last2=McCluskey, Jr. |author-first2=Edward Joseph |author-link2=Edward J. McCluskey, Jr. |title=The reduction of redundancy in solving prime implicant tables |journal=[[I.R.E. Transactions on Electronic Computers]] |date=1962 |volume=EC-11 |issue=4 |pages=473–482}}</ref>
+<ref name="Choudhury_1968">{{cite journal |author-first=Arun K. |author-last=Choudhury |title=I. B. Pyne and E. J. McCluskey Jr., The reduction of redundancy in solving prime implicant tables. IRE transactions on electronic computers, vol. EC-11 (1962), pp. 473–482. |series=Reviews |date=February 1968 |volume=32 |issue=4 |doi=10.2307/2270229 |journal=[[The Journal of Symbolic Logic]] |publisher=[[Association for Symbolic Logic]] (ASL) |pages=540–541 |jstor=2270229 |s2cid=57871609 |url=https://www.cambridge.org/core/journals/journal-of-symbolic-logic/article/pyne-i-b-and-mccluskey-e-j-jr-the-reduction-of-redundancy-in-solving-prime-implicant-tables-ire-transactions-on-electronic-computers-vol-ec11-1962-pp-473482/8CC2894916E25E2C594DD5A61409F265|url-access=subscription }}</ref>
+<ref name="Svoboda_1979_Petrick">{{cite book |title=Advanced Logical Circuit Design Techniques |chapter=9.9. The Petrick function solution for the minimal ΣΠ-form of y |author-first1=Antonín |author-last1=Svoboda |author-link1=Antonín Svoboda (computer scientist) |author-first2=Donnamaie E. |author-last2=White |date=2016 |orig-date=2012, 1985, 1979-08-01 |edition=retyped electronic reissue |publisher=[[Garland STPM Press]] (original issue) / WhitePubs Enterprises, Inc. (reissue) |lccn=78-31384 |isbn=978-0-8240-7014-4<!-- 1990 1st issue --> |pages=148–150 |chapter-url=https://web.archive.org/web/20190315223141/http://www.donnamaie.com/Advanced_logic_ckt/ePUB/Advance%20Logic%20Chap%209.pdf |url=http://www.donnamaie.com/Advanced_logic_ckt/Advanced_Logical_Circuit_Design_Techniques%20sm.pdf |access-date=2017-04-15 |url-status=live |archive-url=https://web.archive.org/web/20170414163013/http://www.donnamaie.com/Advanced_logic_ckt/Advanced_Logical_Circuit_Design_Techniques%20sm.pdf |archive-date=2017-04-14}} [http://www.donnamaie.com/<!-- https://web.archive.org/web/20170415220158/http://www.donnamaie.com/ -->] [https://books.google.com/books?id=g3uzAAAAIAAJ]</ref>
+
+</references>
+
+==Further reading==
+* {{cite web |title=Prime Implicant Simplification Using Petrick's Method |date=2016-02-17 |author-first=Donald |author-last=Krambeck |work=All About Circuits |publisher=EETech Media, LLC |url=http://www.allaboutcircuits.com/technical-articles/prime-implicant-simplification-using-petricks-method/ |access-date=2020-04-03 |url-status=live |archive-url=https://web.archive.org/web/20170412071958/https://www.allaboutcircuits.com/technical-articles/prime-implicant-simplification-using-petricks-method/ |archive-date=2017-04-12}}
+* {{cite book |title=A Recognition Procedure for Transformational Grammars |author-last=Petrick |author-first=Stanley R. |type=PhD thesis |publisher=[[Massachusetts Institute of Technology]] |date=1965}}
+* {{cite book |title=Digital Systems Design with Programmable Logic |chapter=4. Minimization |author-first=Martin |author-last=Bolton |editor-first=Erik L. |editor-last=Dagless |location=University of Bristol, Bristol, UK |edition=1 |date=1990 |publisher=[[Addison-Wesley Publishers Ltd.]] |publication-place=Wokingham, UK |series=Electronic Systems Engineering Series |lccn=90000007 |isbn=0-201-14545-6 |id={{ISBN|978-0-201-14545-8}} ark:/13960/t2f83p38r <!-- |ia=digitalsystemsde0000bolt --> |pages=100–101, 115 |url=https://archive.org/details/digitalsystemsde0000bolt |access-date=2021-04-17 }} (xiv+379+1 pages)
+
+==External links==
+* [https://web.archive.org/web/20170412071609/https://d403fe19-a-62cb3a1a-s-sites.googlegroups.com/site/simpogical/download/qm.pdf?attachauth=ANoY7cqOUBAsLO6wiVSQKsBj0PGW5k-UaTWzufvjC0SUONIEnUE_ryij-m2BfvpSVWnKIX5c1rWlsESb0duGmCWcm0EN8o4me1ABMVlQEeru5-UuWNnEoTEnJcAPAMf9YBtKc_9-C_2EI4N0mE5kUfxiqdoLOS20oS7VLDNQPzbZA6WLetW25rG17B1voUQBZekKpQ3_cpz51xd9sxOH_YlswqUm4htfpg%3D%3D&attredirects=0&d=1 Tutorial on Quine-McCluskey and Petrick's method]<!-- https://web.archive.org/web/20170412071609/https://d403fe19-a-62cb3a1a-s-sites.googlegroups.com/site/simpogical/download/qm.pdf?attachauth=ANoY7cqOUBAsLO6wiVSQKsBj0PGW5k-UaTWzufvjC0SUONIEnUE_ryij-m2BfvpSVWnKIX5c1rWlsESb0duGmCWcm0EN8o4me1ABMVlQEeru5-UuWNnEoTEnJcAPAMf9YBtKc_9-C_2EI4N0mE5kUfxiqdoLOS20oS7VLDNQPzbZA6WLetW25rG17B1voUQBZekKpQ3_cpz51xd9sxOH_YlswqUm4htfpg%3D%3D&attredirects=0&d=1 -->
+* [https://code.google.com/p/quine-mccluskey-petrick/source/browse/ Petrick] C++ implementation based on the tutorial above
+
+{{DEFAULTSORT:Petrick's Method}}
+[[Category:Boolean algebra]]

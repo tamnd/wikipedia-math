@@ -1,0 +1,109 @@
+<!-- wikipedia: en
+     page: 475385
+     title: De Boor's algorithm
+     revision: 1305046057
+     timestamp: 2025-08-09T18:55:02Z
+     history: https://en.wikipedia.org/w/index.php?curid=475385&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1305046057 -->
+{{short description|Method of evaluating spline curves}}
+
+In the [[mathematics|mathematical]] subfield of [[numerical analysis]], '''de Boor's algorithm'''<ref name="de_boor_paper">C. de Boor [1971], "Subroutine package for calculating with B-splines", Techn.Rep. LA-4728-MS, Los Alamos Sci.Lab, Los Alamos NM; p. 109, 121.</ref> is a [[polynomial-time]] and [[numerically stable]] [[algorithm]] for evaluating [[spline curve]]s in [[B-spline]] form. It is a generalization of [[de Casteljau's algorithm]] for [[Bézier curve]]s. The algorithm was devised by German-American mathematician [[Carl R. de Boor]].  Simplified, potentially faster variants of the de Boor algorithm have been created but they suffer from comparatively lower stability.<ref>{{cite journal |last=Lee |first=E. T. Y. |date=December 1982 |title=A Simplified B-Spline Computation Routine |journal=Computing |volume=29 |issue=4 |pages=365–371 |publisher=Springer-Verlag | doi=10.1007/BF02246763|s2cid=2407104 }}</ref><ref>{{cite journal | author = Lee, E. T. Y. | journal = Computing | issue = 3 | pages = 229–238 | publisher = Springer-Verlag | doi=10.1007/BF02240069|title = Comments on some B-spline algorithms | volume = 36 | year = 1986| s2cid = 7003455 }}</ref>
+
+== Introduction ==
+
+A general introduction to B-splines is given in the [[B-spline|main article]]. Here we discuss de Boor's algorithm, an efficient and numerically stable scheme to evaluate a spline curve <math> \mathbf{S}(x) </math> at position <math> x </math>. The curve is built from a sum of B-spline functions <math> B_{i,p}(x) </math> multiplied with potentially vector-valued constants <math> \mathbf{c}_i </math>, called control points,
+<math display="block"> \mathbf{S}(x) = \sum_i \mathbf{c}_i B_{i,p}(x). </math>
+B-splines of order <math> p + 1 </math> are connected piece-wise polynomial functions of degree <math> p </math> defined over a grid of knots <math> {t_0, \dots, t_i, \dots, t_m} </math> (we always use zero-based indices in the following). De Boor's algorithm uses [[Big O notation|O]](p<sup>2</sup>) + [[Big O notation|O]](p) operations to evaluate the spline curve. Note: the [[B-spline|main article about B-splines]] and the classic publications<ref name="de_boor_paper"></ref> use a different notation: the B-spline is indexed as <math> B_{i,n}(x) </math> with <math>n = p + 1</math>.
+
+== Local support ==
+
+B-splines have local support, meaning that the polynomials are positive only in a compact domain and zero elsewhere. The Cox-de Boor recursion formula<ref>C. de Boor, p. 90</ref> shows this:
+<math display="block">B_{i,0}(x) :=
+\begin{cases}
+1 & \text{if } \quad t_i \leq x < t_{i+1} \\
+0 & \text{otherwise}
+\end{cases}
+</math>
+<math display="block">B_{i,p}(x) := \frac{x - t_i}{t_{i+p} - t_i} B_{i,p-1}(x) + \frac{t_{i+p+1} - x}{t_{i+p+1} - t_{i+1}} B_{i+1,p-1}(x). </math>
+
+Let the index <math> k </math> define the knot interval that contains the position, <math> x \in [t_{k},t_{k+1}) </math>. We can see in the recursion formula that only B-splines with <math> i = k-p, \dots, k </math> are non-zero for this knot interval. Thus, the sum is reduced to:
+<math display="block"> \mathbf{S}(x) = \sum_{i=k-p}^{k} \mathbf{c}_i B_{i,p}(x). </math>
+
+It follows from <math> i \geq 0 </math> that <math> k \geq p </math>. Similarly, we see in the recursion that the highest queried knot location is at index <math> k + 1 + p </math>. This means that any knot interval <math> [t_k,t_{k+1}) </math> which is actually used must have at least <math> p </math> additional knots before and after. In a [[computer program]], this is typically achieved by repeating the first and last used knot location <math> p </math> times. For example, for <math> p = 3 </math> and real knot locations <math> (0, 1, 2) </math>, one would pad the knot vector to <math> (0,0,0,0,1,2,2,2,2) </math>.
+
+== The algorithm ==
+
+With these definitions, we can now describe de Boor's algorithm. The algorithm does not compute the B-spline functions <math> B_{i,p}(x) </math> directly. Instead it evaluates <math> \mathbf{S}(x) </math> through an equivalent recursion formula.
+
+Let <math> \mathbf{d}_{i,r} </math> be new control points with <math> \mathbf{d}_{i,0} := \mathbf{c}_{i} </math> for <math> i = k-p, \dots, k</math>. For <math> r = 1, \dots, p </math> the following recursion is applied:
+<math display="block"> \mathbf{d}_{i,r} = (1-\alpha_{i,r}) \mathbf{d}_{i-1,r-1} + \alpha_{i,r} \mathbf{d}_{i,r-1}; \quad i=k-p+r,\dots,k </math>
+<math display="block"> \alpha_{i,r} = \frac{x-t_i}{t_{i+1+p-r}-t_i}.</math>
+
+Once the iterations are complete, we have <math>\mathbf{S}(x) = \mathbf{d}_{k,p} </math>, meaning that <math> \mathbf{d}_{k,p} </math> is the desired result.
+
+De Boor's algorithm is more efficient than an explicit calculation of B-splines <math> B_{i,p}(x) </math> with the Cox-de Boor recursion formula, because it does not compute terms which are guaranteed to be multiplied by zero.
+
+== Optimizations ==
+
+The algorithm above is not optimized for the implementation in a computer. It requires memory for <math> (p + 1) + p + \dots + 1 = (p + 1)(p + 2)/2 </math> temporary control points <math> \mathbf{d}_{i,r} </math>. Each temporary control point is written exactly once and read twice. By reversing the iteration over <math> i </math> (counting down instead of up), we can run the algorithm with memory for only <math> p + 1 </math> temporary control points, by letting <math> \mathbf{d}_{i,r} </math> reuse the memory for <math> \mathbf{d}_{i,r-1} </math>. Similarly, there is only one value of <math> \alpha </math> used in each step, so we can reuse the memory as well.
+
+Furthermore, it is more convenient to use a zero-based index <math> j = 0, \dots, p </math> for the temporary control points. The relation to the previous index is <math> i = j + k - p </math>. Thus we obtain the improved algorithm:
+
+Let <math> \mathbf{d}_{j} := \mathbf{c}_{j+k - p} </math> for <math> j = 0, \dots, p</math>. Iterate for <math> r = 1, \dots, p </math>:
+<math display="block"> \mathbf{d}_{j} := (1-\alpha_j) \mathbf{d}_{j-1} + \alpha_j \mathbf{d}_{j}; \quad j=p, \dots, r \quad </math>
+<math display="block"> \alpha_j := \frac{x-t_{j + k - p}}{t_{j+1+k-r}-t_{j+k-p}}. </math>
+Note that {{mvar|j}} must be counted down. After the iterations are complete, the result is <math>\mathbf{S}(x) = \mathbf{d}_{p} </math>.
+
+== Example implementation ==
+
+The following code in the [[Python (programming language)|Python programming language]] is a naive implementation of the optimized algorithm.
+
+<syntaxhighlight lang="python" line>
+def deBoor(k: int, x: int, t, c, p: int):
+    """Evaluates S(x).
+
+    Arguments
+    ---------
+    k: Index of knot interval that contains x.
+    x: Position.
+    t: Array of knot positions, needs to be padded as described above.
+    c: Array of control points.
+    p: Degree of B-spline.
+    """
+    d = [c[j + k - p] for j in range(0, p + 1)] 
+
+    for r in range(1, p + 1):
+        for j in range(p, r - 1, -1):
+            alpha = (x - t[j + k - p]) / (t[j + 1 + k - r] - t[j + k - p]) 
+            d[j] = (1.0 - alpha) * d[j - 1] + alpha * d[j]
+
+    return d[p]
+</syntaxhighlight>
+
+== See also ==
+* [[De Casteljau's algorithm]]
+* [[Bézier curve]]
+* [[Non-uniform rational B-spline]]
+
+== External links ==
+* [http://www.cs.mtu.edu/~shene/COURSES/cs3621/NOTES/spline/de-Boor.html  De Boor's Algorithm]
+* [http://www.idav.ucdavis.edu/education/CAGDNotes/Deboor-Cox-Calculation/Deboor-Cox-Calculation.html The DeBoor-Cox Calculation]
+
+== Computer code ==
+* [http://www.netlib.org/pppack/ PPPACK]: contains many spline algorithms in [[Fortran]]
+* [https://www.gnu.org/software/gsl/ GNU Scientific Library]: C-library, contains a sub-library for splines ported from [[Netlib|PPPACK]]
+* [https://www.scipy.org/ SciPy]: Python-library, contains a sub-library ''scipy.interpolate'' with spline functions based on [[Netlib|FITPACK]]
+* [https://github.com/msteinbeck/tinyspline TinySpline]: C-library for splines with a C++ wrapper and bindings for C#, Java, Lua, [[PHP]], Python, and Ruby
+* [https://einspline.sourceforge.net/ Einspline]: C-library for splines in 1, 2, and 3 dimensions with Fortran wrappers
+
+== References ==
+{{reflist}}
+
+'''Works cited'''
+* {{cite book | author = Carl de Boor | title = A Practical Guide to Splines, Revised Edition | publisher = Springer-Verlag  | year = 2003|isbn=0-387-95366-3}}
+
+[[Category:Articles with example Python (programming language) code]]
+[[Category:Numerical analysis]]
+[[Category:Splines (mathematics)]]
+[[Category:Interpolation]]

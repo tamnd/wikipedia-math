@@ -1,0 +1,144 @@
+<!-- wikipedia: en
+     page: 2492629
+     title: Nelder–Mead method
+     revision: 1350474856
+     timestamp: 2026-04-22T03:58:15Z
+     history: https://en.wikipedia.org/w/index.php?curid=2492629&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1350474856 -->
+{{Short description|Numerical optimization algorithm}}
+{{distinguish|text=Dantzig's [[simplex algorithm]] for the problem of linear optimization}}
+[[File:An-iteration-of-the-Nelder-Mead-method-over-two-dimensional-space-showing-point-p-min.png|thumb|An iteration of the Nelder-Mead method over two-dimensional space.]]
+[[Image:Nelder-Mead Rosenbrock.gif|thumb|upright=1.3|Search over the [[Rosenbrock function|Rosenbrock banana function]]]]
+[[Image:Nelder-Mead Himmelblau.gif|thumb|upright=1.3|Search over [[Himmelblau's function]]]]
+[[File:Nelder-Mead Simionescu.gif|thumb|upright=1.3|Nelder–Mead minimum search of [[Test functions for optimization|Simionescu's function]]. Simplex vertices are ordered by their value, with 1 having the lowest (best) value.]]
+
+The '''Nelder–Mead method''' (also '''downhill simplex method''', '''amoeba method''', or '''polytope method''') is a [[numerical method]] used to find a local minimum or maximum of an [[objective function]] in a multidimensional space. It is a [[Pattern search (optimization)|direct search]] method (based on function comparison) and is often applied to nonlinear [[Optimization (mathematics)|optimization]] problems for which derivatives may not be known. However, the Nelder–Mead technique is a [[heuristic]] search method that can converge to [[Stationary point|non-stationary points]]<ref name="PM">
+* {{cite journal | last1 = Powell | first1 = Michael J. D. | author-link = Michael J. D. Powell | year = 1973 | title = On Search Directions for Minimization Algorithms | journal = Mathematical Programming | volume = 4 | pages = 193–201 | doi=10.1007/bf01584660| s2cid = 45909653 }}
+* {{ cite journal | last = McKinnon | first = K. I. M. | title =Convergence of the Nelder–Mead simplex method to a non-stationary point | journal =SIAM Journal on Optimization | year = 1999 | volume = 9 | pages =148–158 | doi = 10.1137/S1052623496303482| citeseerx = 10.1.1.52.3900}} (algorithm summary online).
+</ref> on problems that can be solved by alternative methods.<ref name="YKL">
+* Yu, Wen Ci. 1979. "Positive basis and a class of direct search techniques". ''Scientia Sinica'' [''Zhongguo Kexue'']: 53—68. 
+* Yu, Wen Ci. 1979. "The convergent property of the simplex evolutionary technique". ''Scientia Sinica'' [''Zhongguo Kexue'']: 69–77.
+* {{ cite journal | last = Kolda | first = Tamara G. |author-link1=Tamara G. Kolda|author2=Lewis, Robert Michael |author3=Torczon, Virginia|author3-link= Virginia Torczon | year =2003 | title = Optimization by direct search: new perspectives on some classical and modern methods | journal = SIAM Rev. | volume =45 | issue = 3 | pages = 385–482 | doi = 10.1137/S003614450242889|citeseerx=10.1.1.96.8672 }} 
+* {{ cite journal | last = Lewis | first = Robert Michael |author2=Shepherd, Anne |author3=Torczon, Virginia | year = 2007 | title = Implementing generating set search methods for linearly constrained minimization | journal = SIAM J. Sci. Comput. | volume = 29 | issue = 6 | pages = 2507–2530 | doi = 10.1137/050635432| bibcode = 2007SJSC...29.2507L | citeseerx = 10.1.1.62.8771 }}
+</ref>
+
+The Nelder–Mead technique was proposed by [[John Nelder]] and [[Roger Mead]] in 1965,<ref name="NM">{{cite journal | last = Nelder | first = John A. |author2=R. Mead | title = A simplex method for function minimization | journal = Computer Journal | volume = 7 | issue = 4 | year = 1965 | pages = 308–313 | doi =  10.1093/comjnl/7.4.308}}</ref> as a development of the method of Spendley et al.<ref name="SHH">
+{{ cite journal | last1 = Spendley |  first1 = W. | last2 = Hext | first2 = G. R. | last3 = Himsworth | first3 = F. R. | year = 1962 | title = Sequential Application of Simplex Designs in Optimisation and Evolutionary Operation | journal =  Technometrics | volume = 4 |  issue = 4 | pages = 441–461 | doi = 10.1080/00401706.1962.10490033}}</ref>
+
+== Overview ==
+The method uses the concept of a [[simplex]], which is a special [[polytope]] of ''n''&nbsp;+&nbsp;1 vertices in ''n'' dimensions. Examples of simplices include a line segment in one-dimensional space, a triangle in two-dimensional space, a [[tetrahedron]] in three-dimensional space, and so forth.
+
+The method approximates a local optimum of a problem with ''n'' variables when the objective function varies smoothly and is [[unimodal]]. Typical implementations minimize functions, and we maximize <math>f(\mathbf x)</math> by minimizing <math>- f(\mathbf x)</math>.
+
+For example, a suspension bridge engineer has to choose how thick each strut, cable, and pier must be.  These elements are interdependent, but it is not easy to visualize the impact of changing any specific element. Simulation of such complicated structures is often extremely computationally expensive to run, possibly taking upwards of hours per execution. The Nelder–Mead method requires, in the original variant, no more than two evaluations per iteration, except for the ''shrink'' operation described later, which is attractive compared to some other direct-search optimization methods. However, the overall number of iterations to proposed optimum may be high.
+
+Nelder–Mead in ''n'' dimensions maintains a set of ''n''&nbsp;+&nbsp;1 test points arranged as a [[simplex]]. It then extrapolates the behavior of the objective function measured at each test point in order to find a new test point and to replace one of the old test points with the new one, and so the technique progresses.  The simplest approach is to replace the worst point with a point reflected through the [[centroid]] of the remaining ''n'' points.  If this point is better than the best current point, then we can try stretching exponentially out along this line.  On the other hand, if this new point isn't much better than the previous value, then we are stepping across a valley, so we shrink the simplex towards a better point. An intuitive explanation of the algorithm from "Numerical Recipes":
+<ref name="NR">
+{{Cite book | last1=Press | first1=W. H. | last2=Teukolsky | first2=S. A. | last3=Vetterling | first3=W. T. | last4=Flannery | first4=B. P. | year=2007 | title=Numerical Recipes: The Art of Scientific Computing | edition=3rd | publisher=Cambridge University Press |  location=New York | isbn=978-0-521-88068-8 | chapter=Section 10.5. Downhill Simplex Method in Multidimensions | chapter-url=http://apps.nrbook.com/empanel/index.html#pg=502}}
+</ref>
+<blockquote>
+The downhill simplex method now takes a series of steps, most steps just moving the point of the simplex where the function is largest (“highest point”) through the opposite face of the simplex to a lower point. These steps are called reflections, and they are constructed to conserve the volume of the simplex (and hence maintain its nondegeneracy). When it can do so, the method expands the simplex in one or another direction to take larger steps. When it reaches a “valley floor”, the method contracts itself in the transverse direction and tries to ooze down the valley. If there is a situation where the simplex is trying to “pass through the eye of a needle”, it contracts itself in all directions, pulling itself in around its lowest (best) point.
+</blockquote>
+
+Unlike modern optimization methods, the Nelder–Mead heuristic can converge to a non-stationary point, unless the problem satisfies stronger conditions than are necessary for modern methods.<ref name="PM" /> <!--  NONALGORITHM follows: The standard approach to handle this is to restart the algorithm with a new simplex starting at the current best value.  This can be extended in a similar way to [[simulated annealing]] to escape small local minima. --> Modern improvements over the Nelder–Mead heuristic have been known since 1979.<ref name="YKL" />
+
+Many variations exist depending on the actual nature of the problem being solved. A common variant uses a constant-size, small simplex that roughly follows the gradient direction (which gives [[Gradient descent|steepest descent]]). Visualize a small triangle on an elevation map flip-flopping its way down a valley to a local bottom.  This method is also known as the '''flexible polyhedron method'''. This, however, tends to perform poorly against the method described in this article because it makes small, unnecessary steps in areas of little interest.
+
+== One possible variation of the NM algorithm ==
+(This approximates the procedure in the original Nelder–Mead article.)
+[[File:Rosenbrock function Nelder-Mead.gif|thumb|text-top|right|Nelder–Mead method applied to the [[Rosenbrock function]]]]
+
+We are trying to minimize the function <math>f(\mathbf x)</math>, where <math>\mathbf x \in \mathbb{R}^n</math>. Our current test points are <math>\mathbf x_1, \ldots, \mathbf x_{n+1}</math>.
+
+{{ordered list
+|1 = '''Order''' according to the values at the vertices:
+: <math>f(\mathbf x_1) \leq f(\mathbf x_2) \leq \cdots \leq f(\mathbf x_{n+1}).</math>
+
+: Check whether method should stop. See [[#Termination|'''Termination''']] (sometimes called "convergence").
+
+|2 = Calculate <math>\mathbf x_o</math>, the [[centroid]] of all points except <math>\mathbf x_{n+1}</math>.
+
+|3 = '''Reflection'''
+: Compute reflected point <math>\mathbf x_r = \mathbf x_o + \alpha (\mathbf x_o - \mathbf x_{n+1})</math> with <math>\alpha > 0</math>.
+: If the reflected point is better than the second worst, but not better than the best, i.e. <math>f(\mathbf x_1) \leq f(\mathbf x_r) < f(\mathbf x_n)</math>,
+:: then obtain a new simplex by replacing the worst point <math>\mathbf x_{n+1}</math> with the reflected point <math>\mathbf x_r</math>, and go to step&nbsp;1.
+
+|4 = '''Expansion'''
+: If the reflected point is the best point so far, <math>f(\mathbf x_r) < f(\mathbf x_1)</math>,
+:: then compute the expanded point <math>\mathbf x_e = \mathbf x_o + \gamma (\mathbf x_r - \mathbf x_o)</math> with <math>\gamma > 1</math>.
+:: If the expanded point is better than the reflected point, <math>f(\mathbf x_e) < f(\mathbf x_r)</math>,
+::: then obtain a new simplex by replacing the worst point <math>\mathbf x_{n+1}</math> with the expanded point <math>\mathbf x_e</math> and go to step&nbsp;1;
+:: else obtain a new simplex by replacing the worst point <math>\mathbf x_{n+1}</math> with the reflected point <math>\mathbf x_r</math> and go to step&nbsp;1.
+
+| 5 = '''Contraction'''
+: Here it is certain that <math>f(\mathbf x_r) \geq f(\mathbf x_n)</math>. (Note that <math>\mathbf x_n</math> is second or "next" to the worst point.)
+: If <math>f(\mathbf x_r) < f(\mathbf x_{n+1})</math>,
+:: then compute the contracted point on the outside <math>\mathbf x_c = \mathbf x_o + \rho(\mathbf x_{r} - \mathbf x_o)</math> with <math>0 < \rho \leq 0.5</math>.
+:: If the contracted point is better than the reflected point, i.e. <math>f(\mathbf x_c) < f(\mathbf x_{r})</math>,
+::: then obtain a new simplex by replacing the worst point <math>\mathbf x_{n+1}</math> with the contracted point <math>\mathbf x_c</math> and go to step&nbsp;1;
+:: Else go to step&nbsp;6;
+: If <math>f(\mathbf x_r) \geq f(\mathbf x_{n+1})</math>,
+:: then compute the contracted point on the inside <math>\mathbf x_c = \mathbf x_o + \rho(\mathbf x_{n+1} - \mathbf x_o)</math> with <math>0 < \rho \leq 0.5</math>.
+:: If the contracted point is better than the worst point, i.e. <math>f(\mathbf x_c) < f(\mathbf x_{n+1})</math>,
+::: then obtain a new simplex by replacing the worst point <math>\mathbf x_{n+1}</math> with the contracted point <math>\mathbf x_c</math> and go to step&nbsp;1;
+:: Else go to step&nbsp;6;
+| 6 = '''Shrink'''
+: Replace all points except the best (<math>\mathbf x_1</math>) with
+: <math>\mathbf x_i = \mathbf x_1 + \sigma(\mathbf x_i - \mathbf x_1)</math> and go to step&nbsp;1.
+}}
+'''Note''': <math>\alpha</math>, <math>\gamma</math>, <math>\rho</math> and <math>\sigma</math> are respectively the reflection, expansion, contraction and shrink coefficients. Standard values are <math>\alpha = 1</math>, <math>\gamma = 2</math>, <math>\rho = 1/2</math> and <math>\sigma = 1/2</math>.
+
+For the '''reflection''', since <math>\mathbf x_{n+1}</math> is the vertex with the higher associated value among the vertices, we can expect to find a lower value at the reflection of <math>\mathbf x_{n+1}</math> in the opposite face formed by all vertices <math>\mathbf x_i</math> except <math>\mathbf x_{n+1}</math>.
+
+For the '''expansion''', if the reflection point <math>\mathbf x_r</math> is the new minimum along the vertices, we can expect to find interesting values along the direction from <math>\mathbf x_o</math> to <math>\mathbf x_r</math>.
+
+Concerning the '''contraction''', if <math>f(\mathbf x_r) > f(\mathbf x_n)</math>, we can expect that a better value will be inside the simplex formed by all the vertices <math>\mathbf x_i</math>.
+
+Finally, the '''shrink''' handles the rare case that contracting away from the largest point increases <math>f</math>, something that cannot happen sufficiently close to a non-singular minimum. In that case we contract towards the lowest point in the expectation of finding a simpler landscape. However, Nash notes that finite-precision arithmetic can sometimes fail to actually shrink the simplex, and implemented a check that the size is actually reduced.<ref name="CNM">{{Cite book | last1=Nash | first1=J. C. | year=1979 | title=Compact Numerical Methods: Linear Algebra and Function Minimisation | publisher=Adam Hilger |  location=Bristol | isbn=978-0-85274-330-0}}</ref>
+
+== Initial simplex ==
+
+The initial simplex is important. Indeed, a too small initial simplex can lead to a local search, consequently the NM can get more easily stuck. So this simplex should depend on the nature of the problem. However, the original article suggested a simplex where an initial point is given as <math>\mathbf x_1</math>, with the others generated with a fixed step along each dimension in turn. Thus the method is sensitive to scaling of the variables that make up <math>\mathbf x</math>.
+
+== Termination ==
+
+Criteria are needed to break the iterative cycle. Nelder and Mead used the sample standard deviation of the function values of the current simplex. If these fall below some tolerance, then the cycle is stopped and the lowest point in the simplex returned as a proposed optimum. Note that a very "flat" function may have almost equal function values over a large domain, so that the solution will be sensitive to the tolerance. Nash adds the test for shrinkage as another termination criterion.<ref name="CNM" /> Note that programs terminate, while iterations may converge.
+
+== See also ==
+{{Div col|colwidth=20em}}
+* [[Derivative-free optimization]]
+* [[COBYLA]]
+* [[NEWUOA]]
+* [[LINCOA]]
+* [[Nonlinear conjugate gradient method]]
+* [[Levenberg–Marquardt algorithm]]
+* Broyden–Fletcher–Goldfarb–Shanno or [[BFGS method]]
+* [[Differential evolution]]
+* [[Pattern search (optimization)]]
+* [[CMA-ES]]
+{{Div col end}}
+
+==References==
+{{Reflist}}
+
+==Further reading==
+*{{cite book |last=Avriel |first=Mordecai |year=2003 |title=Nonlinear Programming: Analysis and Methods |publisher=Dover Publishing |isbn=978-0-486-43227-4 }}
+*{{cite journal |last1=Coope |first1=I. D. |first2=C. J. |last2=Price |year=2002 |title=Positive Bases in Numerical Optimization |journal=Computational Optimization and Applications |volume=21 |issue=2 |pages=169–176 |doi=10.1023/A:1013760716801 |s2cid=15947440 }}
+*{{cite book |first1=Philip E. |last1=Gill |first2=Walter |last2=Murray |first3=Margaret H. |last3=Wright |chapter=Methods for Multivariate Non-Smooth Functions |title=Practical Optimization |url=https://archive.org/details/practicaloptimiz00gill |url-access=limited |location=New York |publisher=Academic Press |year=1981 |isbn=978-0-12-283950-4 |pages=[https://archive.org/details/practicaloptimiz00gill/page/n110 93]–96 }}
+* {{cite book |last1=Kowalik |first1=J. |last2=Osborne |first2=M. R. |title=Methods for Unconstrained Optimization Problems |location=New York |publisher=Elsevier |year=1968 |isbn=0-444-00041-0 |pages=[https://archive.org/details/methodsforuncons0000kowa/page/24 24–27] |url-access=registration |url=https://archive.org/details/methodsforuncons0000kowa/page/24 }} 
+*{{cite book |first=W. H. |last=Swann |chapter=Direct Search Methods |title=Numerical Methods for Unconstrained Optimization |editor-last=Murray |editor-first=W. |location=New York |publisher=Academic Press |year=1972 |pages=13–28 |isbn=978-0-12-512250-4 }}
+
+==External links==
+*[http://www.brnt.eu/phd/node10.html#SECTION00622200000000000000  Nelder–Mead (Downhill Simplex) explanation and visualization with the Rosenbrock banana function]
+*[http://people.sc.fsu.edu/~burkardt/m_src/asa047/nelmin.m John Burkardt: Nelder–Mead code in Matlab] - note that a variation of the Nelder–Mead method is also implemented by the Matlab function fminsearch.
+*[https://docs.scipy.org/doc/scipy/reference/optimize.minimize-neldermead.html#optimize-minimize-neldermead Nelder-Mead optimization in Python in the SciPy library.]
+*[https://github.com/fchollet/nelder-mead nelder-mead] - A Python implementation of the Nelder–Mead method
+*[https://janert.me/blog/2023/nelder-mead-simplex-optimization/ NelderMead()] - A Go/Golang implementation
+*[http://people.fsv.cvut.cz/~svobodal/sova/  SOVA 1.0 (freeware)] {{Webarchive|url=https://web.archive.org/web/20130606055649/http://people.fsv.cvut.cz/~svobodal/sova/ |date=2013-06-06 }} - Simplex Optimization for Various Applications  
+*[https://web.archive.org/web/20190512002351/http://www.hillstormer.es/] - HillStormer, a practical tool for nonlinear, multivariate and linear constrained Simplex Optimization by Nelder Mead.
+
+{{Optimization algorithms|unconstrained}}
+
+{{DEFAULTSORT:Nelder-Mead method}}
+[[Category:Optimization algorithms and methods]]

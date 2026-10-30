@@ -1,0 +1,305 @@
+<!-- wikipedia: en
+     page: 4255513
+     title: Distributed constraint optimization
+     revision: 1373259947
+     timestamp: 2026-09-04T22:48:16Z
+     history: https://en.wikipedia.org/w/index.php?curid=4255513&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373259947 -->
+'''Distributed constraint optimization''' ('''DCOP''' or '''DisCOP''') is the [[Distributed computing|distributed]] analogue to [[constraint optimization]].  A DCOP is a problem in which a group of agents must distributedly choose values for a set of variables such that the cost of a set of constraints over the variables is minimized.
+
+Distributed Constraint Satisfaction is a framework for describing a problem in terms of constraints that are known and enforced by distinct participants (agents). The constraints are described on some variables with predefined domains, and have to be assigned to the same values by the different agents.
+
+Problems defined with this framework can be solved by any of the algorithms that are designed for it.
+
+The framework was used under different names in the 1980s. The first known usage with the current name is in 1990.{{Citation needed|date=July 2018}}
+
+==Definitions==
+
+===DCOP===
+The main ingredients of a DCOP problem are ''agents'' and ''variables''. Importantly, each variable is owned by an agent; this is what makes the problem distributed. Formally, a DCOP is a [[tuple]] <math>\langle A, V, \mathfrak{D}, f, \alpha, \eta \rangle</math>, where:
+*<math>A</math> is the [[set (mathematics)|set]] of [[Intelligent agent|''agents'']], <math>\{a_1, \dots, a_{|A|}\}</math>.
+*<math>V</math> is the set of ''variables'', <math>\{v_1, v_2, \dots, v_{|V|}\}</math>.
+*<math>\mathfrak{D}</math> is the set of ''variable-domains'', {{nowrap|<math>\{D_1, D_2, \dots, D_{|V|}\}</math>,}} where each <math>D_j \in \mathfrak{D}</math> is a [[finite set]] containing the possible values of variable <math>v_j </math>.
+**If <math>D_j \in \mathfrak{D}</math> contains only two values (e.g. 0 or 1), then <math>v_j</math> is called a ''binary variable''.
+*<math>f</math> is the ''cost function''. It is a function<ref>"<math>\times</math>" or "×" denotes the [[Cartesian product]].</ref><math display="block">f : \bigcup_{S \subseteq V} \times_{v_j \in S} D_j \to \R</math> that maps every possible partial assignment to a cost. Usually, only few values of <math>f</math> are non-zero, and it is represented as a list of the tuples that are assigned a non-zero value. Each such tuple is called a ''constraint''. Each constraint <math>C</math> in this set is a function <math> f_C: D_1\times\cdots\times D_k \to \R </math> assigning a real value to each possible assignment of the variables. Some special kinds of constraints are:
+**''Unary constraints'' - constraints on a single variable, i.e., <math> f_C: D_j \to \R </math> for some <math> v_j\in V</math>.
+**''Binary constraints'' - constraints on two variables, i.e., <math> f_C: D_{j_1} \times D_{j_2} \to \R </math> for some {{nowrap|<math> v_{j_1}, v_{j_2} \in V</math>.}}
+*<math>\alpha</math> is the ''ownership function''. It is a function <math>\alpha: V \to A</math> mapping each variable to its associated agent. <math>\alpha(v_j) \mapsto a_i</math> means that variable <math>v_j</math> "belongs" to agent <math>a_i</math>. This implies that it is agent <math>a_i</math>'s responsibility to assign the value of variable <math>v_j</math>.  Note that <math>\alpha</math> is not necessarily an [[Injective function|injection]], i.e., one agent may own more than one variables. It is also not necessarily a [[surjection]], i.e., some agents may own no variables.
+*<math>\eta</math> is the ''objective function''. It is an [[Operator (mathematics)|operator]] that aggregates all of the individual <math>f</math> costs for all possible variable assignments.  This is usually accomplished through summation:<math display="block">\eta(f) \mapsto \sum_{s \in \bigcup_{S \subseteq V} \times_{v_j \in S} D_j} f(s).</math>
+
+The objective of a DCOP is to have each agent assign values to its associated variables in order to either minimize or maximize <math>\eta(f)</math> for a given assignment of the variables.
+
+===Assignments===
+A ''value assignment'' is a pair <math>(v_j, d_j)</math> where <math>d_j</math> is an element of the domain <math>D_j</math>.
+
+A ''partial assignment'' is a set of value-assignments where each <math>v_j</math> appears at most once. It is also called a ''context.'' This can be thought of as a function mapping variables in the DCOP to their current values:<math display="block">t : V \to (D \in \mathfrak{D}) \cup \{\emptyset\}.</math>
+Note that a context is essentially a partial solution and need not contain values for ''every'' variable in the problem; therefore, <math>t(v_i) \mapsto \emptyset</math> implies that the agent <math>\alpha(v_i)</math> has not yet assigned a value to variable <math>v_i</math>. Given this representation, the "[[Domain of a function|domain]]" (that is, the set of input values) of the function <code>f</code> can be thought of as the set of all possible contexts for the DCOP.  Therefore, in the remainder of this article we may use the notion of a context (i.e., the <math>t</math> function) as an input to the <math>f</math> function.
+
+A ''full assignment'' is an assignment in which each <math>v_j</math> appears exactly once, that is, all variables are assigned. It is also called a ''solution'' to the DCOP.
+
+An ''optimal solution'' is a full assignment in which the objective function <math>\eta(f)</math> is optimized (i.e., maximized or minimized, depending on the type of problem).
+
+==Example problems==
+Various problems from different domains can be presented as DCOPs.
+
+===Distributed graph coloring===
+The [[graph coloring]] problem is as follows: given a [[Graph (discrete mathematics)|graph]] <math>G = \langle N, E \rangle</math> and a set of colors <math>C</math>, assign each [[Vertex (graph theory)|vertex]], <math>n\subset N</math>, a color, <math>c \leq C</math>, such that the number of adjacent vertices with the same color is minimized.
+
+As a DCOP, there is one agent per vertex that is assigned to decide the associated color. Each agent has a single variable whose associated domain is of [[cardinality]] <math>|C|</math> (there is one domain value for each possible color). For each vertex <math>n_i \leq N</math>, there is a variable <math>v_i \in V</math> with domain <math>D_i = C</math>.  For each pair of adjacent vertices <math>\langle n_i, n_j \rangle \in E</math>, there is a constraint of cost 1 if both of the associated variables are assigned the same color: <math display="block">(\forall c \subseteq C : f(\langle v_i, c \rangle, \langle v_j, c \rangle ) \mapsto 1).</math> The objective, then, is to minimize <math>\eta(f)</math>.
+
+===Distributed multiple knapsack problem===
+The ''distributed multiple-'' variant of the [[knapsack problem]] is as follows: given a set of items of varying volume and a set of knapsacks of varying capacity, assign each item to a knapsack such that the amount of overflow is minimized.  Let <math>I</math> be the set of items, <math>K</math> be the set of knapsacks, <math>s : I \to \N</math> be a function mapping items to their volume, and <math>c : K \to \N</math> be a function mapping knapsacks to their capacities.
+
+To encode this problem as a DCOP, for each <math>i \in I</math> create one variable <math>v_i \in V</math> with associated domain <math>D_i = K</math>.  Then for all possible contexts <math>t</math>:<math display="block">f(t) \mapsto \sum_{k \in K} \begin{cases}
+ 0  &  r(t,k) \leq c(k), \\
+ r(t,k)-c(k) & \text{otherwise},
+\end{cases}</math>where <math>r(t,k)</math> represents the total weight assigned by context <math>t</math> to knapsack <math>k</math>:<math display="block">r(t,k) = \sum_{v_i \in t^{-1}(k)} s(i).</math>
+
+=== Distributed item allocation problem ===
+The [[Fair item allocation|item allocation]] problem is as follows. There are several items that have to be divided among several agents. Each agent has a different valuation for the items. The goal is to optimize some global goal, such as maximizing the sum of utilities or minimizing the envy. The item allocation problem can be formulated as a DCOP as follows.<ref name=":2">{{Cite journal|last1=Netzer|first1=Arnon|last2=Meisels|first2=Amnon|last3=Zivan|first3=Roie|date=2016-03-01|title=Distributed envy minimization for resource allocation|url=https://doi.org/10.1007/s10458-015-9291-7|journal=Autonomous Agents and Multi-Agent Systems | volume=30|issue=2|pages=364–402|doi=10.1007/s10458-015-9291-7|s2cid=13834856|issn=1387-2532|url-access=subscription}}</ref>
+
+* Add a binary variable ''v<sub>ij</sub>'' for each agent ''i'' and item ''j''. The variable value is "1" if the agent gets the item, and "0" otherwise. The variable is owned by agent ''i''.
+* To express the constraint that each item is given to at most one agent, add binary constraints for each two different variables related to the same item, with an infinite cost if the two variables are simultaneously "1", and a zero cost otherwise.
+* To express the constraint that all items must be allocated, add an ''n''-ary constraint for each item (where ''n'' is the number of agents), with an infinite cost if no variable related to this item is "1".
+
+=== Other applications ===
+DCOP was applied to other problems, such as:
+
+* coordinating mobile sensors;
+* meeting and task scheduling.
+
+== Algorithms ==
+
+DCOP algorithms can be classified in several ways:<ref name="yeoh06">{{Citation |last1=Yeoh|first1=William|title=Proceedings of the Seventh International Joint Conference on Autonomous Agents and Multiagent Systems |volume=2 |pages=591–8 |year=2008 |contribution=BnB-ADOPT: An Asynchronous Branch-and-Bound DCOP Algorithm|contribution-url=http://idm-lab.org/bib/abstracts/Koen08d.html <!-- publisher is https://dl.acm.org/doi/10.5555/1402298.1402307 note that 10.5555 is a fake doi -->|isbn=9780981738116 |last2=Felner|first2=Ariel|last3=Koenig|first3=Sven|publisher=Ifaamas }}</ref>
+
+* ''Completeness'' - complete search algorithms finding the optimal solution, vs. [[Local search (optimization)|local search]] algorithms finding a [[local optimum]].
+* ''Search strategy'' - best-first search or depth-first branch-and-bound search;
+* ''Synchronization'' among agents - synchronous or asynchronous;
+* ''Communication'' among agents - point-to-point with neighbors in the constraint graph, or broadcast;
+* ''Communication topology'' - chain or tree.
+
+ADOPT, for example, uses best-first search, asynchronous synchronization, point-to-point communication between neighboring agents in the constraint graph and a constraint tree as main communication topology.
+
+{| class="wikitable"
+|-
+! Algorithm Name
+! Year Introduced
+! [[Computational complexity theory|Memory Complexity]]
+! Number of Messages
+! [[Correctness (computer science)]]/<br />[[Completeness (logic)]]
+! Implementations
+|-
+|'''SyncBB'''<ref>{{Cite book|last1=Hirayama|first1=Katsutoshi|last2=Yokoo|first2=Makoto|date=1997|editor-last=Smolka|editor-first=Gert|chapter=Distributed partial constraint satisfaction problem|chapter-url=https://link.springer.com/chapter/10.1007/BFb0017442|title=Principles and Practice of Constraint Programming-CP97|series=Lecture Notes in Computer Science|volume=1330|language=en|location=Berlin, Heidelberg|publisher=Springer|pages=222–236|doi=10.1007/BFb0017442|isbn=978-3-540-69642-1}}</ref>
+Synchronous Branch and Bound
+|1997
+|{{Citation needed|date=October 2010}}
+|{{Citation needed|date=October 2010}}
+|<small>Complete but slow</small>
+|
+|-
+| '''Adopt'''<br />Asynchronous Backtracking<ref>The originally published version of Adopt was uninformed, see
+{{Citation
+  | last1 = Modi
+  | first1 = Pragnesh Jay
+  | last2 = Shen
+  | first2 = Wei-Min
+  | last3 = Tambe
+  | first3 = Milind
+  | last4 = Yokoo
+  | first4 = Makoto
+  | contribution = An asynchronous complete method for distributed constraint optimization
+  | title = Proceedings of the second international joint conference on autonomous agents and multiagent systems
+  | publisher = [[Association for Computing Machinery|ACM]] Press
+  | year = 2003
+  | pages = 161–168
+  | contribution-url = http://teamcore.usc.edu/papers/2003/modi-aamas03.pdf
+  | access-date = 2009-09-07
+  | archive-date = 2019-11-04
+  | archive-url = https://web.archive.org/web/20191104183451/http://teamcore.usc.edu/papers/2003/modi-aamas03.pdf
+  | url-status = dead
+  }}. The original version of Adopt was later extended to be informed, that is, to use estimates of the solution costs to focus its search and run faster, see
+{{Citation
+ |last1            = Ali
+ |first1           = Syed
+ |last2            = Koenig
+ |first2           = Sven
+ |last3            = Tambe
+ |first3           = Milind
+ |contribution     = Preprocessing Techniques for Accelerating the DCOP Algorithm ADOPT
+ |title            = Proceedings of the fourth international joint conference on autonomous agents and multiagent systems
+ |publisher        = [[Association for Computing Machinery|ACM]] Press
+ |year             = 2005
+ |pages            = 1041–8
+ |doi              = 10.1145/1082473.1082631
+ |isbn             = 1595930930
+ |s2cid            = 10882572
+ |contribution-url = http://teamcore.usc.edu/papers/2005/aamas-paper.pdf
+ |access-date      = 2009-09-07
+ |archive-date     = 2010-07-07
+ |archive-url      = https://web.archive.org/web/20100707183003/http://teamcore.usc.edu/papers/2005/aamas-paper.pdf
+ |url-status       = dead
+}}. This extension of Adopt is typically used as reference implementation of Adopt.</ref>
+| 2003
+| Polynomial (or any-space<ref name="matsui05efficient">
+{{Citation
+  | last1 = Matsui | first1 = Toshihiro
+  | last2 = Matsuo | first2 = Hiroshi
+  | last3 = Iwata | first3 = Akira
+  | contribution = Efficient Method for Asynchronous Distributed Constraint Optimization Algorithm
+  | title = Proceedings of Artificial Intelligence and Applications
+  | date = February 2005
+  | pages = 727–732 |citeseerx=10.1.1.408.7230
+  | contribution-url = http://www.matlab.nitech.ac.jp/~matsuo/AIA05-1.pdf}}</ref>)
+| Exponential
+| Proven
+| ''Reference Implementation:'' [http://teamcore.usc.edu/dcop/ Adopt] {{Webarchive|url=https://web.archive.org/web/20060916180148/http://teamcore.usc.edu/dcop/ |date=2006-09-16 }}<br />
+{{Deprecated archive|url=https://archive.today/20080919011453/http://dcopolis.sf.net/|title=DCOPolis}} ([[GNU Lesser General Public License|GNU LGPL]])<br />
+[https://web.archive.org/web/20070629200035/http://liawww.epfl.ch/frodo/ FRODO] ([[GNU Affero General Public License|AGPL]])
+|-
+| '''OptAPO'''<br />Asynchronous Partial Overlay<ref name="mailler04solving">{{Cite book | last1 = Mailler
+  | first1 = Roger
+  | last2 = Lesser
+  | first2 = Victor
+  | chapter = Solving Distributed Constraint Optimization Problems Using Cooperative Mediation
+  | title = Proceedings of the Third International Joint Conference on Autonomous Agents and Multiagent Systems
+  | pages = 438–445 <!-- |doi=10.5555/1018409.1018777 -->
+  | isbn = 1581138644
+  | year = 2004
+  | publisher = [[IEEE Computer Society]]
+  | contribution-url = https://ieeexplore.ieee.org/document/1373508}}</ref>
+| 2004
+| Polynomial
+| Exponential
+| Proven, but proof of completeness has been challenged<ref name="dcr07proceedings">
+{{Citation
+  | last1 = Grinshpoun | first1 = Tal
+  | last2 = Zazon | first2 = Moshe
+  | last3 = Binshtok | first3 = Maxim
+  | last4 = Meisels | first4 = Amnon
+  | contribution = Termination Problem of the APO Algorithm
+  | title = Proceedings of the Eighth International Workshop on Distributed Constraint Reasoning
+  | pages = 117–124
+  | year = 2007
+  | contribution-url = http://liawww.epfl.ch/Publications/Archive/DCR07Proceedings.pdf}}</ref>
+| ''Reference Implementation:'' {{cite web|url=http://www.ai.sri.com/~mailler/optapo.html|archive-url=https://web.archive.org/web/20070715063706/http://www.ai.sri.com/~mailler/optapo.html|archive-date=2007-07-15|title=OptAPO|work=[[Artificial Intelligence Center]]|publisher=[[SRI International]]}}<br />
+{{Deprecated archive|url=https://archive.today/20080919011453/http://dcopolis.sf.net/|title=DCOPolis}} ([[GNU Lesser General Public License|GNU LGPL]]); In Development
+|-
+| '''DPOP'''<br />Distributed Pseudotree Optimization Procedure<ref name="petcu04distributed">
+{{Citation
+  | last1 = Petcu    | first1 = Adrian
+  | last2 = Faltings | first2 = Boi
+  | contribution = DPOP: A Scalable Method for Multiagent Constraint Optimization
+  | title = Proceedings of the 19th International Joint Conference on Artificial Intelligence, IJCAI 2005, Edinburgh, Scotland, pp. 266-271
+  | date = August 2005
+| contribution-url = http://liawww.epfl.ch/cgi-bin/Pubs/single_entry?bibtex_key=Petcu2005}}</ref>
+| 2005
+| Exponential
+| Linear
+| Proven
+| ''Reference Implementation:'' [https://web.archive.org/web/20070629200035/http://liawww.epfl.ch/frodo/ FRODO] ([[GNU Affero General Public License|AGPL]])<br />
+{{Deprecated archive|url=https://archive.today/20080919011453/http://dcopolis.sourceforge.net/|title=DCOPolis}} ([[GNU Lesser General Public License|GNU LGPL]])
+|-
+| '''NCBB'''<br />No-Commitment Branch and Bound<ref name="chechetka06no">
+{{Citation
+  | last1 = Chechetka | first1 = Anton
+  | last2 = Sycara | first2 = Katia
+  | contribution = No-Commitment Branch and Bound Search for Distributed Constraint Optimization
+  | title = Proceedings of the Fifth International Joint Conference on Autonomous Agents and Multiagent Systems
+  | date = May 2006
+  | pages = 1427–9 |doi=10.1145/1160633.1160900 |isbn=1595933034
+  | s2cid = 43918609
+ | contribution-url = http://www.ri.cmu.edu/pub_files/pub4/chechetka_anton_2006_2/chechetka_anton_2006_2.pdf}}</ref>
+| 2006
+| Polynomial (or any-space<ref name="chechetka06anyspace">
+{{Citation
+  | last1 = Chechetka | first1 = Anton
+  | last2 = Sycara | first2 = Katia
+  | contribution = An Any-space Algorithm for Distributed Constraint Optimization
+  | title = Proceedings of the AAAI Spring Symposium on Distributed Plan and Schedule Management
+  | date = March 2006
+  | contribution-url = http://www.ri.cmu.edu/pub_files/pub4/chechetka_anton_2006_1/chechetka_anton_2006_1.pdf| title-link = AAAI
+  }}</ref>)
+| Exponential
+| Proven
+| ''Reference Implementation:'' not publicly released<br />
+{{Deprecated archive|url=https://archive.today/20080919011453/http://dcopolis.sourceforge.net/|title=DCOPolis}} ([[GNU Lesser General Public License|GNU LGPL]])
+|-
+| '''CFL'''<br />Communication-Free Learning<ref name="cfl">
+{{Citation
+  | last1 = Duffy | first1 = K.R.
+  | last2 = Leith | first2 = D.J.
+  | title = Decentralized Constraint Satisfaction
+  | journal = IEEE/ACM Transactions on Networking
+  | volume = 21
+  | issue = 4
+  | pages = 1298–1308
+  | date = August 2013
+  | doi = 10.1109/TNET.2012.2222923
+  | arxiv = 1103.3240
+  | bibcode = 2013ITNet..21.1298D
+ | s2cid = 11504393
+ }}</ref>
+| 2013
+| Linear
+| None <small>Note: no messages are sent, but assumes knowledge about satisfaction of local constraint</small>
+| Incomplete
+|
+|-
+|}
+
+Hybrids of these DCOP algorithms also exist. BnB-Adopt,<ref name="yeoh06" /> for example, changes the search strategy of Adopt from best-first search to depth-first branch-and-bound search.
+
+== <span class="anchor" id="adcop"></span>Asymmetric DCOP ==
+An '''asymmetric DCOP''' is an extension of DCOP in which the cost of each constraint may be different for different agents. Some example applications are:<ref name=":0">{{Cite journal|last1=Grinshpoun|first1=T.|last2=Grubshtein|first2=A.|last3=Zivan|first3=R.|last4=Netzer|first4=A.|last5=Meisels|first5=A.|date=2013-07-30|title=Asymmetric Distributed Constraint Optimization Problems|url=https://www.jair.org/index.php/jair/article/view/10828|journal=Journal of Artificial Intelligence Research|language=en|volume=47|pages=613–647|doi=10.1613/jair.3945|issn=1076-9757|doi-access=free|arxiv=1402.0587}}</ref>
+
+* ''[[Event scheduling]]'': agents who attend the same event might derive different values from it.
+* ''[[Smart grid]]'': the increase in price of electricity in loaded hours may be different agents.
+
+One way to represent an ADCOP is to represent the constraints as functions:
+<math display="block"> f_C: D_1\times\dots\times D_k \to \R^k</math>
+
+Here, for each constraint there is not a single cost but a vector of costs - one for each agent involved in the constraint. The vector of costs is of length ''k'' if each variable belongs to a different agent; if two or more variables belong to the same agent, then the vector of costs is shorter - there is a single cost for each involved ''agent'', not for each variable.
+
+=== Approaches to solving an ADCOP ===
+A simple way for solving an ADCOP is to replace each constraint <math> f_C: D_1\times\cdots\times D_k \to \mathbb{R}^k</math> with a constraint <math> f_C': D_1\times\cdots\times D_k \to \mathbb{R}</math>, which equals the sum of the functions <math> f_C^1 + \cdots + f_C^k</math>. However, this solution requires the agents to reveal their cost functions. Often, this is not desired due to privacy considerations.<ref>{{Cite journal|last1=Greenstadt|first1=Rachel|last2=Pearce|first2=Jonathan P. |last3=Tambe|first3=Milind|date=2006-07-16|title=Analysis of privacy loss in distributed constraint optimization |url=https://dl.acm.org/doi/abs/10.5555/1597538.1597642|journal=Proceedings of the 21st National Conference on Artificial Intelligence - Volume 1|series=AAAI'06|location=Boston|publisher=AAAI Press |pages=647–653 |doi= |isbn=978-1-57735-281-5}}</ref><ref>{{Cite journal|last1=Maheswaran|first1=Rajiv T.|last2=Pearce|first2=Jonathan P.|last3=Bowring |first3=Emma|last4=Varakantham|first4=Pradeep|last5=Tambe|first5=Milind|date=2006-07-01|title=Privacy Loss in Distributed Constraint Reasoning: A Quantitative Framework for Analysis and its Applications|url=https://doi.org/10.1007/s10458-006-5951-y|journal=Autonomous Agents and Multi-Agent Systems|language=en|volume=13|issue=1|pages=27–60|doi=10.1007/s10458-006-5951-y|s2cid=16962945|issn=1573-7454|url-access=subscription}}</ref><ref>{{Cite book |last1=Yokoo |first1=Makoto |last2=Suzuki |first2=Koutarou |last3=Hirayama|first3=Katsutoshi|date=2002|editor-last=Van Hentenryck|editor-first=Pascal|chapter=Secure Distributed Constraint Satisfaction: Reaching Agreement without Revealing Private Information|chapter-url=https://link.springer.com/chapter/10.1007/3-540-46135-3_26 |title=Principles and Practice of Constraint Programming – CP 2002|series=Lecture Notes in Computer Science |volume=2470|language=en|location=Berlin, Heidelberg |publisher=Springer |pages=387–401 |doi=10.1007/3-540-46135-3_26 |isbn=978-3-540-46135-7}}</ref>
+
+Another approach is called Private Events as Variables (PEAV).<ref>{{Cite web|author1=Rajiv T. Maheswaran |author2=Milind Tambe |author3=Emma Bowring |author4=Jonathan P. Pearce |author5=Pradeep Varakantham|date=2004|title=Taking DCOP to the Real World: Efficient Complete Solutions for Distributed Multi-Event Scheduling|url=https://www.computer.org/csdl/proceedings-article/aamas/2004/20920310/12OmNvjyxDN|access-date=2021-04-12|website=computer.org}}</ref> In this approach, each variable owns, in addition to his own variables, also "mirror variables" of all the variables owned by his neighbors in the constraint network. There are additional constraints (with a cost of infinity) that guarantee that the mirror variables equal the original variables. The disadvantage of this method is that the number of variables and constraints is much larger than the original, which leads to a higher run-time.
+
+A third approach is to adapt existing algorithms, developed for DCOPs, to the ADCOP framework. This has been done for both complete-search algorithms and local-search algorithms.<ref name=":0" />
+
+=== Comparison with strategic games ===
+The structure of an ADCOP problem is similar to the game-theoretic concept of a [[simultaneous game]]. In both cases, there are agents who control variables (in game theory, the variables are the agents' possible actions or strategies). In both cases, each choice of variables by the different agents result in a different payoff to each agent. However, there is a fundamental difference:<ref name=":0" />
+
+* In a simultaneous game, the agents are selfish - each of them wants to maximize his/her own utility (or minimize his/her own cost). Therefore, the best outcome that can be sought for in such setting is an [[Nash equilibrium|equilibrium]] - a situation in which no agent can unilaterally increase his/her own gain.
+* In an ADCOP, the agents are considered cooperative: they act according to the protocol even if it decreases their own utility. Therefore, the goal is more challenging: we would like to maximize the sum of utilities (or minimize the sum of costs). A Nash equilibrium roughly corresponds to a [[local optimum]] of this problem, while we are looking for a global optimum.
+
+=== Partial cooperation ===
+There are some intermediate models in which the agents are ''partially-cooperative'': they are willing to decrease their utility to help the global goal, but only if their own cost is not too high. An example of partially-cooperative agents are employees in a firm. On one hand, each employee wants to maximize their own utility; on the other hand, they also want to contribute to the success of the firm. Therefore, they are willing to help others or do some other time-consuming tasks that help the firm, as long as it is not too burdensome on them. Some models for partially-cooperative agents are:<ref name=":1">{{Cite journal|last1=Zivan |first1=Roie|last2=Grubshtein|first2=Alon|last3=Friedman|first3=Michal|last4=Meisels|first4=Amnon|date=2012-06-04|title=Partial cooperation in multi-agent search|url=https://dl.acm.org/doi/abs/10.5555/2343896.2343956|journal=Proceedings of the 11th International Conference on Autonomous Agents and Multiagent Systems - Volume 3|series=AAMAS '12|volume=3 |location=Valencia, Spain |publisher=International Foundation for Autonomous Agents and Multiagent Systems|pages=1267–1268|doi= |isbn=978-0-9817381-3-0}}</ref>
+
+* ''Guaranteed personal benefit'': the agents agree to act for the global good if their own utility is at least as high as in the non-cooperative setting (i.e., the final outcome must be a [[Pareto improvement]] of the original state).
+* ''Lambda-cooperation'': there is a parameter <math>\lambda\in[0,1]</math>. The agents agree to act for the global good if their own utility is at least as high as <math>(1-\lambda)</math> times their non-cooperative utility.
+
+Solving such partial-cooperation ADCOPs requires adaptations of ADCOP algorithms.<ref name=":1" />
+
+==See also==
+* [[Constraint satisfaction problem]]
+* [[Distributed algorithm]]
+* [[Distributed algorithmic mechanism design]]
+
+==Notes and references==
+<references/>
+
+==Books and surveys==
+
+* {{Citation |last1=Fioretto |first1=Ferdinando | last2=Pontelli | first2=Enrico | last3=Yeoh | first3=William |title=Distributed Constraint Optimization Problems and Applications: A Survey |year=2018 |journal=[[Journal of Artificial Intelligence Research]] |url= http://www.jair.org/papers/paper5565.html |doi= 10.1613/jair.5565 |volume= 61 |pages= 623–698|doi-access=free |arxiv=1602.06347 |s2cid=4503761 }}
+* {{Citation |last=Faltings |first=Boi |editor1-last=Walsh |editor1-first=Toby |title=Handbook of Constraint Programming |year=2006 |publisher=[[Elsevier]] | chapter-url=http://www.elsevier.com/wps/find/bookdescription.cws_home/708863/description |isbn=978-0-444-52726-4 |chapter=Distributed Constraint Programming }} A chapter in an edited book.
+* {{Citation | last1=Meisels | first1=Amnon | title=Distributed Search by Constrained Agents | publisher = [[Springer Science+Business Media|Springer]] | isbn=978-1-84800-040-7 | year=2008}}
+* {{Citation | last1=Shoham | first1=Yoav | last2=Leyton-Brown | first2=Kevin | title=Multiagent Systems: Algorithmic, Game-Theoretic, and Logical Foundations | publisher=[[Cambridge University Press]] | isbn=978-0-521-89943-7 | url=http://www.masfoundations.org | year=2009 | location=New York}} See Chapters 1 and 2; [http://www.masfoundations.org/download.html downloadable free online].
+* {{Citation | last1=Yokoo | first1=Makoto | title=Distributed constraint satisfaction: Foundations of cooperation in multi-agent systems | publisher = [[Springer Science+Business Media|Springer]] | isbn=978-3-540-67596-9 | year=2001}}
+* {{Citation | last1=Yokoo | first1=M. Hirayama K. |year=2000 |title=Algorithms for distributed constraint satisfaction: A review |journal=Autonomous Agents and Multi-Agent Systems |volume=3 | issue=2 |pages=185–207 |doi=10.1023/A:1010078712316| s2cid=2139298 }}
+
+{{DEFAULTSORT:Distributed Constraint Optimization}}
+{{Optimization algorithms}}
+[[Category:Mathematical optimization]]
+[[Category:Constraint programming]]

@@ -1,0 +1,455 @@
+<!-- wikipedia: en
+     page: 7430174
+     title: Discrete dipole approximation
+     revision: 1352900244
+     timestamp: 2026-05-06T22:32:49Z
+     history: https://en.wikipedia.org/w/index.php?curid=7430174&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1352900244 -->
+{{Short description|Method for computing radiation}}
+The '''discrete dipole approximation''' ('''DDA'''), also known as the '''coupled dipole approximation''', is a numerical method for computing the scattering and absorption of electromagnetic radiation by particles of arbitrary shape and composition. The method represents a continuum target as a finite array of small, polarizable dipoles, and solves for their interactions with the incident field and with each other. DDA can handle targets with inhomogeneous composition and anisotropic material properties, as well as periodic structures. It is widely applied in fields such as [[nanophotonics]], [[radar]] scattering, [[aerosol]] physics, [[biomedical optics]], and [[astrophysics]].
+
+[[File:DipoleRadiation.gif|thumb|Magnitude of the electric field strength <math>E=|\vec E|</math> (colored) and the [[Poynting vector]] (black arrows) in the near field of the vertically oriented dipole in the image plane. Blue/red colors indicate an electric field oriented downwards/upwards.]]
+
+==Basic concepts==
+The basic idea of the DDA was introduced in 1964 by DeVoe<ref name=devoe1964/> who applied it to study the optical properties of molecular aggregates; retardation effects were not included, so DeVoe's treatment was limited to aggregates that were small compared with the wavelength. The DDA, including retardation effects, was proposed in 1973 by  [[Edward Mills Purcell|Purcell]] and Pennypacker<ref name=purcell1973/>
+who used it to study interstellar dust grains. Simply stated, the DDA is an approximation of the continuum target by a finite array of polarizable points. The points acquire dipole moments in response to the local electric field. The dipoles interact with one another via their electric fields, so the DDA is also sometimes referred to as the coupled dipole approximation.<ref name=singham1986/><ref name=singham1987/>
+
+Nature provides the physical inspiration for the DDA - in 1909 [[Hendrik Lorentz|Lorentz]]<ref name=lorentz1909/>
+showed that the dielectric properties of a substance could be directly related to the polarizabilities of the individual atoms of which it was composed, with a particularly simple and exact relationship, the [[Clausius-Mossotti relation]] (or Lorentz-Lorenz), when the atoms are located on a cubical lattice. We may expect that, just as a continuum representation of a solid is appropriate on length scales that are large compared with the interatomic spacing, an array of polarizable points can accurately approximate the response of a continuum target on length scales that are large compared with the interdipole separation.
+
+For a finite array of point dipoles the scattering problem may be solved exactly, so the only approximation that is present in the DDA is the replacement of the continuum target by an array of N-point dipoles. The replacement requires specification of both the geometry (location of the dipoles) and the dipole polarizabilities. For monochromatic incident waves the self-consistent solution for the oscillating dipole moments may be found; from these the absorption and scattering cross sections are computed. If DDA solutions are obtained for two independent polarizations of the incident wave, then the complete amplitude scattering matrix can be determined.
+Alternatively, the DDA can be derived from [[Electric-field integral equation|volume integral equation for the electric field]].<ref name=Yurkin2007a /> This highlights that the approximation of point dipoles is equivalent to that of discretizing the integral equation, and thus decreases with decreasing dipole size.
+
+With the recognition that the polarizabilities may be tensors, the DDA can readily be applied to anisotropic materials. The extension of the DDA to treat materials with nonzero [[magnetic susceptibility]] is also straightforward, although for most applications magnetic effects are negligible.
+
+There are several reviews of DDA method. {{r|draine1994}}{{r|Yurkin2007a}}{{r|Yurkin2023}}{{r|chaumet2022discrete}}
+
+The method was improved by [[Bruce T. Draine|Draine]], Flatau, and Goodman, who applied the [[fast Fourier transform]] to solve fast convolution problems arising in the discrete dipole approximation (DDA). This allowed for the calculation of scattering by large targets. They distributed an open-source code DDSCAT.<ref name=draine1994/><ref name=draine2008/>
+There are now several DDA implementations,<ref name=Yurkin2007a/> extensions to periodic targets,<ref name=chaumet2003/> and particles placed on or near a plane substrate.<ref name=schmehl1997/><ref name=yurkin2015/> Comparisons with exact techniques have also been published.<ref name=penttila2007/>
+Other aspects, such as the validity criteria of the discrete dipole approximation, were published.<ref name=zubko2010/> The DDA was also extended to employ rectangular or cuboid dipoles,<ref name=smunev2015/> which are more efficient for highly oblate or prolate particles.
+
+== Theory ==
+
+In the discrete dipole approximation, a target object is represented as a finite array of ''N'' point dipoles located at positions <math>\mathbf{r}_j</math> (<math>j = 1, 2, \dots, N</math>). The polarization vector <math>\mathbf{P}_j</math> of each dipole is related to the local electric field <math>\mathbf{E}_j</math> at that dipole by its [[polarizability]] tensor <math>\boldsymbol{\alpha}_j</math>:
+
+In anisotropic case (diagonal polarizability)
+:<math>\mathbf{P}_j = \boldsymbol{\alpha}_j \cdot \mathbf{E}_j</math>
+
+where <math>\boldsymbol{\alpha}_j</math> is diagonal
+:<math>
+\boldsymbol{\alpha}_j =
+\begin{pmatrix}
+\alpha_{x,j} & 0 & 0 \\
+0 & \alpha_{y,j} & 0 \\
+0 & 0 & \alpha_{z,j}
+\end{pmatrix}.
+</math>
+
+This leads to componentwise relations:
+:<math>
+\begin{aligned}
+P_{x,j} &= \alpha_{x,j} E_{x,j},\\
+P_{y,j} &= \alpha_{y,j} E_{y,j},\\
+P_{z,j} &= \alpha_{z,j} E_{z,j}.
+\end{aligned}
+</math>
+
+For isotropic materials, <math>\alpha_{x,j} = \alpha_{y,j} = \alpha_{z,j} = \alpha_j</math>, so
+:<math>\mathbf{P}_j = \alpha_j \mathbf{E}_j</math>.
+
+The local electric field <math>\mathbf{E}_j</math> acting on the ''j''‑th dipole is given by the sum of the incident field <math>\mathbf{E}_{\mathrm{inc}}(\mathbf{r}_j)</math> and the fields radiated by all other dipoles:
+:<math>\mathbf{E}_j = \mathbf{E}_{\mathrm{inc}}(\mathbf{r}_j) + \sum_{k \ne j} \mathbf{G}(\mathbf{r}_j - \mathbf{r}_k) \cdot \mathbf{P}_k</math>
+
+Here, <math>\mathbf{G}(\mathbf{r})</math> is the dyadic Green's function describing the field at position <math>\mathbf{r}</math> due to a unit dipole at the origin.
+
+=== Dyadic Green's function ===
+The free-space dyadic Green's function used in the discrete dipole approximation (DDA) can be expressed as the action of a [[differential operator]] on the scalar Green's function:
+
+:<math>
+\mathbf{G}(\mathbf{r}) = \left[ \nabla \nabla + k^2 \mathbf{I} \right] \frac{e^{ikr}}{r},
+</math>
+
+where <math>k</math> is the [[wavenumber]], <math>\mathbf{I}</math> is the [[identity matrix]], and <math>\mathbf{r}</math> is the vector from the source dipole to the observation point. Evaluating the derivatives leads to the explicit form:
+
+:<math>
+\mathbf{G}(\mathbf{r}) = \frac{e^{ikr}}{r^3} \left[
+k^2 r^2 \left( \mathbf{I} - \hat{\mathbf{r}} \hat{\mathbf{r}} \right)
++ (1 - ikr) \left( 3 \hat{\mathbf{r}} \hat{\mathbf{r}} - \mathbf{I} \right)
+\right],
+</math>
+
+where <math>\hat{\mathbf{r}} = \mathbf{r} / |\mathbf{r}|</math> is the [[unit vector]] pointing from the source to the observation point.
+
+This Green's tensor describes the electric field generated by a dipole in a homogeneous medium. It is used to compute the off-diagonal blocks of the interaction matrix in DDA, that is, the interaction between distinct dipoles <math>j \ne k</math>. The singular self-term <math>\mathbf{G}(\mathbf{r} = 0)</math> is excluded and replaced by a prescribed local term involving the inverse polarizability tensor <math>\boldsymbol{\alpha}_j^{-1}</math>.
+
+Thus, the electric field at dipole <math>j</math> due to dipole <math>k</math> is given by
+
+:<math>
+\mathbf{G}_{jk} = \frac{e^{ikr_{jk}}}{r_{jk}^3} \left[ k^2 r_{jk}^2 \left(\mathbf{I} - \hat{\mathbf{r}}_{jk} \hat{\mathbf{r}}_{jk}\right) + \left(1 - ikr_{jk}\right)\left(3\hat{\mathbf{r}}_{jk}\hat{\mathbf{r}}_{jk} - \mathbf{I}\right)\right],
+</math>
+
+where <math>\mathbf{r}_{jk} = \mathbf{r}_j - \mathbf{r}_k</math>, <math>r_{jk} = |\mathbf{r}_{jk}|</math>, and <math>\hat{\mathbf{r}}_{jk} = \mathbf{r}_{jk}/r_{jk}</math>. Here <math>\mathbf{I}</math> is the identity matrix and <math>k = 2\pi/\lambda</math> is the vacuum wavenumber.
+
+Define
+:<math>
+C_1(r_{jk}) = \frac{e^{ikr_{jk}}}{r_{jk}^3}\left(k^2r_{jk}^2 + ikr_{jk} - 1\right),
+</math>
+:<math>
+C_2(r_{jk}) = \frac{e^{ikr_{jk}}}{r_{jk}^3}\left(3 - 3ikr_{jk} - k^2r_{jk}^2\right).
+</math>
+
+The dyadic Green's function <math>\mathbf{G}_{jk}</math> is:
+
+:<math>
+\mathbf{G}_{jk} =
+\begin{pmatrix}
+C_1 + C_2\hat{r}_{jk,x}^2 &
+C_2\hat{r}_{jk,x}\hat{r}_{jk,y} &
+C_2\hat{r}_{jk,x}\hat{r}_{jk,z} \\
+C_2\hat{r}_{jk,y}\hat{r}_{jk,x} &
+C_1 + C_2\hat{r}_{jk,y}^2 &
+C_2\hat{r}_{jk,y}\hat{r}_{jk,z} \\
+C_2\hat{r}_{jk,z}\hat{r}_{jk,x} &
+C_2\hat{r}_{jk,z}\hat{r}_{jk,y} &
+C_1 + C_2\hat{r}_{jk,z}^2
+\end{pmatrix},
+</math>
+Notice that it is symmetric: <math>G_{jk}^{yx}=G_{jk}^{xy},\; G_{jk}^{zx}=G_{jk}^{xz},\; G_{jk}^{zy}=G_{jk}^{yz}</math>.
+
+Here <math>\mathbf{r}_{jk} = \mathbf{r}_j - \mathbf{r}_k</math> is the displacement vector from dipole <math>k</math> to dipole <math>j</math>, <math>r_{jk} = |\mathbf{r}_{jk}|</math> is the distance between them, and <math>\hat{\mathbf{r}}_{jk} = \mathbf{r}_{jk} / r_{jk}</math> is the unit vector pointing from <math>k</math> to <math>j</math>. The components of <math>\hat{\mathbf{r}}_{jk}</math> are defined as:
+
+:<math>
+\hat{r}_{jk,x} = \frac{r_{j,x} - r_{k,x}}{r_{jk}},\;
+\hat{r}_{jk,y} = \frac{r_{j,y} - r_{k,y}}{r_{jk}},\;
+\hat{r}_{jk,z} = \frac{r_{j,z} - r_{k,z}}{r_{jk}}.
+</math>
+
+=== Polarizability ===
+{{Main|Polarizability}}
+
+In the discrete dipole approximation, the electromagnetic response of a target is modeled by replacing the continuous material with a finite array of point dipoles. Each dipole represents a small volume of the material and acts as a polarizable unit that interacts with both the incident field and the fields radiated by all other dipoles. The key parameter that describes how each dipole responds to the local electric field is its polarizability <math>\alpha_j</math>. For a homogeneous material, the polarizability of a dipole is determined by the material's complex dielectric function <math>\varepsilon(\lambda)</math>, which depends on the wavelength <math>\lambda</math> of light in vacuum. The dielectric function is related to the complex [[refractive index]] <math>n = n' + i n''</math> through <math>\varepsilon = n^2</math>. The goal in DDA is to assign to each dipole a polarizability <math>\alpha_j</math> such that the array of dipoles reproduces, as accurately as possible, the scattering and absorption behavior of the original continuous medium. For isotropic materials, a common starting point is the [[Clausius–Mossotti relation]], which connects the polarizability to the dielectric function:
+
+In the discrete dipole approximation, the total volume of the target is divided into small cubic cells of volume <math>V_\mathrm{dipole} = d^3</math>, where <math>d</math> is the lattice spacing. The Clausius–Mossotti polarizability for each dipole is
+
+:<math>
+\alpha_j = \frac{3V_\mathrm{dipole}}{4\pi}\frac{\varepsilon_j - 1}{\varepsilon_j + 2},
+</math>
+
+where <math>\varepsilon_j</math> is the [[relative permittivity]] of the material at the dipole's position. The dipole volume <math>V_\mathrm{dipole}</math> is constant across all dipoles.
+
+This formula assumes that each dipole occupies a volume embedded in an otherwise uniform dielectric medium. In most implementations of DDA the formulation is expressed in [[Gaussian units]] (CGS). In these units, the polarizability <math>\alpha_j</math> has dimensions of volume (cm<sup>3</sup>). In the discrete dipole approximation, the total volume of the target is divided into <math>N</math> small cubic cells of volume <math>V_\mathrm{dipole} = d^3</math>, where <math>d</math> is the lattice spacing and <math>N</math> is the total number of dipoles. The total target volume is thus
+
+:<math>
+V_\mathrm{target} = N d^3.
+</math>
+
+To improve the accuracy of the method various corrections to <math>\alpha_j</math> are applied. These include: the lattice dispersion relation (LDR) polarizability (Draine & Goodman, 1993), which adjusts <math>\alpha_j</math> to ensure that the dispersion relation of an infinite lattice of dipoles matches that of the continuous material; the radiative reaction (RR) correction, which compensates for the fact that each dipole radiates energy and is influenced by its own radiation field.
+
+=== Size parameter ===
+The size parameter is a [[dimensionless quantity]] used in scattering theory to characterize the size of a particle relative to the wavelength of the incident light. For a sphere, it is defined as:
+
+:<math>x = \frac{2\pi r}{\lambda} = k r</math>
+
+where: <math>x</math> is the size parameter (dimensionless), <math>a</math> is the radius of the sphere, <math>\lambda</math> is the wavelength of light in vacuum,
+
+:<math>k = \frac{2\pi}{\lambda}</math> is the wavenumber.
+
+In case of a sphere, the size parameter determines the scattering regime:
+* If <math>x \ll 1</math>, [[Rayleigh scattering]] dominates.
+* If <math>x \sim 1</math>, the scattering is in the regime of [[Mie scattering]].
+* If <math>x \gg 1</math>, the [[Geometrical optics|geometric optics]]  approximation becomes valid.
+
+=== Effective radius and dipole discretization ===
+For nonspherical targets with the same volume as a sphere, the effective radius <math>r_{\text{eff}}</math> is often used in place of <math>r</math>, with:
+
+:<math>r_{\text{eff}} = \left( \frac{3 V_{\text{tot}}}{4\pi} \right)^{1/3} = \left( \frac{3 N d^3}{4\pi} \right)^{1/3}</math>
+
+where: <math>N</math> is the total number of dipoles, <math>d</math> is the dipole spacing, <math>V_{\text{tot}} = N d^3</math> is the total volume represented by the dipoles. This gives effective size parameter
+
+:<math>x_{\text{eff}} = \frac{2\pi r_{\text{eff}}}{\lambda}</math>
+
+One convenient trick in certain DDA accuracy tests is to define wavelength as <math>2\pi</math>, in such a case effective radius is the same as effective size parameter.
+
+=== Dipole-scale size parameter ===
+Each polarizable point (dipole) occupies a cubic volume with side length <math>d</math>. Analogous to the global size parameter <math>x = 2\pi r / \lambda</math> used for whole particles, one can define a local size parameter for each dipole:
+
+:<math>x_d = |m|kd = \frac{2\pi |m| d}{\lambda}</math>
+
+This local parameter quantifies the ratio of the dipole size to the wavelength of light inside the material. For the DDA to be accurate, the field should vary slowly over the size of each dipole. This condition is satisfied when:
+
+:<math>x_d = |m|kd \lesssim 0.5</math>
+
+This ensures that each dipole is optically small, fields vary slowly over the dipole and the polarizability formula used for each dipole is accurate. Notice that a similar parameter plays a crucial role in the [[anomalous diffraction theory]] of van de Hulst, where the total phase shift experienced by light rays traveling through or around the particle is given by:
+
+:<math>\delta = 2\pi (m - 1) \frac{r}{\lambda}</math>
+
+This describes the [[optical path]] difference introduced by the particle (or in the case of DDA by a dipole).
+
+=== Explicit Matrix Form of the DDA System ===
+
+The Discrete Dipole Approximation (DDA) linear system is expressed as:
+
+:<math> \mathbf{A} \mathbf{P} = \mathbf{E}_{\mathrm{inc}} </math>
+
+where <math>\mathbf{A} \in \mathbb{C}^{3N \times 3N}</math> is the system matrix, <math>\mathbf{P} \in \mathbb{C}^{3N}</math> is the unknown polarization vector, <math>\mathbf{E}_{\mathrm{inc}} \in \mathbb{C}^{3N}</math> is the incident electric field vector.
+We have
+
+:<math>\mathbf{A} = -\mathbf{G} + \mathrm{diag}(\boldsymbol{\alpha}_1^{-1}, \dots, \boldsymbol{\alpha}_N^{-1})</math>.
+
+<math>\mathbf{G}</math> encodes interactions between dipoles via the Green's tensor (non-local), and <math> \mathrm{diag}(\boldsymbol{\alpha}_1^{-1}, \dots, \boldsymbol{\alpha}_N^{-1})</math> is a block-diagonal matrix with each block <math>\boldsymbol{\alpha}_j^{-1} \in \mathbb{C}^{3 \times 3}</math>.
+
+Let ''N'' be the number of dipoles. Each dipole has a polarization vector <math> \mathbf{P}_j \in \mathbb{C}^3 </math>. The total system is a matrix equation of size <math> 3N \times 3N </math>:
+
+:<math>
+\begin{bmatrix}
+\boldsymbol{\alpha}_1^{-1} & -\mathbf{G}_{12} & -\mathbf{G}_{13} & \cdots & -\mathbf{G}_{1N} \\
+-\mathbf{G}_{21} & \boldsymbol{\alpha}_2^{-1} & -\mathbf{G}_{23} & \cdots & -\mathbf{G}_{2N} \\
+-\mathbf{G}_{31} & -\mathbf{G}_{32} & \boldsymbol{\alpha}_3^{-1} & \cdots & -\mathbf{G}_{3N} \\
+\vdots & \vdots & \vdots & \ddots & \vdots \\
+-\mathbf{G}_{N1} & -\mathbf{G}_{N2} & -\mathbf{G}_{N3} & \cdots & \boldsymbol{\alpha}_N^{-1}
+\end{bmatrix}
+\begin{bmatrix}
+\mathbf{P}_1 \\
+\mathbf{P}_2 \\
+\vdots \\
+\mathbf{P}_N
+\end{bmatrix}
+=
+\begin{bmatrix}
+\mathbf{E}_{\mathrm{inc},1} \\
+\mathbf{E}_{\mathrm{inc},2} \\
+\vdots \\
+\mathbf{E}_{\mathrm{inc},N}
+\end{bmatrix}
+</math>
+
+Each block <math> \mathbf{A}_{jk} </math> is a <math> 3 \times 3 </math> complex matrix, defined by:
+
+:<math>
+\mathbf{A}_{jk} = 
+\begin{cases}
+\boldsymbol{\alpha}_j^{-1} \in \mathbb{C}^{3 \times 3}, & \text{if } j = k \\
+-\mathbf{G}_{jk} \in \mathbb{C}^{3 \times 3}, & \text{if } j \ne k
+\end{cases}
+</math>
+
+So <math>\mathbf{A} \in \mathbb{C}^{3N \times 3N}</math> is composed of <math>N \times N</math> blocks, each of size <math>3 \times 3</math>. <math> \boldsymbol{\alpha}_j^{-1} \in \mathbb{C}^{3 \times 3} </math> is the inverse polarizability tensor, <math> \mathbf{G}_{jk} \in \mathbb{C}^{3 \times 3} </math> is the dyadic Green's tensor for interaction between dipoles <math> j </math> and <math> k </math>, <math> \mathbf{P}_j, \mathbf{E}_{\mathrm{inc},j} \in \mathbb{C}^3 </math> are the dipole polarization and incident electric field at dipole <math> j </math>, respectively.
+
+Typically  dipoles are arranged on a regular grid. This implies translational invariance:
+
+:<math> \mathbf{G}_{jk} = \mathbf{G}(\mathbf{r}_j - \mathbf{r}_k) = \mathbf{G}_{|j-k|} </math>
+
+Because <math> \mathbf{G}_{|j-k|} = \mathbf{G}_{|k-j|} </math>, the matrix <math> \mathbf{A} </math> is symmetric:
+
+:<math> \mathbf{A}_{jk} = \mathbf{A}_{kj} \quad \text{for all } j, k </math>
+
+Each dipole has three vector components (<math>x</math>, <math>y</math>, <math>z</math>), so we can rearrange the unknown vector <math>\mathbf{P}</math> by grouping all x-components together, then y-components, then z-components:
+
+:<math>
+\mathbf{P} =
+\begin{bmatrix}
+\mathbf{P}_x \\
+\mathbf{P}_y \\
+\mathbf{P}_z
+\end{bmatrix}
+\in \mathbb{C}^{3N}
+\quad \text{where} \quad
+\mathbf{P}_x =
+\begin{bmatrix}
+P_{1x} \\
+P_{2x} \\
+\vdots \\
+P_{Nx}
+\end{bmatrix}, \quad
+\mathbf{P}_y =
+\begin{bmatrix}
+P_{1y} \\
+P_{2y} \\
+\vdots \\
+P_{Ny}
+\end{bmatrix}, \quad
+\mathbf{P}_z =
+\begin{bmatrix}
+P_{1z} \\
+P_{2z} \\
+\vdots \\
+P_{Nz}
+\end{bmatrix}
+</math>
+
+Similarly, the incident field can be grouped as:
+:<math>
+\mathbf{E}_{\mathrm{inc}} =
+\begin{bmatrix}
+\mathbf{E}_x^{\mathrm{inc}} \\
+\mathbf{E}_y^{\mathrm{inc}} \\
+\mathbf{E}_z^{\mathrm{inc}}
+\end{bmatrix}
+\in \mathbb{C}^{3N}
+</math>
+
+Because the system is linear, we can equivalently rewrite it in [[block matrix]] form, that describe how the <math>\beta</math>-component of polarization affects the <math>\alpha</math>-component of the resulting field:
+
+<math>
+\begin{bmatrix}
+\mathbf{A}_{xx} & \mathbf{A}_{xy} & \mathbf{A}_{xz} \\
+\mathbf{A}_{yx} & \mathbf{A}_{yy} & \mathbf{A}_{yz} \\
+\mathbf{A}_{zx} & \mathbf{A}_{zy} & \mathbf{A}_{zz}
+\end{bmatrix}
+\begin{bmatrix}
+\mathbf{P}_x \\
+\mathbf{P}_y \\
+\mathbf{P}_z
+\end{bmatrix}
+=
+\begin{bmatrix}
+\mathbf{E}_x^{\mathrm{inc}} \\
+\mathbf{E}_y^{\mathrm{inc}} \\
+\mathbf{E}_z^{\mathrm{inc}}
+\end{bmatrix}
+</math>
+
+The expanded form of the equations is:
+
+<math>
+\begin{aligned}
+-\mathbf{G}_{xx} \mathbf{P}_x - \mathbf{G}_{xy} \mathbf{P}_y - \mathbf{G}_{xz} \mathbf{P}_z +
+(\boldsymbol{\alpha}^{-1} \mathbf{P})_x &= \mathbf{E}_x^{\mathrm{inc}} \\
+-\mathbf{G}_{yx} \mathbf{P}_x - \mathbf{G}_{yy} \mathbf{P}_y - \mathbf{G}_{yz} \mathbf{P}_z +
+(\boldsymbol{\alpha}^{-1} \mathbf{P})_y &= \mathbf{E}_y^{\mathrm{inc}} \\
+-\mathbf{G}_{zx} \mathbf{P}_x - \mathbf{G}_{zy} \mathbf{P}_y - \mathbf{G}_{zz} \mathbf{P}_z +
+(\boldsymbol{\alpha}^{-1} \mathbf{P})_z &= \mathbf{E}_z^{\mathrm{inc}}
+\end{aligned}
+</math>
+
+Each block <math> \mathbf{G}_{ij} \in \mathbb{C}^{N \times N} </math> and the total system size is <math> 3N \times 3N </math>. The interaction matrix <math> \mathbf{G} \in \mathbb{C}^{3N \times 3N} </math> is composed of 9 blocks:
+<math> \mathbf{G}_{xx}, \mathbf{G}_{xy}, \mathbf{G}_{xz}, \mathbf{G}_{yx}, \mathbf{G}_{yy}, \mathbf{G}_{yz}, \mathbf{G}_{zx}, \mathbf{G}_{zy}, \mathbf{G}_{zz} </math> (only 6 of them need to be evaluated due to symmetry).
+Each matrix-vector multiplication <math>\mathbf{G}_{\alpha\beta} \mathbf{P}_\beta</math> can be computed as a convolution when the dipoles are arranged on a regular grid, allowing the use of Fast Fourier Transforms (FFTs) to accelerate the solution.
+
+Let <math>\boldsymbol{\beta}_j = \boldsymbol{\alpha}_j^{-1}</math> denote the inverse polarizability tensor for dipole <math>j</math>. Each <math>\boldsymbol{\beta}_j</math> is a complex-valued <math>3 \times 3</math> matrix. This gives:
+
+<math>
+(\boldsymbol{\beta} \mathbf{P})_x =
+\mathrm{diag}(\beta_{1,xx}, \dots, \beta_{N,xx}) \, \mathbf{P}_x +
+\mathrm{diag}(\beta_{1,xy}, \dots, \beta_{N,xy}) \, \mathbf{P}_y +
+\mathrm{diag}(\beta_{1,xz}, \dots, \beta_{N,xz}) \, \mathbf{P}_z
+</math>
+
+<math>
+(\boldsymbol{\beta} \mathbf{P})_y =
+\mathrm{diag}(\beta_{1,yx}, \dots, \beta_{N,yx}) \, \mathbf{P}_x +
+\mathrm{diag}(\beta_{1,yy}, \dots, \beta_{N,yy}) \, \mathbf{P}_y +
+\mathrm{diag}(\beta_{1,yz}, \dots, \beta_{N,yz}) \, \mathbf{P}_z
+</math>
+
+<math>
+(\boldsymbol{\beta} \mathbf{P})_z =
+\mathrm{diag}(\beta_{1,zx}, \dots, \beta_{N,zx}) \, \mathbf{P}_x +
+\mathrm{diag}(\beta_{1,zy}, \dots, \beta_{N,zy}) \, \mathbf{P}_y +
+\mathrm{diag}(\beta_{1,zz}, \dots, \beta_{N,zz}) \, \mathbf{P}_z
+</math>
+
+In the special case of an isotropic and homogeneous particle, the polarizabilities <math>\boldsymbol{\alpha}_j</math> are identical for all dipoles and proportional to the identity matrix: <math>\boldsymbol{\alpha}_j = \alpha \, \mathbf{I}</math>. Then, the inverse becomes <math>\boldsymbol{\beta}_j = \alpha^{-1} \, \mathbf{I}</math>, all off-diagonal elements vanish, and the expressions reduce to a simple element-wise division:
+
+<math>
+(\boldsymbol{\beta} \mathbf{P}) = \frac{1}{\alpha} \, \mathbf{P}
+</math>
+
+Note on practical implementation. In [[Fortran]] and MATLAB, arrays such as <math>\mathbf{P}(n_x,n_y,n_z,3)</math> or <math>\mathbf{E}^{\mathrm{inc}}(n_x,n_y,n_z,3)</math> are stored in column-major order, where the first index varies fastest in memory (anti-lexicographic). This means that all x-components <math>\mathbf{P}_x = \mathbf{P}(:,:,:,1)</math> are contiguous in memory, followed by all y-components <math>\mathbf{P}_y = \mathbf{P}(:,:,:,2)</math>, and then all z-components <math>\mathbf{P}_z = \mathbf{P}(:,:,:,3)</math>.  In contrast, Python ([[NumPy]]) uses row-major order by default (lexicographic, last index varies fastest). To achieve the same contiguous layout of <math>\mathbf{P}_x</math>, <math>\mathbf{P}_y</math>, <math>\mathbf{P}_z</math> in memory, the array should be defined in Python as <math>\mathbf{P}(3, n_x, n_y, n_z)</math>, with the vector component index (x, y, z) first. This ensures that <math>\mathbf{P}_x = \mathbf{P}[0, :, :, :]</math> is stored contiguously in memory, followed by <math>\mathbf{P}_y</math> and <math>\mathbf{P}_z</math>.
+
+==Conjugate gradient iteration schemes and preconditioning==
+
+The solution of the linear system <math>\mathbf{A} \cdot \mathbf{P} = \mathbf{E}^{\mathrm{inc}}</math> in the DDA is typically performed using iterative methods. These methods aim to minimize the residual vector <math>\mathbf{r} = \mathbf{E}^{\mathrm{inc}} - \mathbf{A} \cdot \mathbf{P}</math> through successive approximations of the polarization vector <math>\mathbf{P}</math>. Among the earliest implementations were those based on direct matrix inversion,<ref name="purcell1973"/> as well as the use of the conjugate gradient (CG) algorithm of Petravic and Kuo-Petravic.<ref name="Petravic1979"/> Subsequently, various conjugate gradient methods have been explored and improved for DDA applications.<ref name="chaumet2024"/> These methods are particularly well-suited for large systems because they require only the matrix-vector product <math>\mathbf{A} \cdot \mathbf{P}</math> and do not require storing the full matrix <math>\mathbf{A}</math> explicitly.
+
+In practice, the dominant computational cost in DDA arises from the repeated evaluation of matrix-vector products during the iteration process. When the vector <math>\mathbf{P}</math> is stored in component-block form (as <math>\mathbf{P}_x</math>, <math>\mathbf{P}_y</math>, <math>\mathbf{P}_z</math>), the action of <math>\mathbf{A}</math> reduces to evaluating nine sub-products of the form <math>\mathbf{A}_{\alpha\beta} \mathbf{P}_\beta</math>, where <math>\alpha,\beta \in \{x,y,z\}</math>. These operations can be computed efficiently using convolution and FFT-based techniques when the dipole geometry is grid-based.
+
+==Fast Fourier Transform for fast convolution calculations==
+The use of the fast Fourier transform (FFT) to accelerate convolution operations in the discrete dipole approximation (DDA) was introduced by Goodman, Draine, and Flatau in 1991{{r|Goodman1991}}. Their method employed the three-dimensional FFT algorithm (GPFA) developed by Clive Temperton{{r|Temperton1983}}and required extending the interaction matrix from its original size <math>(n_x,n_y,n_z)</math> to <math>(2n_x,2n_y,2n_z)</math>. This extension was achieved by reversing and mirroring the Green's function tensor blocks so that all positive and negative spatial offsets (lags) were represented in a single array, with an inserted zero plane between the positive and negative sides along each axis. This arrangement ensured that the discrete convolution of the Green's function with the polarization vector could be performed as a cyclic convolution using FFTs, avoiding aliasing from wraparound effects. The sign-flipping of the Green's function in the [[frequency domain]] and the block extension procedure became standard steps in efficient DDA implementations. Several alternative formulations have since been proposed.
+
+A similar variant to that of Goodman, Draine, and Flatau was adopted in the 2021 MATLAB implementation by Shabaninezhad and Ramakrishna{{r|matlab2021}}. In this approach, the computational domain for the polarization vector is zero-padded to <math>(2n_x-1)\times (2n_y-1)\times (2n_z-1)</math> instead of the <math>2n_x\times 2n_y\times 2n_z</math> sizes used in ''DDSCAT''. The stored interaction matrix <math>G</math> differs from ''DDSCAT'' in that there is no zero plane inserted between the positive and negative offsets along each axis. The FFT is performed as a sequence of one-dimensional transforms along the <math>x</math>, <math>y</math>, and <math>z</math> axes, which is mathematically equivalent to performing a full 3-D FFT on the padded domain.
+ 
+Sequence of 1D FFTs was used by MacDonald in his Ph.D. thesis.<ref name=mcdonald2009/>
+
+Barrowes method is a numerical technique for multiplying an <math>n</math>-dimensional block Toeplitz matrix by a vector using the fast Fourier transform (FFT). In three dimensions with grid sizes <math>n_x</math>, <math>n_y</math>, and <math>n_z</math>, the method embeds the block Toeplitz array into a larger block circulant array of size <math>(2n_x-1)\times (2n_y-1)\times (2n_z-1)</math>, which ensures that the corresponding convolution is free of cyclic wraparound. The kernel—containing all positive and negative offsets with the self term set to zero—is reversed along the offset axes, flattened into a one-dimensional array, and transformed by a single long FFT. The input vector is likewise placed in a zero-padded domain of the same size, flattened, and transformed. An element-wise product in the frequency domain corresponds to the spatial-domain convolution; an inverse FFT is then reshaped and cropped back to the physical domain to obtain the result. The method applies to arbitrary dimension <math>n</math> and block size, and was used originally in the discrete dipole approximation.<ref name="Barrowes2001" />
+
+==Thermal discrete dipole approximation==
+Thermal discrete dipole approximation is an extension of the original DDA to simulations of near-field heat transfer between 3D arbitrarily-shaped objects.<ref name=edalatpour2015/><ref name="Moncada-Villa2022"/>
+
+==Discrete dipole approximation codes==
+{{Main|Discrete dipole approximation codes}}
+Most of the codes apply to arbitrary-shaped inhomogeneous nonmagnetic particles and particle systems in free space or homogeneous dielectric host medium. The calculated quantities typically include the [[Mueller calculus#Mueller matrices|Mueller matrices]], [[Cross section (physics)#Scattering of light|integral cross-sections]] (extinction, absorption, and scattering), internal fields and angle-resolved scattered fields (phase function). There are some published comparisons of existing DDA codes.<ref name=penttila2007/>
+
+==Gallery of shapes==
+<gallery>
+File:Shape periodic2d.png|Scattering by periodic structures such as slabs, gratings, of periodic cubes placed on a surface, can be solved in the discrete dipole approximation.
+File:Shape_1d_cylinder.png|Scattering by infinite object (such as cylinder) can be solved in the discrete dipole approximation.
+</gallery>
+
+==See also==
+*[[Computational electromagnetics]]
+*[[Mie theory]]
+*[[Finite-difference time-domain method]]
+*[[Method of moments (electromagnetics)]]
+
+==References==
+<references>
+
+<ref name=chaumet2003>{{cite journal |last1=Chaumet |first1=Patrick C. |last2=Rahmani |first2=Adel |last3=Bryant |first3=Garnett W. |title=Generalization of the coupled dipole method to periodic structures |journal=Phys. Rev. B |volume=67 |issue=16 |article-number=165404 |date=2003-04-02 |doi=10.1103/PhysRevB.67.165404 |arxiv=physics/0305051 |bibcode=2003PhRvB..67p5404C}}</ref>
+
+<ref name=draine1994>{{cite journal |last1=Draine |first1=B. T. |last2=Flatau |first2=P. J. |title=Discrete dipole approximation for scattering calculations |journal=J. Opt. Soc. Am. A |volume=11 |issue=4 |pages=1491–1499 |year=1994 |doi=10.1364/JOSAA.11.001491 |bibcode=1994JOSAA..11.1491D}}</ref>
+
+<ref name=draine2008>{{cite journal |last1=Draine |first1=B. T. |last2=Flatau |first2=P. J. |title=The discrete dipole approximation for periodic targets: theory and tests |journal=J. Opt. Soc. Am. A |volume=25 |issue=11 |pages=2693–2703 |year=2008 |doi=10.1364/JOSAA.25.002693 |pmid=18978846 |arxiv=0809.0338 |bibcode=2008JOSAA..25.2693D}}</ref>
+
+<ref name=devoe1964>{{cite journal |last=DeVoe |first=Howard |title=Optical properties of molecular aggregates. I. Classical model of electronic absorption and refraction |journal=J. Chem. Phys. |volume=41 |issue=2 |pages=393–400 |date=1964-07-15 |doi=10.1063/1.1725879 |bibcode=1964JChPh..41..393D}}</ref>
+
+<ref name=edalatpour2015>{{cite journal |last1=Edalatpour |first1=S. |last2=Čuma |first2=M. |last3=Trueax |first3=T. |last4=Backman |first4=R. |last5=Francoeur |first5=M. |title=Convergence analysis of the thermal discrete dipole approximation |journal=Phys. Rev. E |volume=91 |issue=6 |article-number=063307 |year=2015 |doi=10.1103/PhysRevE.91.063307 |pmid=26172822 |arxiv=1502.02186 |bibcode=2015PhRvE..91f3307E}}</ref>
+
+<ref name=lorentz1909>H. A. Lorentz, ''Theory of Electrons'', Teubner, Leipzig, 1909.</ref>
+
+<ref name=mcdonald2009>{{cite journal |last1=McDonald |first1=J. |last2=Golden |first2=A. |last3=Jennings |first3=G. |title=OpenDDA: a high-performance computational framework for the discrete dipole approximation |journal=Int. J. High Perform. Comput. Appl. |volume=23 |issue=1 |pages=42–61 |year=2009 |doi=10.1177/1094342008097914 |arxiv=0908.0863 |bibcode=2009arXiv0908.0863M}}</ref>
+
+<ref name=purcell1973>{{cite journal |last1=Purcell |first1=E. M. |last2=Pennypacker |first2=C. R. |title=Scattering and absorption of light by nonspherical dielectric grains |journal=Astrophys. J. |volume=186 |pages=705–714 |year=1973 |doi=10.1086/152538 |bibcode=1973ApJ...186..705P}}</ref>
+
+<ref name=penttila2007>{{cite journal |last1=Penttilä |first1=A. |last2=Zubko |first2=E. |last3=Lumme |first3=K. |last4=Muinonen |first4=K. |last5=Yurkin |first5=M. A. |title=Comparison between discrete dipole implementations and exact techniques |journal=J. Quant. Spectrosc. Radiat. Transfer |volume=106 |issue=1–3 |pages=417–436 |year=2007 |doi=10.1016/j.jqsrt.2007.01.026 |url=https://scattering.ru/papers/Penttila%20et%20al.%20-%202007%20-%20Comparison%20between%20discrete%20dipole%20implementations.pdf |bibcode=2007JQSRT.106..417P}}</ref>
+
+<ref name=schmehl1997>{{cite journal |last1=Schmehl |first1=R. |last2=Nebeker |first2=B. M. |last3=Hirleman |first3=E. D. |title=Discrete-dipole approximation for scattering by features on surfaces using FFT techniques |journal=J. Opt. Soc. Am. A |volume=14 |issue=11 |pages=3026–3036 |date=1997-11-01 |doi=10.1364/JOSAA.14.003026 |bibcode=1997JOSAA..14.3026S}}</ref>
+
+<ref name=singham1986>{{cite journal |last1=Singham |first1=S. B. |last2=Salzman |first2=G. C. |title=Evaluation of the scattering matrix of an arbitrary particle using the coupled dipole approximation |journal=J. Chem. Phys. |volume=84 |issue=5 |pages=2658–2667 |year=1986 |doi=10.1063/1.450338 |bibcode=1986JChPh..84.2658S}}</ref>
+
+<ref name=singham1987>{{cite journal |last1=Singham |first1=S. B. |last2=Bohren |first2=C. F. |title=Light scattering by an arbitrary particle: a physical reformulation of the coupled dipole method |journal=Opt. Lett. |volume=12 |issue=1 |pages=10–12 |date=1987-01-01 |doi=10.1364/OL.12.000010 |bibcode=1987OptL...12...10S}}</ref>
+
+<ref name=smunev2015>{{cite journal |last1=Smunev |first1=D. A. |last2=Chaumet |first2=P. C. |last3=Yurkin |first3=M. A. |title=Rectangular dipoles in the discrete dipole approximation |journal=J. Quant. Spectrosc. Radiat. Transfer |volume=156 |pages=67–79 |year=2015 |doi=10.1016/j.jqsrt.2015.01.019 |url=https://scattering.ru/papers/Smunev%20et%20al.%20-%202015%20-%20Rectangular%20dipoles%20in%20the%20discrete%20dipole%20approxi.pdf |bibcode=2015JQSRT.156...67S}}</ref>
+
+<ref name=zubko2010>{{cite journal |last1=Zubko |first1=E. |last2=Petrov |first2=D. |last3=Grynko |first3=Y. |last4=Shkuratov |first4=Y. |last5=Okamoto |first5=H. |title=Validity criteria of the discrete dipole approximation |journal=Appl. Opt. |volume=49 |issue=8 |pages=1267–1279 |year=2010 |doi=10.1364/AO.49.001267 |pmid=20220882 |bibcode=2010ApOpt..49.1267Z|hdl=2115/50065 |hdl-access=free }}</ref>
+
+<ref name=Yurkin2007a>{{cite journal |last1=Yurkin |first1=M. A. |last2=Hoekstra |first2=A. G. |title=The discrete dipole approximation: an overview and recent developments |journal=J. Quant. Spectrosc. Radiat. Transfer |volume=106 |issue=1–3 |pages=558–589 |year=2007 |doi=10.1016/j.jqsrt.2007.01.034 |arxiv=0704.0038 |url=https://scattering.ru/papers/Yurkin%20and%20Hoekstra%20-%202007%20-%20The%20discrete%20dipole%20approximation%20an%20overview%20and.pdf |bibcode=2007JQSRT.106..558Y}}</ref>
+
+<ref name=yurkin2015>{{cite journal |last1=Yurkin |first1=M. A. |last2=Huntemann |first2=M. |title=Rigorous and fast discrete dipole approximation for particles near a plane interface |journal=J. Phys. Chem. C |volume=119 |issue=52 |pages=29088–29094 |year=2015 |doi=10.1021/acs.jpcc.5b09271 |url=https://scattering.ru/papers/Yurkin%20and%20Huntemann%20-%202015%20-%20Rigorous%20and%20fast%20discrete%20dipole%20approximation%20fo.pdf}}</ref>
+
+<ref name=matlab2021>{{cite journal |last1=Shabaninezhad |first1=M. |last2=Awan |first2=M. G. |last3=Ramakrishna |first3=G. |title=MATLAB package for discrete dipole approximation by graphics processing unit: Fast Fourier Transform and Biconjugate Gradient |journal=J. Quant. Spectrosc. Radiat. Transfer |volume=262 |article-number=107501 |year=2021 |doi=10.1016/j.jqsrt.2020.107501 |bibcode=2021JQSRT.26207501S}}</ref>
+
+<ref name=Yurkin2023>{{cite book |last=Yurkin |first=Maxim A. |title=Light, Plasmonics and Particles |chapter=Discrete Dipole Approximation |pages=167–198 |year=2023 |publisher=Elsevier |isbn=978-0-323-99901-4 |doi=10.1016/B978-0-323-99901-4.00020-2 |url=https://scattering.ru/books/Yurkin%20-%202023%20-%20Discrete%20dipole%20approximation.pdf}}</ref>
+
+<ref name=chaumet2024>{{cite journal |last=Chaumet |first=Patrick C. |title=A comparative study of efficient iterative solvers for the discrete dipole approximation |journal=J. Quant. Spectrosc. Radiat. Transfer |volume=312 |article-number=108816 |year=2024 |doi=10.1016/j.jqsrt.2023.108816 |bibcode=2024JQSRT.31208816C}}</ref>
+
+<ref name=chaumet2022discrete>{{cite journal |last=Chaumet |first=Patrick C. |title=The discrete dipole approximation: A review |journal=Mathematics |volume=10 |issue=17 |page=3049 |year=2022 |doi=10.3390/math10173049 |doi-access=free }}</ref>
+
+<ref name=Barrowes2001>{{cite journal |last1=Barrowes |first1=B. E. |last2=Teixeira |first2=F. L. |last3=Kong |first3=J. A. |title=Fast algorithm for matrix–vector multiply of asymmetric multilevel block-Toeplitz matrices in 3-D scattering |journal=Microw. Opt. Technol. Lett. |volume=31 |issue=1 |pages=28–32 |year=2001 |doi=10.1002/mop.1348}}</ref>
+
+<ref name=Goodman1991>{{cite journal |last1=Goodman |first1=J. J. |last2=Draine |first2=B. T. |last3=Flatau |first3=P. J. |title=Application of fast-Fourier-transform techniques to the discrete-dipole approximation |journal=Opt. Lett. |volume=16 |issue=15 |pages=1198–1200 |year=1991 |doi=10.1364/OL.16.001198 |pmid=19776919 |bibcode=1991OptL...16.1198G}}</ref>
+
+<ref name="Petravic1979">{{cite journal |last1=Petravic |first1=M. |last2=Kuo-Petravic |first2=G. |title=An ILUCG algorithm which minimizes in the euclidean norm |journal=Journal of Computational Physics |volume=32 |issue=2 |pages=263–269 |year=1979|doi=10.1016/0021-9991(79)90133-5 |bibcode=1979JCoPh..32..263P |url=https://digital.library.unt.edu/ark:/67531/metadc1195635/ }}</ref>
+
+<ref name="Moncada-Villa2022">{{Cite journal | last1 = Moncada-Villa | first1 = E. | last2 = Cuevas | first2 = J. C. | year = 2022 | title = Thermal discrete dipole approximation for near-field radiative heat transfer in many-body systems with arbitrary nonreciprocal bodies | journal = Physical Review B | volume = 106 | issue = 23 | article-number = 235430 | doi = 10.1103/PhysRevB.106.235430 | arxiv = 2206.14921 | bibcode = 2022PhRvB.106w5430M }}</ref>
+
+<ref name="Temperton1983">C. Temperton. "Self-sorting mixed-radix fast Fourier transforms." Journal of Computational Physics, 52.1 (1983): 1–23.</ref>
+
+</references>
+
+{{DEFAULTSORT:Discrete Dipole Approximation}}
+[[Category:Computational science]]
+[[Category:Electrodynamics]]
+[[Category:Scattering]]
+[[Category:Scattering, absorption and radiative transfer (optics)]]
+[[Category:Computational electromagnetics]]

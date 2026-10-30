@@ -1,0 +1,202 @@
+<!-- wikipedia: en
+     page: 25099295
+     title: Backfitting algorithm
+     revision: 1372602850
+     timestamp: 2026-09-01T12:19:33Z
+     history: https://en.wikipedia.org/w/index.php?curid=25099295&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1372602850 -->
+{{Short description|Iterative procedure}}
+In [[statistics]], the '''backfitting algorithm''' is a simple iterative procedure used to fit a [[generalized additive model]]. It was introduced in 1985 by [[Leo Breiman]] and [[Jerome H. Friedman|Jerome Friedman]] along with generalized additive models. In most cases, the backfitting algorithm is equivalent to the [[Gauss&ndash;Seidel|Gauss&ndash;Seidel method]], an algorithm used for solving a certain [[linear system of equations]].
+
+==Algorithm==
+Additive models are a class of [[Nonparametric regression|non-parametric regression]] models of the form:
+
+: <math> Y_i  = \alpha + \sum_{j=1}^p f_j(X_{ij}) + \epsilon_i </math>
+
+where each <math>X_1, X_2, \ldots, X_p </math> is a variable in our <math>p</math>-dimensional predictor <math>X</math>, and <math>Y</math> is our outcome variable. <math>\epsilon</math> represents our inherent error, which is assumed to have mean zero. The <math>f_j</math> represent unspecified smooth functions of a single <math>X_j</math>. Given the flexibility in the <math>f_j</math>, we typically do not have a unique solution: <math>\alpha</math> is left unidentifiable as one can add any constants to any of the <math>f_j</math> and subtract this value from <math>\alpha</math>. It is common to rectify this by constraining
+
+: <math>\sum_{i = 1}^N f_j(X_{ij}) = 0</math> for all <math>j</math>
+
+leaving
+
+: <math>\alpha = 1/N \sum_{i = 1}^N y_i</math>
+
+necessarily.
+
+The backfitting algorithm is then:
+    	
+    '''Initialize''' <math>\hat{\alpha} = 1/N \sum_{i = 1}^N y_i, \hat{f_j} \equiv 0</math>,<math> \forall j</math>
+    '''Do''' until <math>\hat{f_j}</math> converge:
+        '''For''' each predictor ''j'':
+            '''(a)''' <math> \hat{f_j} \leftarrow \text{Smooth}[\lbrace y_i - \hat{\alpha} - \sum_{k \neq j} \hat{f_k}(x_{ik}) \rbrace_1^N ]</math> (backfitting step)
+            '''(b)''' <math> \hat{f_j} \leftarrow \hat{f_j} - 1/N \sum_{i=1}^N \hat{f_j}(x_{ij})</math> (mean centering of estimated function)
+
+where <math>\text{Smooth}</math> is our smoothing operator. This is typically chosen to be a [[Smoothing spline|cubic spline smoother]] but can be any other appropriate fitting operation, such as:
+
+* local [[polynomial regression]]
+* [[kernel smoothing]] methods
+* more complex operators, such as surface smoothers for second and higher-order interactions
+
+In theory, step '''(b)''' in the algorithm is not needed as the function estimates are constrained to sum to zero. However, due to numerical issues this might become a problem in practice.<ref>[[Trevor Hastie|Hastie, Trevor]], [[Robert Tibshirani]] and Jerome Friedman (2001). ''The Elements of Statistical Learning: Data Mining, Inference, and Prediction''. Springer, {{ISBN|0-387-95284-5}}.</ref>
+
+==Motivation==
+If we consider the problem of minimizing the expected squared error:
+
+: <math>\min_{\alpha, f_j}\ \mathbb{E}[(Y - \alpha - \sum_{j=1}^p f_j(X_j))^2]</math>
+
+There exists a unique solution by the theory of projections given by:
+
+: <math>f_i(X_i) = \mathbb{E}[Y - \alpha - \sum_{j \neq i}^p f_j(X_j) \mid X_i]</math>
+
+for ''i''&nbsp;=&nbsp;1,&nbsp;2,&nbsp;...,&nbsp;''p''.
+
+This gives the matrix interpretation:
+
+: <math>
+
+\begin{pmatrix}
+I & P_1 & \cdots  & P_1 \\
+P_2 & I &  \cdots  & P_2 \\
+\vdots &  &  \ddots & \vdots \\
+P_p & \cdots  & P_p & I 
+\end{pmatrix}
+
+\begin{pmatrix}
+f_1(X_1)\\
+f_2(X_2)\\
+\vdots \\
+f_p(X_p)
+\end{pmatrix}
+=
+\begin{pmatrix}
+P_1 Y\\
+P_2 Y\\
+\vdots \\
+P_p Y
+\end{pmatrix}
+</math>
+
+where <math>P_i(\cdot) = \mathbb{E}(\cdot|X_i)</math>. In this context we can imagine a smoother matrix, <math>S_i</math>, which approximates our <math>P_i</math> and gives an estimate, <math>S_i Y</math>, of <math>\mathbb{E}(Y|X)</math>
+
+: <math>
+\begin{pmatrix}
+I & S_1 & \cdots  & S_1 \\
+S_2 & I &  \cdots  & S_2 \\
+\vdots &  &  \ddots & \vdots \\
+S_p & \cdots  & S_p & I 
+\end{pmatrix}
+
+\begin{pmatrix}
+f_1\\
+f_2\\
+\vdots \\
+f_p
+\end{pmatrix}
+=
+\begin{pmatrix}
+S_1 Y\\
+S_2 Y\\
+\vdots \\
+S_p Y
+\end{pmatrix}
+
+</math>
+
+or in abbreviated form
+
+: <math> \hat{S}f = QY \, </math>
+
+An exact solution of this is infeasible to calculate for large ''np'', so the iterative technique of backfitting is used. We take initial guesses <math>f_j^{(0)}</math> and update each <math>f_j^{(\ell)}</math> in turn to be the smoothed fit for the residuals of all the others:
+
+: <math> \hat{f_j}^{(\ell)} \leftarrow \text{Smooth}[\lbrace y_i - \hat{\alpha} - \sum_{k \neq j} \hat{f_k}(x_{ik}) \rbrace_1^N ]</math>
+
+Looking at the abbreviated form it is easy to see the backfitting algorithm as equivalent to the [[Gauss&ndash;Seidel|Gauss&ndash;Seidel method]] for linear smoothing operators ''S''.
+
+==Explicit derivation for two dimensions==
+
+Following,<ref> Härdle, Wolfgang; et al. (June 9, 2004). "Backfitting". Archived from the original on 2015-05-10. Retrieved 2015-08-19.</ref> we can formulate the backfitting algorithm explicitly for the two dimensional case. We have:
+
+: <math> f_1 = S_1(Y-f_2), f_2 = S_2(Y-f_1) </math>
+
+If we denote <math> \hat{f}_1^{(i)} </math> as the estimate of <math>f_1</math> in the ''i''th updating step, the backfitting steps are
+
+: <math> \hat{f}_1^{(i)} = S_1[Y - \hat{f}_2^{(i-1)}], \hat{f}_2^{(i)} = S_2[Y - \hat{f}_1^{(i)}] </math>
+
+By induction we get
+
+: <math> \hat{f}_1^{(i)} = Y - \sum_{\alpha = 0}^{i-1}(S_1 S_2)^\alpha(I-S_1)Y - (S_1 S_2)^{i -1} S_1\hat{f}_2^{(0)} </math>
+
+and
+
+: <math> \hat{f}_2^{(i)} = S_2 \sum_{\alpha = 0}^{i-1}(S_1 S_2)^\alpha(I-S_1)Y + S_2(S_1 S_2)^{i -1} S_1\hat{f}_2^{(0)} </math>
+
+If we set <math> \hat{f}_2^{(0)}= 0</math> then we get
+: <math> \hat{f}_1^{(i)} = Y - S_2^{-1} \hat{f}_2^{(i)} =
+[I - \sum_{\alpha = 0}^{i-1}(S_1 S_2)^\alpha(I-S_1)]Y </math>
+
+: <math> \hat{f}_2^{(i)} = [S_2 \sum_{\alpha = 0}^{i-1}(S_1 S_2)^\alpha(I-S_1)]Y </math>
+
+Where we have solved for <math> \hat{f}_1^{(i)} </math> by directly plugging out from <math> f_2 = S_2(Y-f_1) </math>.
+
+We have convergence if <math> \|S_1 S_2\| < 1 </math>. In this case, letting <math> \hat{f}_1^{(i)}, \hat{f}_2^{(i)} \xrightarrow{} \hat{f}_1^{(\infty)}, \hat{f}_2^{(\infty)} </math>:
+: <math> \hat{f}_1^{(\infty)}  = Y - S_2^{-1} \hat{f}_2^{( \infty)} =
+Y - (I - S_1 S_2)^{-1} (I - S_1) Y </math>
+
+: <math> \hat{f}_2^{(\infty)}  = S_2 (I - S_1 S_2)^{-1} (I - S_1) Y </math>
+
+We can check this is a solution to the problem, i.e. that <math> \hat{f}_1^{(i)} </math> and <math> \hat{f}_2^{(i)} </math> converge to <math> f_1 </math> and <math> f_2 </math> correspondingly, by plugging these expressions into the original equations.
+
+==Issues==
+The choice of when to stop the algorithm is arbitrary and it is hard to know a priori how long reaching a specific convergence threshold will take. Also, the final model depends on the order in which the predictor variables <math>X_i</math> are fit.
+
+As well, the solution found by the backfitting procedure is non-unique. If <math>b</math> is a vector such that <math>\hat{S}b = 0</math> from above, then if <math>\hat{f}</math> is a solution then so is <math>\hat{f} + \alpha b</math> is also a solution for any <math> \alpha \in \mathbb{R}</math>. A modification of the backfitting algorithm involving projections onto the eigenspace of ''S'' can remedy this problem.
+
+==Modified algorithm==
+We can modify the backfitting algorithm to make it easier to provide a unique solution. Let <math> \mathcal{V}_1(S_i) </math> be the space spanned by all the eigenvectors of ''S''<sub>i</sub> that correspond to eigenvalue 1. Then any ''b'' satisfying <math>\hat{S}b = 0</math> has <math> b_i \in \mathcal{V}_1(S_i) \forall i=1,\dots,p</math> and <math> \sum_{i=1}^p b_i = 0.</math> Now if we take <math> A </math> to be a matrix that projects orthogonally onto <math> \mathcal{V}_1(S_1) + \dots + \mathcal{V}_1(S_p) </math>, we get the following modified backfitting algorithm:
+
+    '''Initialize''' <math>\hat{\alpha} = 1/N \sum_1^N y_i, \hat{f_j} \equiv 0</math>,<math> \forall i, j</math>, <math>\hat{f_+} = \alpha + \hat{f_1} + \dots + \hat{f_p} </math>
+    '''Do''' until <math>\hat{f_j}</math> converge:
+        Regress <math> y - \hat{f_+} </math> onto the space <math> \mathcal{V}_1(S_i) + \dots + \mathcal{V}_1(S_p) </math>, setting <math> a = A(Y- \hat{f_+})</math>
+        '''For''' each predictor ''j'':
+            Apply backfitting update to <math>(Y - a)</math> using the smoothing operator <math>(I - A_i)S_i</math>, yielding new estimates for <math>\hat{f_j}</math>
+
+{{more footnotes|date=December 2009}}
+
+==References==
+{{Reflist}}<!--added under references heading by script-assisted edit-->
+* {{cite journal
+ | doi=10.2307/2288473
+ | title=Estimating optimal transformations for multiple regression and correlations (with discussion)
+ | jstor=2288473
+ |author1=Breiman, L.  |author2=Friedman, J. H.
+  |name-list-style=amp | journal=Journal of the American Statistical Association
+ | volume=80 | issue = 391 
+ | pages=580–619
+ | year=1985
+}}
+* {{cite journal
+ | title=Generalized Additive Models
+ |author1=Hastie, T. J.  |author2=Tibshirani, R. J.
+  |name-list-style=amp | journal=Monographs on Statistics and Applied Probability
+ | volume=43
+ | year=1990
+}}
+* {{cite web
+ |url=http://sfb649.wiwi.hu-berlin.de/fedc_homepage/xplore/ebooks/html/spm/spmhtmlnode37.html 
+ |title=Backfitting 
+ |author=Härdle, Wolfgang 
+ |date=June 9, 2004 
+ |accessdate=2015-08-19 
+ |display-authors=etal 
+ |url-status=dead 
+ |archiveurl=https://web.archive.org/web/20150510225240/http://sfb649.wiwi.hu-berlin.de/fedc_homepage/xplore/ebooks/html/spm/spmhtmlnode37.html 
+ |archivedate=2015-05-10 
+}}
+
+==External links==
+*{{Deprecated archive|url=https://archive.today/20121211125906/http://rss.acs.unt.edu/Rdoc/library/gam/html/gam.html|title=R Package for GAM backfitting|sec=el}}
+*[https://web.archive.org/web/20061121130651/http://pbil.univ-lyon1.fr/library/mda/html/bruto.html R Package for BRUTO backfitting]
+
+[[Category:Numerical linear algebra]]
+[[Category:Generalized linear models]]

@@ -1,0 +1,82 @@
+<!-- wikipedia: en
+     page: 37217701
+     title: Sponge function
+     revision: 1286346390
+     timestamp: 2025-04-19T09:04:34Z
+     history: https://en.wikipedia.org/w/index.php?curid=37217701&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1286346390 -->
+{{Short description|Theory of cryptography}}
+[[Image:SpongeConstruction.svg|thumb|upright=1.35|right|alt=Illustration of the sponge construction |The sponge construction for hash functions. ''P<sub>i</sub>'' are blocks of the input string, ''Z<sub>i</sub>'' are hashed output blocks.]]
+In [[cryptography]], a '''sponge function''' or '''sponge construction''' is any of a class of [[algorithm]]s with finite [[state (computer science)|internal state]] that take an input [[bit stream]] of any length and produce an output bit stream of any desired length. Sponge functions have both theoretical and practical uses. They can be used to model or implement many [[cryptographic primitive]]s, including [[cryptographic hash]]es, [[message authentication codes]], [[mask generation function]]s, [[stream cipher]]s, [[pseudo-random number generator]]s, and [[authenticated encryption]].<ref name=duplex>{{cite web |last1=Bertoni |first1=Guido |last2=Daemen |first2=Joan |last3=Peeters |first3=Michaël |last4=van Assche |first4=Giles |title=Duplexing the Sponge: Single-Pass Authenticated Encryption and Other Applications |url=https://keccak.team/files/SpongeDuplex.pdf |access-date=2023-03-27}}</ref>
+
+==Construction==
+A sponge function is built from three components:<ref>{{cite web |url=https://keccak.team/sponge_duplex.html |title=The sponge and duplex constructions |last1=Bertoni |first1=Guido |last2=Daemen |first2=Joan |last3=Peeters |first3=Michaël |last4=van Assche |first4=Giles |access-date=2023-03-27}}</ref>
+
+* a state memory, ''S'', containing ''b'' bits,
+* a function <math>f: \{0,1\}^b \rightarrow \{0,1\}^b</math>
+* a padding function ''P''
+
+''S'' is divided into two sections: one of size ''r'' (the bitrate) and the remaining part of size ''c'' (the capacity). These sections are denoted ''R'' and ''C'' respectively.
+
+''f'' produces a [[pseudorandom permutation]] of the <math>2^b</math> states from ''S''.
+
+''P'' appends enough bits to the input string so that the length of the padded input is a whole multiple of the bitrate, ''r''. This means the input is segmented into blocks of ''r'' bits.
+
+===Operation===
+
+The sponge function "absorbs" (in the [[Sponge (material)|sponge]] metaphor) all blocks of a padded input string as follows:
+*''S'' is initialized to zero
+*for each ''r''-bit block ''B'' of ''P''(string)
+**''R'' is replaced with ''R'' XOR ''B'' (using bitwise [[Exclusive or|XOR]])
+**''S'' is replaced by ''f''(''S'')
+
+The sponge function output is now ready to be produced ("squeezed out") as follows:
+*repeat until output is full
+**output the ''R'' portion of ''S''
+**''S'' is replaced by ''f''(''S'') 
+
+If less than ''r'' bits remain to be output, then ''R'' will be truncated (only part of ''R'' will be output).
+
+Another metaphor describes the state memory as an "[[entropy pool]]", with input "poured into" the pool, and the transformation function referred to as "stirring the entropy pool".<ref name="Rivest2014">
+{{cite news
+| last1= Rivest
+| first1= Ron
+| last2= Schuldt
+| first2= Jacob
+| date= 2014-10-27
+| title=Spritz – a spongy RC4-like stream cipher and hash function
+| url=https://people.csail.mit.edu/rivest/pubs/RS14.pdf
+| accessdate=2014-12-29
+}}</ref>
+
+Note that input bits are never XORed into the ''C'' portion of the state memory, nor are any bits of ''C'' ever output directly. The extent to which ''C'' is altered by the input depends entirely on the transformation function ''f.'' In hash applications, resistance to [[Collision attack|collision]] or [[preimage attack]]s depends on ''C'', and its size (the "capacity" ''c'') is typically twice the desired resistance level.
+
+===Duplex construction===
+
+It is also possible to absorb and squeeze in an alternating fashion.<ref name=duplex/> This operation is called the duplex construction or duplexing. It can be the basis of a single pass authenticated encryption system. This have also been used as an efficient variant of the [[Fiat–Shamir heuristic|Fiat-Shamir transformation]] for some protocols.<ref>{{Citation |last=Chiesa |first=Alessandro |title=A Fiat-Shamir Transformation From Duplex Sponges |date=2025 |url=https://eprint.iacr.org/2025/536 |access-date=2025-04-09 |id=2025/536 |last2=Orrù |first2=Michele}}</ref>
+
+*The state ''S'' is initialized to zero
+*for each ''r''-bit block ''B'' of the input
+**''R'' is XORed with ''B''
+**''S'' is replaced by ''f''(''S'')
+**''R'' is now an output block of size ''r'' bits.
+
+===Overwrite mode===
+It is possible to omit the XOR operations during absorption, while still maintaining the chosen [[security level]].<ref name=duplex/> In this mode, in the absorbing phase, the next block of the input overwrites the ''R'' part of the state. This allows keeping a smaller state between the steps. Since the ''R'' part will be overwritten anyway, it can be discarded in advance, only the ''C'' part must be kept.
+
+==Applications==
+Sponge functions have both theoretical and practical uses. In theoretical cryptanalysis, a '''random sponge function''' is a sponge construction where ''f'' is a random permutation or transformation, as appropriate. Random sponge functions capture more of the practical limitations of cryptographic primitives than does the widely used [[random oracle]] model, in particular the finite internal state.<ref>{{cite web |last1=Bertoni |first1=Guido |last2=Daemen |first2=Joan |last3=Peeters |first3=Michaël |last4=van Assche |first4=Giles |title=On the Indifferentiability of the Sponge Construction |url=https://keccak.team/files/SpongeIndifferentiability.pdf |access-date=March 27, 2023}}</ref>
+
+The sponge construction can also be used to build practical cryptographic primitives. For example, the [[Keccak]] cryptographic sponge with a 1600-bit state has been selected by [[NIST]] as the winner in the [[SHA-3 competition]]. The strength of Keccak derives from the intricate, multi-round permutation ''f'' that its authors developed.<ref>{{cite web|url=https://www.nist.gov/itl/csd/sha-100212.cfm|title=NIST Selects Winner of Secure Hash Algorithm (SHA-3) Competition|first=Chad|last=Boutin|date=2 October 2012|publisher=[[NIST]]|accessdate=4 October 2012}}</ref> The [[RC4]]-redesign called [[Spritz (cipher)|Spritz]] refers to the sponge-construct to define the algorithm.
+
+For other examples, a sponge function can be used to build [[authenticated encryption]] with associated data (AEAD),<ref name="Rivest2014"/> as well as [[password hashing]] schemes.<ref name="lyra2ToC">{{Cite conference|last=van Beirendonck|first=M.|last2=Trudeau|first2=L.|last3=Giard|first3=P.|last4=Balatsoukas-Stimming|first4=A.|date=2019-05-29|title=A Lyra2 FPGA Core for Lyra2REv2-Based Cryptocurrencies|conference=IEEE International Symposium on Circuits and Systems (ISCAS)|location=Sapporo, Japan|publisher=IEEE|pages=1–5|doi=10.1109/ISCAS.2019.8702498|arxiv=1807.05764}}</ref>
+
+==References==
+{{reflist}}
+
+== External links ==
+{{Cryptography navbox | hash}}
+
+[[Category:Cryptographic hash functions]]
+[[Category:Theory of cryptography]]

@@ -1,0 +1,110 @@
+<!-- wikipedia: en
+     page: 21866881
+     title: Benders decomposition
+     revision: 1362575855
+     timestamp: 2026-07-04T21:48:25Z
+     history: https://en.wikipedia.org/w/index.php?curid=21866881&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1362575855 -->
+{{Short description|Technique in mathematical optimization}}
+{{More footnotes|date=September 2020}}
+'''Benders decomposition''' (or '''Benders' decomposition''') is a technique in [[mathematical optimization]] that allows the solution of very large [[linear programming]] problems that have a special [[block matrix|block structure]]. This block structure often occurs in applications such as [[stochastic programming]] as the uncertainty is usually represented with scenarios. The technique is named after [[Jacques F. Benders]].
+
+The strategy behind Benders decomposition can be summarized as ''divide-and-conquer''. That is, in Benders decomposition, the variables of the original problem are divided into two subsets so that a first-stage master problem is solved over the first set of variables, and the values for the second set of variables are determined in a second-stage subproblem for a given first-stage solution. If the subproblem determines that the fixed first-stage decisions are in fact infeasible, then so-called ''Benders cuts'' are generated and added to the master problem, which is then re-solved until no cuts can be generated. Since Benders decomposition adds new ''constraints'' as it progresses towards a solution, the approach is called "''row'' generation".  In contrast, [[Dantzig–Wolfe decomposition]] uses "[[column generation|''column'' generation]]".
+
+== Methodology ==
+Assume a problem that occurs in two or more stages, where the decisions for the later stages rely on the results from the earlier ones. An attempt at first-stage decisions can be made without prior knowledge of optimality according to later stage decisions. This first-stage decision is the master problem. Further stages can then be analyzed as separate subproblems. Information from these subproblems is passed back to the master problem. If constraints for a subproblem were violated, they can be added back to the master problem. The master problem is then re-solved.
+
+The master problem represents an initial [[convex set]] which is further constrained by information gathered from the subproblems. Because the feasible space only shrinks as information is added, the objective value for the master function provides a lower bound on the objective function of the overall problem. 
+
+Benders Decomposition is applicable to problems with a largely block-diagonal structure.
+
+==Mathematical Formulation==
+Assume a problem of the following structure:
+
+:<math> \begin{align}
+& \text{minimize} && \mathbf{c}^\mathrm{T}\mathbf{x} + \mathbf{d}^\mathrm{T}\mathbf{y} \\
+& \text{subject to} && A \mathbf{x} + B \mathbf{y} \geq \mathbf{b} \\
+& && \mathbf{y} \in Y \\
+& && \mathbf{x} \geq \mathbf{0}
+\end{align}</math>
+
+Where <math>A, B</math> represent the constraints shared by both stages of variables and <math>Y</math> represents the feasible set for <math>\mathbf{y}</math>.  Notice that for any fixed <math>\mathbf{\bar{y}} \in Y</math>, the residual problem is
+
+:<math> \begin{align}
+& \text{minimize} && \mathbf{c}^\mathrm{T}\mathbf{x} + \mathbf{d}^\mathrm{T}\mathbf{\bar{y}} \\
+& \text{subject to} && A \mathbf{x} \geq \mathbf{b} - B \mathbf{\bar{y}} \\
+& && \mathbf{x} \geq \mathbf{0}
+\end{align} </math>
+
+The dual of the residual problem is
+
+:<math> \begin{align}
+& \text{maximize} && (\mathbf{b} - B \mathbf{\bar{y}})^\mathrm{T} \mathbf{u} + \mathbf{d}^\mathrm{T}\mathbf{\bar{y}} \\
+& \text{subject to} && A^\mathrm{T} \mathbf{u} \leq \mathbf{c} \\
+& && \mathbf{u} \geq \mathbf{0}
+\end{align} </math>
+
+Using the [[dual representation]] of the residual problem, the original problem can be rewritten as an equivalent minimax problem
+
+:<math>
+\min_{\mathbf{y} \in Y} \left[ \mathbf{d}^\mathrm{T}\mathbf{y} + \max_{\mathbf{u} \geq \mathbf{0}} \left\{ (\mathbf{b} - B \mathbf{y})^\mathrm{T} \mathbf{u} \mid A^\mathrm{T} \mathbf{u} \leq \mathbf{c} \right\} \right].
+</math>
+
+Benders decomposition relies on an iterative procedure that chooses successive values of <math>\mathbf{y}</math> without considering the inner problem except through a set of cut constraints that are created through a pass-back mechanism from the maximization problem.  Although the minimax formulation is written in terms of <math>(\mathbf{u}, \mathbf{y})</math>, for an optimal <math>\mathbf{\bar{y}}</math> the corresponding <math>\mathbf{\bar{x}}</math> can be found by solving the original problem with <math>\mathbf{\bar{y}}</math> fixed.
+
+=== Master Problem Formulation ===
+The decisions for the first stage problem can be described by the smaller minimization problem
+
+:<math> \begin{align}
+& \text{minimize} && \mathbf{\mathbf{d}^\mathrm{T}\mathbf{y} + z} \\
+& \text{subject to} && \{\text{cuts}\} \\
+& && \mathbf{y} \in Y \\
+\end{align}</math>
+
+Initially the set of cuts is empty.  Solving this master problem will constitute a "first guess" at an optimal solution to the overall problem, with the value of <math>\mathbf{z}</math> unbounded below and <math>\mathbf{y}</math> taking on any feasible value.
+
+The set of cuts will be filled in a sequence of iterations by solving the inner maximization problem of the minimax formulation.  The cuts both guide the master problem towards an optimal <math>\mathbf{y}</math>, if one exists, and ensure that <math>\mathbf{y}</math> is feasible for the full problem.  The set of cuts define the relationship between <math>\mathbf{y}</math>, <math>\mathbf{z}</math>, and implicitly <math>\mathbf{x}</math>.
+
+Since the value of <math>z</math> starts unconstrained and we only add constraints at each iteration, meaning the feasible space can only shrink, the value of the master problem at any iteration provides a lower bound on the solution to the overall problem.  If for some <math>\mathbf{\bar{y}}</math> the objective value of the master problem is equal to the value of the optimal value of the inner problem, then by duality theory the solution is optimal.
+
+=== Subproblem Formulation ===
+
+The subproblem considers the suggested solution <math>\mathbf{\bar{y}}</math> to the master problem and solves the inner maximization problem from the minimax formulation.  The inner problem is formulated using the dual representation
+
+:<math> \begin{align}
+& \text{maximize} && (\mathbf{b} - B \mathbf{\bar{y}})^\mathrm{T} \mathbf{u} + \mathbf{d}^\mathrm{T}\mathbf{\bar{y}} \\
+& \text{subject to} && A^\mathrm{T} \mathbf{u} \leq \mathbf{c} \\
+& && \mathbf{u} \geq \mathbf{0}
+\end{align} </math>
+
+While the master problem provides a lower bound on the value of the problem, the subproblem is used to get an upper bound.  The result of solving the subproblem for any given <math>\mathbf{\bar{y}}</math> can either be a finite optimal value for which an [[extreme point]] <math>\mathbf{\bar{u}}</math> can be found, an unbounded solution for which an extreme ray <math>\mathbf{\bar{u}}</math> in the [[recession cone]] can be found, or a finding that the subproblem is infeasible.
+
+== Procedure ==
+
+At a high level, the procedure will iteratively consider the master problem and subproblem.  Each iteration provides an updated upper and lower bound on the optimal objective value.  The result of the subproblem either provides a new constraint to add to the master problem or a certificate that no finite optimal solution exists for the problem.  The procedure terminates when it is shown that no finite optimal solution exists or when the gap between the upper and lower bound is sufficiently small.  In such a case, the value of <math>\mathbf{\bar{x}}</math> is determined by solving the primal residual problem fixing <math>\mathbf{\bar{y}}</math>.
+
+Formally, the procedure begins with the lower bound set to <math>-\inf</math>, the upper bound set to <math>\inf</math>, and the cuts in the master problem empty.  An initial solution is produced by selecting any <math>\mathbf{\bar{y}} \in Y</math>.  Then the iterative procedure begins and continues until the gap between the upper and lower bound is at most <math>\epsilon</math> or it is shown that no finite optimal solution exists.
+
+The first step of each iteration begins by updating the upper bound by solving the subproblem given the most recent value of <math>\mathbf{\bar{y}}</math>.  There are three possible outcomes from solving the subproblem.
+
+In the first case, the objective value of the subproblem is unbounded above.  By [[duality theory]], when a dual problem has unbounded objective the corresponding primal problem is infeasible.  This means that the choice of <math>\mathbf{\bar{y}}</math> does not satisfy <math>A \mathbf{x} + B \mathbf{\bar{y}} \geq \mathbf{b}</math> for any <math>\mathbf{x} \geq \mathbf{0}</math>.  This solution can be removed from the master problem by taking an extreme ray <math>\mathbf{\bar{u}}</math> that certifies the subproblem has unbounded objective and adding a constraint to the master asserting that <math>(\mathbf{b} - B \mathbf{y})^\mathrm{T} \mathbf{\bar{u}} \leq \mathbf{0}</math>.
+
+In the second case, the subproblem is infeasible.  Since the dual feasible space to the problem is empty, either the original problem is not feasible or there is a ray in the primal problem that certifies the objective value is unbounded below.  In either case, the procedure terminates.
+
+In the third case, the subproblem has a finite optimal solution.  By duality theory for linear programs, the optimal value of the subproblem is equal to the optimal value of the original problem constrained on the choice of <math>\mathbf{\bar{y}}</math>.  This allows the upper bound to be updated to the value of the optimal solution of the subproblem, if it is better than the current upper bound.  Given an optimal extreme point <math>\mathbf{\bar{u}}</math>, it also yields a new constraint that requires the master problem to consider the objective value under this particular solution by asserting that
+<math> z \geq (\mathbf{b} - B \mathbf{y})^\mathrm{T} \mathbf{\bar{u}} </math>.  This will strictly increase the value of <math>z</math> at the solution <math>\mathbf{\bar{y}}</math> in the master problem if the choice of <math>\mathbf{\bar{y}}</math> was suboptimal.
+
+Finally, the last part of each iteration is creating a new solution to the master problem by solving the master problem with the new constraint.  The new solution <math>(\mathbf{\bar{y}}, z)</math> is used to update the lower bound.  If the gap between the best upper and lower bound is less than <math>\epsilon</math> then the procedure terminates and the value of <math>\mathbf{\bar{x}}</math> is determined by solving the primal residual problem fixing <math>\mathbf{\bar{y}}</math>.  Otherwise, the procedure continues on to the next iteration.
+
+==See also==
+* [[FortSP]] solver uses Benders decomposition for solving stochastic programming problems
+
+==References==
+{{Reflist}}
+* Benders, J. F. (Sept. 1962), "[https://link.springer.com/article/10.1007%2FBF01386316 Partitioning procedures for solving mixed-variables programming problems]", ''[[Numerische Mathematik]]'' 4(3): 238–252. 
+* {{citation|last=Lasdon|first=Leon&nbsp;S.|title=Optimization Theory for Large Systems|publisher=[[Dover Publications]]|location=Mineola, New York|year=2002|edition=reprint of the 1970 Macmillan|pages=xiii+523|mr=1888251}}.
+
+[[Category:Linear programming]]
+[[Category:Decomposition methods]]
+[[Category:Stochastic optimization]]

@@ -1,0 +1,349 @@
+<!-- wikipedia: en
+     page: 81945855
+     title: Kullback–Leibler Upper Confidence Bound
+     revision: 1351492636
+     timestamp: 2026-04-28T08:50:51Z
+     history: https://en.wikipedia.org/w/index.php?curid=81945855&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1351492636 -->
+{{Short description|Asymptotically optimal algorithm for a decision theory problem}}
+
+[[File:UCB-type run.gif|thumb|Behaviour of an UCB algorithm on a bandit run]]
+
+In [[multi-armed bandit problem|multi-armed bandit problems]], '''KL-UCB''' (for ''Kullback–Leibler Upper Confidence Bound'')<ref name="Maillard2011" /> is a UCB-type algorithm that is asymptotically optimal, in the sense that its regret matches the problem-dependent [[Lai-Robbins lower bound|Lai-Robbins lower bound]].<ref name="Lai1985" />
+
+== Multi-armed bandit problem ==
+
+The [[Multi-armed bandit problem|Multi-armed bandit problem]] is a [[Sequential game|sequential game]] where one player has to choose at each turn between <math>K</math> actions (arms). Behind every arm <math>a</math> there is an unknown distribution <math>\nu_a</math> that lies in a set <math>\mathcal{D}</math> known by the player (for example, <math>\mathcal{D}</math> can be the set of [[Normal distribution|Gaussian distributions]] or [[Bernoulli distribution|Bernoulli distributions]]).<br />
+
+At each turn <math>t</math> the player chooses (pulls) an arm <math>a_t</math>, he then gets an observation <math>X_t</math> of the distribution <math>\nu_{a_t}</math>.
+
+=== Regret minimization ===
+
+The goal is to minimize the regret at time <math>T</math> that is defined as
+: <math>R_T := \sum_{a=1}^K \Delta_a \mathbb{E}[N_a(T)]</math>
+where
+* <math>\mu_a := \mathbb{E}[\nu_a]</math> is the mean of arm <math>a</math>
+* <math>\mu^* := \max_a \mu_a</math> is the highest mean
+* <math>\Delta_a := \mu^* - \mu_a</math>
+* <math>N_a(t)</math> is the number of pulls of arm <math>a</math> up to turn <math>t</math><br />
+
+The player has to find an algorithm that chooses at each turn <math>t</math> which arm to pull based on the previous actions and observations <math>(a_s,X_s)_{s < t}</math> to minimize the regret <math>R_T</math>.<br />
+
+This is a trade-off problem between exploration to find the best arm (the arm with the highest mean) and exploitation to play as much as possible the arm that we think is the best arm.<ref name="Lattimore"/>
+
+== Applications ==
+
+Multi-armed bandit algorithms are used in a variety of fields; for example, they have applications in clinical trials, recommender systems, telecommunications<ref name="Bouneffouf2019"/>, and precision agriculture.<ref name="Gautron2024"/>
+
+== Algorithm KL-UCB ==
+
+The algorithm is a UCB-type algorithm based on optimism, which means that at each turn <math>t</math> we compute an upper confidence bound (UCB) for the mean of each arm <math>a</math>; we then pull the arm with the highest UCB.<br />
+
+The difference with KL-UCB is that it uses an estimation of the lower bound of [[Tze Leung Lai|Lai]]–[[Herbert Robbins|Robbins]]<ref name="Lai1985" /> to make the upper confidence bound.<ref name="Maillard2011" />
+
+=== History ===
+
+The algorithm was first introduced in 2011 for [[Bernoulli distribution|Bernoulli distribution]].<ref name="Maillard2011" /> It was then extended to one-dimensional [[Exponential family|exponential families]] and bounded distributions in 2013.<ref name="Cappe2013" /> An adaptation called KL-UCB-Switch, which uses a mix of MOSS<ref name="AudibertBubeck2009"/> and KL-UCB, was developed to obtain both the problem-dependent and problem-independent asymptotic lower bounds in 2022.<ref name="Garivier2022" /> The algorithm was also extended to Lipschitz bandits in 2014.<ref name="Magureanu2014" />
+
+=== Formal algorithm ===
+[[File:Kl ucb index.png|thumb|The index of an arm a at turn t for KL UCB]]
+
+At first, the algorithm pulls all the arms once. Then, for each turn <math>t \geq K+1</math>, for each arm <math>a</math>, we compute:
+:<math>
+U_a(t) := \max\left\{ \mu \ | \ N_a(t)\mathcal{K}_{inf}(\hat \nu_a(t),\mu,\mathcal{D}) \leq \delta_t \right\}
+</math>
+
+where
+
+* <math>\mathcal{K}_{inf}(\nu,\mu,\mathcal{D}) := \inf\left\{\mathrm{KL}(\nu,\tilde\nu) \ | \ \tilde \nu \in \mathcal{D}, \ \mathbb{E}[\tilde \nu] > \mu \right\}</math>
+* <math>\mathrm{KL}</math> is the [[Kullback–Leibler divergence|Kullback–Leibler divergence]]
+* <math>\hat \nu_a(t)</math> is the [[Empirical measure|empirical distribution]] of arm <math>a</math> at turn <math>t</math>
+* <math>\delta_t</math> is a well-chosen sequence of positive numbers, often equal to <math>\ln t + c \ln \ln t</math> with <math>c > 0</math>.<ref name="Cappe2013" />
+
+Then we choose the arm <math>a_t</math> with the highest index:
+: <math>a_t := \arg \max_a U_a(t)</math>
+
+We note that the algorithm does not require knowledge of <math>T</math>.
+
+=== Example ===
+
+In the special case of [[Normal distribution|Gaussian distribution]] with fixed variance <math>\sigma^2</math>, we have:
+
+:<math>
+U_a(t) = \hat \mu_a(t) + \sqrt{\frac{2 \sigma^2 \delta_t}{N_a(t)}}
+</math>
+
+with <math>\hat \mu_a(t)</math> being the [[Sample mean and covariance|empirical mean]] of arm <math>a</math> at turn <math>t</math>.
+
+=== Pseudocode ===
+
+ The player gets the set D
+ '''for each''' arm i '''do''':
+     n[i] ← 1; nu[i] ← None; d ← ln(K)
+ '''for''' t from 1 to K '''do''':
+     select arm t
+     observe reward r
+     n[t] ← n[t] + 1
+     nu[t] ← update empirical distribution
+ '''for''' t from K+1 to T '''do''':
+     '''for each''' arm i '''do''':
+         index[i] ← compute_index(n[i], nu[i], D, d)
+     select arm a with highest index[a]
+     observe reward r
+     n[a] ← n[a] + 1
+     nu[a] ← update empirical distribution
+     d ← ln(t+1)
+
+== Theoretical results ==
+
+In the multi-armed bandit problem we have the [[Tze Leung Lai|Lai]]–[[Herbert Robbins|Robbins]]<ref name="Lai1985"/> asymptotic lower bound on regret. The algorithm KL-UCB matches this lower bound for one-dimensional exponential families with <math>\delta_t := \ln t + 3 \ln \ln t</math> and for distributions bounded in <math>[0,1]</math> with <math>\delta_t := \ln t + \ln \ln t</math>.<ref name="Cappe2013" />
+
+=== Lai–Robbins lower bound ===
+
+In 1985 [[Tze Leung Lai|Lai]] and [[Herbert Robbins|Robbins]] proved an asymptotic, problem-dependent lower bound on regret.<br />
+
+It states that for every consistent algorithm on the set <math>\mathcal{D}</math> — that is, an algorithm for which, for every <math>(\nu_1,\dots,\nu_K)\in\mathcal{D}^K</math>, the regret <math>R_T</math> is subpolynomial (i.e. <math>R_T = o_{T\to+\infty}(T^\alpha)</math> for all <math>\alpha>0</math>) — we have:
+: <math>R_T \geq \left(\sum_{a : \mu_a < \mu^*} \frac{\Delta_a}{\mathcal{K}_{\inf}(\nu_a,\mu^*,\mathcal{D})} \right)\ln T + o_{T\to+\infty}(\ln T).</math>
+
+This bound is asymptotic (as <math>T \to +\infty</math>) and gives a first-order lower bound of order <math>\ln T</math> with the optimal constant in front of it.
+
+=== Regret bound for KL-UCB ===
+
+The algorithm matches the [[Tze Leung Lai|Lai]]–[[Herbert Robbins|Robbins]]<ref name="Lai1985"/> lower bound for one-dimensional exponential-family distributions and for distributions bounded in <math>[0,1]</math>.<ref name="Cappe2013" />
+
+==== One-dimensional exponential family ====
+
+For <math>\mathcal{D}</math> being the set of one-dimensional exponential families, with <math>\delta_t := \ln t + 3 \ln \ln t</math> we have the following upper bound on the regret of KL-UCB:<ref name="Cappe2013" />
+:<math>R_T \leq \left(\sum_{a : \mu_a < \mu^*} \frac{\Delta_a}{\mathcal{K}_{\inf}(\nu_a,\mu^*,\mathcal{D})} \right)\ln T + O_{T}(\sqrt{\ln T}).</math>
+
+==== Bounded distributions in [0,1] ====
+
+For <math>\mathcal{D} = \mathcal{P}([0,1])</math> (the set of distributions supported on <math>[0,1]</math>), and for <math>\delta_t := \ln t + \ln \ln t</math>, we have the following upper bound on the regret of KL-UCB:<ref name="Cappe2013" />
+:<math>
+R_T \leq \left(\sum_{a : \mu_a < \mu^*} \frac{\Delta_a}{\mathcal{K}_{\inf}(\nu_a,\mu^*,\mathcal{D})} \right)\ln T  + O_{T}\big((\ln T)^{4/5} \ln \ln T\big).
+</math>
+
+=== Runtime ===
+
+For <math>\mathcal{D} = \mathcal{P}([0,1])</math>, the runtime needed per step and for an arm <math>k</math> with <math>n</math> observations is <math>\mathcal{O}\big(n(\ln n)^2\big)</math>.<ref name="Baudry2023"/> This is higher than that of other optimal algorithms, such as NPTS<ref name="Riou2020" /> with <math>\mathcal{O}(n)</math>.<ref name="Baudry2023" /> MED<ref name="Honda2010" /> with <math>\mathcal{O}(n \ln n)</math>.<ref name="Baudry2023" /> and [[Algorithm IMED|IMED]]<ref name="Honda2015" /> with <math>\mathcal{O}(n \ln n)</math>.<ref name="Baudry2023" /><br />
+
+The high runtime of KL-UCB is due to a two-level optimisation: for each arm and candidate mean <math>\mu</math>, the algorithm evaluates <math>\mathcal{K}_{\inf}(\hat\nu_a(t),\mu,\mathcal{D})</math> and then maximises <math>\mu</math> subject to <math>N_a(t)\,\mathcal{K}_{\inf}(\hat\nu_a(t),\mu,\mathcal{D}) \le \delta_t</math>. For distributions bounded in <math>[0,1]</math> the inner problem has no closed form and must be solved numerically, which increases the per-step cost.<ref name="Honda2010"/><ref name="Cappe2013"/>
+
+== See also ==
+
+* [[Multi-armed bandit|Multi-armed bandit]]
+* [[Confidence interval|Confidence interval]]
+
+== References ==
+<references>
+
+<ref name="AudibertBubeck2009">{{cite conference
+ |last1=Audibert
+ |first1=Jean-Yves
+ |last2=Bubeck
+ |first2=Sébastien
+ |title=Minimax policies for adversarial and stochastic bandits
+ |year=2009
+ |conference=Proceedings of the 22nd Annual Conference on Learning Theory (COLT)
+ |pages=217--226
+}}</ref>
+
+<ref name="Gautron2024">{{cite journal
+ |last1=Gautron
+ |first1=Romain
+ |last2=Baudry
+ |first2=Dorian
+ |last3=Adam
+ |first3=Myriam
+ |last4=Falconnier
+ |first4=Gatien N
+ |last5=Hoogenboom
+ |first5=Gerrit
+ |last6=King
+ |first6=Brian
+ |last7=Corbeels
+ |first7=Marc
+ |title=A new adaptive identification strategy of best crop management with farmers
+ |journal=Field Crops Research
+ |volume=307
+ |pages=109249
+ |year=2024
+ |publisher=Elsevier
+}}</ref>
+
+<ref name="Bouneffouf2019">{{cite arXiv
+ |last1=Bouneffouf
+ |first1=Djallel
+ |last2=Rish
+ |first2=Irina
+ |title=A survey on practical applications of multi-armed and contextual bandits
+ |year=2019
+ |eprint=1904.10040
+ |class=cs.LG
+}}</ref>
+
+<ref name="Lattimore">{{cite book
+| last1 = Lattimore
+| first1 = Tor
+| last2 = Szepesvári
+| first2 = Csaba
+| title = ''Bandit Algorithms''
+| year = 2020
+| publisher = Cambridge University Press
+| location = Cambridge
+}}</ref>
+
+<ref name="Maillard2011">{{cite conference
+ |last1=Maillard
+ |first1=Odalric-Ambrym
+ |last2=Munos
+ |first2=Rémi
+ |last3=Stoltz
+ |first3=Gilles
+ |title=A Finite-Time Analysis of Multi-armed Bandits Problems with Kullback-Leibler Divergences
+ |book-title=Proceedings of the 24th Annual Conference on Learning Theory
+ |editor1-last=Kakade
+ |editor1-first=Sham M.
+ |editor2-last=von Luxburg
+ |editor2-first=Ulrike
+ |series=Proceedings of Machine Learning Research
+ |volume=19
+ |pages=497–514
+ |location=Budapest, Hungary
+ |publisher=PMLR
+ |year=2011
+ |url=https://proceedings.mlr.press/v19/maillard11a.html
+}}</ref>
+
+<ref name="Cappe2013">{{cite journal
+ |last1=Cappé
+ |first1=Olivier
+ |last2=Garivier
+ |first2=Aurélien
+ |last3=Maillard
+ |first3=Odalric-Ambrym
+ |last4=Munos
+ |first4=Rémi
+ |last5=Stoltz
+ |first5=Gilles
+ |title=Kullback-Leibler Upper Confidence Bounds for Optimal Sequential Allocation
+ |journal=The Annals of Statistics
+ |year=2013
+ |pages=1516–1541
+}}</ref>
+
+<ref name="Garivier2022">{{cite journal
+ |last1=Garivier
+ |first1=Aurélien
+ |last2=Hadiji
+ |first2=Hédi
+ |last3=Ménard
+ |first3=Pierre
+ |last4=Stoltz
+ |first4=Gilles
+ |title=KL-UCB-switch: Optimal Regret Bounds for Stochastic Bandits from Both a Distribution-Dependent and a Distribution-Free Viewpoints
+ |journal=Journal of Machine Learning Research
+ |volume=23
+ |number=179
+ |year=2022
+ |pages=1–66
+}}</ref>
+
+<ref name="Magureanu2014">{{cite arXiv
+ |last1=Magureanu
+ |first1=Stefan
+ |last2=Combes
+ |first2=Richard
+ |last3=Proutière
+ |first3=Alexandre
+ |title=Lipschitz Bandits: Regret Lower Bounds and Optimal Algorithms
+ |year=2014
+ |eprint=1405.4758
+ |class=cs.LG
+}}</ref>
+
+<ref name="Lai1985">{{cite journal
+ |last1=Lai
+ |first1=T.L.
+ |last2=Robbins
+ |first2=Herbert
+ |title=Asymptotically Efficient Adaptive Allocation Rules
+ |journal=Advances in Applied Mathematics
+ |volume=6
+ |number=1
+ |pages=4–22
+ |year=1985
+ |doi=10.1016/0196-8858(85)90002-8
+ |url=https://www.sciencedirect.com/science/article/pii/0196885885900028
+|url-access=subscription
+ }}</ref>
+
+<ref name="Riou2020">{{cite conference
+ |last1=Riou
+ |first1=Charles
+ |last2=Honda
+ |first2=Junya
+ |title=Bandit Algorithms Based on Thompson Sampling for Bounded Reward Distributions
+ |book-title=Proceedings of the 31st International Conference on Algorithmic Learning Theory
+ |editor1-last=Kontorovich
+ |editor1-first=Aryeh
+ |editor2-last=Neu
+ |editor2-first=Gergely
+ |series=Proceedings of Machine Learning Research
+ |volume=117
+ |pages=777–826
+ |location=
+ |publisher=PMLR
+ |year=2020
+ |url=https://proceedings.mlr.press/v117/riou20a.html
+}}</ref>
+
+<ref name="Honda2015">{{cite journal
+ |last1=Honda
+ |first1=Junya
+ |last2=Takemura
+ |first2=Akimichi
+ |title=Non-Asymptotic Analysis of a New Bandit Algorithm for Semi-Bounded Rewards
+ |journal=Journal of Machine Learning Research
+ |volume=16
+ |number=113
+ |pages=3721–3756
+ |year=2015
+ |url=http://jmlr.org/papers/v16/honda15a.html
+}}</ref>
+
+<ref name="Honda2010">{{cite conference
+ |last1=Honda
+ |first1=Junya
+ |last2=Takemura
+ |first2=Akimichi
+ |title=An Asymptotically Optimal Bandit Algorithm for Bounded Support Models
+ |book-title=COLT
+ |pages=67–79
+ |year=2010
+}}</ref>
+
+<ref name="Baudry2023">{{cite journal
+ |last1=Baudry
+ |first1=Dorian
+ |last2=Pesquerel
+ |first2=Fabien
+ |last3=Degenne
+ |first3=Rémy
+ |last4=Maillard
+ |first4=Odalric-Ambrym
+ |title=Fast Asymptotically Optimal Algorithms for Non-Parametric Stochastic Bandits
+ |journal=Advances in Neural Information Processing Systems
+ |volume=36
+ |pages=11469–11514
+ |year=2023
+}}</ref>
+
+</references>
+
+[[Category:Algorithms]]
+[[Category:Decision theory]]
+[[Category:Sequential methods]]
+[[Category:Optimization algorithms and methods]]
+[[Category:Stochastic optimization]]

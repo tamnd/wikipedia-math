@@ -1,0 +1,76 @@
+<!-- wikipedia: en
+     page: 8280771
+     title: Fast multipole method
+     revision: 1369241924
+     timestamp: 2026-08-13T19:22:19Z
+     history: https://en.wikipedia.org/w/index.php?curid=8280771&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1369241924 -->
+{{Short description|Numerical technique}}
+__NOTOC__
+The '''fast multipole method''' ('''FMM''') is a [[numerical analysis|numerical]] technique that was developed to speed up the calculation of long-ranged forces in the [[n-body problem|''n''-body problem]]. It does this by expanding the system [[Green's function (many-body theory)|Green's function]] using a [[multipole expansion]], which allows one to group sources that lie close together and treat them as if they were a single source.<ref>Rokhlin, Vladimir (1985). "[https://www.sciencedirect.com/science/article/pii/0021999185900026 Rapid Solution of Integral Equations of Classic Potential Theory]." J. Computational Physics Vol. 60, pp. 187–207.</ref>
+
+The FMM has also been applied in accelerating the [[iterative solver]] in the [[Method of moments (electromagnetics)|method of moments]] (MoM) as applied to [[computational electromagnetics]] problems,<ref>[[Nader Engheta]], William D. Murphy, [[Vladimir Rokhlin (American scientist)|Vladimir Rokhlin]], and [[Marius Vassiliou]] (1992), “The Fast Multipole Method for Electromagnetic Scattering Computation,” IEEE Transactions on Antennas and Propagation 40, 634–641.</ref> and in particular in [[Charge based boundary element fast multipole method|computational bioelectromagnetism]]. The FMM was first introduced in this manner by [[Leslie Greengard]] and [[Vladimir Rokhlin Jr.]]<ref>{{cite web |url=http://www-theor.ch.cam.ac.uk/people/ross/thesis/node97.html |title=The Fast Multipole Method |access-date=2010-12-10 |url-status=dead |archive-url=https://web.archive.org/web/20110603231158/http://www-theor.ch.cam.ac.uk/people/ross/thesis/node97.html |archive-date=2011-06-03 }} <!--link redirects to the members list--></ref> and is based on the [[multipole expansion]] of the vector [[Helmholtz equation]]. By treating the interactions between far-away basis functions using the FMM, the corresponding matrix elements do not need to be explicitly stored, resulting in a significant reduction in required memory. If the FMM is then applied in a hierarchical manner, it can improve the complexity of matrix-vector products in an iterative solver from <math>\mathcal{O}(N^2)</math> to <math>\mathcal{O}(N)</math> in finite arithmetic, i.e., given a tolerance <math>\varepsilon</math>, the matrix-vector product is guaranteed to be within a tolerance <math>\varepsilon.</math> The dependence of the complexity on the tolerance <math>\varepsilon</math> is <math>\mathcal{O}(\log(1/\varepsilon))</math>, i.e., the complexity of FMM is <math>\mathcal{O}(N\log(1/\varepsilon))</math>. This has expanded the area of applicability of the MOM to far greater problems than were previously possible.
+
+The FMM, introduced by Rokhlin Jr. and Greengard has been said to be one of the top ten [[algorithm]]s of the 20th century.<ref>{{cite journal |author-first=Barry Arthur |author-last=Cipra |author-link=Barry Arthur Cipra |date=May 16, 2000 |title=The Best of the 20th Century: Editors Name Top 10 Algorithms |journal=SIAM News |volume=33 |issue=4 |pages=2 |publisher=[[Society for Industrial and Applied Mathematics]] |url=https://archive.siam.org/news/news.php?id=637 |access-date=February 27, 2019 |archive-date=September 20, 2018 |archive-url=https://web.archive.org/web/20180920011143/https://archive.siam.org/news/news.php?id=637 |url-status=dead }}</ref> The FMM algorithm reduces the complexity of matrix-vector multiplication involving a certain type of dense matrix which can arise out of many physical systems.
+
+The FMM has also been applied for efficiently treating the Coulomb interaction in the [[Hartree–Fock method]] and [[density functional theory]] calculations in [[quantum chemistry]].<ref>{{cite journal |last1=White |first1=Christopher A. |last2=Johnson |first2=Benny G. |last3=Gill |first3=Peter M.W. |last4=Head-Gordon |first4=Martin |title=The continuous fast multipole method |journal=Chemical Physics Letters |date=November 1994 |volume=230 |issue=1-2 |pages=8–16 |doi=10.1016/0009-2614(94)01128-1}}</ref><ref>{{cite journal |last1=White |first1=Christopher A. |last2=Johnson |first2=Benny G. |last3=Gill |first3=Peter M.W. |last4=Head-Gordon |first4=Martin |title=Linear scaling density functional calculations via the continuous fast multipole method |journal=Chemical Physics Letters |date=May 1996 |volume=253 |issue=3-4 |pages=268–278 |doi=10.1016/0009-2614(96)00175-3}}</ref>
+
+==Sketch of the algorithm==
+[[File:Fast Multipoles - Local Expansion.svg|thumb|Fast multipole method – interpolation of a pole at ''x'' = 3 with an order-5 Chebyshev polynomial]]
+
+In its simplest form, the fast multipole method seeks to evaluate the following function:
+<math display="block">
+ f(y) = \sum_{\alpha=1}^N \frac{\phi_\alpha}{y - x_\alpha},
+</math>
+where <math>x_\alpha \in [-1, 1]</math> are a set of poles, and <math>\phi_\alpha\in\mathbb C</math> are the corresponding pole weights on a set of points <math>\{y_1, \ldots, y_M\}</math> with <math>y_\beta \in [-1, 1]</math>. This is the one-dimensional form of the problem, but the algorithm can be easily generalized to multiple dimensions and kernels other than <math>(y - x)^{-1}</math>.
+
+Naively, evaluating <math>f(y)</math> on <math>M</math> points requires <math>\mathcal O(MN)</math> operations. The crucial observation behind the fast multipole method is that if the distance between <math>y</math> and <math>x</math> is large enough, then <math>(y - x)^{-1}</math> is well-approximated by a [[polynomial]]. Specifically, let <math>-1 < t_1 < \ldots < t_p < 1</math> be the [[Chebyshev nodes]] of order <math>p \ge 2,</math> and let <math>u_1(y), \ldots, u_p(y)</math> be the corresponding [[Lagrange polynomial|Lagrange basis polynomials]]. One can show that the interpolating polynomial
+<math display="block">
+ \frac{1}{y-x} = \sum_{i=1}^p \frac{1}{t_i - x} u_i(y) + \epsilon_p(y)
+</math>
+converges quickly with polynomial order, <math>|\epsilon_{p(y)}| < 5^{-p}</math>, provided that the pole is far enough away from the region of interpolation, <math>|x| \ge 3</math> and <math>|y| < 1</math>. This is known as the "local expansion".
+
+The speed-up of the fast multipole method derives from this interpolation: provided that all the poles are "far away", we evaluate the sum only on the Chebyshev nodes at a cost of <math>\mathcal O(N p)</math>, and then interpolate it onto all the desired points at a cost of <math>\mathcal O(M p)</math>:
+<math display="block">
+ \sum_{\alpha=1}^N \frac{\phi_\alpha}{y_\beta - x_\alpha}
+ = \sum_{i=1}^p u_i(y_\beta) \sum_{\alpha=1}^N \frac{1}{t_i - x_\alpha} \phi_\alpha.
+</math>
+
+Since <math>p = -\log_5 \epsilon</math>, where <math>\epsilon</math> is the numerical tolerance, the total cost is <math>\mathcal O\big((M + N) \log(1/\epsilon)\big)</math>.
+
+To ensure that the poles are indeed well-separated, one recursively subdivides the unit interval such that only <math>\mathcal O(p)</math> poles end up in each interval. One then uses the explicit formula within each interval and interpolation for all intervals that are well-separated. This does not spoil the scaling, since one needs at most <math>\log(1/\epsilon)</math> levels within the given tolerance.
+
+==See also==
+* [[Barnes–Hut simulation]]
+* [[Multipole expansion]]
+* [[n-body simulation|''n''-body simulation]]
+
+==References==
+{{Reflist}}
+
+== Further reading ==
+* Yijun Liu: ''Fast Multipole Boundary Element Method: Theory and Applications in Engineering'', Cambridge Univ. Press, ISBN 978-0-521-11659-6 (2009).
+
+==External links==
+*Gibson, Walton C. ''The Method of Moments in Electromagnetics'' (3rd ed.), Chapman & Hall/CRC, 2021. {{ISBN|9780367365066}}. 
+* [http://portal.acm.org/citation.cfm?id=36901 Abstract of Greengard and Rokhlin's original paper]
+* [http://math.nyu.edu/faculty/greengar/shortcourse_fmm.pdf A short course on fast multipole methods] by Rick Beatson and Leslie Greengard.
+* [http://www.umiacs.umd.edu/~ramani/cmsc878R/fmmdemo2.jar JAVA Animation of the Fast Multipole Method] Nice animation of the Fast Multipole Method with different adaptations.
+
+===Free software===
+* [https://sourceforge.net/projects/puma-em/ Puma-EM] A high performance, parallelized, open source Method of Moments / Multilevel Fast Multipole Method electromagnetics code.
+* [http://www.harperlangston.com/kifmm3d/documentation/index.html KIFMM3d] The Kernel-Independent Fast Multipole 3d Method (kifmm3d) is a new FMM implementation which does not require the explicit multipole expansions of the underlying kernel, and it is based on kernel evaluations.
+* [https://github.com/dmalhotra/pvfmm PVFMM] An optimized parallel implementation of KIFMM for computing potentials from particle and volume sources.
+* [http://www.yijunliu.com/Software FastBEM] Free fast multipole boundary element programs for solving 2D/3D potential, elasticity, stokes flow and acoustic problems.
+* [http://www.fastfieldsolvers.com FastFieldSolvers] maintains the distribution of the tools, called FastHenry and FastCap, developed at M.I.T. for the solution of Maxwell equations and extraction of circuit parasites (inductance and capacitance) using the FMM.
+* [https://github.com/exafmm/exafmm ExaFMM] ExaFMM is a CPU/GPU capable 3D FMM code for Laplace/Helmholtz kernels that focuses on parallel scalability.
+* [http://scalfmm-public.gforge.inria.fr/doc/ ScalFMM] {{Webarchive|url=https://web.archive.org/web/20170502145137/http://scalfmm-public.gforge.inria.fr/doc/ |date=2017-05-02 }} ScalFMM is a C++ software library developed at [[Inria]] Bordeaux with high emphasis on genericity and parallelization (using [[OpenMP]]/[[Message Passing Interface|MPI]]).
+* [https://jacksondebuhr.github.io/dashmm/ DASHMM] DASHMM is a C++ Software library developed at Indiana University using Asynchronous Multi-Tasking HPX-5 [[runtime system]]. It provides a unified execution on shared and distributed memory computers and provides 3D Laplace, Yukawa, and Helmholtz kernels. 
+* [https://zhang416.github.io/recfmm/ RECFMM] Adaptive FMM with dynamic parallelism on multicores.
+* [https://fmm3d.readthedocs.io/en/latest/ FMM3D] A library for efficient 3D N-body interaction computation on multicore machines.
+{{Portal bar|Mathematics|Physics|Astronomy}}
+
+[[Category:Numerical analysis]]
+[[Category:Numerical differential equations]]
+[[Category:Computational science]]

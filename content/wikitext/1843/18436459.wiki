@@ -1,0 +1,428 @@
+<!-- wikipedia: en
+     page: 18436459
+     title: Extended Kalman filter
+     revision: 1371940434
+     timestamp: 2026-08-29T13:39:40Z
+     history: https://en.wikipedia.org/w/index.php?curid=18436459&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1371940434 -->
+{{Short description|Filter for nonlinear state estimation}}
+In [[estimation theory]], the '''extended Kalman filter''' ('''EKF''') is the [[nonlinear]] version of the [[Kalman filter]] which linearizes about an estimate of the current [[mean]] and [[covariance]]. In the case of well defined transition models, the EKF has been considered<ref name=Julier2004>{{cite journal
+ | author = Julier, S.J.
+ |author2=Uhlmann, J.K.
+ | year = 2004
+ | title = Unscented filtering and nonlinear estimation
+ | journal = Proceedings of the IEEE
+ |volume=92
+ |issue=3
+ | pages = 401–422
+ | doi =  10.1109/jproc.2003.823141 
+ |bibcode=2004IEEEP..92..401J
+ |s2cid=9614092
+ | url = https://www.cs.ubc.ca/~murphyk/Papers/Julier_Uhlmann_mar04.pdf
+ }}</ref> the ''[[de facto]]'' standard in the theory of nonlinear [[State observer|state estimation]], [[navigation system]]s and [[GPS]].<ref name=Courses2006>{{cite book
+ | doi = 10.1109/NSSPW.2006.4378854
+ | author = Courses, E.
+ |author2=Surveys, T.
+ | title = 2006 IEEE Nonlinear Statistical Signal Processing Workshop
+ | chapter = Sigma-Point Filters: An Overview with Applications to Integrated Navigation and Vision Assisted Control
+ | year = 2006
+ | pages = 201–202
+ | isbn = 978-1-4244-0579-4
+ | s2cid = 18535558
+ }}</ref>
+
+==History==
+The papers establishing the mathematical foundations of Kalman type filters were published between 1959 and 1961.<ref name=Kalman1960-1>{{cite journal
+ | author = R.E. Kalman
+ | year = 1960
+ | title = Contributions to the theory of optimal control
+ | journal = Bol. Soc. Mat. Mexicana
+ | pages = 102–119
+ | citeseerx = 10.1.1.26.4070
+ }}</ref><ref name=Kalman1960>{{cite journal
+ | author = R.E. Kalman
+ | year = 1960
+ | title = A New Approach to Linear Filtering and Prediction Problems
+ | journal = Journal of Basic Engineering
+ | volume = 82
+ | pages = 35–45
+ | url = https://www.cs.unc.edu/~welch/kalman/media/pdf/Kalman1960.pdf
+| doi = 10.1115/1.3662552
+ | s2cid = 1242324
+ }}</ref><ref name=Kalman1961>{{cite journal
+ | author = R.E. Kalman
+ |author2=R.S. Bucy
+ | year = 1961
+ | title = New results in linear filtering and prediction theory
+ | journal = Journal of Basic Engineering
+ |volume=83
+ | pages = 95–108
+ | url = https://people.duke.edu/~hpgavin/SystemID/References/KalmanBucy-ASME-JBE-1961.pdf
+|doi=10.1115/1.3658902
+ |s2cid=8141345
+ }}</ref>  Named after the [[Hungarian-American]] [[mathematician]], [[engineer]], and inventor [[Rudolf E. Kálmán]], the [[Kalman filter]] is the optimal linear estimator for ''linear''
+system models with additive independent white noise in both the transition and the measurement systems.
+Unfortunately, in engineering, most systems are ''nonlinear'', so attempts were made to apply
+this filtering method to nonlinear systems; most of this work was done at [[NASA Ames]].<ref name=McElhoe1966>{{cite journal
+ | author = Bruce A. McElhoe
+ | year = 1966
+ | title = An Assessment of the Navigation and Course Corrections for a Manned Flyby of Mars or Venus
+ | journal = IEEE Transactions on Aerospace and Electronic Systems
+ | volume = 2
+ | issue = 4
+ | pages = 613–623
+| bibcode = 1966ITAES...2..613M
+ | doi = 10.1109/TAES.1966.4501892
+ | s2cid = 51649221
+ }}</ref><ref name=Smith1962>{{cite web
+ | author = G.L. Smith
+ | author2 = S.F. Schmidt and L.A. McGee
+ | year = 1962
+ | title = Application of statistical filter theory to the optimal estimation of position and velocity on board a circumlunar vehicle
+ | publisher = National Aeronautics and Space Administration
+ | url = https://archive.org/details/nasa_techdoc_19620006857
+}}</ref>  The EKF adapted techniques from [[calculus]], namely multivariate [[Taylor series]] expansions, to linearize a model about a working point.  If the system model (as described below) is not well known or is inaccurate, then [[Monte Carlo methods]], especially [[particle filters]], are employed for estimation.  Monte Carlo techniques predate the existence of the EKF but are more computationally expensive for any moderately dimensioned [[state-space]].
+
+==Formulation==
+In the extended Kalman filter, the state transition and observation models don't need to be linear functions of the state but may instead be [[Differentiable function|differentiable]] functions.
+
+:<math>\boldsymbol{x}_{k} = f(\boldsymbol{x}_{k-1}, \boldsymbol{u}_{k-1}) + \boldsymbol{w}_{k-1}</math>
+
+:<math>\boldsymbol{z}_{k} = h(\boldsymbol{x}_{k}) + \boldsymbol{v}_{k}</math>
+
+Here '''w'''<sub>''k''</sub> and '''v'''<sub>''k''</sub> are the process and observation noises which are both assumed to be zero mean [[Multivariate normal distribution|multivariate Gaussian]] noises with [[covariance matrix|covariance]] '''Q'''<sub>''k''</sub> and '''R'''<sub>''k''</sub> respectively. '''u'''<sub>''k''</sub> is the control vector.
+
+The function ''f'' can be used to compute the predicted state from the previous estimate and similarly the function ''h'' can be used to compute the predicted measurement from the predicted state. However, ''f'' and ''h'' cannot be applied to the covariance directly. Instead a matrix of partial derivatives (the [[Jacobian matrix and determinant|Jacobian]]) is computed.
+
+At each time step, the Jacobian is evaluated with current predicted states. These matrices can be used in the Kalman filter equations. This process essentially linearizes the non-linear function around the current estimate.
+
+See the [[Kalman Filter]] article for notational remarks.
+
+==Discrete-time predict and update equations==
+
+Notation <math>\hat{\mathbf{x}}_{n\mid m}</math> represents the estimate of <math>\mathbf{x}</math> at time ''n'' given observations up to and including at time {{nowrap|''m'' ≤ ''n''}}.
+
+===Predict===
+{|
+|-
+| style="width:20em" | Predicted state estimate
+| <math>\hat{\boldsymbol{x}}_{k|k-1} = f(\hat{\boldsymbol{x}}_{k-1|k-1}, \boldsymbol{u}_{k-1})  </math>
+|-
+| Predicted covariance estimate
+| <math> \boldsymbol{P}_{k|k-1} =  {{\boldsymbol{F}_{k}}} \boldsymbol{P}_{k-1|k-1}{ {\boldsymbol{F}_{k}^T}} + \boldsymbol{Q}_{k-1} </math>
+|-
+|}
+
+===Update===
+{|
+|-
+| style="width:20em"  | [[Innovation (signal processing)|Innovation]] or measurement residual
+|<math>\tilde{\boldsymbol{y}}_{k} = \boldsymbol{z}_{k} - h(\hat{\boldsymbol{x}}_{k|k-1})</math>
+|-
+| Innovation (or residual) covariance
+| <math>\boldsymbol{S}_{k} = {{\boldsymbol{H}_{k}}}\boldsymbol{P}_{k|k-1}{{\boldsymbol{H}_{k}^T}} + \boldsymbol{R}_{k}</math>
+|-
+| ''Near-optimal'' Kalman gain
+| <math>\boldsymbol{K}_{k} = \boldsymbol{P}_{k|k-1}{{\boldsymbol{H}_{k}^T}}\boldsymbol{S}_{k}^{-1} </math>
+|-
+| Updated state estimate
+| <math>\hat{\boldsymbol{x}}_{k|k} = \hat{\boldsymbol{x}}_{k|k-1} + \boldsymbol{K}_{k}\tilde{\boldsymbol{y}}_{k} </math>
+|-
+| Updated covariance estimate 
+| <math> \boldsymbol{P}_{k|k} = (\boldsymbol{I} - \boldsymbol{K}_{k} {{\boldsymbol{H}_{k}}})\boldsymbol{P}_{k|k-1}  </math>
+|}
+
+where the state transition and observation matrices are defined to be the following [[Jacobian matrix|Jacobians]]
+
+:<math> {{\boldsymbol{F}_{k}}} = \left . \frac{\partial f}{\partial \boldsymbol{x} } \right \vert _{\hat{\boldsymbol{x}}_{k-1|k-1},\boldsymbol{u}_{k-1}} </math>
+
+:<math> {{\boldsymbol{H}_{k}}} = \left . \frac{\partial h}{\partial \boldsymbol{x} } \right \vert _{\hat{\boldsymbol{x}}_{k|k-1}} </math>
+
+== Disadvantages and alternatives ==
+
+Unlike its linear counterpart, the extended Kalman filter in general is ''not'' an optimal estimator (it is optimal if the measurement and the state transition model are both linear, as in that case the extended Kalman filter is identical to the regular one). In addition, if the initial estimate of the state is wrong, or if the process is modeled incorrectly, the filter may quickly diverge, owing to its linearization.   Another problem with the extended Kalman filter is that the estimated [[covariance matrix]] tends to underestimate the true covariance matrix and therefore risks becoming [[Consistency (statistics)|inconsistent]] in the statistical sense without the addition of "stabilising noise".<ref>{{Cite book
+|last1 = Huang
+|first1 = Guoquan P
+|last2 = Mourikis
+|first2 = Anastasios I
+|last3 = Roumeliotis
+|first3 = Stergios I
+|title = 2008 IEEE International Conference on Robotics and Automation
+|chapter = Analysis and improvement of the consistency of extended Kalman filter based SLAM
+|pages = 473–479
+|date=2008
+|doi = 10.1109/ROBOT.2008.4543252
+|isbn = 978-1-4244-1646-2
+}}</ref>
+
+More generally one should consider  the infinite dimensional nature of the [[Filtering problem (stochastic processes)|nonlinear filtering problem]] and the inadequacy of a simple mean and variance-covariance estimator to fully represent the optimal filter. It should also be noted that the extended Kalman filter may give poor performances even for very simple one-dimensional systems such as the cubic sensor,<ref>{{cite journal |authorlink1=Michiel Hazewinkel |first1=M. |last1=Hazewinkel |first2=S.I. |last2=Marcus |first3=H.J. |last3=Sussmann |year=1983 |title=Nonexistence of finite-dimensional filters for conditional statistics of the cubic sensor problem |journal=Systems & Control Letters |volume=3 |issue=6 |pages=331–340 |doi=10.1016/0167-6911(83)90074-9 |url=https://ir.cwi.nl/pub/10760 }}</ref> where the optimal filter can be bimodal<ref name="brigoieee">{{cite journal |last1=Brigo |first1=Damiano |last2=Hanzon |first2=Bernard | last3= LeGland | first3 = Francois | year=1998 |title=A differential geometric approach to nonlinear filtering: the projection filter |journal= IEEE Transactions on Automatic Control |volume= 43 |issue=2 |pages= 247–252 |doi=10.1109/9.661075 |bibcode=1998ITAC...43..247B |url=https://hal.inria.fr/hal-02101519/file/rr-2598.pdf |author1-link=Damiano Brigo }}</ref> and as such cannot be effectively represented by a single mean and variance estimator, having a rich structure, or similarly for the quadratic sensor.<ref name="brigomcss">{{cite journal |last1=Armstrong |first1=John |last2=Brigo |first2=Damiano |  year=2016 |title=Nonlinear filtering via stochastic PDE projection on mixture manifolds in L2 direct metric |journal= Mathematics of Control, Signals and Systems |volume= 28 |issue=1 |pages= 1–33|doi=10.1007/s00498-015-0154-1 |bibcode=2016MCSS...28....5A |s2cid=42796459 |hdl=10044/1/30130 |hdl-access=free |arxiv=1303.6236 }}</ref>
+In such cases the [[projection filters]] have been studied as an alternative, having been applied also to navigation.<ref name="azimi">{{cite journal |last1=Azimi-Sadjadi |first1= Babak |last2=Krishnaprasad |first2= P.S.  |year=2005 |title=Approximate nonlinear filtering and its application in navigation |journal= Automatica |volume= 41 |issue=6 |pages= 945–956|doi= 10.1016/j.automatica.2004.12.013 }}</ref> Other general nonlinear filtering methods like full [[particle filter]]s may be considered in this case.
+
+Having stated this, the extended Kalman filter can give reasonable performance, and is arguably the [[de facto standard]] in navigation systems and GPS.{{Citation needed|date=June 2025}}
+
+==Generalizations==
+
+=== Continuous-time extended Kalman filter ===
+'''Model'''
+:<math>
+\begin{align}
+\dot{\mathbf{x}}(t) &= f\bigl(\mathbf{x}(t), \mathbf{u}(t)\bigr) 
+\\
+ \mathbf{z}(t) &= h\bigl(\mathbf{x}(t)\bigr)(t) 
+\end{align}
+</math>
+'''Initialize'''
+:<math>
+\hat{\mathbf{x}}(t_0)=E\bigl[\mathbf{x}(t_0)\bigr] \text{, } \mathbf{P}(t_0)=Var\bigl[\mathbf{x}(t_0)\bigr]
+</math>
+'''Predict-Update'''
+:<math>\begin{align}
+\dot{\hat{\mathbf{x}}}(t) &= f\bigl(\hat{\mathbf{x}}(t),\mathbf{u}(t)\bigr)+\mathbf{K}(t)\Bigl(\mathbf{z}(t)-h\bigl(\hat{\mathbf{x}}(t)\bigr)\Bigr)\\
+\dot{\mathbf{P}}(t) &= \mathbf{F}(t)\mathbf{P}(t)+\mathbf{P}(t)\mathbf{F}(t)^{T}-\mathbf{K}(t)\mathbf{H}(t)\mathbf{P}(t)+\mathbf{Q}(t)\\
+\mathbf{K}(t) &= \mathbf{P}(t)\mathbf{H}(t)^{T}\mathbf{S}(t)^{-1}\\
+\mathbf{F}(t) &= \left . \frac{\partial f}{\partial \mathbf{x} } \right \vert _{\hat{\mathbf{x}}(t),\mathbf{u}(t)}\\
+\mathbf{H}(t) &= \left . \frac{\partial h}{\partial \mathbf{x} } \right \vert _{\hat{\mathbf{x}}(t)} 
+\end{align}</math>
+Unlike the discrete-time extended Kalman filter, the prediction and update steps are coupled in the continuous-time extended Kalman filter.<ref>{{cite book|last1=Brown|first1=Robert Grover|last2=Hwang|first2=Patrick Y.C.|title=Introduction to Random Signals and Applied Kalman Filtering|url=https://archive.org/details/introductiontora00brow|url-access=limited|date=1997|publisher=John Wiley & Sons|location=New York|isbn=978-0-471-12839-7|pages=[https://archive.org/details/introductiontora00brow/page/n150 289]–293|edition=3}}</ref>
+
+==== Discrete-time measurements ====
+Most physical systems are represented as continuous-time models while discrete-time measurements are frequently taken for state estimation via a digital processor. Therefore, the system model and measurement model are given by
+:<math>
+\begin{align}
+\dot{\mathbf{x}}(t) &= f\bigl(\mathbf{x}(t), \mathbf{u}(t)\bigr) + \mathbf{w}(t) &\mathbf{w}(t) &\sim \mathcal{N}\bigl(\mathbf{0},\mathbf{Q}(t)\bigr) \\
+\mathbf{z}_k &= h(\mathbf{x}_k) + \mathbf{v}_k   &\mathbf{v}_k &\sim \mathcal{N}(\mathbf{0},\mathbf{R}_k)
+\end{align}
+</math>
+where <math>\mathbf{x}_k=\mathbf{x}(t_k)</math>.
+
+'''Initialize'''
+:<math>
+\hat{\mathbf{x}}_{0|0}=E\bigl[\mathbf{x}(t_0)\bigr], \mathbf{P}_{0|0}=E\bigl[\left(\mathbf{x}(t_0)-\hat{\mathbf{x}}(t_0)\right)\left(\mathbf{x}(t_0)-\hat{\mathbf{x}}(t_0)\right)^T\bigr]
+</math>
+'''Predict'''
+:<math>
+\begin{align}
+\text{solve }
+&\begin{cases}
+\dot{\hat{\mathbf{x}}}(t) = f\bigl(\hat{\mathbf{x}}(t), \mathbf{u}(t)\bigr) \\
+\dot{\mathbf{P}}(t) = \mathbf{F}(t)\mathbf{P}(t)+\mathbf{P}(t)\mathbf{F}(t)^T+ \mathbf{Q}(t)
+\end{cases}\qquad
+\text{with }
+\begin{cases}
+\hat{\mathbf{x}}(t_{k-1}) = \hat{\mathbf{x}}_{k-1|k-1} \\
+\mathbf{P}(t_{k-1}) = \mathbf{P}_{k-1|k-1}
+\end{cases} \\
+\Rightarrow
+&\begin{cases}
+\hat{\mathbf{x}}_{k|k-1} = \hat{\mathbf{x}}(t_k) \\
+\mathbf{P}_{k|k-1} = \mathbf{P}(t_k)
+\end{cases}
+\end{align}
+</math>
+where
+:<math> \mathbf{F}(t) = \left. \frac{\partial f}{\partial \mathbf{x} } \right \vert _{\hat{\mathbf{x}}(t),\mathbf{u}(t)} </math>
+'''Update'''
+:<math>\mathbf{K}_{k} = \mathbf{P}_{k|k-1}\mathbf{H}_{k}^{T}\bigl(\mathbf{H}_{k}\mathbf{P}_{k|k-1}\mathbf{H}_{k}^{T} + \mathbf{R}_{k}\bigr)^{-1} </math>
+:<math>\hat{\mathbf{x}}_{k|k} = \hat{\mathbf{x}}_{k|k-1} + \mathbf{K}_{k}\bigl(\mathbf{z}_{k} - h(\hat{\mathbf{x}}_{k|k-1})\bigr) </math>
+:<math>\mathbf{P}_{k|k} = (\mathbf{I} - \mathbf{K}_{k}\mathbf{H}_{k})\mathbf{P}_{k|k-1} </math>
+where
+:<math> \textbf{H}_{k} = \left . \frac{\partial h}{\partial \textbf{x} } \right \vert _{\hat{\textbf{x}}_{k|k-1}} </math>
+The update equations are identical to those of discrete-time extended Kalman filter.<ref name=":0" />
+
+===Higher-order extended Kalman filters===
+
+The above recursion is a first-order extended Kalman filter (EKF). Higher order EKFs may be obtained by retaining more terms of the Taylor series expansions. For example, second and third order EKFs have been described.<ref name=":0">{{cite book | author = Einicke, G.A.
+ | year = 2019
+ | title = Smoothing, Filtering and Prediction: Estimating the Past, Present and Future (2nd ed.)
+ | publisher = Amazon Prime Publishing
+ | isbn = 978-0-6485115-0-2
+ }}</ref> However, higher order EKFs tend to only provide performance benefits when the measurement noise is small.
+
+===Non-additive noise formulation and equations===
+The typical formulation of the EKF involves the assumption of [[additive process]] and measurement noise.  This assumption, however, is not necessary for EKF implementation.<ref>{{cite book|last=Simon|first=Dan|title=Optimal State Estimation|url=https://archive.org/details/optimalstateesti0000simo|url-access=limited|year=2006|publisher=John Wiley & Sons|location=Hoboken, NJ|isbn=978-0-471-70858-2}}</ref>  Instead, consider a more general system of the form:
+
+:<math>\boldsymbol{x}_{k} = f(\boldsymbol{x}_{k-1}, \boldsymbol{u}_{k-1}, \boldsymbol{w}_{k-1})</math>
+
+:<math>\boldsymbol{z}_{k} = h(\boldsymbol{x}_{k}, \boldsymbol{v}_{k})</math>
+
+Here '''w'''<sub>''k''</sub> and '''v'''<sub>''k''</sub> are the process and observation noises which are both assumed to be zero mean [[Multivariate normal distribution|multivariate Gaussian]] noises with [[covariance matrix|covariance]] '''Q'''<sub>''k''</sub> and '''R'''<sub>''k''</sub> respectively.  Then the [[covariance]] prediction and innovation equations become
+
+:<math> \boldsymbol{P}_{k|k-1} =  {{{\boldsymbol{F}_{k-1}}}} {\boldsymbol{P}_{k-1|k-1}}{{{\boldsymbol{F}_{k-1}^T}}} {+} {\boldsymbol{L}_{k-1}} {\boldsymbol{Q}_{k-1}}{\boldsymbol{L}^{T}_{k-1}} </math>
+
+:<math> \boldsymbol{S}_{k} = {{\boldsymbol{H}_{k}}}{\boldsymbol{P}_{k|k-1}}{{\boldsymbol{H}_{k}^T}} {+} {\boldsymbol{M}_{k}} {\boldsymbol{R}_{k}} {\boldsymbol{M}_{k}^{T}}</math>
+
+where the matrices <math>\boldsymbol{L}_{k-1}</math> and <math>\boldsymbol{M}_{k}</math> are Jacobian matrices:
+
+:<math> {{\boldsymbol{L}_{k-1}}} = \left . \frac{\partial f}{\partial \boldsymbol{w} } \right \vert _{\hat{\boldsymbol{x}}_{k-1|k-1},\boldsymbol{u}_{k-1}} </math>
+
+:<math> {{\boldsymbol{M}_{k}}} = \left . \frac{\partial h}{\partial \boldsymbol{v} } \right \vert _{\hat{\boldsymbol{x}}_{k|k-1}} </math>
+
+The predicted state estimate and measurement residual are evaluated at the mean of the process and measurement noise terms, which is assumed to be zero.  Otherwise, the non-additive noise formulation is implemented in the same manner as the additive noise EKF.
+
+===Implicit extended Kalman filter===
+
+In certain cases, the observation model of a nonlinear system cannot be solved for <math>\boldsymbol{z}_{k}</math>, but can be expressed by the [[implicit function]]:
+
+:<math>h(\boldsymbol{x}_{k}, \boldsymbol{z'}_{k}) = \boldsymbol{0} </math>
+
+where <math>\boldsymbol{z}_{k} = \boldsymbol{z'}_{k} + \boldsymbol{v}_{k}</math> are the noisy observations.
+
+The conventional extended Kalman filter can be applied with the following substitutions:<ref name="Quan 2017 p. ">{{cite book | last=Quan | first=Quan | title=Introduction to multicopter design and control | publisher=Springer | location=Singapore | year=2017 | isbn=978-981-10-3382-7 }}</ref><ref name="Zhang 1997 pp. 59–76">{{cite journal | last=Zhang | first=Zhengyou | title=Parameter estimation techniques: a tutorial with application to conic fitting | journal=Image and Vision Computing | volume=15 | issue=1 | year=1997 | issn=0262-8856 | doi=10.1016/s0262-8856(96)01112-2 | pages=59–76| url=https://hal.inria.fr/inria-00074015/file/RR-2676.pdf }}</ref>
+
+:<math> {{\boldsymbol{R}_{k}}} \leftarrow {{\boldsymbol{J}_{k}}} {{\boldsymbol{R}_{k}}} {{\boldsymbol{J}_{k}^{T}}} </math>
+
+:<math> \tilde{\boldsymbol{y}}_{k} \leftarrow -h(\hat{\boldsymbol{x}}_{k|k-1}, \boldsymbol{z}_{k}) </math>
+
+where:
+
+:<math> {{\boldsymbol{J}_{k}}} = \left . \frac{\partial h}{\partial \boldsymbol{z} } \right \vert _{\hat{\boldsymbol{x}}_{k|k-1}, \boldsymbol{z}_{k}} </math>
+
+Here the original observation covariance matrix <math> {{\boldsymbol{R}_{k}}} </math> is transformed, and the innovation <math> \tilde{\boldsymbol{y}}_{k} </math> is defined differently. The Jacobian matrix <math> {{\boldsymbol{H}_{k}}} </math> is defined as before, but determined from the implicit observation model <math>h(\boldsymbol{x}_{k}, \boldsymbol{z}_{k})</math>.
+
+== Modifications and alternatives ==
+
+=== Iterated extended Kalman filter ===
+
+The iterated extended Kalman filter improves the linearization of the extended Kalman filter by recursively modifying the centre point of the Taylor expansion. This reduces the linearization error at the cost of increased computational requirements.<ref name="Zhang 1997 pp. 59–76"/>
+
+=== Robust extended Kalman filter ===
+
+The robust extended Kalman filter arises by linearizing the signal model about the current state estimate and using the linear [[Kalman filter]] to predict the next estimate. This attempts to produce a locally optimal filter, however, it is not necessarily stable because the solutions of the underlying [[Riccati equation]] are not guaranteed to be positive definite. One way of improving performance is the faux algebraic Riccati technique<ref>{{Cite journal 
+|last1 = Einicke
+|first1 = G.A.
+|last2 = White
+|first2 = L.B.
+|last3 = Bitmead
+|first3 = R.R.
+|title = The Use of Fake Algebraic Riccati Equations for Co-channel Demodulation
+|journal =  IEEE Transactions on Signal Processing
+|volume = 51
+|issue = 9
+|pages = 2288–2293
+|date=September 2003
+|doi=10.1109/tsp.2003.815376
+|bibcode = 2003ITSP...51.2288E
+|hdl = 2440/2403
+|hdl-access = free
+}}</ref> which trades off optimality for stability. The familiar structure of the extended Kalman filter is retained but stability is achieved by selecting a positive definite solution to a faux [[algebraic Riccati equation]] for the gain design.
+
+Another way of improving extended Kalman filter performance is to employ the [[H-infinity]] results from [[robust control]]. Robust filters are obtained by adding a positive definite term to the design Riccati equation.<ref>{{Cite journal
+|last1 = Einicke
+|first1 =  G.A.
+|last2 = White
+|first2 = L.B.
+|title = Robust Extended Kalman Filtering
+|journal =  IEEE Transactions on Signal Processing
+|volume = 47
+|issue = 9
+|pages = 2596–2599
+|date=September 1999
+|doi=10.1109/78.782219
+|bibcode = 1999ITSP...47.2596E
+}}</ref> The additional term is parametrized by a scalar which the designer may tweak to achieve a [[trade-off]] between mean-square-error and peak error performance criteria.
+
+=== Invariant extended Kalman filter ===
+{{Main|Invariant extended Kalman filter}}
+
+The invariant extended Kalman filter (IEKF) is a modified version of the EKF for nonlinear systems possessing symmetries (or ''invariances''). It combines the advantages of both the EKF and the recently introduced [[symmetry-preserving filter]]s. Instead of using a linear correction term based on a linear output error, the IEKF uses a geometrically adapted correction term based on an invariant output error; in the same way the gain matrix is not updated from a linear state error, but from an invariant state error. The main benefit is that the gain and covariance equations converge to constant values on a much bigger set of trajectories than equilibrium points as it is the case for the EKF, which results in a better convergence of the estimation.
+
+===Unscented Kalman filters===
+A nonlinear Kalman filter which shows promise as an improvement over the EKF is the [[Kalman filter#Unscented Kalman filter|unscented Kalman filter]] (UKF). In the UKF, the probability density is approximated by a deterministic sampling of points which represent the underlying distribution as a [[Gaussian distribution|Gaussian]].  The nonlinear transformation of these points are intended to be an estimation of the [[posterior distribution]], the [[Moment (mathematics)|moments]] of which can then be derived from the transformed samples.  The transformation is known as the [[unscented transform]].  The UKF tends to be more robust and more accurate than the EKF in its estimation of error in all the directions.
+
+<blockquote>
+"The extended Kalman filter (EKF) is probably the most widely used estimation algorithm for nonlinear systems. However, more than 35 years of experience in the estimation community has shown that is difficult to implement, difficult to tune, and only reliable for systems that are almost linear on the time scale of the updates. Many of these difficulties arise from its use of linearization."<ref name="Julier2004"/>
+</blockquote>
+
+A 2012 paper includes simulation results which suggest that some published variants of the UKF fail to be as accurate as the Second Order Extended Kalman Filter (SOEKF), also known as the augmented Kalman filter.<ref>{{cite journal |last1=Gustafsson |first1=F. |last2=Hendeby |first2=G. |title=Some Relations Between Extended and Unscented Kalman Filters |journal=IEEE Transactions on Signal Processing |volume=60 |issue=2 |pages=545–555 |date=February 2012 |doi=10.1109/TSP.2011.2172431 |bibcode=2012ITSP...60..545G |url=https://urn.kb.se/resolve?urn=urn:nbn:se:liu:diva-75272 }}</ref>  The SOEKF predates the UKF by approximately 35 years with the moment dynamics first described by Bass et al.<ref>{{cite journal |first1=R. |last1=Bass |first2=V. |last2=Norum |first3=L. |last3=Schwartz |title= Optimal multichannel nonlinear filtering|journal=  Journal of Mathematical Analysis and Applications|volume=16 |pages=152–164 |year=1966 |doi=10.1016/0022-247X(66)90193-4 |doi-access=free}}</ref>  The difficulty in implementing any Kalman-type filters for nonlinear state transitions stems from the [[numerical stability]] issues required for precision,<ref name="GrewalAndrews2015">{{cite book|author1=Mohinder S. Grewal|author2=Angus P. Andrews|title=Kalman Filtering: Theory and Practice with MATLAB|url=https://books.google.com/books?id=Sgx9BgAAQBAJ&q=%22Kalman+Filtering+%3A+Theory+and+Practice+Using+MATLAB%22|date=2 February 2015|publisher=John Wiley & Sons|isbn=978-1-118-98496-3}}</ref>  however the UKF does not escape this difficulty in that it uses linearization as well, namely [[linear regression]].  The stability issues for the UKF generally stem from the numerical approximation to the [[square root]] of the covariance matrix, whereas the stability issues for both the EKF and the SOEKF stem from possible issues in the [[Taylor Series]] approximation along the trajectory.
+
+===Ensemble Kalman Filter===
+The UKF was in fact predated by the [[Ensemble Kalman filter]], invented by Evensen in 1994. It has the advantage over the UKF that the number of ensemble members used can be much smaller than the state dimension, allowing for applications in very high-dimensional systems, such as [[weather prediction]], with state-space sizes of a billion or more.
+
+===Fuzzy Kalman Filter===
+Fuzzy Kalman filter with a new method to represent possibility distributions was recently proposed to replace probability distributions by possibility distributions in order to obtain a genuine possibilistic filter, enabling the use of non-symmetric process and observation noises as well as higher inaccuracies in both process and observation models.
+<ref>{{Cite journal
+|last1 = Matía
+|first1 =  F.
+|last2 = Jiménez
+|first2 = V.
+|last3 = Alvarado
+|first3 = B.P.
+|last4 = Haber
+|first4 = R.
+|title = The fuzzy Kalman filter: Improving its implementation by reformulating uncertainty representation
+|journal =  Fuzzy Sets and Systems
+|volume = 402
+|pages = 78–104
+|date=January 2021
+|doi=10.1016/j.fss.2019.10.015
+|s2cid = 209913435
+}}</ref>
+
+==See also==
+* [[Assumed density filter]]
+* [[Kalman filter]]
+* [[Ensemble Kalman filter]]
+* [[Fast Kalman filter]]
+* [[Invariant extended Kalman filter]]
+* [[Moving horizon estimation]]
+* [[Particle filter]]
+* [[Kalman filter#Unscented Kalman filter|Unscented Kalman filter]]
+*[[Filtering problem (stochastic processes)|Nonlinear filtering problem]]
+*[[Projection filters]]
+
+==References==
+{{reflist}}
+
+==Further reading==
+{{Refbegin}}
+* {{Cite book
+ |author1=Anderson, B.D.O.  |author2=Moore, J.B.
+ | year = 1979
+ | title = Optimal Filtering
+ | publisher = Prentice–Hall
+ | location = Englewood Cliffs, New Jersey
+ | isbn = 0-13-638122-7
+ | url = http://www.dii.unimore.it/~lbiagiotti/MaterialeKalmanFilter/AndersonMoore2005.pdf
+}}
+
+* {{Cite book
+ | author = Gelb, A.
+ | year = 1974
+ | title = Applied Optimal Estimation
+ | url = https://archive.org/details/appliedoptimales00anal
+ | url-access = registration
+ | publisher = MIT Press
+ | isbn = 978-0-262-57048-0
+}}
+
+* {{Cite book
+ | first=Andrew H.  |last= Jazwinski
+ | year = 1970
+ | title = Stochastic Processes and Filtering
+ | url=https://archive.org/details/stochasticproces0000jazw  | url-access=limited  | publisher = [[Academic Press]] | location=New York
+ | series = Mathematics in Science and Engineering
+ | pages=[https://archive.org/details/stochasticproces00jazw_055/page/n388 376]
+ | isbn=978-0-12-381550-7
+}}
+
+* {{Cite book
+ | first=Peter S. |last=Maybeck
+ | year = 1979
+ | title = Stochastic Models, Estimation, and Control
+ | publisher = [[Academic Press]] | location=New York
+ | isbn = 978-0-12-480701-3
+ | volume = 141-1
+ | series = Mathematics in Science and Engineering
+ | pages=423
+}}
+
+{{Refend}}
+
+==External links==
+* {{cite web |url=http://correll.cs.colorado.edu/?p=1464 |title=Position estimation of a differential-wheel robot based on odometry and landmarks |website=Correll lab |archive-url=https://web.archive.org/web/20120119224326/http://correll.cs.colorado.edu/?p=1464 |archive-date=19 January 2012 |url-status=dead }}
+
+{{DEFAULTSORT:Extended Kalman Filter}}
+[[Category:Signal estimation]]
+[[Category:Nonlinear filters]]
+[[Category:Robot control]]

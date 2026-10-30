@@ -1,0 +1,299 @@
+<!-- wikipedia: en
+     page: 30634770
+     title: MMH-Badger MAC
+     revision: 1310874248
+     timestamp: 2025-09-12T02:33:17Z
+     history: https://en.wikipedia.org/w/index.php?curid=30634770&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1310874248 -->
+{{short description|Message authentication code}}
+'''Badger''' is a [[message authentication code]] (MAC) based on the idea of [[universal hashing]] and was developed{{when |date=October 2024}} by Boesgaard, Scavenius, Pedersen, Christensen, and Zenner.<ref name=BS05>{{Cite web |title= Badger- A fast and provably secure MAC |year=2005 |first1=Martin |last1=Boesgaard |authorlink1=Martin Boesgaard |first2=Ove |last2=Scavenius |authorlink2=Ove Scavenius |first3=Thomas |last3=Pedersen |author3-link=Thomas Pedersen (computer scientist) |first4=Thomas |last4=Christensen |author4-link=Thomas Christensen (computer scientist) |first5=Erik |last5=Zenner |author5-link=Erik Zenner |url=https://eprint.iacr.org/2004/319.pdf}}</ref> It is constructed by strengthening the ∆-universal hash family MMH using an ϵ-almost strongly universal (ASU) hash function family after the application of ENH (see below), where the value of ϵ  is <math>1/(2^{32}-5)</math>.<ref name=SV05>{{Cite web |title=Evaluation of Badger |year=2005 |first1=Stefan |last1=Lucks |authorlink1=Stefan Luck |first2=Vincent |last2=Rijmen |authorlink2=Vincent Rijmen |url=http://www.cryptico.com/Files/Filer/Badger_Security_Report.pdf}}</ref> Since Badger is a MAC function based on the [[universal hash]] function approach, the conditions needed for the security of Badger are the same as those for other universal hash functions such as [[UMAC (cryptography)|UMAC]].
+
+==Introduction==
+
+The Badger MAC processes a message of length up to <math>2^{64}-1</math> bits and returns an [[authentication tag]] of length <math>u\cdot32</math> bits, where <math>1\le u \le 5 </math>. According to the [[security]] needs, user can choose the value of <math>u</math>, that is the number of parallel [[Merkle tree|hash tree]]s in Badger. One can choose larger values of ''u'', but those values do not influence further the security of MAC. The [[algorithm]] uses a 128-bit  key and the limited message length to be processed under this key is <math>2^{64}</math>.<ref name=B>{{Cite web |title=Badger Message Authentication Code, Algorithm Specification |year=2005 |url=http://www.cryptico.com/Files/Filer/WP_Badger_Specification.pdf}}</ref>
+
+The key setup has to be run only once per key in order to run the Badger [[algorithm]] under a given key, since the resulting internal state of the MAC can be saved to be used with any other message that will be processed later.
+
+==ENH==
+
+Hash families can be combined in order to obtain new hash families. For the ϵ-AU, ϵ-A∆U, and ϵ-ASU families, the latter are contained in the former. For instance, an A∆U family is also an AU family, an ASU is also an A∆U family, and so forth. On the other hand, a stronger family can be reduced to a weaker one, as long as a performance gain can be reached. A method to reduce ∆-universal hash function to [[universal hash]] functions will be described in the following.
+
+'''Theorem 2<ref name=BS05/>'''
+
+Let <math>H^\triangle</math> be an ϵ-AΔU hash family from a set ''A'' to a set ''B''. Consider a message <math>(m, m_b) \in A \times B </math>. Then the family ''H'' consisting of the functions <math>h(m,m_b) = H^\triangle (m) + m_b </math> is ϵ-AU.
+
+If <math> m \ne m'</math>, then the [[probability]] that
+<math>h(m,m_b) =h(m',m'_b)</math> is at most ϵ,
+since <math>H^\triangle</math> is an ϵ-A∆U family. If <math> m = m'</math> but <math> m_b\ne m_b'</math>, then the [[probability]] is trivially 0.
+The proof for Theorem 2 was described in <ref name=BS05/>
+
+The ENH-family is constructed based on the [[universal hash]] family NH (which is also used in [[UMAC (cryptography)|UMAC]]):
+
+: <math>NH_K (M)= \sum_{i=1}^ \frac{\ell}{2} (k_{(2i-1)} +_w m_{(2i-1)})\times (k_{2i} +_w m_{2i} ) \mod 2^{2w} </math>
+
+Where '<math>+_w</math>' means 'addition modulo <math>2^w</math>', and <math>m_i,k_i \in \big\{0,\ldots, 2^w-1\big\}</math>. It is a <math>2^{-w}</math>-A∆U hash family.
+
+'''Lemma 1<ref name=BS05/>'''
+
+The following version of NH is <math>2^{-w}</math>-A∆U:
+
+: <math>NH_K (M)=(k_1 +_w m_1 )\times(k_2 +_w m_2 ) \mod 2^{2w}</math>
+
+Choosing w=32 and applying Theorem 1, one can obtain the <math>2^{-32}</math>-AU function family ENH, which will be the basic building block of the badger MAC:
+
+: <math>ENH_{k_1,k_2} (m_1,m_2,m_3,m_4 )=(m_1 +_{32} k_1)(m_2 +_{32} k_2) +_{64} m_3 +_{64} 2^{32} m_4</math>
+
+where all arguments are 32-bits long and the output has 64-bits.
+
+==Construction==
+
+Badger is constructed using the strongly universality hash family and can be described as
+
+: <math>\mathcal{H}=H^* \times F,</math><ref name=BS05/>
+
+where an <math>\epsilon_{H^*}</math>-AU universal function family ''H*'' is used to hash messages of any size onto a fixed size and an <math>\epsilon_{F}</math>-ASU function family ''F'' is used to guarantee the strong universality of the overall construction. ''NH'' and ''ENH'' are used to construct ''H*''. The maximum input size of the function family ''H*'' is <math>2^{64}-1</math> and the output size is 128 bits, split into 64 bits each for the message and the hash. The collision probability for the ''H*''-function ranges from <math>2^{-32}</math> to <math>2^{-26.14}</math>. To construct the strongly universal function family ''F'', the ∆-universal hash family MMH* is transformed into a strongly universal hash family by adding another key.
+
+==Two steps on Badger==
+
+There are two steps that have to be executed for every message: processing phase and finalize phase.<ref name=B/>
+
+===Processing phase===
+In this phase, the data is hashed to a 64-bit string. A core function {{mvar|h}} : <math>\left\{0,1\right\}^{64}\times \left\{0,1\right\}^{128} \to \left\{0,1\right\}^{64}</math> is used in this processing phase, that hashes a 128-bit string <math> m_2 \parallel m_1</math> to a 64-bit string <math> h( k, m_2, m_1 )</math> as follows:
+	
+: <math> h(k, m_2, m_1 )= (L(m_1 ) +_{32} L(k) )\cdot(U(m_1) +_{32} U(k) ) +_{64} m_2 \, </math>
+
+for any ''n'', <math>+_n</math> means addition modulo <math>2^n</math>. Given a {{tmath|2n}}-bit string ''x'', {{tmath|L(x)}} means least significant ''n'' bits, and {{tmath|U(x)}} means most significant ''n'' bits.
+
+A message can be processed by using this function. Denote {{code|level_key[j][i]}} by <math>k_j^i</math>.
+
+Pseudo-code of the processing phase is as follow.
+
+ ''L'' = |''M''|
+ '''if''' ''L'' = 0
+     <math>M^1 = \cdots = M^u = 0</math>
+     Go to finalization
+ ''r'' = ''L'' mod 64
+ '''if''' ''r'' ≠ 0:
+     <math>M = 0^{64-r} \parallel M</math>
+ '''for''' ''i'' = 1 '''to''' ''u'':
+     <math>M^i = M</math>
+     <math>v' = \max\{ 1, \lceil\log_2 L\rceil - 6 \}</math>
+ '''for''' ''j'' = 1 '''to''' ''v''&prime;:
+     divide {{tmath|M^i}} into 64-bit blocks, {{tmath|1=M^i = m_t^i \parallel \cdots \parallel m_1^i}}
+ '''if''' ''t'' '''is''' even:
+     {{tmath|1=M^i = h(k_j^i, m_t^i, m_{t-1}^i) \parallel \cdots \parallel h(k_j^i, m_2^i, m_1^i)}}
+ '''else'''
+     {{tmath|1=M^i = m_t^i \parallel h(k_j^i, m_{t-1}^i, m_{t-2}^i) \parallel \cdots \parallel h(k_j^i, m_2^i, m_1^i)}}
+
+===Finalize phase===
+In this phase, the 64-string resulting from the processing phase is transformed into the desired MAC tag. This finalization phase uses the [[Rabbit (cipher)|Rabbit]] [[stream cipher]] and uses both key setup and IV setup by taking the finalization key {{code|final_key[j][i]}} as  <math>k_j^i</math>.
+
+Pseudo-code of the finalization phase
+
+ RabbitKeySetup(K)
+ RabbitIVSetup(N)
+ '''for''' ''i'' = 1 '''to''' ''u'':
+     <math>Q^i =0^7 \parallel L \parallel M^i</math>
+     divide {{tmath|Q^i}} into 27-bit blocks, <math>Q^i=q_5^i \parallel \cdots \parallel q_1^i</math>
+     <math>S^i =(\sum_{j=1}^5 (q_j^i K_j^i))+K_6^i \bmod p</math>
+ <math>S = S^u \parallel \cdots \parallel S^1</math>
+ ''S'' = ''S'' ⨁ RabbitNextbit(''u''∙32)
+ '''return''' S
+
+===Notation===
+
+From the [[pseudocode]] above, ''k'' denotes the key in the Rabbit Key Setup(K) which initializes Rabbit with the 128-bit key ''k''. ''M'' denotes the  message to be hashed and  |''M''| denotes the length of the message in bits. {{tmath|q_i}} denotes a message ''M'' that is divided into ''i'' blocks. For the given {{tmath|2n}}-bit string ''x'' then {{math|''L''(''x'')}} and {{math|''U''(''x'')}} respectively denoted its least significant n bits and most significant ''n'' bits.
+
+==Performance==
+
+Boesgard, Christensen and Zenner report the performance of  Badger measured on a 1.0&nbsp;GHz [[Pentium III]] and on a 1.7&nbsp;GHz [[Pentium 4]] processor.<ref name=BS05/> The speed-optimized versions were programmed in [[assembly language]] inlined in C and compiled using the Intel [[C++]] 7.1 compiler.
+
+The following table presents Badger's properties for various restricted message lengths. "Memory req." denotes the amount of memory required to store the internal state including key material and the inner state of the [[Rabbit (cipher)|Rabbit]] [[stream cipher]] . "Setup" denotes the key setup, and "Fin." denotes finalization with IV-setup.
+
+{| class="wikitable"
+|-
+! Max. Message Size
+! Forgery Bound
+! Memory Reg.
+! Setup Pentium III
+! Fin. Pentium III
+! Setup Pentium III
+! Fin. Pentium III
+|-
+| <math>2^{11}</math> bytes (e.g.IPsec)
+| <math>2^{-57.7}</math>
+| 400 bytes
+| 1133 cycles	
+| 409 cycles	
+| 1774 cycles	
+| 776 cycles
+|-
+| <math>2^{15}</math> bytes (e.g.TLS)
+| <math>2^{-56.6}</math>
+| 528 bytes
+| 1370 cycles	
+| 421 cycles	
+| 2100 cycles	
+| 778 cycles
+|-
+| <math>2^{32}</math> bytes
+| <math>2^{-54.2}</math>
+| 1072 bytes
+| 2376 cycles	
+| 421 cycles	
+| 3488 cycles	
+| 778 cycles
+|-
+| <math>2^{61}-1</math> bytes
+| <math>2^{-52.2}</math>
+| 2000 bytes
+| 4093 cycles	
+| 433 cycles	
+| 5854 cycles	
+| 800 cycles
+|}
+
+==MMH (Multilinear Modular Hashing)==
+The name MMH stands for Multilinear-Modular-Hashing. Applications in [[Multimedia]] are for example to verify the [[integrity]] of an on-line multimedia title. The performance of MMH is based on the improved support of integer [[scalar product]]s in modern microprocessors.
+
+MMH uses single precision scalar products as its most basic operation. It consists of a (modified) [[inner product]] between the message and a key [[modular arithmetic|modulo]] a [[Prime number|prime]] <math>p</math>. The construction of MMH works in the [[finite field]] <math>F_p</math> for some prime integer <math>p</math>.
+
+===MMH*===
+MMH* involves a construction of a family of [[hash functions]] consisting of [[Multilinear map|multilinear]] functions on <math>F_p^k</math> for some positive integer {{mvar|k}}. The family MMH* of functions from <math>F_p^k</math> to <math>F_p</math> is defined as follows.
+
+: <math> \mathrm{MMH}^* = \{ g_x : F_p^k \rightarrow F_p | x \in F_p^k \} </math>
+
+where ''x, m'' are vectors, and the functions <math>g_x</math> are defined as follows.
+: <math>g_x(m) = m x\bmod p = \sum_{i=1}^n  m_i\,x_i\bmod p</math>
+
+In the case of MAC, {{mvar|m}} is a message and {{mvar|x}} is a key where <math> m = (m_1,\ldots,m_k) </math> and <math>x = (x_1,\ldots,x_k), x_i, m_i \in \!F_p</math>.
+
+MMH* should satisfy the security requirements of a MAC, enabling say Ana and Bob to communicate in an authenticated way. They have a secret key {{mvar|x}}. Say Charles listens to the conversation between Ana and Bob and wants to change the message into his own message to Bob which should pass as a message from Ana. So, his message {{mvar|m'}} and Ana's message {{mvar|m}} will differ in at least one bit (e.g. <math> m_1 \ne m'_1 </math>).
+
+Assume that Charles knows that the function is of the form <math> g_x (m) </math> and he knows Ana's message {{mvar|m}} but he does not know the key ''x'' then the probability that Charles can change the message or send his own message can be explained by the following theorem.
+
+'''Theorem 1<ref name=HK97>{{ Cite book |title=MMH:Software Message Authentication in the Gbit/second rates |year=1997 |first1=Shai |last1=Halevi |authorlink1=Shai Halevi |first2=Hugo |last2=Krawczyk |chapter=MMH: Software message authentication in the Gbit/Second rates |series=Lecture Notes in Computer Science |volume=1267 |pages=172–189 |doi=10.1007/BFb0052345 |isbn=978-3-540-63247-4 |authorlink2=Hugo Krawczyk }}</ref>''':The family MMH* is ∆-universal.
+
+Proof:
+
+Take <math>a\in F_p</math>, and let <math> m , m'</math> be two different messages. Assume [[without loss of generality]] that <math> m_1 \ne m'_1 </math>. Then for any choice of <math> x_2,x_3,\ldots,x_s </math>, there is
+: <math>
+\begin{align}
+{\Pr}_{x_1}[g_x (m)-g_x (m')\equiv a \mod p] &= {\Pr}_{x_1}[(m_1 x_1+m_2 x_2+ \cdots +m_k x_k )-(m'_1 x_1+m'_2 x_2+\cdots+m'_k x_k )\equiv a \mod p]\\
+&= {\Pr}_{x_1}[(m_1-m'_1)x_1+(m_2-m'_2)x_2+ \cdots +(m_k-m'_k)x_k]\equiv a \mod p]\\
+&= {\Pr}_{x_1}[(m_1-m'_1)x_1+\textstyle \sum_{k=2}^s(m_k-m'_k)x_k\equiv a \mod p]\\
+&= {\Pr}_{x_1}[(m_1-m'_1)x_1\equiv a - \textstyle \sum_{k=2}^s(m_k-m'_k)x_k \mod p]\\
+&=\frac {1}{p}
+\end{align}
+</math>
+
+To explain the theorem above, take <math> F_p </math> for <math> p </math> prime represent the field as <math> F_p = \underbrace{\big\{ 0,1,\ldots,p-1 \big\}}_p </math>. If one takes an element in <math> F_p </math>, let say <math> 0\in  F_p</math> then the probability that <math> x_1=0</math> is
+
+:<math> {\Pr}_{x_1 \in \!{F_p}}(x_1=0)= \frac {1}{p} </math>
+
+So, what one actually needs to compute is
+:<math> {\Pr}_{(x_1,\ldots,x_k)\in \!{F_p^k}} (g_x(m)\equiv g_x(m')\mod p) </math>
+
+But,
+:<math>
+\begin{align}
+{\Pr}_{(x_1,\ldots,x_k)\in \!{F_p^k}}(g_x(m)\equiv g_x(m')\mod p) &= \sum_{(x_2,\ldots,x_k)\in \!{F_p^{k-1}}} {\Pr}_{(x_2^'\cdots,x_k^')\in \!{F_p^{k-1}}}({x_2 = x_2^'},\ldots,{x_k = x_k^'})\cdot {\Pr}_{x_1\in \!F_p}(g_x(m)\equiv g_x(m')\mod p)\\
+&= \sum_{(x_2,\ldots,x_k)\in \!{F_p^{k-1}}} \frac {1}{p^{k-1}} \cdot \frac {1}{p}\\
+&=p^{k-1}\cdot \frac {1}{p^{k-1}} \cdot \frac {1}{p}\\
+&=\frac {1}{p}
+\end{align}
+</math>
+
+From the proof above, <math>\frac{1}{p}</math> is the [[hash collision|collision]] [[probability]] of the attacker in 1 round, so on average {{mvar|p}} verification queries will suffice to get one message accepted. To reduce the collision probability, it is necessary to choose large ''p'' or to concatenate {{mvar|n}} such MACs using {{mvar|n}} independent keys so that the collision probability] becomes <math>\frac{1}{p^n}</math>. In this case the number of keys are increased by a factor of {{mvar|n}} and the output is also increased by {{mvar|n}}.
+
+===MMH*32===
+Halevi and Krawczyk<ref name=HK97/> construct a variant called <math>\mathrm{MMH}^*_{32}</math>. The construction works with 32-bit [[integers]] and with the [[Prime number|prime]] integer <math>p=2^{32}+15</math>. Actually the prime ''p'' can be chosen to be any prime which satisfies <math>2^{32}<p<2^{32}+2^{16}</math>. This idea is adopted from the suggestion by Carter and Wegman to use the primes <math>2^{16}+1</math> or <math>2^{31}-1</math>.
+
+: <math>\mathrm{MMH}^*_{32}</math> is defined as follows:
+
+: <math>\mathrm{MMH}^*_{32}=\left\{g_x (\left\{0,1\right\}^{32} )^k \right\} \to F_p, </math>
+
+where <math>\left\{0,1\right\}^{32}</math> means <math>\left\{0, 1, \ldots, 2^{32}-1\right\}</math> (i.e., binary representation)
+
+The functions <math>g_x</math> are defined as follows.
+
+: <math>
+\begin{align}
+g_x (m)&\ \overset{\underset{\mathrm{def}}{}}{=}\ m \cdot x \bmod (2^{32}+15)\\
+&=\textstyle \sum_{i=1}^k m_i \cdot x_i \bmod (2^{32}+15)
+\end{align}
+</math>
+
+where
+
+: <math> x= (x_1,\ldots,x_k ),\ m=(m,\ldots,m_k )</math>
+
+By theorem 1, the [[collision]] [[probability]] is about <math>\epsilon = 2^{-32}</math>, and the family of <math>\mathrm{MMH}^*_{32}</math> can be defined as ''ϵ''-almost ∆ Universal with <math>\epsilon = 2^{-32}</math>.
+
+===The value of ''k''===
+The value of ''k'' that describes the length of the message and key [[Tuple|vectors]] has several effects:
+* Since the costly modular reduction over ''k'' is multiply and add operations increasing ''k'' should decrease the speed.
+* Since the key ''x'' consist of ''k'' 32-bit integers increasing ''k'' will results in a longer key.
+* The probability of breaking the system is <math>1/p</math> and <math>p\approx 2^k</math> so increasing ''k'' makes the system harder to break.
+
+===Performance===
+Below are the timing results for various implementations of MMH<ref name=HK97/> in 1997, designed by Halevi and Krawczyk.
+* A 150&nbsp;MHz [[PowerPC]] 604 RISC machine running AIX
+{| class="wikitable"
+|-
+! 150&nbsp;MHz [[PowerPC]] 604
+! Message in Memory
+! Message in Cache
+|-
+| 64-bit
+| 390 Mbit/second
+| 417 Mbit/second
+|-
+| 32-bit output
+| 597 Mbit/second
+| 820 Mbit/second
+|}
+
+* A 150&nbsp;[[Hertz|MHz]] Pentium-Pro machine running [[Windows NT]]
+{| class="wikitable"
+|-
+! 150&nbsp;MHz PowerPC 604
+! Message in Memory
+! Message in Cache
+|-
+| 64-bit
+| 296 Mbit/second
+| 356 Mbit/second
+|-
+| 32-bit output
+| 556 Mbit/second
+| 813 Mbit/second
+|}
+
+* A 200&nbsp;MHz Pentium-Pro machine running [[Linux]]
+{| class="wikitable"
+|-
+! 150&nbsp;MHz PowerPC 604
+! Message in Memory
+! Message in Cache
+|-
+| 64-bit
+| 380 Mbit/second
+| 500 Mbit/second
+|-
+| 32-bit output
+| 645 Mbit/second
+| 1080 Mbit/second
+|}
+
+==See also==
+* [[UMAC (cryptography)|UMAC]]
+* [[VMAC]]
+* [[Poly1305-AES]]
+
+==References==
+{{Reflist}}
+
+[[Category:Articles with example pseudocode]]
+[[Category:Message authentication codes]]

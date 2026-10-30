@@ -1,0 +1,218 @@
+<!-- wikipedia: en
+     page: 3849994
+     title: Computational electromagnetics
+     revision: 1374832310
+     timestamp: 2026-09-14T09:45:13Z
+     history: https://en.wikipedia.org/w/index.php?curid=3849994&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374832310 -->
+{{Short description|Branch of physics}}
+{{Use American English|date = April 2019}}
+[[File:Adiabatic-far-field-sub-diffraction-imaging-ncomms8942-s2.ogv|thumb|275px|A [[Superlens|subwavelength imaging]] simulation through [[finite-difference time-domain method]]]]
+{{Electromagnetism}}
+'''Computational electromagnetics''' ('''CEM'''), '''computational electrodynamics''' or '''electromagnetic modeling''' is the process of modeling the interaction of [[electromagnetic field]]s with physical objects and the environment using computers.
+
+It typically involves using [[computer program]]s to compute approximate solutions to [[Maxwell's equations]] to calculate [[Antenna (radio)|antenna]] performance, [[electromagnetic compatibility]], [[radar cross section]] and electromagnetic [[wave propagation]] when not in free space.  A large subfield is '''antenna modeling''' computer programs, which calculate the [[radiation pattern]] and electrical properties of radio antennas, and are widely used to design antennas for specific applications.
+
+==Background==
+<!-- ''Why do electromagnetic modeling?   is being modeled?  What are the computational issues?''  {{Expand section|date=October 2008}} -->
+Several real-world electromagnetic problems like [[electromagnetic scattering]], [[electromagnetic radiation]], modeling of [[waveguide]]s etc., are not analytically calculable, for the multitude of irregular geometries found in actual devices. Computational numerical techniques can overcome the inability to derive closed form solutions of Maxwell's equations under various [[constitutive relation]]s of media, and [[boundary condition]]s. This makes ''computational electromagnetics'' (CEM) important to the design, and modeling of antenna, radar, [[communication satellite|satellite]] and other communication systems, [[nanophotonic]] devices and high speed [[silicon]] electronics, [[medical imaging]], cell-phone antenna design, among other applications.
+
+CEM typically solves the problem of computing the ''E'' (electric) and ''H'' (magnetic) fields across the problem domain (e.g., to calculate antenna [[radiation pattern]] for an arbitrarily shaped antenna structure). Also calculating power flow direction ([[Poynting vector]]), a waveguide's [[normal mode]]s, media-generated wave dispersion, and scattering can be computed from the ''E'' and ''H'' fields. CEM models may or may not assume [[symmetry]], simplifying real world structures to idealized [[cylinder (geometry)|cylinder]]s, [[sphere]]s, and other regular geometrical objects. CEM models extensively make use of symmetry, and solve for reduced dimensionality from 3 spatial dimensions to 2D and even 1D.
+
+An [[Eigenvalue, eigenvector and eigenspace|eigenvalue]] problem formulation of CEM allows us to calculate steady state normal modes in a structure. [[Transient response]] and impulse field effects are more accurately modeled by CEM in time domain, by [[FDTD]]. Curved geometrical objects are treated more accurately as finite elements [[Finite element method|FEM]], or non-orthogonal grids. [[Beam propagation method]] (BPM) can solve for the power flow in waveguides. CEM is application specific, even if different techniques converge to the same field and power distributions in the modeled domain.
+
+==Overview of methods==
+The most common numerical approach is to discretize ("mesh") the problem space in terms of grids or regular shapes ("cells"), and solve Maxwell's equations simultaneously across all cells. Discretization consumes computer memory, and solving the relevant equations takes significant time. Large-scale CEM problems face memory and CPU limitations, and combating these limitations is an active area of research. High performance clustering, vector processing, and/or [[parallel computer|parallelism]] is often required to make the computation practical. Some typical methods involve: time-stepping through the equations over the whole domain for each time instant; banded [[matrix inversion]] to calculate the weights of basis functions (when modeled by finite element methods); matrix products (when using transfer matrix methods); calculating numerical [[integral]]s (when using the [[Boundary element method|method of moments]]); using [[fast Fourier transform]]s; and time iterations (when calculating by the split-step method or by BPM).
+
+==Choice of methods==
+Choosing the right technique for solving a problem is important, as choosing the wrong one can either result in incorrect results, or results which take excessively long time to compute. However, the name of a technique does not always tell one how it is implemented, especially for commercial tools, which will often have more than one solver.
+
+Davidson<ref name="davidson" /> gives two tables comparing the FEM, MoM and FDTD techniques in the way they are normally implemented. One table is for both open region (radiation and scattering problems) and another table is for guided wave problems.
+
+==Maxwell's equations in hyperbolic PDE form==
+Maxwell's equations can be formulated as a [[hyperbolic system]] of [[partial differential equation]]s.  This gives access to powerful techniques for numerical solutions.
+
+It is assumed that the waves propagate in the (''x'',''y'')-plane and restrict the direction of the magnetic field to be parallel to the ''z''-axis and thus the electric field to be parallel to the (''x'',''y'') plane. The wave is called a transverse magnetic (TM) wave.  In 2D and no polarization terms present, Maxwell's equations can then be formulated as:
+<math display="block">\frac{\partial}{\partial t}\bar{u} + A\frac{\partial}{\partial x}\bar{u} + B\frac{\partial}{\partial y}\bar{u} +C\bar{u} = \bar{g}</math>
+where ''u'', ''A'', ''B'', and ''C'' are defined as
+<math display="block">\begin{align}
+\bar{u} &= \left(\begin{matrix} E_x \\ E_y \\ H_z \end{matrix}\right), \\[1ex]
+A &= \left(\begin{matrix} 0 & 0 & 0 \\ 0 & 0 & \frac{1}{\epsilon} \\ 0 & \frac{1}{\mu} & 0 \end{matrix}\right), \\[1ex]
+B &= \left(\begin{matrix} 0 & 0 & \frac{-1}{\epsilon} \\ 0 & 0 & 0 \\ \frac{-1}{\mu} & 0 & 0 \end{matrix}\right), \\[1ex]
+C &= \left(\begin{matrix} \frac{\sigma}{\epsilon} & 0 & 0 \\ 0 & \frac{\sigma}{\epsilon} & 0 \\ 0 & 0 & 0 \end{matrix}\right).
+\end{align}</math>
+
+In this representation, <math>\bar{g}</math> is the [[forcing function (differential equations)|forcing function]], and is in the same space as <math>\bar{u}</math>.  It can be used to express an externally applied field or to describe an optimization [[constraint (mathematics)|constraint]].  As formulated above:
+<math display="block">\bar{g}=\left(\begin{matrix} E_{x, \text{constraint}} \\ E_{y, \text{constraint}} \\ H_{z, \text{constraint}} \end{matrix}\right).</math>
+
+<math>\bar{g}</math> may also be explicitly defined equal to zero to simplify certain problems, or to find a [[Generalized eigenvector|characteristic solution]], which is often the first step in a method to find the particular inhomogeneous solution.
+
+==Integral equation solvers==
+
+===The discrete dipole approximation===
+The [[discrete dipole approximation]] is a flexible technique for computing scattering and absorption by targets of arbitrary [[geometry]]. The formulation is based on integral form of Maxwell equations. The DDA is an approximation of the continuum target by a finite array of polarizable points. The points acquire [[Magnetic moment|dipole moment]]s in response to the local electric field. The dipoles of course interact with one another via their electric fields, so the DDA is also sometimes referred to as the coupled [[dipole]] approximation. The resulting linear system of equations is commonly solved using [[conjugate gradient]] iterations. The discretization matrix has symmetries (the integral form of Maxwell equations has form of convolution) enabling [[fast Fourier transform]] to multiply matrix times vector during conjugate gradient iterations.
+
+===Method of moments and boundary element method ===
+The [[Method of moments (electromagnetics)|method of moments]] (MoM)<ref>[[Roger F. Harrington]] (1968). Field Computation by Moment Methods. Latest printing by IEEE Press in 1993, {{ISBN|0780310144}}.</ref> or [[boundary element method]] (BEM) is a numerical computational method of solving linear partial differential equations which have been formulated as [[integral equation]]s (i.e. in ''boundary integral'' form). It can be applied in many areas of engineering and science including [[fluid mechanics]], [[acoustics]], [[electromagnetics]], [[fracture mechanics]], and [[Plasticity (physics)|plasticity]].
+
+MoM has become more popular since the 1980s. Because it requires calculating only boundary values, rather than values throughout the space, it is significantly more efficient in terms of computational resources for problems with a small surface/volume ratio. Conceptually, it works by constructing a "mesh" over the modeled surface.  However, for many problems, MoM are significantly computationally less efficient than volume-discretization methods ([[finite element method]], [[finite difference method]], [[finite volume method]]).  Boundary element formulations typically give rise to fully populated matrices. This means that the storage requirements and computational time will tend to grow according to the square of the problem size.  By contrast, finite element matrices are typically banded (elements are only locally connected) and the storage requirements for the system matrices typically grow linearly with the problem size.  Compression techniques (''e.g.'' multipole expansions or adaptive cross approximation/hierarchical matrices) can be used to ameliorate these problems, though at the cost of added complexity and with a success-rate that depends heavily on the nature and geometry of the problem.
+
+MoM is applicable to problems for which [[Green's function]]s can be calculated. These usually involve fields in [[linear]] [[Homogeneity (physics)|homogeneous]] media. This places considerable restrictions on the range and generality of problems suitable for boundary elements. Nonlinearities can be included in the formulation, although they generally introduce volume integrals which require the volume to be discretized before solution, removing an oft-cited advantage of MoM.
+
+===Fast multipole method ===
+The [[fast multipole method]] (FMM) is an alternative to MoM or Ewald summation. It is an accurate simulation technique and requires less memory and processor power than MoM. The FMM was first introduced by [[Leslie Greengard|Greengard]] and [[Vladimir Rokhlin (American scientist)|Rokhlin]]<ref>{{cite journal | last1=Greengard | first1=L | last2=Rokhlin | first2=V | title=A fast algorithm for particle simulations | journal=Journal of Computational Physics | publisher=Elsevier BV | volume=73 | issue=2 | year=1987 | issn=0021-9991 | doi=10.1016/0021-9991(87)90140-9 | pages=325–348| bibcode=1987JCoPh..73..325G |url=https://apps.dtic.mil/dtic/tr/fulltext/u2/a169294.pdf|archive-url=https://web.archive.org/web/20190801195118/https://apps.dtic.mil/dtic/tr/fulltext/u2/a169294.pdf|url-status=live|archive-date=August 1, 2019}}</ref><ref>{{cite journal | last=Rokhlin | first=V | title=Rapid solution of integral equations of classical potential theory | journal=Journal of Computational Physics | publisher=Elsevier BV | volume=60 | issue=2 | year=1985 | issn=0021-9991 | doi=10.1016/0021-9991(85)90002-6 | pages=187–207| bibcode=1985JCoPh..60..187R }}</ref> and is based on the [[multipole expansion]] technique. The first application of the FMM in computational electromagnetics was by Engheta et al.(1992).<ref>{{cite journal | last1=Engheta | first1=N. | last2=Murphy | first2=W.D. | last3=Rokhlin | first3=V. | last4=Vassiliou | first4=M.S. | title=The fast multipole method (FMM) for electromagnetic scattering problems | journal=IEEE Transactions on Antennas and Propagation | publisher=Institute of Electrical and Electronics Engineers (IEEE) | volume=40 | issue=6 | year=1992 | issn=0018-926X | doi=10.1109/8.144597 | pages=634–641| bibcode=1992ITAP...40..634E | url=https://repository.upenn.edu/cgi/viewcontent.cgi?article=1214&context=ese_papers }}</ref> The FMM has also applications in computational bioelectromagnetics in the [[Charge based boundary element fast multipole method]].   FMM can also be used to accelerate MoM.
+
+===Plane wave time-domain ===
+While the fast multipole method is useful for accelerating MoM solutions of integral equations with static or frequency-domain oscillatory kernels, the '''plane wave time-domain (PWTD)''' algorithm employs similar ideas to accelerate the MoM solution of time-domain integral equations involving the [[retarded potential]]. The PWTD algorithm was introduced in 1998 by Ergin, Shanker, and Michielssen.<ref>{{cite journal | last1=Ergin | first1=A.Arif | last2=Shanker | first2=Balasubramaniam | last3=Michielssen | first3=Eric | title=Fast Evaluation of Three-Dimensional Transient Wave Fields Using Diagonal Translation Operators | journal=Journal of Computational Physics | publisher=Elsevier BV | volume=146 | issue=1 | year=1998 | issn=0021-9991 | doi=10.1006/jcph.1998.5908 | pages=157–180| bibcode=1998JCoPh.146..157E }}</ref>
+
+===Partial element equivalent circuit method===
+The [[partial element equivalent circuit]] (PEEC) is a 3D full-wave modeling method suitable for combined [[Electromagnetism|electromagnetic]] and [[Electronic circuit|circuit]] analysis. Unlike MoM, PEEC is a full [[spectrum]] method valid from [[Direct current|dc]] to the maximum [[frequency]] determined by the meshing. In the PEEC method, the [[integral equation]] is interpreted as [[Kirchhoff's voltage law]] applied to a basic PEEC cell which results in a complete circuit solution for 3D geometries. The equivalent circuit formulation allows for additional [[SPICE]] type circuit elements to be easily included. Further, the models and the analysis apply to both the time and the frequency domains. The circuit equations resulting from the PEEC model are easily constructed using a modified [[loop analysis]] (MLA) or [[modified nodal analysis]] (MNA) formulation. Besides providing a direct current solution, it has several other advantages over a MoM analysis for this class of problems since any type of circuit element can be included in a straightforward way with appropriate matrix stamps. The PEEC method has recently been extended to include nonorthogonal geometries.<ref>{{cite journal | last1=Ruehli | first1=A.E. | last2=Antonini | first2=G. | last3=Esch | first3=J. | last4=Ekman | first4=J. | last5=Mayo | first5=A. | last6=Orlandi | first6=A. | title=Nonorthogonal PEEC formulation for time- and frequency-domain EM and circuit modeling | journal=IEEE Transactions on Electromagnetic Compatibility | publisher=Institute of Electrical and Electronics Engineers (IEEE) | volume=45 | issue=2 | year=2003 | issn=0018-9375 | doi=10.1109/temc.2003.810804 | pages=167–176| bibcode=2003ITElC..45..167R | url=http://urn.kb.se/resolve?urn=urn:nbn:se:ltu:diva-12484 }}</ref> This model extension, which is consistent with the classical [[orthogonal]] formulation, includes the Manhattan representation of the geometries in addition to the more general [[quadrilateral]] and [[hexahedral]] elements. This helps in keeping the number of unknowns at a minimum and thus reduces computational time for nonorthogonal geometries.<ref>[http://www.sm.luth.se/~jekman/PEEC/Program/ Partial Element Equivalent Circuit (PEEC) homepage]</ref>
+
+===Cagniard-deHoop method of moments===
+The Cagniard-deHoop method of moments (CdH-MoM) is a 3-D full-wave time-domain integral-equation technique that is formulated via the [[Lorentz reciprocity theorem]]. Since the CdH-MoM heavily relies on the [[Cagniard-deHoop method]], a joint-transform approach originally developed for the analytical analysis of seismic wave propagation in the crustal model of the Earth, this approach is well suited for the TD EM analysis of planarly-layered structures. The CdH-MoM has been originally applied to time-domain performance studies of cylindrical and planar antennas<ref>Stumpf, M: Time-Domain Electromagnetic Reciprocity in Antenna Modeling, Piscataway, NJ: IEEE Press--Wiley (2020).</ref> and, more recently, to the TD EM scattering analysis of transmission lines in the presence of thin sheets<ref>{{cite journal | last=Stumpf | first=M. | title=Transient response of a transmission line above a thin conducting sheet -- A numerical model based on the Cagniard-DeHoop method of moments | journal=IEEE Antennas Wirel. Propag. Lett. | publisher=Institute of Electrical and Electronics Engineers (IEEE) | volume=20 | issue=9 | year=2021 | issn=1548-5757 | doi=10.1109/LAWP.2021.3098623 | pages=1829–1833| bibcode=2021IAWPL..20.1829S | s2cid=237403278 | doi-access=free }}.</ref> and electromagnetic metasurfaces,<ref>Stumpf, M: Metasurface Electromagnetics: The Cagniard-DeHoop Time-Domain Approach, London, UK: IET (2022).</ref><ref>{{cite journal | last=Stumpf | first=M. | title = Pulsed electromagnetic scattering by metasurfaces -- A numerical solution based on the Cagniard–DeHoop Method of Moments | journal=IEEE Trans. Antennas Propag. | publisher=Institute of Electrical and Electronics Engineers (IEEE) | volume=69 | issue=11 | year=2021 | issn=1558-2221 | doi=10.1109/TAP.2021.3076342 | pages=7761–7770| bibcode = 2021ITAP...69.7761S | s2cid=235844966 | doi-access=free }}</ref> for example.
+
+==Differential equation solvers==
+
+===Finite-difference frequency-domain ===
+Finite-difference frequency-domain (FDFD) provides a rigorous solution to Maxwell’s equations in the frequency-domain using the finite-difference method.<ref>Rumpf, Raymond C.: Electromagnetic and Photonic Simulation for the Beginner Finite-Difference Frequency-Domain in MATLAB: Artech House (2022).</ref> FDFD is arguably the simplest numerical method that still provides a rigorous solution. It is incredibly versatile and able to solve virtually any problem in electromagnetics. The primary drawback of FDFD is poor efficiency compared to other methods. On modern computers, however, a huge array of problems are easily handled such as calculated guided modes in waveguides, calculating scattering from an object, calculating transmission and reflection from photonic crystals, calculate photonic band diagrams, simulating metamaterials, and much more.
+
+FDFD may be the best "first" method to learn in computational electromagnetics (CEM). It involves almost all the concepts encountered with other methods, but in a much simpler framework. Concepts include boundary conditions, linear algebra, injecting sources, representing devices numerically, and post-processing field data to calculate meaningful things. This will help a person learn other techniques as well as provide a way to test and benchmark those other techniques.
+
+FDFD is very similar to finite-difference time-domain (FDTD). Both methods represent space as an array of points and enforces Maxwell’s equations at each point. FDFD puts this large set of equations into a matrix and solves all the equations simultaneously using linear algebra techniques. In contrast, FDTD continually iterates over these equations to evolve a solution over time. Numerically, FDFD and FDTD are very similar, but their implementations are very different.
+
+===Finite-difference time-domain ===
+[[Finite-difference time-domain]] (FDTD) is a popular CEM technique. It is easy to understand. It has an exceptionally simple implementation for a full wave solver. It is at least an order of magnitude less work to implement a basic FDTD solver than either an FEM or MoM solver. FDTD is the only technique where one person can realistically implement oneself in a reasonable time frame, but even then, this will be for a quite specific problem.<ref name="davidson">David B. Davidson, ''Computational Electromagnetics for RF and Microwave Engineering'', Second Edition, Cambridge University Press, 2010</ref> Since it is a time-domain method, solutions can cover a wide frequency range with a single simulation run, provided the time step is small enough to satisfy the [[Nyquist–Shannon sampling theorem]] for the desired highest frequency.
+
+FDTD belongs in the general class of grid-based differential time-domain numerical modeling methods. [[Maxwell's equations]] (in [[Partial differential equation|partial differential]] form) are modified to central-difference equations, discretized, and implemented in software. The equations are solved in a cyclic manner:  the [[electric field]] is solved at a given instant in time, then the [[magnetic field]] is solved at the next instant in time, and the process is repeated over and over again.
+
+The basic FDTD algorithm traces back to a seminal 1966 paper by Kane Yee in [[IEEE Transactions on Antennas and Propagation]]. [[Allen Taflove]] originated the descriptor "Finite-difference time-domain" and its corresponding "FDTD" acronym in a 1980 paper in [[IEEE Transactions on Electromagnetic Compatibility|IEEE Trans. Electromagn. Compat.]] Since about 1990, FDTD techniques have emerged as the primary means to model many scientific and engineering problems addressing electromagnetic wave interactions with material structures. An effective technique based on a time-domain finite-volume discretization procedure was introduced by Mohammadian et al. in 1991.<ref>{{cite journal | last1=Mohammadian | first1=Alireza H. | last2=Shankar | first2=Vijaya | last3=Hall | first3=William F. | title=Computation of electromagnetic scattering and radiation using a time-domain finite-volume discretization procedure | journal=Computer Physics Communications | publisher=Elsevier BV | volume=68 | issue=1–3 | year=1991 | issn=0010-4655 | doi=10.1016/0010-4655(91)90199-u | pages=175–196| bibcode=1991CoPhC..68..175M }}</ref>  Current FDTD modeling applications range from near-DC (ultralow-frequency geophysics involving the entire Earth-[[ionosphere]] waveguide) through [[microwave]]s (radar signature technology, antennas, wireless communications devices, digital interconnects, biomedical imaging/treatment) to visible light ([[photonic crystal]]s, nanoplasmonics, [[soliton]]s, and [[biophotonics]]).  Approximately 30 commercial and university-developed software suites are available.
+
+===Multiresolution time-domain===
+MRTD is an adaptive alternative to the finite difference time domain method (FDTD) based on [[wavelet]] analysis.
+
+=== Finite-volume time-domain ===
+The [[Finite volume method|finite-volume time-domain]] (FVTD) method is used to solve electromagnetic problems by using the conservative form of Maxwell's equations<ref>{{Cite web |title=Clemson Vehicular Electronics Laboratory: The Finite Volume Time Domain Method |url=https://cecas.clemson.edu/cvel/modeling/tutorials/techniques/fvtd/fvtd.html |archive-url=http://web.archive.org/web/20260515200053/https://cecas.clemson.edu/cvel/modeling/tutorials/techniques/fvtd/fvtd.html |archive-date=2026-05-15 |access-date=2026-07-24 |website=cecas.clemson.edu}}</ref>. It was first introduced in the 1990's as a way to generalize FDTD's Cartesian staggered-grid to other types of meshes, using e.g. tetrahedral or hexahedral cells<ref>{{Cite journal |last=Madsen |first=Niel K. |last2=Ziolkowski |first2=Richard W. |date=1990-01-01 |title=A Three-Dimensional Modified Finite Volume Technique for Maxwell's Equations |url=https://doi.org/10.1080/02726349008908233 |journal=Electromagnetics |volume=10 |issue=1-2 |pages=147–161 |doi=10.1080/02726349008908233 |issn=0272-6343|url-access=subscription }}</ref>. Its numerical results showcase better accuracy for non rectangular shapes.
+
+===Finite element method ===
+The [[finite element method]] (FEM) is used to find approximate solution of [[partial differential equation]]s (PDE) and [[integral equation]]s.  The solution approach is based either on eliminating the time derivatives completely (steady state problems), or rendering the PDE into an equivalent [[ordinary differential equation]], which is then solved using standard techniques such as [[finite difference]]s, etc.
+
+In solving [[partial differential equation]]s, the primary challenge is to create an equation which approximates the equation to be studied, but which is [[numerically stable]], meaning that errors in the input data and intermediate calculations do not accumulate and destroy the meaning of the resulting output. There are many ways of doing this, with various advantages and disadvantages. The finite element method is a good choice for solving partial differential equations over complex domains or when the desired precision varies over the entire domain.
+
+=== Discontinuous time-domain method ===
+Among many time domain methods, discontinuous Galerkin time domain (DGTD) method has become popular recently since it integrates advantages of both the finite volume time domain (FVTD) method and the finite element time domain (FETD) method. Like FVTD, the numerical flux is used to exchange information between neighboring elements, thus all operations of DGTD are local and easily parallelizable. Similar to FETD, DGTD employs unstructured mesh and is capable of high-order accuracy if the high-order hierarchical basis function is adopted. With the above merits, DGTD method is widely implemented for the transient analysis of multiscale problems involving large number of unknowns.<ref>{{Cite journal|last1=Tobón|first1=Luis E.|last2=Ren|first2=Qiang| last3=Liu|first3=Qing Huo| date=February 2015|title=A new efficient 3D Discontinuous Galerkin Time Domain (DGTD) method for large and multiscale electromagnetic simulations| journal=Journal of Computational Physics| volume=283| pages=374–387| doi=10.1016/j.jcp.2014.12.008| issn=0021-9991|bibcode=2015JCoPh.283..374T
+}}</ref><ref>{{Cite journal
+  |last1=Mai  |first1=W.  |last2=Hu  |first2=J.  |last3=Li  |first3=P.  |last4=Zhao  |first4=H.
+  |date=October 2017
+  |title=An Efficient and Stable 2-D/3-D Hybrid Discontinuous Galerkin Time-Domain Analysis With Adaptive Criterion for Arbitrarily Shaped Antipads in Dispersive Parallel-Plate Pair
+  |journal=IEEE Transactions on Microwave Theory and Techniques
+  |volume=65  |issue=10
+  |pages=3671–3681
+  |doi=10.1109/TMTT.2017.2690286
+  |issn=0018-9480
+  |bibcode=2017ITMTT..65.3671M
+|s2cid=43188111 }}</ref>
+
+===Finite integration technique ===
+The finite integration technique (FIT) is a spatial discretization scheme to numerically solve electromagnetic field problems in time and frequency domain. It preserves basic [[topological]] properties of the continuous equations such as conservation of charge and energy. FIT was proposed in 1977 by [[w:de:Thomas Weiland|Thomas Weiland]] and has been enhanced continually over the years.<ref>{{cite journal|first=T.|last= Weiland|title= A Discretization Method for the Solution of Maxwell's Equations for Six-Component Fields| journal=Archiv für Elektronik und Übertragungstechnik| volume=31|issue= 3|pages= 116–120|year= 1977|bibcode=1977ArElU..31..116W|language=de}}</ref> This method covers the full range of electromagnetics (from static up to high frequency) and optic applications and is the basis for commercial simulation tools: CST Studio Suite developed by [[Computer Simulation Technology]] (CST AG) and 
+Electromagnetic Simulation solutions developed by [[Nimbic]].
+
+The basic idea of this approach is to apply the Maxwell equations in integral form to a set of staggered grids. This method stands out due to high flexibility in geometric modeling and boundary handling as well as incorporation of arbitrary material distributions and material properties such as [[anisotropy]], non-linearity and dispersion. Furthermore, the use of a consistent dual orthogonal grid (e.g. [[Cartesian grid]]) in conjunction with an explicit time integration scheme (e.g. leap-frog-scheme) leads to compute and memory-efficient algorithms, which are especially adapted for transient field analysis in [[radio frequency]] (RF) applications.
+
+===Pseudo-spectral time domain ===
+{{main|Pseudospectral time-domain method}}
+This class of marching-in-time computational techniques for Maxwell's equations uses either discrete Fourier or [[discrete Chebyshev transform]]s to calculate the spatial derivatives of the electric and magnetic field vector components that are arranged in either a 2-D grid or 3-D lattice of unit cells. PSTD causes negligible numerical phase velocity anisotropy errors relative to FDTD, and therefore allows problems of much greater electrical size to be modeled.<ref>
+For a recent comprehensive summary of PSTD techniques for Maxwell's equations, see Q. Liu and G. Zhao "Advances in PSTD Techniques," Chapter 17 in Computational Electrodynamics: The Finite-Difference Time-Domain Method, A. Taflove and S. C. Hagness, eds., Boston: [[Artech House]], 2005.</ref>
+
+===Pseudo-spectral spatial domain ===
+PSSD solves Maxwell's equations by propagating them forward in a chosen spatial direction. The fields are therefore held as a function of time, and (possibly) any transverse spatial dimensions. The method is pseudo-spectral because temporal derivatives are calculated in the frequency domain with the aid of FFTs. Because the fields are held as functions of time, this enables arbitrary dispersion in the propagation medium to be rapidly and accurately modelled with minimal effort.<ref>{{cite journal | last1=Tyrrell | first1=J. C. A. | last2=Kinsler | first2=P. | last3=New | first3=G. H. C. | title=Pseudospectral spatial-domain: a new method for nonlinear pulse propagation in the few-cycle regime with arbitrary dispersion | journal=Journal of Modern Optics | publisher=Informa UK Limited | volume=52 | issue=7 | date=2005-05-10 | issn=0950-0340 | doi=10.1080/09500340512331334086 | pages=973–986| bibcode=2005JMOp...52..973T | s2cid=121604760 }}</ref> However, the choice to propagate forward in space (rather than in time) brings with it some subtleties, particularly if reflections are important.<ref>{{cite journal | last=Kinsler | first=Paul | title=Optical pulse propagation with minimal approximations | journal=Physical Review A | volume=81 | issue=1 | date=2010-01-25 | issn=1050-2947 | doi=10.1103/physreva.81.013819 | article-number=013819| arxiv=0810.5689 | bibcode=2010PhRvA..81a3819K }}</ref>
+
+===Transmission line matrix ===
+[[Transmission line matrix method|Transmission line matrix]] (TLM) can be formulated in several means as a direct set of lumped elements solvable directly by a circuit solver (ala SPICE, [[HSPICE]], et al.), as a custom network of elements or via a [[scattering matrix]] approach.  TLM is a very flexible analysis strategy akin to FDTD in capabilities, though more codes tend to be available with FDTD engines.
+
+===Locally one-dimensional  ===
+
+This is an implicit method. In this method, in two-dimensional case, Maxwell equations  are computed in two steps, whereas in three-dimensional case Maxwell equations are divided into three spatial coordinate directions. Stability and dispersion analysis of the three-dimensional LOD-FDTD method have been discussed in detail.<ref>{{cite journal | last=Ahmed | first=I. | title=Development of the Three-Dimensional Unconditionally Stable LOD-FDTD Method | journal=[[IEEE Transactions on Antennas and Propagation]] | publisher=Institute of Electrical and Electronics Engineers (IEEE) | volume=56 | issue=11 | year=2008 | issn=0018-926X | doi=10.1109/tap.2008.2005544 | pages=3596–3600| bibcode=2008ITAP...56.3596A | s2cid=31351974 }}</ref><ref>{{cite journal | last1=Ahmed | first1=Iftikhar | last2=Chua | first2=Eng-Kee | last3=Li | first3=Er-Ping | title=Numerical Dispersion Analysis of the Unconditionally Stable Three-Dimensional LOD-FDTD Method | journal=IEEE Transactions on Antennas and Propagation | publisher=Institute of Electrical and Electronics Engineers (IEEE) | volume=58 | issue=12 | year=2010 | issn=0018-926X | doi=10.1109/tap.2010.2078481 | pages=3983–3989| bibcode=2010ITAP...58.3983A | s2cid=9987649 }}</ref>
+
+==Other methods==
+
+===Eigenmode expansion ===
+[[Eigenmode expansion]] (EME) is a rigorous bi-directional technique to simulate electromagnetic propagation which relies on the decomposition of the electromagnetic fields into a basis set of local eigenmodes. The eigenmodes are found by solving Maxwell's equations in each local cross-section. Eigenmode expansion can solve Maxwell's equations in 2D and 3D and can provide a fully vectorial solution provided that the mode solvers are vectorial. It offers very strong benefits compared with the FDTD method for the modelling of optical waveguides, and it is a popular tool for the modelling of [[fiber optics]] and [[silicon photonics]] devices.
+
+===Physical optics ===
+[[Physical optics]] (PO) is the name of a [[high frequency approximation]] (short-[[wavelength]] [[approximation]]) commonly used in optics, [[electrical engineering]] and [[applied physics]].  It is an intermediate method between geometric optics, which ignores [[wave]] effects, and full wave [[electromagnetism]], which is a precise [[theory]]. The word "physical" means that it is more physical than [[geometrical optics]] and not that it is an exact physical theory.
+
+The approximation consists of using ray optics to estimate the field on a surface and then [[integral|integrating]] that field over the surface to calculate the transmitted or scattered field. This resembles the [[Born approximation]], in that the details of the problem are treated as a [[perturbation theory|perturbation]].
+
+===Uniform theory of diffraction ===
+The [[uniform theory of diffraction]] (UTD) is a [[high frequency]] method for solving [[Electromagnetic radiation|electromagnetic]] [[scattering]] problems from electrically small discontinuities or discontinuities in more than one dimension at the same point.
+
+The [[uniform theory of diffraction]] approximates [[near and far field|near field]] electromagnetic fields as quasi optical and uses ray diffraction to determine diffraction coefficients for each diffracting object-source combination. These coefficients are then used to calculate the field strength and [[phase (waves)|phase]] for each direction away from the diffracting point. These fields are then added to the incident fields and reflected fields to obtain a total solution.
+
+==Validation==
+Validation is one of the key issues facing electromagnetic simulation users. The user must understand and master the validity domain of its simulation. The measure is, "how far from the reality are the results?"
+
+Answering  this question involves three steps: comparison between simulation results and analytical formulation, cross-comparison between codes, and comparison of simulation results with measurement.
+
+===Comparison between simulation results and analytical formulation===
+For example, assessing the value of the [[radar cross section]] of a plate with the analytical formula:
+<math display="block">\text{RCS}_\text{Plate} = \frac{4 \pi A^2}{\lambda^2},</math>
+where '''A''' is the surface of the plate and <math>\lambda</math> is the wavelength. The next curve presenting the RCS of a plate computed at 35 [[GHz]] can be used as reference example.
+
+===Cross-comparison between codes===
+One example is the cross comparison of results from method of moments and asymptotic methods in their validity domains.<ref>
+As an illustration, the company [http://www.oktal-se.fr/ OKTAL-SE] made common development and cross comparison with the French research institute [http://www.onera.fr/ ONERA], comparing Method of Moment and Asymptotic methods. The cross comparison helped the validation process of the SE-RAY-EM code of OKTAL-SE. [http://www.oktal-se.fr/website/external/rcs_plate_35ghz.jpg Illustration]{{dead link|date=February 2017}} of the comparison between the SE-RAY-EM code and the ONERA reference code (right image).</ref>
+
+===Comparison of simulation results with measurement===
+The final validation step is made by comparison between measurements and simulation. For example, the RCS calculation<ref>
+[http://www.oktal-se.fr/ SE-RAY-EM]</ref> and the measurement<ref>
+[http://www.fgan.de/ FGAN-FHR]</ref> of a complex metallic object at 35&nbsp;GHz. The computation implements GO, PO and PTD for the edges.
+
+Validation processes can clearly reveal that  some differences can be explained by the differences between the experimental setup and its reproduction in the simulation environment.<ref>[https://web.archive.org/web/20071013230028/http://www.oktal-se.fr/website/news/pdf/RCS_35GHz_March2007.pdf full article]</ref>
+
+==Light scattering codes==
+There are now many efficient codes for solving electromagnetic scattering problems. They are listed as:
+* [[discrete dipole approximation codes]],
+* [[codes for electromagnetic scattering by cylinders]],
+* [[codes for electromagnetic scattering by spheres]]. 
+Solutions which are analytical, such as Mie solution for scattering by spheres or cylinders, can be used to validate more involved techniques.
+
+==See also==
+{{div col}}
+* [[EM simulation software]]
+* [[Analytical regularization]]
+* [[Computational physics]]
+* [[Electromagnetic field solver]]
+* [[Electromagnetic wave equation]]
+* [[Finite-difference time-domain method]]
+* [[Finite-difference frequency-domain]]
+* [[Mie theory]]
+* [[Physical optics]]
+* [[Rigorous coupled-wave analysis]]
+* [[Space mapping]]
+* [[Uniform theory of diffraction]]
+* [[Shooting and bouncing rays]]
+* [[List of computational physics software]]
+* [[List of textbooks in electromagnetism]]
+
+{{div col end}}
+
+==References==
+{{reflist}}
+
+==Further reading==
+*{{cite book | author=R. F. Harrington | title=Field Computation by Moment Methods | publisher=Wiley-IEEE Press | year=1993 | isbn=978-0-7803-1014-8|author-link=Roger F. Harrington}}
+*{{cite book |author1=W. C. Chew |author2=J.-M. Jin |author3=E. Michielssen |author4=J. Song | title=Fast and Efficient Algorithms in Computational Electromagnetics | publisher=Artech House Publishers | year=2001 | isbn=978-1-58053-152-8}}
+*{{cite book | author=J. Jin | title=The Finite Element Method in Electromagnetics, 2nd. ed. | publisher=Wiley-IEEE Press | year=2002 | isbn=978-0-471-43818-2 }}
+*{{cite book | author=[[Allen Taflove]] and Susan C. Hagness | title=Computational Electrodynamics: The Finite-Difference Time-Domain Method, 3rd ed. | publisher=Artech House Publishers | year=2005 | isbn=978-1-58053-832-9 }}
+*{{cite book |author1=John Volakis |author2=Arindam Chatterjee |author3=Leo Kempel | title=Finite Element Methods for Electromagnetics: Antennas, Microwave Circuits, and Scattering Applications| publisher=Wiley-IEEE Press | year=1998 | isbn=978-0-780-33425-0}}
+
+==External links==
+* [http://www.dmoz.org/search?q=%22computational+electromagnetics%22 Computational electromagnetics at the Open Directory Project]
+*[http://www.iisc.ernet.in/~currsci/nov25/articles24.htm Computational electromagnetics: a review] {{Webarchive|url=https://web.archive.org/web/20160315122139/http://www.iisc.ernet.in/~currsci/nov25/articles24.htm |date=2016-03-15 }}
+{{Computational science}}
+{{DEFAULTSORT:Computational Electromagnetics}}
+[[Category:Computational electromagnetics| ]]
+[[Category:Electrodynamics]]
+[[Category:Partial differential equations]]
+[[Category:Computational fields of study]]

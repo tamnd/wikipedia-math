@@ -1,0 +1,260 @@
+<!-- wikipedia: en
+     page: 219847
+     title: Levinson recursion
+     revision: 1330673581
+     timestamp: 2026-01-01T20:57:25Z
+     history: https://en.wikipedia.org/w/index.php?curid=219847&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1330673581 -->
+{{short description|Recursive algorighm in linear algebra}}
+'''Levinson recursion''' or '''Levinson–Durbin recursion''' is a procedure in [[linear algebra]] to [[recursion|recursively]] calculate the solution to an equation involving a [[Toeplitz matrix]]. The [[algorithm]] runs in {{math|[[Big O notation|Θ]](''n''<sup>2</sup>)}} time, which is a strong improvement over [[Gauss–Jordan elimination]], which runs in {{math|Θ(''n''<sup>3</sup>)}}.
+
+The Levinson–Durbin algorithm was proposed first by [[Norman Levinson]] in 1947, improved by [[James Durbin]] in 1960, and subsequently improved to {{math|4''n''<sup>2</sup>}} and then {{math|3''n''<sup>2</sup>}} multiplications by W. F. Trench and S. Zohar, respectively.
+
+Other methods to process data include [[Schur decomposition]] and [[Cholesky decomposition]]. In comparison to these, Levinson recursion (particularly split Levinson recursion) tends to be faster computationally, but more sensitive to computational inaccuracies like [[round-off error]]s.
+
+The Bareiss algorithm for [[Toeplitz matrix|Toeplitz matrices]] (not to be confused with the general [[Bareiss algorithm]]) runs about as fast as Levinson recursion, but it uses {{math|''O''(''n''<sup>2</sup>)}} space, whereas Levinson recursion uses only ''O''(''n'') space.  The Bareiss algorithm, though, is [[numerical stability|numerically stable]],<ref>Bojanczyk et al. (1995).</ref><ref>Brent (1999).</ref> whereas Levinson recursion is at best only weakly stable (i.e. it exhibits numerical stability for [[Condition number|well-conditioned]] linear systems).<ref>Krishna & Wang (1993).</ref>
+
+Newer algorithms, called ''asymptotically fast'' or sometimes ''superfast'' Toeplitz algorithms, can solve in {{math|Θ(''n'' (log ''n'')<sup>''p''</sup>)}} for various ''p'' (e.g. ''p'' = 2,<ref>{{cite web |url=http://www.maths.anu.edu.au/~brent/pd/rpb143tr.pdf |title=Archived copy |access-date=2013-04-01 |archive-date=2012-03-25 |archive-url=https://web.archive.org/web/20120325215317/http://maths.anu.edu.au/~brent/pd/rpb143tr.pdf |url-status=dead }}</ref><ref>{{cite web |url=http://etd.gsu.edu/theses/available/etd-04182008-174330/unrestricted/kimitei_symon_k_200804.pdf |title=Archived copy |access-date=2009-04-28 |url-status=dead |archive-url=https://web.archive.org/web/20091115041852/http://etd.gsu.edu/theses/available/etd-04182008-174330/unrestricted/kimitei_symon_k_200804.pdf |archive-date=2009-11-15 }}</ref> ''p'' = 3<ref>{{cite web |url=http://saaz.cs.gsu.edu/papers/sfast.pdf |title=Archived copy |website=saaz.cs.gsu.edu |access-date=12 January 2022 |archive-url=https://web.archive.org/web/20070418074240/http://saaz.cs.gsu.edu/papers/sfast.pdf |archive-date=18 April 2007 |url-status=dead}}</ref>). Levinson recursion remains popular for several reasons; for one, it is relatively easy to understand in comparison; for another, it can be faster than a superfast algorithm for small ''n'' (usually ''n''&nbsp;<&nbsp;256).<ref>{{cite web |url=http://www.math.niu.edu/~ammar/papers/amgr88.pdf |title=Archived copy |access-date=2006-08-15 |archive-date=2006-09-05 |archive-url=https://web.archive.org/web/20060905064921/http://www.math.niu.edu/~ammar/papers/amgr88.pdf |url-status=dead }}</ref>
+
+== Derivation ==
+
+=== Background ===
+Matrix equations follow the form
+: <math>\mathbf M \, \vec x = \vec y.</math>
+
+The Levinson–Durbin algorithm may be used for any such equation, as long as '''M''' is a known [[Toeplitz matrix]] with a nonzero [[main diagonal]]. Here <math>\vec y</math> is a known [[vector space|vector]], and <math>\vec x</math> is an unknown vector of numbers ''x''<sub>''i''</sub> yet to be determined.
+
+For the sake of this article, ''ê''<sub>''i''</sub> is a vector made up entirely of zeroes, except for its ''i''th place, which holds the value one. Its length will be implicitly determined by the surrounding context. The term ''N'' refers to the width of the matrix above – '''M''' is an ''N''×''N'' matrix. Finally, in this article, superscripts refer to an ''inductive index'', whereas subscripts denote indices. For example (and definition), in this article, the matrix '''T'''<sup>''n''</sup> is an ''n''×''n'' matrix that copies the upper left ''n''×''n'' block from '''M''' – that is, ''T''<sup>''n''</sup><sub>''ij''</sub> = ''M''<sub>''ij''</sub>.
+
+'''T'''<sup>''n''</sup> is also a Toeplitz matrix, meaning that it can be written as
+: <math>\mathbf T^n = \begin{bmatrix}
+    t_0    & t_{-1}  & t_{-2}  & \dots  & t_{-n+1}   \\
+    t_1    & t_0     & t_{-1}  & \dots  & t_{-n+2} \\
+    t_2    & t_1     & t_0     & \dots  & t_{-n+3} \\
+    \vdots & \vdots  & \vdots  & \ddots & \vdots   \\
+    t_{n-1}& t_{n-2} & t_{n-3} & \dots  & t_0
+  \end{bmatrix}. </math>
+
+=== Introductory steps ===
+The algorithm proceeds in two steps. In the first step, two sets of vectors, called the ''forward'' and ''backward'' vectors, are established. The forward vectors are used to help get the set of backward vectors; then they can be immediately discarded. The backwards vectors are necessary for the second step, where they are used to build the solution desired.
+
+Levinson–Durbin recursion defines the ''n''th "forward vector", denoted <math>\vec f^n</math>, as the vector of length ''n'' which satisfies:
+: <math>\mathbf T^n \vec f^n = \hat e_1.</math>
+
+The ''n''th "backward vector" <math>\vec b^n</math> is defined similarly; it is the vector of length ''n'' which satisfies:
+: <math>\mathbf T^n \vec b^n = \hat e_n.</math>
+
+An important simplification can occur when '''''M''''' is a [[symmetric matrix]]; then the two vectors are related by ''b''<sup>''n''</sup><sub>''i''</sub> = ''f''<sup>''n''</sup><sub>''n''+1−''i''</sub> – that is, they are row-reversals of each other. This can save some extra computation in that special case.
+
+=== Obtaining the backward vectors ===
+Even if the matrix is not symmetric, then the ''n''th forward and backward vector may be found from the vectors of length ''n''&nbsp;−&nbsp;1 as follows. First, the forward vector may be extended with a zero to obtain:
+: <math>\mathbf T^n \begin{bmatrix} \vec f^{n-1} \\ 0 \\ \end{bmatrix} =
+  \begin{bmatrix}
+    \        & \               & \     & t_{-n+1}   \\
+    \        & \mathbf T^{n-1} & \     & t_{-n+2} \\
+    \        & \               & \     & \vdots   \\
+    t_{n-1}  & t_{n-2}         & \dots & t_0      \\
+  \end{bmatrix}
+  \begin{bmatrix}  \            \\
+                   \vec f^{n-1} \\
+                   \            \\
+                   0            \\
+                   \            \\
+  \end{bmatrix} = 
+  \begin{bmatrix}  1            \\
+                   0            \\
+                   \vdots       \\
+                   0            \\
+                   \varepsilon_f^n
+  \end{bmatrix}. </math>
+
+In going from '''''T''<sup>''n''−1</sup>''' to '''''T''<sup>''n''</sup>''', the extra ''column'' added to the matrix does not perturb the solution when a zero is used to extend the forward vector. However, the extra ''row'' added to the matrix ''has'' perturbed the solution; and it has created an unwanted error term ''ε''<sub>''f''</sub> which occurs in the last place. The above equation gives it the value of:
+: <math> \varepsilon_f^n \ = \  \sum_{i=1}^{n-1} \ M_{ni} \  f_{i}^{n-1} \ = \ \sum_{i=1}^{n-1} \  t_{n-i} \ f_{i}^{n-1}. </math>
+
+This error will be returned to shortly and eliminated from the new forward vector; but first, the backwards vector must be extended in a similar (albeit reversed) fashion. For the backwards vector,
+: <math> \mathbf T^n \begin{bmatrix} 0 \\ \vec b^{n-1} \\ \end{bmatrix} =
+\begin{bmatrix}
+    t_0     & \dots & t_{-n+2}         & t_{-n+1} \\
+    \vdots  & \     & \               & \       \\
+    t_{n-2} & \     & \mathbf T^{n-1} & \       \\
+    t_{n-1} & \     & \               &
+  \end{bmatrix}
+  \begin{bmatrix}  \            \\
+                   0            \\
+                   \            \\
+                   \vec b^{n-1} \\
+                   \            \\
+  \end{bmatrix} = 
+  \begin{bmatrix}  \varepsilon_b^n  \\
+                   0             \\
+                   \vdots        \\
+                   0             \\
+                   1
+  \end{bmatrix}. </math>
+
+As before, the extra column added to the matrix does not perturb this new backwards vector; but the extra row does. Here we have another unwanted error ''ε''<sub>''b''</sub> with value:
+: <math> \varepsilon_b^n \ = \ \sum_{i=2}^n \  M_{1i} \ b_{i-1}^{n-1} \ = \ \sum_{i=1}^{n-1} \  t_{-i} \ b_i^{n-1}. \ </math>
+
+These two error terms can be used to form higher-order forward and backward vectors described as follows. Using the linearity of matrices, the following identity holds for all <math>(\alpha,\beta)</math>:
+: <math>\mathbf T \left( \alpha
+  \begin{bmatrix}
+                   \vec f \\
+                   \            \\
+                   0            \\
+  \end{bmatrix} + \beta
+  \begin{bmatrix}
+                   0            \\
+                   \            \\
+                   \vec b
+  \end{bmatrix} \right ) = \alpha
+  \begin{bmatrix}  1        \\
+                   0        \\
+                   \vdots   \\
+                   0        \\
+                   \varepsilon_f \\
+  \end{bmatrix} + \beta
+  \begin{bmatrix}  \varepsilon_b  \\
+                   0             \\
+                   \vdots        \\
+                   0             \\
+                   1
+  \end{bmatrix}.</math>
+
+If ''α'' and ''β'' are chosen so that the right hand side yields ''ê''<sub>1</sub> or ''ê''<sub>''n''</sub>, then the quantity in the parentheses will fulfill the definition of the ''n''th forward or backward vector, respectively. With those alpha and beta chosen, the vector sum in the parentheses is simple and yields the desired result.
+
+To find these coefficients, <math>\alpha^n_{f}</math>, <math>\beta^n_{f}</math> are such that :
+: <math>
+\vec f^n = \alpha^n_{f} \begin{bmatrix} \vec f^{n-1}\\
+0
+\end{bmatrix}
++\beta^n_{f}\begin{bmatrix}0\\
+\vec b^{n-1}
+\end{bmatrix}
+</math>
+and respectively  <math>\alpha^n_{b}</math>, <math>\beta^n_{b}</math> are such that :
+: <math>\vec b^n = \alpha^n_{b}
+\begin{bmatrix}
+\vec f^{n-1}\\
+0
+\end{bmatrix}
++\beta^n_{b}\begin{bmatrix}
+0\\
+\vec b^{n-1}
+\end{bmatrix}.
+</math>
+By multiplying both previous equations by <math>{\mathbf T}^n</math> one gets the following equation:
+: <math>
+\begin{bmatrix} 1 & \varepsilon^n_b \\
+0 & 0 \\
+\vdots & \vdots \\
+0 & 0 \\
+\varepsilon^n_f & 1
+\end{bmatrix} \begin{bmatrix} \alpha^n_f & \alpha^n_b \\ \beta^n_f & \beta^n_b \end{bmatrix}
+= \begin{bmatrix}
+1 & 0 \\
+0 & 0 \\
+\vdots & \vdots \\
+0 & 0 \\
+0 & 1
+\end{bmatrix}.</math>
+
+Now, all the zeroes in the middle of the two vectors above being disregarded and collapsed, only the following equation is left:
+: <math> \begin{bmatrix} 1 & \varepsilon^n_b \\ \varepsilon^n_f & 1 \end{bmatrix} \begin{bmatrix} \alpha^n_f & \alpha^n_b \\ \beta^n_f & \beta^n_b \end{bmatrix} = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix}.</math>
+
+With these solved for (by using the Cramer 2×2 [[Invertible matrix|matrix inverse]] formula), the new forward and backward vectors are:
+: <math>\vec f^n = {1 \over { 1 - \varepsilon_b^n \varepsilon_f^n }}          \begin{bmatrix} \vec f^{n-1} \\ 0 \end{bmatrix}
+                 - { \varepsilon_f^n \over { 1 - \varepsilon_b^n \varepsilon_f^n }}\begin{bmatrix} 0 \\ \vec b^{n-1} \end{bmatrix}</math>
+: <math>\vec b^n =  { 1 \over { 1 - \varepsilon_b^n \varepsilon_f^n }}         \begin{bmatrix} 0 \\ \vec b^{n-1} \end{bmatrix}
+                 - { \varepsilon_b^n \over { 1 - \varepsilon_b^n \varepsilon_f^n }}\begin{bmatrix} \vec f^{n-1} \\ 0 \end{bmatrix}.</math>
+
+Performing these vector summations, then, gives the ''n''th forward and backward vectors from the prior ones. All that remains is to find the first of these vectors, and then some quick sums and multiplications give the remaining ones. The first forward and backward vectors are simply:
+: <math>\vec f^1 = \vec b^1 = \left[ {1 \over M_{11}} \right] = \left[ {1 \over t_0} \right].</math>
+
+=== Using the backward vectors ===
+The above steps give the ''N'' backward vectors for '''''M'''''. From there, a more arbitrary equation is:
+: <math> \vec y = \mathbf M \  \vec x. </math>
+
+The solution can be built in the same recursive way that the backwards vectors were built. Accordingly, <math>\vec x</math> must be generalized to a sequence of intermediates <math>\vec x^n</math>, such that <math>\vec x^N = \vec x</math>.
+
+The solution is then built recursively by noticing that if
+: <math> \mathbf T^{n-1}
+  \begin{bmatrix}  x_1^{n-1}     \\
+                   x_2^{n-1}     \\
+                   \vdots   \\
+                   x_{n-1}^{n-1} \\
+  \end{bmatrix} =   
+  \begin{bmatrix}  y_1     \\
+                   y_2     \\
+                   \vdots   \\
+                   y_{n-1}
+  \end{bmatrix}.</math>
+
+Then, extending with a zero again, and defining an error constant where necessary:
+: <math> \mathbf T^{n}
+  \begin{bmatrix}  x_1^{n-1}     \\
+                   x_2^{n-1}     \\
+                   \vdots   \\
+                   x_{n-1}^{n-1} \\
+                   0
+  \end{bmatrix} =   
+  \begin{bmatrix}  y_1     \\
+                   y_2     \\
+                   \vdots   \\
+                   y_{n-1} \\
+                   \varepsilon_x^{n-1}
+  \end{bmatrix}.</math>
+
+We can then use the ''n''th backward vector to eliminate the error term and replace it with the desired formula as follows:
+: <math> \mathbf T^{n} \left (
+  \begin{bmatrix}  x_1^{n-1}     \\
+                   x_2^{n-1}     \\
+                   \vdots   \\
+                   x_{n-1}^{n-1} \\
+                   0 \\
+  \end{bmatrix} + (y_n - \varepsilon_x^{n-1}) \  \vec b^n \right ) =   
+  \begin{bmatrix}  y_1     \\
+                   y_2     \\
+                   \vdots   \\
+                   y_{n-1} \\
+                   y_n
+  \end{bmatrix}.</math>
+
+Extending this method until ''n'' = ''N'' yields the solution <math>\vec x</math>.
+
+In practice, these steps are often done concurrently with the rest of the procedure, but they form a coherent unit and deserve to be treated as their own step.
+
+== Block Levinson algorithm ==
+If '''''M''''' is not strictly Toeplitz, but [[block matrix|block]] Toeplitz, the Levinson recursion can be derived in much the same way by regarding the block Toeplitz matrix as a Toeplitz matrix with matrix elements (Musicus 1988). Block Toeplitz matrices arise naturally in [[signal processing]] algorithms when dealing with multiple signal streams (e.g., in [[System analysis#Characterization of systems|MIMO]] systems) or cyclo-stationary signals.
+
+== See also ==
+* [[Split Levinson recursion]]
+* [[Linear prediction]]
+* [[Autoregressive model]]
+
+== Notes ==
+{{reflist}}
+
+== References ==
+
+'''Defining sources'''
+* Levinson, N. (1947). "The Wiener RMS error criterion in filter design and prediction". ''J. Math. Phys.'', v. 25, pp.&nbsp;261–278.
+* Durbin, J. (1960). "The fitting of time series models". ''Rev. Inst. Int. Stat.'', v. 28, pp.&nbsp;233–243.
+* Trench, W. F. (1964).  "An algorithm for the inversion of finite Toeplitz matrices".  ''J. Soc. Indust. Appl. Math.'', v. 12, pp.&nbsp;515–522.
+* Musicus, B. R. (1988). "Levinson and Fast Choleski Algorithms for Toeplitz and Almost Toeplitz Matrices". ''RLE TR'' No. 538, MIT. [http://dspace.mit.edu/bitstream/1721.1/4954/1/RLE-TR-538-20174000.pdf]
+* Delsarte, P. and Genin, Y. V. (1986). "The split Levinson algorithm". ''IEEE Transactions on Acoustics, Speech, and Signal Processing'', v. ASSP-34(3), pp.&nbsp;470–478.
+
+'''Further work'''
+* {{cite journal | last1 = Bojanczyk | first1 = A.W. | last2 = Brent | first2 = R.P. | last3 = De Hoog | first3 = F.R. | last4 = Sweet | first4 = D.R. | year = 1995 | title = On the stability of the Bareiss and related Toeplitz factorization algorithms | journal = [[SIAM Journal on Matrix Analysis and Applications]] | volume = 16 | pages = 40–57 | doi = 10.1137/S0895479891221563 | arxiv = 1004.5510 | s2cid = 367586 }}
+* [[Richard P. Brent|Brent R.P.]] (1999), "Stability of fast algorithms for structured linear systems", ''Fast Reliable Algorithms for Matrices with Structure'' (editors T. Kailath, A.H. Sayed), ch.4 ([[Society for Industrial and Applied Mathematics|SIAM]]).
+* Bunch, J. R. (1985). "Stability of methods for solving Toeplitz systems of equations". ''SIAM J. Sci. Stat. Comput.'', v. 6, pp.&nbsp;349–364. [https://doi.org/10.1137/0906025]
+* {{cite journal | last = Krishna | first = H. |author2=Wang, Y.  | title = The Split Levinson Algorithm is weakly stable | journal = [[SIAM Journal on Numerical Analysis]] | volume = 30 | issue = 5 | pages = 1498–1508 | date = 1993 | url = http://scitation.aip.org/getabs/servlet/GetabsServlet?prog=normal&id=SJNAAM000030000005001498000001&idtype=cvips&gifs=yes | doi = 10.1137/0730078| url-access = subscription }}
+
+'''Summaries'''
+* Bäckström, T. (2004). "2.2. Levinson–Durbin Recursion". ''Linear Predictive Modelling of Speech – Constraints and Line Spectrum Pair Decomposition''. Doctoral thesis. Report no. 71 / Helsinki University of Technology, Laboratory of Acoustics and Audio Signal Processing. Espoo, Finland. [http://lib.tkk.fi/Diss/2004/isbn9512269473/isbn9512269473.pdf]
+* Claerbout, Jon F. (1976). "Chapter 7 – Waveform Applications of Least-Squares". ''Fundamentals of Geophysical Data Processing''.  Palo Alto: Blackwell Scientific Publications. [https://web.archive.org/web/20060921204908/http://sep.stanford.edu/oldreports/fgdp2/fgdp_07.pdf]
+* {{citation |last1=Press|first1=WH|last2=Teukolsky|first2=SA|last3=Vetterling|first3=WT|last4=Flannery|first4=BP|year=2007|title=Numerical Recipes: The Art of Scientific Computing|edition=3rd|publisher=Cambridge University Press| publication-place=New York|isbn=978-0-521-88068-8|chapter=Section 2.8.2. Toeplitz Matrices|chapter-url=http://apps.nrbook.com/empanel/index.html?pg=96}}
+* Golub, G.H., and Loan, C.F. Van (1996). "Section 4.7: Toeplitz and related Systems" ''Matrix Computations'', Johns Hopkins University Press
+
+[[Category:Matrices (mathematics)]]
+[[Category:Numerical analysis]]

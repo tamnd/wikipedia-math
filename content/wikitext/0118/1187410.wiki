@@ -1,0 +1,104 @@
+<!-- wikipedia: en
+     page: 1187410
+     title: Semidefinite embedding
+     revision: 1279465402
+     timestamp: 2025-03-08T18:57:36Z
+     history: https://en.wikipedia.org/w/index.php?curid=1187410&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1279465402 -->
+'''Maximum Variance Unfolding (MVU)''', also known as '''Semidefinite Embedding''' (SDE), is an [[algorithm]] in [[computer science]] that uses [[semidefinite programming]] to perform [[non-linear dimensionality reduction]] of high-dimensional [[coordinate vector|vector]]ial input data.<ref>{{Harvnb|Weinberger, Sha and Saul|2004a}}</ref><ref>{{Harvnb|Weinberger and Saul|2004b}}</ref><ref>{{Harvnb|Weinberger and Saul|2006}}</ref>
+
+It is motivated by the observation that [[Kernel principal component analysis|kernel Principal Component Analysis]] (kPCA) does not reduce the data dimensionality,<ref>{{Harvnb|Lawrence|2012|loc=page 1612}}</ref> as it leverages the [[Kernel trick]] to non-linearly map the original data into an [[inner-product space]].
+
+== Algorithm ==
+MVU creates a mapping from the high dimensional input vectors to some low dimensional [[Euclidean vector]] space in the following steps:<ref>{{Harvnb|Weinberger, Sha and Saul|2004a|loc=page 7.}}</ref>
+
+# A [[neighbourhood (topology)|neighbourhood]] graph is created. Each input is connected with its k-nearest input vectors (according to [[Euclidean distance]] metric) and all k-nearest neighbors are connected with each other. If the data is sampled well enough, the resulting graph is a discrete approximation of the underlying manifold. 
+# The neighbourhood graph is "unfolded" with the help of semidefinite programming. Instead of learning the output vectors directly, the semidefinite programming aims to find an inner product matrix that maximizes the pairwise distances between any two inputs that are not connected in the neighbourhood graph while preserving the nearest neighbors distances. 
+# The low-dimensional embedding is finally obtained by application of [[multidimensional scaling]] on the learned inner product matrix.
+
+The steps of applying semidefinite programming followed by a linear dimensionality reduction step to recover a low-dimensional embedding into a Euclidean space were first proposed by [[Nathan Linial|Linial]], London, and Rabinovich.<ref>{{harvnb|Linial, London and Rabinovich|1995}}</ref>
+
+==Optimization formulation==
+
+Let <math>X \,\!</math> be the original input and <math>Y\,\!</math> be the embedding. If <math>i,j\,\!</math> are two neighbors, then the local isometry constraint that needs to be satisfied is:<ref>{{Harvnb|Weinberger, Sha and Saul|2004a|loc=page 3, equation 8}}</ref><ref>{{Harvnb|Weinberger and Saul|2004b|loc=page 3, equation 2}}</ref><ref>{{Harvnb|Weinberger and Saul|2006|loc=page 4, equation 2}}</ref>
+
+:<math>|X_{i}-X_{j}|^{2}=|Y_{i}-Y_{j}|^{2}\,\!</math>
+
+Let <math>G, K\,\!</math> be the [[Gramian matrix|Gram matrices]] of <math> X \,\!</math> and <math> Y \,\!</math> (i.e.: <math>G_{ij}=X_i \cdot X_j,K_{ij}=Y_i \cdot Y_j \,\!</math>). We can express the above constraint for every neighbor points <math>i,j\,\!</math> in term of <math>G, K\,\!</math>:<ref>{{Harvnb|Weinberger, Sha and Saul|2004a|loc=page 3, equation 9}}</ref><ref>{{Harvnb|Weinberger and Saul|2004b|loc=page 3, equation 3}}</ref>
+
+:<math>G_{ii}+G_{jj}-G_{ij}-G_{ji}=K_{ii}+K_{jj}-K_{ij}-K_{ji}\,\!</math>
+
+In addition, we also want to constrain the embedding <math> Y \,\!</math> to center at the origin:<ref>{{Harvnb|Weinberger, Sha and Saul|2004a|loc=page 3, equation 6}}</ref><ref>{{Harvnb|Weinberger and Saul|2004b|loc=page 3, equation 5}}</ref><ref>{{Harvnb|Weinberger and Saul|2006|loc=page 5, equation 8}}</ref>
+
+<math>0 = |\sum_{i}Y_{i}|^2\Leftrightarrow(\sum_{i}Y_{i}) \cdot (\sum_{i}Y_{i})\Leftrightarrow\sum_{i,j}Y_{i} \cdot Y_{j}\Leftrightarrow\sum_{i,j}K_{ij}</math>
+
+As described above, except the distances of neighbor points are preserved, the algorithm aims to maximize the pairwise distance of every pair of points. The objective function to be maximized is:<ref>{{Harvnb|Weinberger, Sha and Saul|2004a|loc=page 4, equation 10}}</ref><ref>{{Harvnb|Weinberger and Saul|2004b|loc=page 4, equation 6}}</ref><ref>{{Harvnb|Weinberger and Saul|2006|loc=page 5, equation 4}}</ref>
+
+<math>T(Y)=\dfrac{1}{2N}\sum_{i,j}|Y_{i}-Y_{j}|^{2}</math>
+
+Intuitively, maximizing the function above is equivalent to pulling the points as far away from each other as possible and therefore "unfold" the manifold. The local isometry constraint <ref>{{Harvnb|Weinberger and Saul|2004b|loc=page 4, equation 7}}</ref>
+
+Let <math>\tau = max \{\eta_{ij}|Y_{i}-Y_{j}|^2\} \,\!</math> where 
+<math>\eta_{ij} := \begin{cases}
+         1 & \mbox{if}\ i \mbox{ is a neighbour of } j \\
+          0 & \mbox{otherwise} .
+\end{cases}</math>
+
+prevents the objective function from diverging (going to infinity).
+
+Since the graph has N points, the distance between any two points <math>|Y_{i}-Y_{j}|^2 \leq N \tau \,\!</math>. We can then bound the objective function as follows:<ref>{{Harvnb|Weinberger and Saul|2004b|loc=page 4, equation 8}}</ref><ref>{{Harvnb|Weinberger and Saul|2006|loc=page 5, equation 6}}</ref>
+
+:<math>T(Y)=\dfrac{1}{2N}\sum_{i,j}|Y_{i}-Y_{j}|^{2} \leq \dfrac{1}{2N}\sum_{i,j}(N\tau)^2 = \dfrac{N^3\tau^2}{2} \,\!</math>
+
+The objective function can be rewritten purely in the form of the Gram matrix:<ref>{{Harvnb|Weinberger, Sha and Saul|2004a|loc=page 4, equation 11}}</ref><ref>{{Harvnb|Weinberger and Saul|2004b|loc=page 4, equation 9}}</ref><ref>{{Harvnb|Weinberger and Saul|2006|loc=page 6, equations 10 to 13}}</ref>
+
+:<math> 
+\begin{align}
+  T(Y) &{}=  \dfrac{1}{2N}\sum_{i,j}|Y_{i}-Y_{j}|^{2} \\
+          &{}= \dfrac{1}{2N}\sum_{i,j}(Y_{i}^2+Y_{j}^2-Y_{i} \cdot Y_{j} - Y_{j} \cdot Y_{i})\\
+          &{}= \dfrac{1}{2N}(\sum_{i,j}Y_{i}^2+\sum_{i,j}Y_{j}^2-\sum_{i,j}Y_{i} \cdot Y_{j} -\sum_{i,j}Y_{j} \cdot Y_{i})\\  
+          &{}= \dfrac{1}{2N}(\sum_{i,j}Y_{i}^2+\sum_{i,j}Y_{j}^2-0 -0)\\
+          &{}= \dfrac{1}{N}(\sum_{i}Y_{i}^2)=\dfrac{1}{N}(Tr(K))\\
+\end{align}
+\,\!</math>
+
+Finally, the optimization can be formulated as:<ref>{{Harvnb|Weinberger, Sha and Saul|2004a|loc=page 4, section 3.3}}</ref><ref>{{Harvnb|Weinberger and Saul|2004b|loc=page 4, equation 9}}</ref><ref>{{Harvnb|Weinberger and Saul|2006|loc=page 6, equations 10 to 13}}</ref>
+
+<math>
+ \begin{align}
+& \text{Maximize}   && Tr(\mathbf{K})\\
+& \text{subject to} && \mathbf{K} \succeq 0, \sum_{ij}\mathbf{K}_{ij} = 0 \\
+& \text{and} && G_{ii}+G_{jj}-G_{ij}-G_{ji}=K_{ii}+K_{jj}-K_{ij}-K_{ji}, \forall i, j \mbox{  where } \eta_{ij} = 1,
+\end{align} 
+</math>
+
+After the Gram matrix <math>K \,\!</math> is learned by semidefinite programming, the output <math>Y \,\!</math> can be obtained via [[Cholesky decomposition]]. 
+
+In particular, the Gram matrix can be written as <math> K_{ij}=\sum_{\alpha = 1}^{N}(\lambda_{\alpha } V_{\alpha i} V_{\alpha j}) \,\!</math> where <math> V_{\alpha i} \,\!</math> is the i-th element of eigenvector <math> V_{\alpha} \,\!</math> of the eigenvalue <math> \lambda_{\alpha } \,\!</math>.<ref>{{Harvnb|Weinberger and Saul|2004b|loc=page 4, equation 10}}</ref><ref>{{Harvnb|Weinberger and Saul|2006|loc=page 7, equations 14}}</ref>
+
+It follows that the <math> \alpha \,\!</math>-th element of the output <math> Y_i \,\!</math> is <math> \sqrt{\lambda_{\alpha }} V_{\alpha i} \,\!</math>.<ref>{{Harvnb|Weinberger and Saul|2004b|loc=page 4, equation 11}}</ref><ref>{{Harvnb|Weinberger and Saul|2006|loc=page 7, equations 15}}</ref>
+
+==See also==
+* [[Locally linear embedding]]
+* [[Isometry (disambiguation)]]
+* [[Local Tangent Space Alignment]]
+* [[Riemannian manifold]]
+* [[Energy minimization]]
+
+==Notes==
+{{Reflist|2}}
+
+==References==
+* {{cite journal|author-last=Linial, London and Rabinovich | author-first=Nathan, Eran and Yuri|title=The geometry of graphs and some of its algorithmic applications|journal=Combinatorica|year=1995|volume=15| issue=2|pages=215–245| doi=10.1007/BF01200757| s2cid=5071936|url=https://www.researchgate.net/publication/228057833}}
+* {{cite conference|author-last= Weinberger, Sha and Saul|author-first=Kilian Q., Fei and Lawrence K.|title=Learning a kernel matrix for nonlinear dimensionality reduction|conference=Proceedings of the Twenty First International Conference on Machine Learning (ICML 2004). [[Banff, Alberta]], Canada|date=4 July 2004a|url=https://repository.upenn.edu/cis_papers/2/}}
+* {{cite conference|author-last=Weinberger and Saul|author-first=Kilian Q. and Lawrence K. | title=Unsupervised learning of image manifolds by semidefinite programming|volume=2|conference=2004 IEEE Computer Society Conference on Computer Vision and Pattern Recognition|date=27 June 2004b|url=https://repository.upenn.edu/cis_papers/1/}}
+* {{cite journal|author-last=Weinberger and Saul| author-first=Kilian Q. and Lawrence K.| title=Unsupervised learning of image manifolds by semidefinite programming|volume=70|journal=International Journal of Computer Vision|date=1 May 2006| pages=77–90|doi=10.1007/s11263-005-4939-z| s2cid=291166|url=http://bicmr.pku.edu.cn/~wenzw/bigdata/weinberger-saul-mvu-image-manifolds.pdf}}
+* {{cite journal|last=Lawrence|first=Neil D|title=A unifying probabilistic perspective for spectral dimensionality reduction: insights and new models|year=2012|pages=1612|volume=13|issue=May|journal=[[Journal of Machine Learning Research]]|url=http://www.jmlr.org/papers/v13/lawrence12a.html|bibcode=2010arXiv1010.4830L|arxiv=1010.4830}}
+
+==Additional material==
+*[https://web.archive.org/web/20120313162120/http://www.cse.wustl.edu/~kilian/code/code.html Kilian Q. Weinberger's MVU Matlab code]
+
+[[Category:Computational statistics]]
+[[Category:Dimension reduction]]
+[[Category:Optimization algorithms and methods]]

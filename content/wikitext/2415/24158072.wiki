@@ -1,0 +1,180 @@
+<!-- wikipedia: en
+     page: 24158072
+     title: Boole's rule
+     revision: 1354478531
+     timestamp: 2026-05-16T17:47:42Z
+     history: https://en.wikipedia.org/w/index.php?curid=24158072&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1354478531 -->
+{{Short description|Method of numerical integration}}
+'''Boole's rule''' is a method of [[numerical integration | numerical quadrature]] arising in [[calculus]], and named after [[George Boole]].  Boole's rule and the composite Boole rule approximate
+the area under a curve over a fixed interval using 5 equally spaced
+points, and is designed to exactly integrate
+5th-order polynomials over that interval.  It is a member of the [[Newton–Cotes formulas|Newton–Cotes]] family of rules.
+
+==Formula==
+===Simple Boole's rule===
+It approximates an integral
+<math display="block">
+ \int_{a}^{b} f(x)\,dx
+</math>
+by using the values of {{mvar|f}} at five equally spaced points:{{sfn|Boole|1880|p=47|loc=Eq(21)}}
+<math display="block">\begin{align}
+ x_0 &= a, \\
+ x_1 &= x_0 + h, \\ 
+ x_2 &= x_0 + 2h, \\
+ x_3 &= x_0 + 3h, \\
+ x_4 &= x_0 + 4h = b.
+\end{align}</math>
+
+It is expressed thus in [[Abramowitz and Stegun]]'s ''Handbook of Mathematical Functions with Formulas, Graphs, and Mathematical Tables'':{{sfn|Davis|Polonsky|1983}}
+<math display="block">
+ \int_{x_0}^{x_4} f(x)\,dx = \frac{2h}{45}\bigl[ 7f(x_0) + 32 f(x_1) + 12 f(x_2) + 32 f(x_3) + 7f(x_4)\bigr] -\frac{8f^{(6)}(\xi)h^7}{945}
+</math>
+for some number {{tmath|\xi}} between {{tmath|x_0}} and {{tmath|x_4}}, and {{nowrap|1=945 = 1 × 3 × 5 × 7 × 9}}.  It is sometimes erroneously referred to as Bode's rule, due to a typographical error that propagated from Abramowitz and Stegun.{{sfn|Weisstein}}
+
+The following constitutes a very simple implementation of the method in [[Common Lisp]] which ignores the error term:
+
+{{hidden
+|header = Example implementation in [[Common Lisp]]
+|titlealign = left
+|toggle = left
+|content =
+<syntaxhighlight lang="lisp">
+(defun integrate-booles-rule (f x1 x5)
+  "Calculates the Boole's rule numerical integral of the function F in
+   the closed interval extending from inclusive X1 to inclusive X5
+   without error term inclusion."
+  (declare (type (function (real) real) f))
+  (declare (type real                   x1 x5))
+  (let ((h (/ (- x5 x1) 4)))
+    (declare (type real h))
+    (let* ((x2 (+ x1 h))
+           (x3 (+ x2 h))
+           (x4 (+ x3 h)))
+      (declare (type real x2 x3 x4))
+      (* (/ (* 2 h) 45)
+         (+ (*  7 (funcall f x1))
+            (* 32 (funcall f x2))
+            (* 12 (funcall f x3))
+            (* 32 (funcall f x4))
+            (*  7 (funcall f x5)))))))
+</syntaxhighlight>
+}}
+
+=== Composite Boole's rule ===
+In cases where the integration is permitted to extend over equidistant sections of the interval <math>[a, b]</math>, the composite Boole's rule might be applied. Given <math>N</math> divisions, where {{nobr|<math>N</math> [[Modulo|mod]] <math>4 = 0</math>,}} the integrated value amounts to{{sfn|Sablonnière|Sbibih|Tahrichi|2010|p=852}}
+<math display=block>
+ \int_{x_0}^{x_N} f(x)\,dx = \frac{2h}{45}
+    \left[7\big(f(x_0) + f(x_N)\big)
+       + 32 \sum_{i \in \{1, 3,  5, \ldots, N - 1\}} f(x_i)
+       + 12 \sum_{i \in \{2, 6, 10, \ldots, N - 2\}} f(x_i)
+       + 14 \sum_{i \in \{4, 8, 12, \ldots, N - 4\}} f(x_i)
+    \right] + \text{error term},
+</math>
+where the error term is similar to above. The following Common Lisp code implements the aforementioned formula:
+{{hidden
+|header = Example implementation in [[Common Lisp]]
+|titlealign = left
+|toggle = left
+|content =
+<syntaxhighlight lang="lisp">
+(defun integrate-composite-booles-rule (f a b n)
+  "Calculates the composite Boole's rule numerical integral of the
+   function F in the closed interval extending from inclusive A to
+   inclusive B across N subintervals."
+  (declare (type (function (real) real) f))
+  (declare (type real                   a b))
+  (declare (type (integer 1 *)          n))
+  (let ((h (/ (- b a) n)))
+    (declare (type real h))
+    (flet ((f[i] (i)
+            (declare (type (integer 0 *) i))
+            (let ((xi (+ a (* i h))))
+              (declare (type real xi))
+              (the real (funcall f xi)))))
+      (* (/ (* 2 h) 45)
+         (+ (*  7 (+ (f[i] 0) (f[i] n)))
+            (* 32 (loop for i from 1 to (- n 1) by 2 sum (f[i] i)))
+            (* 12 (loop for i from 2 to (- n 2) by 4 sum (f[i] i)))
+            (* 14 (loop for i from 4 to (- n 4) by 4 sum (f[i] i))))))))
+</syntaxhighlight>
+}}
+
+{{hidden
+|header = Example implementation in [[R (programming language)|R]]
+|titlealign = left
+|toggle = left
+|content =
+<syntaxhighlight lang="r">
+booleQuad <- function(fx, dx) {
+  # Calculates the composite Boole's rule numerical 
+  # integral for a function with a vector of precomputed
+  # values fx evaluated at the points in vector dx.
+  n <- length(dx)
+  h <- diff(dx)
+  stopifnot(exprs = {
+    length(fx) == n
+    n > 8L
+    h[1L] >= 0
+    n >= 2L
+    n %% 4L == 1L
+    isTRUE(all.equal(h, rep(h[1L], length(h))))
+  })
+  nm2 <- n - 2L
+  cf <- double(nm2)
+  cf[seq.int(1, nm2, 2L)] <- 32
+  cf[seq.int(2, nm2, 4L)] <- 12
+  cf[seq.int(4, nm2, 4L)] <- 14
+  cf <- c(7, cf, 7)
+  sum(cf * fx) * 2 * h[1L] / 45
+}
+</syntaxhighlight>
+}}
+
+==See also==
+* [[Newton–Cotes formulas]]
+* [[Simpson's rule]]
+* [[Romberg's method]]
+
+==Notes==
+{{reflist}}
+
+==References==
+{{sfn whitelist|CITEREFDavisPolonsky1983|CITEREFWeisstein}}
+* {{cite book
+ |last= Boole 
+ |first= George
+ |author-link= George Boole
+ |year=1880
+ |orig-year=1860
+ |edition = 3rd
+ |title=A Treatise on the Calculus of Finite Differences
+ |url=https://archive.org/details/cu31924031240934/page/n61/mode/2up?q=7
+ |publisher=[[Macmillan Publishers|Macmillan and Company]]
+}}
+* {{AS ref|25, eqn 25.4.14|886|first1=Philip J. |last1=Davis |link1=Philip J. Davis |first2=Ivan |last2=Polonsky}}
+* {{cite journal
+| last1      = Sablonnière
+| first1     = P.
+| last2      = Sbibih
+| first2     = D.
+| last3      = Tahrichi
+| first3     = M.
+| date       = 2010
+| title      = Error estimate and extrapolation of a quadrature formula derived from a quartic spline quasi-interpolant
+| journal    = BIT Numerical Mathematics
+| volume     = 50
+| issue = 4
+| pages      = 843{{ndash}}862
+| doi        = 10.1007/s10543-010-0278-0
+}}
+* {{MathWorld |title=Boole's Rule|id=BoolesRule}}
+
+{{Numerical integration}}
+{{DEFAULTSORT:Boole's Rule}}
+
+[[Category:Integral calculus]]
+[[Category:Numerical analysis]]
+[[Category:Numerical integration]]
+[[Category:Articles with example Lisp (programming language) code]]

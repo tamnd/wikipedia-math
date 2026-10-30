@@ -1,0 +1,35 @@
+<!-- wikipedia: en
+     page: 64339511
+     title: Delegated credential
+     revision: 1236563750
+     timestamp: 2024-07-25T11:06:14Z
+     history: https://en.wikipedia.org/w/index.php?curid=64339511&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1236563750 -->
+{{Short description|Type of cryptographic certificate}}
+
+'''Delegated credential''' is a short-lived [[Transport Layer Security|TLS]] [[Public key certificate|certificate]] used to improve security by faster recovery from [[private key]] leakage, without increasing the [[Network delay|latency]] of the [[TLS handshake]]. It is currently an [[Internet Engineering Task Force|IETF]] [[Internet Draft]],<ref>{{cite web |last1=Barnes |first1=Richard |last2=Iyengar |first2=Subodh |last3=Rescorla |first3=Eric |last4=Sullivan |first4=Nick |title=Delegated Credentials for TLS |url=https://tools.ietf.org/html/draft-ietf-tls-subcerts |website=tools.ietf.org |accessdate=21 June 2020 |language=en}}</ref> and has been in use by [[Cloudflare]]<ref>{{cite web |title=Delegated Credentials for TLS |url=https://blog.cloudflare.com/keyless-delegation/ |website=The Cloudflare Blog |language=en |date=1 November 2019 |accessdate=21 June 2020}}</ref> and [[Facebook]],<ref>{{cite web |last1=Guzman |first1=Alex |last2=Nekritz |first2=Kyle |last3=Iyengar |first3=Subodh |title=Delegated credentials: Improving TLS security |url=https://engineering.fb.com/security/delegated-credentials/ |website=Facebook Engineering |accessdate=21 June 2020 |date=1 November 2019}}</ref> with browser support by [[Firefox]].<ref>{{cite web |last1=Jacobs |first1=Kevin |last2=Jones |first2=J. C. |last3=Merwe |first3=Thyla van der |title=Validating Delegated Credentials for TLS in Firefox |url=https://blog.mozilla.org/security/2019/11/01/validating-delegated-credentials-for-tls-in-firefox/ |website=Mozilla Security Blog |date=November 2019 |accessdate=21 June 2020}}</ref>
+
+==Motivation==
+Modern websites and other services use [[content delivery network]]s (CDNs), which are servers potentially distributed all over the world, in order to respond to a user's request as fast as possible, alongside other services that CDNs provide such as [[DDoS mitigation]]. However, in order to establish a [[Transport Layer Security|secure]] connection, the server is required to prove possession of a private key associated with a certificate, which serves as a [[chain of trust]] linking the public key and a trusted party. The trusted party is normally a [[certificate authority]] (CA).
+
+CAs issue these [[Public key certificate|digital certificates]] with an expiration time, usually a few months up to a year. It is the server's responsibility to renew the certificate close to its expiration date. Knowledge of a private key associated to a valid certificate is devastating for the site's security, as it allows [[Man-in-the-middle attack]]s, in which a malicious entity can impersonate to a user as a legitimate server. Therefore, these private keys should be kept secure, preferably not distributed over every server in the CDN. Specifically, if a private key is compromised, the corresponding certificate should optimally be [[Certificate revocation|revoked]], such that browsers will no longer support this certificate. Certificate revocation has two main drawbacks. Firstly, current revocation methods do not work well across all browsers, and put the users at risk; and secondly, upon revocation, the server needs to quickly fetch a new valid certificate from the CA and deploy it across all [[Mirror site|mirrors]].
+
+==Design==
+A delegated credential is a short-lived key (from a few hours to a few days) that the certificate's owner delegates to the server for use in TLS. It is in fact a [[Key signature (cryptography)|signature]]: the certificate's owner uses the certificate's private key to sign a delegated public key, and an expiration time.
+
+Given this delegated credential, a browser can (if it supports it) verify the server's authenticity by verifying the delegated certificate and then verify the certificate itself.
+
+==Advantages==
+This approach has many advantage over current solutions:
+* Delegated credentials are short-lived, so private keys can be changed frequently. Therefore, even if a particular delegated credential is compromised without certificate owner knowing it, that compromised credential could only be abused for a very short time.
+* No revocation is needed for stolen certificates.{{Citation needed|date=April 2021}}
+* The certificate owner does not need to expose its private key to the CDN servers, but rather periodically supply them with delegated credentials. Therefore, certificate owner can maintain exclusive control over its private key (and even store it in [[Hardware security module|HSM]]) while using third-party CDN servers.
+* The delegated credential has its own key, so it can experiment with new algorithms such as [[Ed25519]]. This can facilitate [[cryptographic agility]].
+
+==References==
+{{Reflist}}
+
+[[Category:Cryptographic protocols]]
+[[Category:Application layer protocols]]
+[[Category:Transport Layer Security]]

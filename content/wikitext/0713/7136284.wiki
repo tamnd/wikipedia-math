@@ -1,0 +1,85 @@
+<!-- wikipedia: en
+     page: 7136284
+     title: Duplication and elimination matrices
+     revision: 1312717092
+     timestamp: 2025-09-22T06:16:17Z
+     history: https://en.wikipedia.org/w/index.php?curid=7136284&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1312717092 -->
+In [[mathematics]], especially in [[linear algebra]] and [[Matrix (mathematics)|matrix theory]], the '''duplication matrix''' and the '''elimination matrix''' are [[linear transformation]]s used for transforming [[vectorization (mathematics)#Half-vectorization|half-vectorization]]s of [[matrix (mathematics)|matrices]] into [[vectorization (mathematics)|vectorizations]] or (respectively) vice versa.
+
+==Duplication matrix==
+The duplication matrix <math> D_n </math> is the unique <math>n^2 \times \frac{n(n+1)}{2}</math> matrix which, for any <math> n \times n </math> [[symmetric matrix]] <math> A </math>, transforms <math>\mathrm{vech}(A)</math> into <math>\mathrm{vec}(A)</math>:
+:<math> D_n \mathrm{vech}(A) = \mathrm{vec}(A)</math>.
+
+For the <math>2 \times 2</math> symmetric matrix <math>A=\left[\begin{smallmatrix} a & b \\ b & d \end{smallmatrix}\right]</math>, this transformation reads
+: <math>D_n \mathrm{vech}(A) = \mathrm{vec}(A) \implies \begin{bmatrix} 1&0&0 \\ 0&1&0 \\ 0&1&0 \\ 0&0&1 \end{bmatrix} \begin{bmatrix} a \\ b \\ d \end{bmatrix} = \begin{bmatrix} a \\ b \\ b \\ d \end{bmatrix}</math>
+
+
+The explicit formula for calculating the duplication matrix for a <math>n \times n</math> matrix is: 
+
+<math>D^T_n = \sum \limits_{i \ge j} u_{ij} (\mathrm{vec}T_{ij})^T</math>
+
+Where: 
+*<math> u_{ij} </math> is a unit vector of order <math> \frac{1}{2} n (n+1) </math> having the value <math>1</math> in the position <math>(j-1)n+i - \frac{1}{2}j(j-1)</math> and 0 elsewhere; 
+*<math> T_{ij} </math> is a <math>n \times n </math> matrix with 1 in position <math> (i,j) </math> and <math> (j,i) </math> and zero elsewhere
+
+Here is a [[C++]] function using [[Armadillo (C++ library)]]:
+<syntaxhighlight lang="C++">
+arma::mat duplication_matrix(const int &n) {
+    arma::mat out((n*(n+1))/2, n*n, arma::fill::zeros);
+    for (int j = 0; j < n; ++j) {
+        for (int i = j; i < n; ++i) {
+            arma::vec u((n*(n+1))/2, arma::fill::zeros);
+            u(j*n+i-((j+1)*j)/2) = 1.0;
+            arma::mat T(n,n, arma::fill::zeros);
+            T(i,j) = 1.0;
+            T(j,i) = 1.0;
+            out += u * arma::trans(arma::vectorise(T));
+        }
+    }
+    return out.t();
+}
+</syntaxhighlight>
+
+==Elimination matrix==
+An elimination matrix <math>L_n</math> is a <math>\frac{n(n+1)}{2} \times n^2</math> matrix which, for any <math>n \times n</math> matrix <math>A</math>, transforms <math>\mathrm{vec}(A)</math> into <math>\mathrm{vech}(A)</math>:
+:<math>L_n \mathrm{vec}(A) = \mathrm{vech}(A)</math>.&nbsp;<ref>{{harvtxt|Magnus|Neudecker|1980}}, Definition 3.1</ref>
+
+By the explicit (constructive) definition given by {{harvtxt|Magnus|Neudecker|1980}}, the <math>\frac{1}{2}n(n+1)</math> by <math>n^2</math> elimination matrix <math>L_n</math> is given by
+:<math>L_n = \sum_{i \geq j} u_{ij} \mathrm{vec}(E_{ij})^T = \sum_{i \geq j} (u_{ij}\otimes e_j^T \otimes e_i^T),</math>
+where <math>e_i</math> is a unit vector whose <math>i</math>-th element is one and zeros elsewhere, and <math>E_{ij} = e_ie_j^T</math>. 
+
+Here is a [[C++]] function using [[Armadillo (C++ library)]]:
+<syntaxhighlight lang="C++">
+arma::mat elimination_matrix(const int &n) {
+    arma::mat out((n*(n+1))/2, n*n, arma::fill::zeros);
+    for (int j = 0; j < n; ++j) {
+        arma::rowvec e_j(n, arma::fill::zeros);
+        e_j(j) = 1.0;
+        for (int i = j; i < n; ++i) {
+            arma::vec u((n*(n+1))/2, arma::fill::zeros);
+            u(j*n+i-((j+1)*j)/2) = 1.0;
+            arma::rowvec e_i(n, arma::fill::zeros);
+            e_i(i) = 1.0;
+            out += arma::kron(u, arma::kron(e_j, e_i));
+        }
+    }
+    return out;
+}
+</syntaxhighlight>
+
+For the <math>2 \times 2 </math> matrix <math>A = \left[\begin{smallmatrix} a & b \\ c & d \end{smallmatrix}\right]</math>, one choice for this transformation is given by
+: <math>L_n \mathrm{vec}(A) = \mathrm{vech}(A) \implies \begin{bmatrix} 1&0&0&0 \\ 0&1&0&0 \\ 0&0&0&1 \end{bmatrix} \begin{bmatrix} a \\ c \\ b \\ d \end{bmatrix} = \begin{bmatrix} a \\ c \\ d \end{bmatrix}</math>.
+
+==Notes==
+<references/>
+
+==References==
+*{{Citation | last1=Magnus | first1=Jan R. | last2=Neudecker | first2=Heinz | title=The elimination matrix: some lemmas and applications | doi=10.1137/0601049 | year=1980 | journal= SIAM Journal on Algebraic and Discrete Methods| issn=0196-5212 | volume=1 | issue=4 | pages=422–449| url=http://repository.uvt.nl/id/ir-uvt-nl:oai:wo.uvt.nl:153210 | url-access=subscription }}.
+*Jan R. Magnus and Heinz Neudecker (1988), ''Matrix Differential Calculus with Applications in Statistics and Econometrics'', Wiley. {{ISBN|978-0-471-98633-1}}.
+*Jan R. Magnus (1988), ''Linear Structures'', Oxford University Press. {{ISBN|978-0-19-520655-5}}
+
+[[Category:Matrices (mathematics)]]
+
+[[de:Eliminationsmatrix]]

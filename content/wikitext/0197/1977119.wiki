@@ -1,0 +1,92 @@
+<!-- wikipedia: en
+     page: 1977119
+     title: FastICA
+     revision: 1375083643
+     timestamp: 2026-09-15T19:38:29Z
+     history: https://en.wikipedia.org/w/index.php?curid=1977119&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375083643 -->
+{{Short description|Machine learning algorithm}}
+{{one source|date=April 2013}}
+'''FastICA''' is an efficient and popular algorithm for [[independent component analysis]] invented by [[Aapo Hyvärinen]] at [[Helsinki University of Technology]].<ref name = "Hyvarinen">{{Cite journal | last1 = Hyvärinen | first1 = A. | last2 = Oja | first2 = E. | doi = 10.1016/S0893-6080(00)00026-5 | title = Independent component analysis: Algorithms and applications | journal = Neural Networks | volume = 13 | issue = 4–5 | pages = 411–430 | year = 2000 | pmid =  10946390| url = http://www.cs.helsinki.fi/u/ahyvarin/papers/NN00new.pdf}}</ref><ref>{{Cite journal | last1 = Hyvarinen | first1 = A. | title = Fast and robust fixed-point algorithms for independent component analysis | doi = 10.1109/72.761722 | journal = IEEE Transactions on Neural Networks | volume = 10 | issue = 3 | pages = 626–634 | year = 1999 | pmid =  18252563| url = http://www.cs.helsinki.fi/u/ahyvarin/papers/TNN99new.pdf}}</ref> Like most ICA algorithms, FastICA seeks an orthogonal rotation of [[FastICA#Prewhitening the data|prewhitened]] data, through a fixed-point [[iterative method|iteration scheme]], that maximizes a measure of [[non-Gaussianity]] of the rotated components. Non-gaussianity serves as a proxy for [[statistical independence]], which is a very strong condition and requires infinite data to verify. FastICA can also be alternatively derived as an approximative Newton iteration.
+
+== Algorithm ==
+
+=== ''Prewhitening'' the data ===
+Let the <math>\mathbf{X} := (x_{ij}) \in \mathbb{R}^{N \times M}</math> denote the input data matrix, <math>M</math> the number of columns corresponding with the number of samples of mixed signals and <math>N</math> the number of rows corresponding with the number of independent source signals. The input data matrix <math>\mathbf{X}</math> must be ''prewhitened'', or centered and whitened, before applying the FastICA algorithm to it.
+
+*Centering the data entails demeaning each component of the input data <math>\mathbf{X}</math>, that is,
+<div class="center"><math> x_{ij} \leftarrow x_{ij} - \frac{1}{M} \sum_{j^{\prime}} x_{ij^{\prime}}</math> </div>
+:for each <math>i =1,\ldots,N</math> and <math>j = 1, \ldots, M </math>. After centering, each row of <math>\mathbf{X}</math> has an [[expected value]] of <math>0</math>.
+*''Whitening'' the data requires a [[linear transformation]]  <math>\mathbf{L}: \mathbb{R}^{N \times M} \to \mathbb{R}^{N \times M}</math> of the centered data so that the components of <math>\mathbf{L}(\mathbf{X})</math> are uncorrelated and have variance one. More precisely, if <math>\mathbf{X}</math> is a centered data matrix, the covariance of <math>\mathbf{L}_{\mathbf{x}} := \mathbf{L}(\mathbf{X})</math> is the <math>(N \times N)</math>-dimensional [[identity matrix]], that is,
+<div class="center"><math> \mathrm{E}\left \{ \mathbf{L}_{\mathbf{x}} \mathbf{L}_{\mathbf{x}}^{T} \right \} = \mathbf{I}_N</math></div>
+: A common method for whitening is by performing an [[eigenvalue decomposition]] on the [[covariance matrix]] of the centered data <math>\mathbf{X}</math>, <math> E\left \{  \mathbf{X} \mathbf{X}^{T} \right \} = \mathbf{E}\mathbf{D}\mathbf{E}^T</math>, where <math>\mathbf{E}</math> is the matrix of eigenvectors and <math>\mathbf{D}</math> is the [[diagonal matrix]] of eigenvalues. The whitened data matrix is defined thus by
+<div class="center"><math> \mathbf{X} \leftarrow \mathbf{D}^{-1/2}\mathbf{E}^T\mathbf{X}. </math></div>
+
+=== Single component extraction ===
+
+The iterative algorithm finds the direction for the weight vector <math>\mathbf{w} \in \mathbb{R}^N</math>
+that maximizes a measure of non-Gaussianity of the projection <math>\mathbf{w}^T \mathbf{X}</math>, 
+with <math>\mathbf{X} \in \mathbb{R}^{N \times M}</math> denoting a [[FastICA#Prewhitening the data|prewhitened]] data matrix as described above.
+Note that <math>\mathbf{w}</math> is a column vector. To measure non-Gaussianity, FastICA relies on a nonquadratic [[nonlinear]] [[function (mathematics)|function]] <math>f(u)</math>, its first derivative <math>g(u)</math>, and its second derivative <math>g^{\prime}(u)</math>. Hyvärinen states that the functions 
+<div class="center"><math>
+f(u) = \log \cosh (u), \quad  g(u) = \tanh (u), \quad \text{and} \quad {g}'(u) = 1-\tanh^2(u), 
+</math></div>
+are useful for general purposes, while 
+<div class="center"><math>
+f(u) = -e^{-u^2/2}, \quad g(u) = u e^{-u^2/2}, \quad \text{and} \quad {g}'(u) = (1-u^2) e^{-u^2/2}
+</math></div> 
+may be highly robust.<ref name ="Hyvarinen" /> The steps for extracting the weight vector <math>\mathbf{w}</math> for single component in FastICA are the following: 
+# Randomize the initial weight vector <math>\mathbf{w}</math>
+# Let <math> 
+   \mathbf{w}^+ \leftarrow E\left\{\mathbf{X} g(\mathbf{w}^T \mathbf{X})^T\right\} - 
+                  E\left\{g'(\mathbf{w}^T \mathbf{X})\right\}\mathbf{w} 
+      </math>, where <math>E\left\{...\right\}</math> means averaging over all column-vectors of matrix <math>\mathbf{X}</math>
+# Let <math> \mathbf{w} \leftarrow \mathbf{w}^+ / \|\mathbf{w}^+\| </math>
+# If not converged, go back to 2
+
+=== Multiple component extraction ===
+
+The single unit iterative algorithm estimates only one weight vector which extracts a single component. Estimating additional components that are mutually "independent" requires repeating the algorithm to obtain linearly independent projection vectors - note that the notion of  [[Independence (probability theory)|independence]] here refers to maximizing non-Gaussianity in the estimated components. Hyvärinen provides several ways of extracting multiple components with the simplest being the following. Here, <math>\mathbf{1_{M}}</math> is a column vector of 1's of dimension <math>M</math>.
+
+'''Algorithm''' FastICA
+:'''Input:''' <math> C </math> Number of desired components
+:'''Input:''' <math> \mathbf{X} \in \mathbb{R}^{N \times M} </math> Prewhitened matrix, where each column represents an <math>N</math>-dimensional sample, where <math> C <= N </math>
+:'''Output:''' <math> \mathbf{W} \in \mathbb{R}^{N \times C} </math> Un-mixing matrix where each column projects <math> \mathbf{X} </math> onto independent component. 
+:'''Output:''' <math> \mathbf{S} \in \mathbb{R}^{C \times M} </math> Independent components matrix, with <math>M</math> columns representing a sample with <math> C </math>  dimensions.
+ 
+  '''for''' p '''in''' 1 to C:
+     ''<math>\mathbf{w_p} \leftarrow</math> Random vector of length N''
+     '''while''' <math>\mathbf{w_p}</math> changes
+         <math>\mathbf{w_p} \leftarrow \frac{1}{M}\mathbf{X} g(\mathbf{w_p}^T \mathbf{X})^T - \frac{1}{M}g'(\mathbf{w_p}^T\mathbf{X})\mathbf{1_{M}} \mathbf{w_p}</math>
+         <math>\mathbf{w_p} \leftarrow \mathbf{w_p} - \sum_{j = 1}^{p-1} (\mathbf{w_p}^T\mathbf{w_j})\mathbf{w_j}</math>
+         <math>\mathbf{w_p} \leftarrow \frac{\mathbf{w_p}}{\|\mathbf{w_p}\|}</math><br />
+  '''output''' <math> \mathbf{W} \leftarrow \begin{bmatrix} \mathbf{w_1},  \dots,  \mathbf{w_C} \end{bmatrix}
+             </math><br />
+  '''output''' <math> 
+             \mathbf{S} \leftarrow \mathbf{W^T}\mathbf{X}</math>
+
+== See also ==
+
+* [[Unsupervised learning]]
+* [[Machine learning]]
+* The [[IT++]] library features a FastICA implementation in [[C++]]
+* [[Infomax]]
+
+==References==
+
+{{Reflist}}
+
+==External links==
+* [https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.FastICA.html FastICA in Python]
+* [http://www.cis.hut.fi/projects/ica/fastica/ FastICA package for Matlab or Octave]
+* [https://cran.r-project.org/web/packages/fastICA/index.html fastICA package] in [[R programming language]]
+* [https://sourceforge.net/projects/fastica FastICA in Java] on [[SourceForge]]
+* [http://rapid-i.com/wiki/index.php?title=Independent_Component_Analysis FastICA in Java] in [[RapidMiner]].
+* [https://github.com/derekharrison/FastICA FastICA in Matlab]
+* [https://mdp-toolkit.sourceforge.net/index.html FastICA in MDP]
+* [https://juliastats.org/MultivariateStats.jl/stable/ica/ FastICA in Julia]
+
+[[Category:Factor analysis]]
+[[Category:Computational statistics]]
+[[Category:Machine learning algorithms]]

@@ -1,0 +1,97 @@
+<!-- wikipedia: en
+     page: 3955084
+     title: Py (cipher)
+     revision: 1315755392
+     timestamp: 2025-10-08T13:15:38Z
+     history: https://en.wikipedia.org/w/index.php?curid=3955084&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1315755392 -->
+{{Short description|Stream cipher}}
+'''Py''' is a [[stream cipher]] submitted to [[eSTREAM]] by [[Eli Biham]] and [[Jennifer Seberry]].  It is one of the fastest eSTREAM candidates at around 2.6 cycles per byte on some platforms.  It has a structure a little like [[RC4]], but adds an array of 260 32-bit words which are indexed using a permutation of bytes, and produces 64 bits in each round.
+
+The authors assert that the name be pronounced "Roo", a reference to the cipher's Australian origin, by reading the letters "Py" as [[Cyrillic]] (Ру) rather than Latin characters.  This somewhat perverse pronunciation is understood to be their answer, in jest, to the difficult-to-pronounce name ''Rijndael'' for the cipher which was adopted as the [[Advanced Encryption Standard]].
+
+* The original April 2005 proposal included the cipher Py, and a simplified version Py6.  The latter reduces the size of some internal tables, providing greatly reduced key scheduling cost, at the expense of a shorter maximum output length.
+* In June 2006, the authors described Pypy (even more confusingly, ''half''-Cyrillic Pyру and thus pronounced "Pyroo") as an optional stronger variant.  This omits one of the output words from each iteration of Py, and thus operates at about 0.6 times the speed of Py.
+* In January 2007, the key schedule algorithm was changed, producing "tweaked" variants TPy, TPypy and TPy6.  To be precise, the first (key-dependent) phase is unmodified, but the second (IV setup) phase has an error corrected.  The round functions used to produce output are identical.
+* At [https://web.archive.org/web/20071209204650/http://www.cse.iitm.ac.in/~indocrypt2007/ Indocrypt 2007], [[Gautham Sekar]], [[Souradyuti Paul]] and [[Bart Preneel]] proposed two new ciphers [[RCR-32]] and [[RCR-64]] based on the design principles of Pypy and Py, respectively.  These replace a variable rotate in Py with a fixed rotate, eliminating an attack and speeding up the cipher slightly.  The TPy key schedule is used unmodified.
+
+==Attacks on the Py-family ==
+{{As of|2006}}, the best cryptanalytic attack on Py (by [[Hongjun Wu]] and [[Bart Preneel]]) can under some circumstances (e.g. where the IV is much longer than the key) recover the key given partial [[keystream]]s for 2<sup>24</sup> chosen IVs [http://www.ecrypt.eu.org/stream/papersdir/2006/052.pdf].
+
+In a more difficult scenario from the point of view of attacker, given only known plaintext (rather than chosen plaintext), there is also a [[distinguishing attack]] on the keystream (by [[Paul Crowley (cryptographer)|Paul Crowley]]) which requires around 2<sup>72</sup> bytes of output and comparable time.  This is an improvement on an attack presented by [[Gautham Sekar]], [[Souradyuti Paul]] and [[Bart Preneel]] which requires 2<sup>88</sup> bytes.  There is a still a debate whether these attacks constitute an academic break of Py. When the attackers claim that the above attacks can be built with workload less than the exhaustive search under the design specifications of Py and therefore, it is clearly a theoretical break of the cipher, the designers rule out the attacks because Py's security bounds limit any attacker to a total of 2<sup>64</sup> bytes of output across all keystreams everywhere. A recent revision of the [[Souradyuti Paul|Paul]], [[Bart Preneel|Preneel]], and Sekar paper includes a detailed discussion of this issue in section 9.  There are no doubts about the legitimacy of the Wu and Preneel attack.
+
+Py was selected as Phase 2 Focus Candidate for Profile 1 (software) by the [[eSTREAM]] project [http://www.ecrypt.eu.org/stream/endofphase1.html] but did not advance to Phase 3 due to the Wu and Preneel chosen IV attack. [http://www.ecrypt.eu.org/stream/endofphase2.html].
+
+In January 2007, three new ciphers namely TPy, TPypy and TPy6 have been proposed by the designers of Py to eliminate the above attacks. The TPy is still vulnerable against the above distinguishing attacks by [[Souradyuti Paul|Paul]] et al. (complexity 2<sup>88</sup>) and Crowley (complexity 2<sup>72</sup>), which do not depend on the key schedule.  The best attack so far on the TPypy, which is conjectured to be the strongest of the Py-family of ciphers, is by Sekar et al. which is a distinguishing attack with data complexity 2<sup>281</sup>. This attack is only meaningful if the key-size of TPypy is longer than 281 bits.
+
+To remove attacks on TPy and TPypy, [[Gautham Sekar|Sekar]], [[Souradyuti Paul|Paul]] and [[Bart Preneel|Preneel]] at [https://web.archive.org/web/20071209204650/http://www.cse.iitm.ac.in/~indocrypt2007/ Indocrypt 2007] gave proposals for two new ciphers [[RCR-32]] and [[RCR-64]]. So far there are no attacks against the [[RCR-32]] and [[RCR-64]].
+
+==Round functions==
+
+Py is based on the idea of "sliding arrays": arrays are indexed relative to a start pointer, which is advanced by one word each round.  Where modulo indexing is available (hardware, and many [[digital signal processor]]s), these can be implemented as [[circular buffer]]s.  In software, these are most easily implemented as large arrays.  When the end of the array is reached, the working portions are copied back to the beginning and operations continue.
+
+The 256-byte P array contains a 256-entry permutation (each byte appears exactly once), while the Y array contains 260 32-bit words.
+
+<syntaxhighlight lang="c" line="GESHI_NORMAL_LINE_NUMBERS">
+#include <stdint.h>
+#define ROTL32(x, s) ((x)<<(s) | (x)>>(32-(s)))
+uint8_t  *P;    // P[0] through P[255] are active
+uint32_t *Y;    // Y[-3] through Y[256] are active
+uint32_t s;
+uint32_t *output;
+
+while (output_words--) {
+        int i = Y[185] % 256;
+        P[256] = P[i];     // This effectively swaps P[0] and P[i]
+        P[i] = P[0];       // Then copies P[0] to P[256]
+        P++;  // Prior P[1] is new P[0], just-written P[256] is new P[255]
+
+        s += Y[P[72]] - Y[P[239]];
+        s = ROTL32(s, (P[116] + 18) % 32);
+
+        *output++ = (ROTL32(s, 25) ^ Y[256]) + Y[P[26]];  // This line omitted from Pypy & TPypy
+        *output++ = (       s      ^ Y[-1] ) + Y[P[208]];
+        Y[257]    = (ROTL32(s, 14) ^ Y[-3] ) + Y[P[153]];
+        Y++;  // Prior P[-2] is new P[-3], just-written P[257] is new P[256]
+}
+</syntaxhighlight>
+
+When byte output is required, Py specifies that the output words are converted little-endian.
+
+Line 17 is omitted from Pypy, Tpypy, and RCR-32.
+
+RCR-32 and RCR-64 are identical to the above, except that line 15 is changed to a fixed left-rotate of 19 bits.
+
+Py6 has the same structure, but the P and Y arrays are shortened to 64 bytes and 68 words, respectively.  P entries are only 6 bits long, a savings that could be exploited in dedicated hardware.  The various offsets into <code>P[]</code> and <code>Y[]</code> are, of course, modified, making the inner loop:
+<syntaxhighlight lang="c" line start=8>
+while (output_words--) {
+        int i = Y[43] % 64;
+        P[64] = P[i];
+        P[i] = P[0];
+        P++;
+
+        s += Y[P[18]] - Y[P[57]];
+        s = ROTL32(s, (P[26] + 18) % 32);
+
+        *output++ = (ROTL32(s, 25) ^ Y[64]) + Y[P[8]];
+        *output++ = (       s      ^ Y[-1]) + Y[P[21]];
+        Y[65]     = (ROTL32(s, 14) ^ Y[-3]) + Y[P[48]];
+        Y++;
+}
+</syntaxhighlight>
+
+==External links==
+* [[Eli Biham]], [[Jennifer Seberry]], [http://www.ecrypt.eu.org/stream/ciphers/py/py.ps Py specification] ([[PostScript]])
+* [[Eli Biham]], [[Jennifer Seberry]], [http://www.ecrypt.eu.org/stream/papersdir/2007/038.ps Tweaking the IV Setup of the Py Family of Stream Ciphers -- The Ciphers TPy, TPypy, and TPy6]
+* [http://www.ecrypt.eu.org/stream/pyp2.html eStream page on Py]
+* [[Paul Crowley (cryptographer)|Paul Crowley]], [http://www.ciphergoth.org/crypto/py/ Cryptanalysis of Py]
+* [[Souradyuti Paul]], [[Bart Preneel]], [[Gautham Sekar]], [http://www.cosic.esat.kuleuven.be/publications/article-735.pdf Distinguishing attacks on the stream cipher Py], FSE 2006.
+* [[Gautham Sekar]], [[Souradyuti Paul]], [[Bart Preneel]], [https://web.archive.org/web/20070929102613/http://mirror.cr.yp.to/eprint.iacr.org/2007/075 Weaknesses in the Pseudorandom Bit Generation Algorithms of the Stream Ciphers TPypy and TPy], IACR-ePrint report.
+* [[Souradyuti Paul]], [[Bart Preneel]], [http://eprint.iacr.org/2005/448 On the (In)security of Stream Ciphers Based on Arrays and Modular Addition (Full Version) ], Asicrypt 2006.
+* [[Gautham Sekar]], [[Souradyuti Paul]], [[Bart Preneel]], [http://www.cosic.esat.kuleuven.be/publications/article-932.pdf Related-key Attacks on the Py-family of Ciphers and an Approach to Repair the Weaknesses], Indocrypt 2007.
+* [https://web.archive.org/web/20060515033407/http://www.iaik.tugraz.at/research/krypto/aes/old/~rijmen/rijndael/ The Rijndael page] - the "Rijndael FAQ" is gently parodied in Appendix B of the Py specification.
+
+{{Cryptography navbox | stream}}
+
+[[Category:Stream ciphers]]

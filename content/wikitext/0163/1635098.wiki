@@ -1,0 +1,128 @@
+<!-- wikipedia: en
+     page: 1635098
+     title: Mehrotra predictor–corrector method
+     revision: 1369599828
+     timestamp: 2026-08-16T00:07:43Z
+     history: https://en.wikipedia.org/w/index.php?curid=1635098&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1369599828 -->
+{{Short description|1989 Optimisation algorithm}}
+'''Mehrotra's predictor–corrector method''' in [[Optimization (mathematics)|optimization]] is a specific [[interior point method]] for [[linear programming]]. It was proposed in 1989 by Sanjay Mehrotra.<ref>{{cite journal|last=Mehrotra|first=S.|title=On the implementation of a primal–dual interior point method|journal=SIAM Journal on Optimization|volume=2|year=1992|issue=4|pages=575–601|doi=10.1137/0802028}}</ref>
+
+The method is based on the fact that at each [[iteration]] of an interior point algorithm it is necessary to compute the [[Cholesky decomposition]] (factorization) of a large matrix to find the search direction. The factorization step is the most computationally expensive step in the algorithm. Therefore, it makes sense to use the same decomposition more than once before recomputing it.
+
+At each iteration of the algorithm, Mehrotra's predictor–corrector method uses the same Cholesky decomposition to find two different directions: a predictor and a corrector.
+
+The idea is to first compute an optimizing search direction based on a first order term (predictor). The step size that can be taken in this direction is used to evaluate how much centrality correction is needed. Then, a corrector term is computed: this contains both a centrality term and a second order term.
+
+The complete search direction is the sum of the predictor direction and the corrector direction.
+
+Although there is no theoretical complexity bound on it yet, Mehrotra's predictor–corrector method is widely used in practice.<ref>"In 1989, Mehrotra described a practical algorithm for linear programming that remains the basis of most current software; his work appeared in 1992."{{cite journal|last=Potra|first=Florian A.|author2=Stephen J. Wright|title=Interior-point methods|journal=Journal of Computational and Applied Mathematics|volume=124|year=2000|issue=1–2|pages=281–302|doi=10.1016/S0377-0427(00)00433-7|doi-access=|bibcode=2000JCoAM.124..281P }}</ref> Its corrector step uses the same [[Cholesky decomposition]] found during the predictor step in an effective way, and thus it is only marginally more expensive than a standard interior point algorithm. However, the additional overhead per iteration is usually paid off by a reduction in the number of iterations needed to reach an optimal solution. It also appears to converge very fast when close to the optimum.
+
+== Derivation ==
+The derivation of this section follows the outline by Nocedal and Wright.<ref name=":0">{{Cite book|title=Numerical Optimisation|last1=Nocedal|first1=Jorge|last2=Wright|first2=Stephen J.|publisher=Springer|year=2006|isbn=978-0387-30303-1|location=United States of America|pages=392–417, 448–496}}</ref>
+
+=== Predictor step - Affine scaling direction ===
+A linear program can always be formulated in the standard form
+
+<math>\begin{align}
+&\underset{x}{\min}&q(x) &= c^Tx,\\
+&\text{s.t.}&Ax&=b,\\
+           &\;& x&\geq0,
+\end{align}</math>
+
+where <math>c\in\mathbb{R}^{n \times 1},\;A\in\mathbb{R}^{m \times n} </math> and <math>b\in\mathbb{R}^{m \times 1}</math> define the problem with <math>m </math> constraints and <math>n </math> equations while <math>x\in\mathbb{R}^{n \times 1} </math> is a vector of variables.
+
+The [[Karush–Kuhn–Tucker conditions|Karush-Kuhn-Tucker (KKT) conditions]] for the problem are
+
+<math>\begin{align}
+A^T\lambda + s &= c,\;\;\;\text{(Lagrange gradient condition)}\\
+Ax &= b,\;\;\;\text{(Feasibility condition)}\\
+XSe &= 0,\;\;\;\text{(Complementarity condition)}\\
+(x,s) &\geq 0,
+\end{align}</math>
+
+where <math>X=\text{diag}(x)</math> and <math>S=\text{diag}(s)</math> whence <math>e=(1,1,\dots,1)^T\in\mathbb{R}^{n \times 1}</math>.
+
+These conditions can be reformulated as a mapping <math>F: \mathbb{R}^{2n+m}\rightarrow\mathbb{R}^{2n+m}</math> as follows
+
+<math>\begin{align}
+F(x,\lambda,s) = \begin{bmatrix} A^T\lambda+s-c\\Ax-b\\XSe\end{bmatrix} &= 0\\
+(x,s)&\geq0
+\end{align}</math>
+
+The predictor-corrector method then works by using [[Newton's method]] to obtain the [[affine scaling]] direction. This is achieved by solving the following system of linear equations
+
+<math>J(x,\lambda,s) \begin{bmatrix} \Delta x^\text{aff}\\\Delta\lambda^\text{aff} \\\Delta s^\text{aff}\end{bmatrix} = -F(x,\lambda,s)</math>
+
+where <math>J</math>, defined as
+
+<math>J(x,\lambda,s) = \begin{bmatrix} \nabla_x F & \nabla_\lambda F & \nabla_s F\end{bmatrix},</math>
+
+is the Jacobian of F.
+
+Thus, the system becomes
+
+<math>\begin{bmatrix} 0 & A^T & I \\ A & 0 & 0 \\ S & 0 & X \end{bmatrix}\begin{bmatrix} \Delta x^\text{aff}\\\Delta\lambda^\text{aff} \\\Delta s^\text{aff}\end{bmatrix} = \begin{bmatrix}-r_c\\-r_b\\-XSe\end{bmatrix},\;\;\; r_c = A^T\lambda+s-c,\;\;\; r_b = Ax-b</math>
+
+=== Centering step ===
+The average value of the products <math>x_is_i,\;i=1,2,\dots,n</math> constitute an important measure of the desirability of a certain set <math>(x^k,s^k)</math> (the superscripts denote the value of the iteration number, <math>k</math>, of the method). This is called the duality measure and is defined by
+
+<math>\mu=\frac{1}{n}\sum_{i=1}^n x_is_i = \frac{x^Ts}{n}.</math>
+
+For a value of the centering parameter, <math>\sigma\in[0,1],</math> the centering step can be computed as the solution to
+
+<math>\begin{bmatrix} 0 & A^T & I \\ A & 0 & 0 \\ S & 0 & X \end{bmatrix}
+\begin{bmatrix} \Delta x^\text{cen}\\\Delta\lambda^\text{cen} \\\Delta s^\text{cen}\end{bmatrix}
+= \begin{bmatrix}-r_c\\-r_b\\-XSe+\sigma\mu e\end{bmatrix}</math>
+
+=== Corrector step ===
+Considering the system used to compute the affine scaling direction defined in the above, one can note that taking a full step in the affine scaling direction results in the complementarity condition not being satisfied:
+
+<math>\left(x_i+\Delta x_i^\text{aff}\right)\left(s_i+\Delta s_i^\text{aff}\right) = x_is_i + x_i\Delta s_i^\text{aff} + s_i\Delta x_i^\text{aff} + \Delta x_i^\text{aff}\Delta s_i^\text{aff} = \Delta x_i^\text{aff}\Delta s_i^\text{aff} \ne 0.</math>
+
+As such, a system can be defined to compute a step that attempts to correct for this error. This system relies on the previous computation of the affine scaling direction.
+
+<math>\begin{bmatrix} 0 & A^T & I \\ A & 0 & 0 \\ S & 0 & X \end{bmatrix}
+\begin{bmatrix} \Delta x^\text{cor}\\\Delta\lambda^\text{cor} \\\Delta s^\text{cor}\end{bmatrix}
+= \begin{bmatrix}0\\0\\-\Delta X^\text{aff}\Delta S^\text{aff}e\end{bmatrix}</math>
+
+=== Aggregated system - Center-corrector direction ===
+The predictor, corrector and centering contributions to the system right hand side can be aggregated into a single system. This system will depend on the previous computation of the affine scaling direction, however, the system matrix will be identical to that of the predictor step such that its factorization can be reused.
+
+The aggregated system is
+
+<math>\begin{bmatrix} 0 & A^T & I \\ A & 0 & 0 \\ S & 0 & X \end{bmatrix}
+\begin{bmatrix} \Delta x\\\Delta\lambda \\\Delta s\end{bmatrix}
+= \begin{bmatrix}-r_c\\-r_b\\-XSe-\Delta X^\text{aff}\Delta S^\text{aff}e+\sigma\mu e\end{bmatrix}</math>
+
+The predictor-corrector algorithm then first computes the affine scaling direction. Secondly, it solves the aggregated system to obtain the search direction of the current iteration.
+
+== Adaptive selection of centering parameter ==
+The affine scaling direction can be used to define a [[heuristic]] to adaptively choose the centering parameter as
+
+<math>\sigma = \left(\frac{\mu_\text{aff}}{\mu}\right)^3,</math>
+
+where
+
+<math>\begin{align}
+\mu_\text{aff} &= (x+\alpha^\text{pri}_\text{aff}\Delta x^\text{aff})^T(s+\alpha^\text{dual}_\text{aff}\Delta s^\text{aff})/n,\\
+\alpha^\text{pri}_\text{aff} &= \min\left(1, \underset{i:\Delta x_i^\text{aff}<0}{\min} -\frac{x_i}{\Delta x_i^\text{aff}}\right),\\
+\alpha^\text{dual}_\text{aff} &= \min\left(1, \underset{i:\Delta s_i^\text{aff}<0}{\min} -\frac{s_i}{\Delta s_i^\text{aff}}\right),
+\end{align}</math>
+
+Here, <math>\mu_\text{aff}</math> is the duality measure of the affine step and <math>\mu</math> is the duality measure of the previous iteration.<ref name=":0" />
+
+== Step lengths ==
+In practical implementations, a version of [[line search]] is performed to obtain the maximal step length that can be taken in the search direction without violating nonnegativity, <math>(x,s) \geq 0</math>.<ref name=":0" />
+
+== Adaptation to Quadratic Programming ==
+Although the modifications presented by Mehrotra were intended for interior point algorithms for linear programming, the ideas have been extended and successfully applied to [[quadratic programming]] as well.<ref name=":0" />
+
+==References==
+
+<references/>
+
+{{DEFAULTSORT:Mehrotra predictor-corrector method}}
+[[Category:Optimization algorithms and methods]]
+[[Category:Linear programming]]

@@ -1,0 +1,87 @@
+<!-- wikipedia: en
+     page: 1579249
+     title: Optimal asymmetric encryption padding
+     revision: 1338977327
+     timestamp: 2026-02-18T08:06:19Z
+     history: https://en.wikipedia.org/w/index.php?curid=1579249&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1338977327 -->
+{{Short description|Scheme often used with RSA encryption}}
+{{redirect|OAEP|the division of the Thailand Ministry of Science Technology and Environment previously known as the Office of Atomic Energy for Peace|Office of Atoms for Peace}}
+
+In [[cryptography]], '''optimal asymmetric encryption padding''' ('''OAEP''') is a [[padding (cryptography)|padding scheme]] often used together with [[RSA (cryptosystem)|RSA encryption]]. OAEP was introduced by [[Mihir Bellare|Bellare]] and [[Phillip Rogaway|Rogaway]],<ref>[[Mihir Bellare|M. Bellare]], [[Phillip Rogaway|P. Rogaway]]. ''Optimal Asymmetric Encryption -- How to encrypt with RSA''.  Extended abstract in Advances in Cryptology – [[Eurocrypt]] '94 Proceedings, [[Lecture Notes in Computer Science]] Vol. 950, A. De Santis ed, [[Springer-Verlag]], 1995. [http://www-cse.ucsd.edu/users/mihir/papers/oaep.pdf full version (pdf)]</ref> and subsequently standardized in [[PKCS1|PKCS #1 v2]] and RFC 2437.
+
+The OAEP algorithm is a form of [[Feistel network]] which uses a pair of [[random oracle]]s G and H to process the plaintext prior to [[asymmetric encryption]].  When combined with any secure [[trapdoor one-way function|trapdoor one-way permutation]] <math>f</math>, this processing is proved in the [[random oracle model]] to result in a combined scheme which is [[semantic security|semantically secure]] under [[chosen-plaintext attack]] [[ciphertext indistinguishability|(IND-CPA)]]. When implemented with certain trapdoor permutations (e.g., RSA), OAEP is also proven to be secure against chosen-ciphertext attack. OAEP can be used to build an [[all-or-nothing transform]].
+
+OAEP satisfies the following two goals:
+
+#Add an element of randomness which can be used to convert a [[deterministic encryption]] scheme (e.g., traditional [[RSA (algorithm)|RSA]]) into a [[probabilistic encryption|probabilistic]] scheme.
+#Prevent partial decryption of ciphertexts (or other information leakage) by ensuring that an adversary cannot recover any portion of the plaintext without being able to invert the trapdoor one-way permutation <math>f</math>.
+
+The original version of OAEP (Bellare/Rogaway, 1994) showed a form of "[[plaintext-aware encryption|plaintext awareness]]" (which they claimed implies security against [[chosen-ciphertext attack]]) in the random oracle model when OAEP is used with any trapdoor permutation. Subsequent results contradicted this claim, showing that OAEP was only [[IND-CCA1]] secure. However, the original scheme was proved in the [[random oracle model]] to be [[IND-CCA2]] secure when OAEP is used with the RSA permutation using standard encryption exponents, as in the case of RSA-OAEP.<ref>
+Eiichiro Fujisaki, Tatsuaki Okamoto, David Pointcheval, and [[Jacques Stern (cryptographer)|Jacques Stern]]. ''RSA-- OAEP is secure under the RSA assumption''. In J. Kilian, ed., Advances in Cryptology – [[CRYPTO]] 2001, vol. 2139 of Lecture Notes in Computer Science, SpringerVerlag, 2001. [http://eprint.iacr.org/2000/061.pdf full version (pdf)]</ref> An improved scheme (called OAEP+) that works with any trapdoor one-way permutation was offered by [[Victor Shoup]] to solve this problem.<ref>
+Victor Shoup. ''OAEP Reconsidered''. IBM Zurich Research Lab, Saumerstr. 4, 8803 Ruschlikon, Switzerland. September 18, 2001. [http://www.shoup.net/papers/oaep.pdf full version (pdf)]</ref> More recent work has shown that in the [[Standard model (cryptography)|standard model]] (that is, when hash functions are not modeled as random oracles) it is impossible to prove the IND-CCA2 security of RSA-OAEP under the assumed hardness of the [[RSA problem]].<ref>
+P. Paillier and J. Villar, ''Trading One-Wayness against Chosen-Ciphertext Security in Factoring-Based Encryption'', Advances in Cryptology – [[Asiacrypt]] 2006.</ref><ref>
+D. Brown, [http://eprint.iacr.org/2006/223 ''What Hashes Make RSA-OAEP Secure?''], IACR ePrint 2006/233.</ref>
+
+==Algorithm==
+[[File:OAEP encoding schema.svg|410x410px|thumb|right|OAEP encoding schema according to RFC 8017]]
+In the diagram,
+
+* ''MGF'' is the [[Mask generation function|mask generating function]], usually MGF1,
+* ''Hash'' is the chosen [[Cryptographic hash function|hash function]],
+* ''hLen'' is the length of the output of the hash function in bytes,
+* ''k'' is the length of the [[RSA (cryptosystem)|RSA]] modulus ''n'' in bytes,
+* ''M'' is the message to be padded, with length ''mLen'' (at most <math>\mathrm{mLen}= k - 2 \cdot \mathrm{hLen} - 2</math> bytes),
+* ''L'' is an optional label to be associated with the message (the label is the empty string by default and can be used to authenticate data without requiring encryption),
+* ''PS'' is a byte string of <math>k - \mathrm{mLen} - 2 \cdot \mathrm{hLen} - 2</math> null-bytes.
+* ⊕ is an [[Exclusive or|XOR]]-Operation.
+
+=== Encoding ===
+<nowiki>RFC 8017</nowiki><ref>{{cite IETF|title=PKCS #1: RSA Cryptography Specifications Version 2.2|rfc=8017|sectionname=Encryption Operation|section=7.1.1|page=22|last=|first=|author-link=|date=November 2016|publisher=[[Internet Engineering Task Force|IETF]]|access-date=2022-06-04|doi=10.17487/RFC8017}}</ref> for PKCS#1 v2.2 specifies the OAEP scheme as follows for encoding:
+
+# Hash the label ''L'' using the chosen hash function: <math>\mathrm{lHash} = \mathrm{Hash}(L)</math>
+# Generate a padding string ''PS'' consisting of <math>k - \mathrm{mLen} - 2 \cdot \mathrm{hLen} - 2</math> bytes (0x00 and 0x01).
+# Concatenate ''lHash'', ''PS'', the single byte 0x01, and the message ''M'' to form a data block ''DB'': <math>\mathrm{DB} = \mathrm{lHash} || \mathrm{PS} || \mathrm{0x01} || \mathrm{M}</math>. This data block has length <math>k - \mathrm{hLen} - 1</math> bytes.
+# Generate a random seed of length ''hLen''. 
+# Use the mask generating function to generate a mask of the appropriate length for the data block: <math>\mathrm{dbMask} = \mathrm{MGF}(\mathrm{seed}, k - \mathrm{hLen} - 1)</math>
+# Mask the data block with the generated mask: <math>\mathrm{maskedDB} = \mathrm{DB} \oplus \mathrm{dbMask}</math>
+# Use the mask generating function to generate a mask of length ''hLen'' for the seed: <math>\mathrm{seedMask} = \mathrm{MGF}(\mathrm{maskedDB}, \mathrm{hLen})</math>
+# Mask the seed with the generated mask: <math>\mathrm{maskedSeed} = \mathrm{seed} \oplus \mathrm{seedMask}</math>
+# The encoded (padded) message is the byte 0x00 concatenated with the ''maskedSeed'' and ''maskedDB'': <math>\mathrm{EM} = \mathrm{0x00} || \mathrm{maskedSeed} || \mathrm{maskedDB}</math>
+
+=== Decoding ===
+Decoding works by reversing the steps taken in the encoding algorithm:
+
+# Hash the label ''L'' using the chosen hash function: <math>\mathrm{lHash} = \mathrm{Hash}(L)</math>
+# To reverse step 9, split the encoded message ''EM'' into the byte 0x00, the ''maskedSeed'' (with length ''hLen'') and the ''maskedDB'':  <math>\mathrm{EM} = \mathrm{0x00} || \mathrm{maskedSeed} || \mathrm{maskedDB}</math>
+# Generate the ''seedMask'' which was used to mask the ''seed'': <math>\mathrm{seedMask} = \mathrm{MGF}(\mathrm{maskedDB}, \mathrm{hLen})</math>
+# To reverse step 8, recover the ''seed'' with the ''seedMask'': <math>\mathrm{seed} = \mathrm{maskedSeed} \oplus \mathrm{seedMask}</math>
+# Generate the ''dbMask'' which was used to mask the data block: <math>\mathrm{dbMask} = \mathrm{MGF}(\mathrm{seed}, k - \mathrm{hLen} - 1)</math>
+# To reverse step 6, recover the data block ''DB:'' <math>\mathrm{DB} = \mathrm{maskedDB} \oplus \mathrm{dbMask}</math>
+# To reverse step 3, split the data block into its parts: <math>\mathrm{DB} = \mathrm{lHash'} || \mathrm{PS} || \mathrm{0x01} || \mathrm{M}</math>.
+## Verify that:
+##* ''lHash''' is equal to the computed ''lHash''
+##* ''PS'' only consists of bytes 0x00
+##* ''PS'' and ''M'' are separated by the 0x01 byte and
+##* the first byte of ''EM'' is the byte 0x00.
+## If any of these conditions aren't met, then the padding is invalid.
+
+Usage in RSA: The encoded message can then be encrypted with RSA. The deterministic property of RSA is now avoided by using the OAEP encoding because the ''seed'' is randomly generated and influences the entire encoded message.
+
+===Security===
+The "[[All-or-nothing transform|all-or-nothing]]" security is from the fact that to recover ''M'', one must recover the entire ''maskedDB'' and the entire ''maskedSeed''; ''maskedDB'' is required to recover the ''seed'' from the ''maskedSeed'', and the ''seed'' is required to recover the data block ''DB'' from ''maskedDB''. Since any changed bit of a cryptographic hash completely changes the result, the entire ''maskedDB'', and the entire ''maskedSeed'' must both be completely recovered.
+
+===Implementation===
+In the PKCS#1 standard, the random oracles are identical. The PKCS#1 standard further requires that the random oracles be [[MGF1]] with an appropriate hash function.<ref>{{Cite journal|url=https://eprint.iacr.org/2006/223.pdf| title=What Hashes Make RSA-OAEP Secure?|journal = IACR Cryptology ePrint Archive| last=Brown |first=Daniel R. L.| date=2006| language=en|access-date=2019-04-03}}</ref>
+
+==See also==
+*[[Key encapsulation]]
+
+==References==
+<references/>
+
+{{Cryptography navbox | public-key}}
+
+[[Category:Public-key encryption schemes]]
+[[Category:Padding algorithms]]

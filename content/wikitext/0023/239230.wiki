@@ -1,0 +1,122 @@
+<!-- wikipedia: en
+     page: 239230
+     title: Edmonds–Karp algorithm
+     revision: 1319257810
+     timestamp: 2025-10-28T18:37:34Z
+     history: https://en.wikipedia.org/w/index.php?curid=239230&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1319257810 -->
+{{Short description|Algorithm to compute the maximum flow in a flow network}}
+{{Use American English|date = April 2019}}
+In [[computer science]], the '''Edmonds–Karp algorithm''' is an implementation of the [[Ford–Fulkerson algorithm|Ford–Fulkerson method]] for computing the [[maximum flow problem|maximum flow]] in a [[flow network]] in [[big O notation|<math>O(|V||E|^2)</math>]] time. The algorithm was first published by [[Yefim Dinitz]] in 1970,<ref>{{cite journal |first=E. A. |last=Dinic |author-link=Yefim Dinitz |title=Algorithm for solution of a problem of maximum flow in a network with power estimation |journal=Soviet Mathematics - Doklady |volume=11 |pages=1277–1280 |publisher=Doklady |year=1970 }}</ref><ref name="ipv">{{cite book | author = Yefim Dinitz | editor =  [[Oded Goldreich]] |editor2=Arnold L. Rosenberg |editor3=Alan L. Selman |editor3-link = Alan Selman| title = Theoretical Computer Science: Essays in Memory of [[Shimon Even]] | chapter = Dinitz' Algorithm: The Original Version and Even's Version | year = 2006 | publisher = Springer | isbn = 978-3-540-32880-3 | pages = 218–240 | chapter-url = https://rangevoting.org/Dinitz_alg.pdf}}</ref> and independently published by [[Jack Edmonds]] and [[Richard Karp]] in 1972.<ref>{{cite journal |last1=Edmonds |first1=Jack |author1-link=Jack Edmonds |last2=Karp |first2=Richard M. |author2-link=Richard Karp |title=Theoretical improvements in algorithmic efficiency for network flow problems |journal=Journal of the ACM |volume=19 |issue=2 |pages=248–264  |year=1972 |url=http://www.eecs.umich.edu/%7Epettie/matching/Edmonds-Karp-network-flow.pdf |doi=10.1145/321694.321699 |s2cid=6375478 }}</ref> [[Dinic's algorithm|Dinitz's algorithm]] includes additional techniques that reduce the running time to <math>O(|V|^2|E|)</math>.<ref name="ipv" />
+{{Wikibooks|Algorithm implementation|Graphs/Maximum flow/Edmonds-Karp|Edmonds-Karp}}
+
+==Algorithm==
+The algorithm is identical to the [[Ford–Fulkerson algorithm]], except that the search order when finding the [[Flow network#Augmenting paths|augmenting path]] is defined. The path found must be a [[Shortest path problem|shortest path]] that has available capacity. This can be found by a [[breadth-first search]], where we apply a weight of 1 to each edge. The running time of <math>O(|V||E|^2)</math> is found by showing that each augmenting path can be found in <math>O(|E|)</math> time, that every time at least one of the {{mvar|E}} edges becomes saturated (an edge which has the maximum possible flow), that the distance from the saturated edge to the source along the augmenting path must be longer than last time it was saturated, and that the length is at most <math>|V|</math>. Another property of this algorithm is that the length of the shortest augmenting path increases monotonically.<ref name='clrs'>{{cite book |author=[[Thomas H. Cormen]], [[Charles E. Leiserson]], [[Ronald L. Rivest]] and [[Clifford Stein]] |title=Introduction to Algorithms |publisher=MIT Press | year = 2009 |isbn=978-0-262-03384-8 |edition=third |chapter=26.2 |pages=727–730 |title-link=Introduction to Algorithms }}</ref> A proof outline using these properties is as follows:
+
+The proof first establishes that distance of the shortest path from the source node {{mvar|s}} to any non-sink node {{mvar|v}} in a residual flow network increases monotonically after each augmenting iteration (Lemma 1, proven below). Then, it shows that each of the <math>|E|</math> edges can be critical at most <math>\frac{|V|}{2}</math> times for the duration of the algorithm, giving an upper-bound of <math>O\left( \frac{|V||E|}{2} \right) = O(|V||E|)</math> augmenting iterations. Since each iteration takes <math>O(|E|)</math>  time (bounded by the time for finding the shortest path using Breadth-First-Search), the total running time of Edmonds-Karp is <math>O(|V||E|^2)</math> as required. <ref name='clrs'/>
+
+To prove Lemma 1, one can use [[proof by contradiction]] by assuming that there is an augmenting iteration that causes the shortest path distance from {{mvar|s}} to {{mvar|v}} to ''decrease''. Let {{mvar|f}} be the flow before such an augmentation and <math>f'</math> be the flow after. Denote the minimum distance in a residual flow network {{tmath|G_f}} from nodes <math>u, v</math> as <math>\delta_f (u, v)</math>. One can derive a contradiction by showing that <math>\delta_f (s, v) \leq \delta _{f'} (s, v)</math>, meaning that the shortest path distance between source node {{mvar|s}} and non-sink node {{mvar|v}} did not in fact decrease. <ref name='clrs'/>
+
+==Pseudocode==
+ '''algorithm''' EdmondsKarp '''is'''
+     '''input''':
+         graph   ''(graph[v] should be the list of edges coming out of vertex v in the''
+                 '' original graph '''and''' their corresponding constructed reverse edges''
+                 '' which are used for push-back flow.''
+                 '' Each edge should have a capacity 'cap', flow, source 's' and sink 't' ''
+                 '' as parameters, as well as a pointer to the reverse edge 'rev'.)''
+         s       ''(Source vertex)''
+         t       ''(Sink vertex)''
+     '''output''':
+         flow    ''(Value of maximum flow)''
+     
+     flow := 0   ''(Initialize flow to zero)''
+     '''repeat'''
+         ''(Run a breadth-first search (bfs) to find the shortest s-t path.''
+         '' We use 'pred' to store the edge taken to get to each vertex,''
+         '' so we can recover the path afterwards)''
+         q := '''queue'''()
+         q.push(s)
+         pred := '''array'''(graph.length)
+         '''while''' '''not''' empty(q) '''and''' pred[t] = null
+             cur := q.pop()
+             '''for''' Edge e '''in''' graph[cur] '''do'''
+                 '''if''' pred[e.t] = '''null''' '''and''' e.t ≠ s '''and''' e.cap > e.flow '''then'''
+                     pred[e.t] := e
+                     q.push(e.t)
+ 
+         '''if''' '''not''' (pred[t] = null) '''then'''
+             ''(We found an augmenting path.''
+             '' See how much flow we can send)'' 
+             df := '''∞'''
+             '''for''' (e := pred[t]; e ≠ null; e := pred[e.s]) '''do'''
+                 df := '''min'''(df, e.cap - e.flow)
+             ''(And update edges by that amount)''
+             '''for''' (e := pred[t]; e ≠ null; e := pred[e.s]) '''do'''
+                 e.flow  := e.flow + df
+                 e.rev.flow := e.rev.flow - df
+             flow := flow + df
+ 
+     '''until''' pred[t] = null  ''(i.e., until no augmenting path was found)''
+     '''return''' flow
+
+==Example==
+Given a network of seven nodes, source A, sink G, and capacities as shown below:
+
+[[Image:Edmonds-Karp flow example 0.svg|300px|class=skin-invert-image]]
+
+In the pairs <math>f/c</math> written on the edges, <math>f</math> is the current flow, and <math>c</math> is the capacity. The residual capacity from <math>u</math> to <math>v</math> is <math>c_f(u,v)=c(u,v)-f(u,v)</math>, the total capacity, minus the flow that is already used. If the net flow from <math>u</math> to <math>v</math> is negative, it ''contributes'' to the residual capacity.
+
+{| class="wikitable"
+|-
+! Path
+! Capacity
+! Resulting network
+|-
+| align="center" | <math>A,D,E,G</math>
+| <math>\begin{align}
+  & \min(c_f(A,D),c_f(D,E),c_f(E,G)) \\
+= & \min(3-0,2-0,1-0) \\
+= & \min(3,2,1) = 1
+\end{align}</math>
+| [[Image:Edmonds-Karp flow example 1.svg|300px|class=skin-invert-image]]</td>
+|-
+| align="center" | <math>A,D,F,G</math>
+| <math>\begin{align}
+  & \min(c_f(A,D),c_f(D,F),c_f(F,G)) \\
+= & \min(3-1,6-0,9-0) \\
+= & \min(2,6,9) = 2
+\end{align}</math>
+| [[Image:Edmonds-Karp flow example 2.svg|300px|class=skin-invert-image]]</td>
+|-
+| align="center" | <math>A,B,C,D,F,G</math>
+| <math>\begin{align}
+  & \min(c_f(A,B),c_f(B,C),c_f(C,D),c_f(D,F),c_f(F,G)) \\
+= & \min(3-0,4-0,1-0,6-2,9-2) \\
+= & \min(3,4,1,4,7) = 1
+\end{align}</math>
+| [[Image:Edmonds-Karp flow example 3.svg|300px|class=skin-invert-image]]</td>
+|-
+| align="center" | <math>A,B,C,E,D,F,G</math>
+| <math>\begin{align}
+  & \min(c_f(A,B),c_f(B,C),c_f(C,E),c_f(E,D),c_f(D,F),c_f(F,G)) \\
+= & \min(3-1,4-1,2-0,0-(-1),6-3,9-3) \\
+= & \min(2,3,2,1,3,6) = 1
+\end{align}</math>
+| [[Image:Edmonds-Karp flow example 4.svg|300px|class=skin-invert-image]]</td>
+|}
+
+Notice how the length of the [[augmenting path]] found by the algorithm (in red) never decreases. The paths found are the shortest possible. The flow found is equal to the capacity across the [[max flow min cut theorem|minimum cut]] in the graph separating the source and the sink. There is only one minimal cut in this graph, partitioning the nodes into the sets <math>\{A,B,C,E\}</math> and <math>\{D,F,G\}</math>, with the capacity
+:<math>c(A,D)+c(C,D)+c(E,G)=3+1+1=5.\ </math>
+
+==Notes==
+{{reflist|30em}}
+
+==References==
+# Algorithms and Complexity (see pages 63–69).  https://web.archive.org/web/20061005083406/http://www.cis.upenn.edu/~wilf/AlgComp3.html
+
+{{Optimization algorithms|combinatorial}}
+{{DEFAULTSORT:Edmonds-Karp Algorithm}}
+[[Category:Network flow problem]]
+[[Category:Graph algorithms]]

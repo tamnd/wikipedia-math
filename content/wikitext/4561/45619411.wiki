@@ -1,0 +1,105 @@
+<!-- wikipedia: en
+     page: 45619411
+     title: HTTP Public Key Pinning
+     revision: 1342010896
+     timestamp: 2026-03-06T13:13:04Z
+     history: https://en.wikipedia.org/w/index.php?curid=45619411&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1342010896 -->
+{{Short description|Obsolete Internet security mechanism}}
+{{HTTP}}
+'''HTTP Public Key Pinning''' ('''HPKP''') is an obsolete [[Internet security]] mechanism delivered via an [[Hypertext Transfer Protocol|HTTP]] [[Header (computing)|header]] which allows [[HTTPS]] websites to resist [[impersonation]] by attackers using misissued or otherwise fraudulent [[Public key certificate|digital certificates]].<ref name="rfc7469">{{Cite IETF|title=Public Key Pinning Extension for HTTP
+|rfc=7469|last1=Evans|first1=Chris|last2=Palmer|first2=Chris|last3=Sleevi|first3=Ryan|date=April 2015|publisher=[[Internet Engineering Task Force|IETF]]|doi=10.17487/RFC7469|issn=2070-1721}}</ref> A server uses it to deliver to the [[Client (computing)|client]] (e.g. a [[web browser]]) a set of hashes of [[public key]]s that must appear in the certificate chain of future connections to the same [[domain name]].
+
+For example, attackers might compromise a [[certificate authority]], and then mis-issue certificates for a [[Same-origin policy|web origin]]. To combat this risk, the HTTPS web server serves a list of “pinned” public key hashes valid for a given time; on subsequent connections, during that validity time, clients expect the server to use one or more of those public keys in its certificate chain. If it does not, an error message is shown, which cannot be (easily) bypassed by the user.
+
+The technique does not pin certificates, but [[public key]] hashes. This means that one can use the [[Public-key cryptography|key pair]] to get a certificate from any certificate authority, when one has access to the private key. Also the user can pin public keys of [[Root certificate|root]] or [[Intermediate certificate authorities|intermediate certificates]] (created by certificate authorities), restricting site to certificates issued by the said certificate authority.
+
+Due to HPKP mechanism complexity and possibility of accidental misuse (potentially causing a lockout condition by system administrators), in 2017 browsers deprecated HPKP and in 2018 removed its support in favor of [[Certificate Transparency]].<ref name=":3">{{Cite web |last=Leyden |first=John |date=2017-10-30 |title=RIP HPKP: Google abandons public key pinning |url=https://www.theregister.co.uk/2017/10/30/google_hpkp/ |access-date=2018-12-18 |website=[[The Register]] |language=en}}</ref><ref>{{Cite web |last=Tung |first=Liam |date=2017-10-30 |title=Google: Chrome is backing away from public key pinning, and here's why |url=https://www.zdnet.com/article/google-chrome-is-backing-away-from-public-key-pinning-and-heres-why/ |access-date=2018-12-18 |website=[[ZDNet]] |language=en}}</ref>
+
+== Mechanism ==
+The server communicates the HPKP policy to the user agent via an [[HTTP]] response header field named <code>Public-Key-Pins</code> (or <code>Public-Key-Pins-Report-Only</code> for reporting-only purposes).
+
+The HPKP policy specifies [[Cryptographic hash function|hashes]] of the subject public key info of one of the certificates in the website's authentic X.509 [[public key certificate]] chain (and at least one backup key) in <code>pin-sha256</code> directives, and a period of time during which the user agent shall enforce public key pinning in <code>max-age</code> directive, optional <code>includeSubDomains</code> directive to include all subdomains (of the domain that sent the header) in pinning policy and optional <code>report-uri</code> directive with URL where to send pinning violation reports. At least one of the public keys of the certificates in the certificate chain needs to match a pinned public key in order for the chain to be considered valid by the user agent.
+
+At the time of publishing, {{IETF RFC|7469}} only allowed the [[SHA-2|SHA-256]] hash algorithm. ([https://tools.ietf.org/html/rfc7469#appendix-A Appendix A. of RFC 7469] mentions some tools and required arguments that can be used to produce hashes for HPKP policies.)
+
+A website operator can choose to either pin the [[root certificate]] public key of a particular root certificate authority, allowing only that certificate authority (and all intermediate authorities signed by its key) to issue valid certificates for the website's domain, and/or to pin the key(s) of one or more intermediate issuing certificates, or to pin the end-entity public key.
+
+At least one backup key must be pinned, in case the current pinned key needs to be replaced. The HPKP is not valid without this backup key (a backup key is defined as a public key not present in the current certificate chain).<ref>{{Cite web|title = About Public Key Pinning|url = https://noncombatant.org/2015/05/01/about-http-public-key-pinning/|website = noncombatant.org|access-date = 2015-05-07}}</ref>
+
+HPKP is standardized in [[Request for Comments|RFC]] 7469.<ref name="rfc7469" /> It expands on static [[certificate pinning]], which hardcodes public key hashes of well-known websites or services within web browsers and applications.<ref>{{Cite web|title = Certificate and Public Key Pinning - OWASP|url = https://www.owasp.org/index.php/Certificate_and_Public_Key_Pinning#Examples_of_Pinning|website = www.owasp.org|access-date = 2015-05-07}}</ref>
+
+Most browsers disable pinning for [[Public key certificate|certificate chains]] with private [[root certificate]]s to enable various corporate [[Deep content inspection|content inspection]] scanners<ref>{{Cite web|title = Security FAQ - The Chromium Projects|url = https://www.chromium.org/Home/chromium-security/security-faq#TOC-How-does-key-pinning-interact-with-local-proxies-and-filters-|website = www.chromium.org|access-date = 2015-07-07}}</ref> and web debugging tools (such as [[mitmproxy]] or [[Fiddler (software)|Fiddler]]).<nowiki> The RFC 7469 standard recommends disabling pinning violation reports for "user-defined" root certificates, where it is "acceptable" for the browser to disable pin validation.</nowiki><ref>{{Cite journal|title = RFC 7469 - Public Key Pinning Extension for HTTP|url = https://tools.ietf.org/html/rfc7469#section-2.6|website = tools.ietf.org| year=2015 | doi=10.17487/RFC7469 |access-date = 2015-07-07| last1=Evans | first1=C. | last2=Palmer | first2=C. | last3=Sleevi | first3=R. | url-access=subscription }}</ref>
+
+== Reporting ==
+If the user agent performs pin validation and fails to find a valid SPKI fingerprint in the served certificate chain, it will POST a JSON formatted [[rfc:7469#section-3|violation report]] to the host specified in the [[rfc:7469#section-2.1.4|report-uri]] directive containing details of the violation. This URI may be served via [[HTTP]] or [[HTTPS]]; however, the user agent cannot send HPKP violation reports to an HTTPS URI in the same domain as the domain for which it is reporting the violation. Hosts may either use HTTP for the <code>report-uri</code>, use an alternative domain, or use a reporting service.<ref>{{Cite web|url = https://report-uri.io|title = HPKP Violation Reporting|publisher = Scott Helme}}</ref>
+
+Some browsers also support the <code>Public-Key-Pins-Report-Only</code>, which only triggers this reporting while not showing an error to the user.
+
+== Criticism and decline ==
+
+During its peak adoption, HPKP was reported to be used by 3,500 of top 1 million internet sites, a figure that declined to 650 around the end of 2019.<ref name=":4">{{cite web|url = https://scotthelme.co.uk/hpkp-is-no-more/|title = HPKP is no more|date = 2020-01-20|access-date = 2020-01-30|publisher = Scott Helme}}</ref>
+
+Criticism and concern revolved around malicious or human error scenarios known as HPKP Suicide and RansomPKP.<ref>{{cite web|url = https://github.com/cyph/appsec-glory|title = Abusing Bleeding Edge Web Standards for AppSec Glory|date = 2016-08-03|access-date = 2026-01-14|publisher = Bryant Zadegan and Ryan Lester}}</ref><ref>{{cite web|url = https://scotthelme.co.uk/using-security-features-to-do-bad-things/|title = Using security features to do bad things|date = 2016-08-15|access-date = 2020-01-30|publisher = Scott Helme}}</ref> In such scenarios, a website owner would have their ability to publish new contents to their domain severely hampered by either losing access to their own keys or having new keys announced by a malicious attacker.
+
+== Browser support and deprecation ==
+{| class="wikitable"
+|+Browser support for HTTP Public Key Pinning
+!Browser
+!Version added
+!Version deprecated
+!Version removed
+!Notes
+|-
+|Google Chrome
+|46<ref>{{Cite web |last=Stark |first=Emily |date=2015-08-31 |title=Rolling out public key pinning with HPKP reporting |url=https://developer.chrome.com/blog/hpkp-reporting-with-chrome-46/ |url-status=live |archive-url=https://web.archive.org/web/20230116041052/https://developer.chrome.com/blog/hpkp-reporting-with-chrome-46/ |archive-date=2023-01-16 |access-date=2023-03-10 |website=Chrome Developers |language=en}}</ref>
+|67<ref>{{Cite web |last=Medley |first=Joe |date=2018-06-07 |title=Deprecations and removals in Chrome 67 |url=https://developers.google.com/web/updates/2018/04/chrome-67-deps-rems#deprecate_http-based_public_key_pinning |url-status=live |archive-url=https://web.archive.org/web/20230310110700/https://developer.chrome.com/blog/chrome-67-deps-rems/ |archive-date=2023-03-10 |access-date=2023-03-10 |website=Google Developers |language=en}}</ref>
+|72<ref>{{Cite web |last1=Palmer |last2=Estark |last3=Rsleevi |date=2022-09-13 |title=Remove HTTP-Based Public Key Pinning - Chrome Platform Status |url=https://www.chromestatus.com/feature/5903385005916160 |url-status=live |archive-url=https://web.archive.org/web/20220525114545/https://chromestatus.com/feature/5903385005916160 |archive-date=2022-05-25 |access-date=2019-11-18 |website=www.chromestatus.com}}</ref><ref>{{Cite web |last=Medley |first=Joe |date=2020-06-27 |title=Deprecations and removals in Chrome 72 - Chrome Developers |url=https://developer.chrome.com/blog/chrome-72-deps-rems/ |url-status=live |archive-url=https://web.archive.org/web/20221118074908/https://developer.chrome.com/blog/chrome-72-deps-rems/ |archive-date=2022-11-18 |access-date=2023-03-10 |website=Chrome Developers |language=en}}</ref>
+|
+|-
+|Opera
+|33<ref>{{Cite web |last=Bynens |first=Mathias |date=2015-10-27 |title=Opera 33 released |url=https://github.com/operasoftware/devopera/blob/master/src/blog/_posts/2015-10-27-opera-33.md#http-public-key-pinning-reporting |url-status=live |archive-url=https://web.archive.org/web/20230310105949/https://github.com/operasoftware/devopera/blob/master/src/blog/_posts/2015-10-27-opera-33.md#http-public-key-pinning-reporting |archive-date=2023-03-10 |access-date=2023-03-10 |website=GitHub |publisher=Opera}}</ref>
+|54<ref>{{Cite web |date=2018-06-28 |title=What's new in Chromium 67 and Opera 54 |url=https://github.com/operasoftware/devopera/blob/d12ea75a15e7120054a63b52ed19393b234aab10/src/blog/_posts/2018-06-28-opera-54.md#deprecations-and-interoperability-improvements |url-status=live |archive-url=https://web.archive.org/web/20230310104129/https://github.com/operasoftware/devopera/blob/d12ea75a15e7120054a63b52ed19393b234aab10/src/blog/_posts/2018-06-28-opera-54.md |archive-date=2023-03-10 |access-date=2023-03-10 |website=GitHub |publisher=Opera}}</ref>
+|60
+|
+|-
+|Firefox
+|35
+|72<ref name=":0">{{Cite web|date=November 14, 2019|title=HTTP Public Key Pinning is no longer supported|url=https://www.fxsitecompat.dev/en-CA/docs/2019/http-public-key-pinning-is-no-longer-supported/|url-status=live|archive-url=https://web.archive.org/web/20200529185340/https://www.fxsitecompat.dev/en-CA/docs/2019/http-public-key-pinning-is-no-longer-supported/|archive-date=2020-05-29|access-date=2020-02-19|website=Firefox Site Compatibility}}</ref><ref name=":1">{{Cite web |last=Keeler |first=Dana |date=2019-11-13 |title=Mozilla source code change that removed HPKP including discussion and reasons for this change (bug 1412438) |url=https://hg.mozilla.org/mozilla-central/rev/d791bfa31f08  |url-status=live |archive-url=https://web.archive.org/web/20230310101353/https://hg.mozilla.org/mozilla-central/rev/d791bfa31f08 |archive-date=2023-03-10 |access-date=2023-03-10 |website=Mozilla Firefox Version Control |language=en-US}}</ref>
+|78<ref>{{Cite web |title=remove HPKP (http public key pinning) entirely (not built-in pins) |url=https://bugzilla.mozilla.org/show_bug.cgi?id=1630038 |website=bugzilla.mozilla.org |quote=HPKP is disabled by default (bug 1412438). Due to socket process work, it has already become a maintenance burden (see bug 1485652). This bug will remove HPKP entirely.}}</ref>
+|
+|-
+|[[Internet Explorer]]
+|{{N/A}}<ref name=":2">{{cite web|url=https://developer.microsoft.com/en-us/microsoft-edge/platform/status/publickeypinningextensionforhttp/|title=The status of Public Key Pinning Extension for HTTP in Microsoft Edge is Under Consideration|website=Microsoft Edge Development|access-date=2018-09-21|archive-date=2016-12-20|archive-url=https://web.archive.org/web/20161220052157/https://developer.microsoft.com/en-us/microsoft-edge/platform/status/publickeypinningextensionforhttp/|url-status=dead}}</ref>
+|{{N/A}}
+|{{N/A}}
+|
+|-
+|[[Microsoft Edge]]
+|{{N/A}}<ref name=":2" />
+|{{N/A}}
+|{{N/A}}
+|
+|-
+|Safari
+|{{N/A}}
+|{{N/A}}
+|{{N/A}}
+|
+|}
+
+== See also ==
+* [[Certificate authority#CA compromise|Certificate authority compromise]]
+* [[Certificate Transparency]]
+* [[HTTP Strict Transport Security]]
+* [[List of HTTP header fields]]
+* [[DNS Certification Authority Authorization]]
+* [https://developer.mozilla.org/en-US/docs/Web/Security/Public_Key_Pinning Public Key Pinning Extension for HTTP (HPKP)] on [[MDN Web Docs]]
+
+== References ==
+{{Reflist}}<br />{{SSL/TLS}}
+
+[[Category:Hypertext Transfer Protocol headers]]
+[[Category:Internet security]]
+[[Category:Transport Layer Security]]

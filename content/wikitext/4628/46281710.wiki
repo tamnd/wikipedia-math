@@ -1,0 +1,136 @@
+<!-- wikipedia: en
+     page: 46281710
+     title: Walk-on-spheres method
+     revision: 1368623327
+     timestamp: 2026-08-10T03:49:03Z
+     history: https://en.wikipedia.org/w/index.php?curid=46281710&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1368623327 -->
+{{Short description|Mathematical algorithm}}
+In [[mathematics]], the '''walk-on-spheres method (WoS)''' is a numerical probabilistic [[algorithm]], or [[Monte-Carlo method]], used mainly in order to approximate the solutions of some specific [[boundary value problem]] for [[partial differential equations]] (PDEs).<ref name="muller">{{cite journal|last1=Muller|first1=Mervin E.|authorlink1=Mervin E. Muller|title=Some continuous Monte-Carlo Methods for the Dirichlet Problem|journal=The Annals of Mathematical Statistics|date=Sep 1956|volume=27|issue=3|pages=569–589|jstor=2237369|doi=10.1214/aoms/1177728169|doi-access=free}}</ref><ref name="sabelfeld">{{cite book|last1=Sabelfeld|first1=Karl K.|title=Monte Carlo methods in boundary value problems|date=1991|publisher=Springer-Verlag|location=Berlin [etc.]|isbn=978-3540530015}}</ref> The WoS method was first introduced by [[Mervin E. Muller]] in 1956 to solve [[Laplace's equation]],<ref name="muller"/> and was since then generalized to other problems.
+
+It relies on probabilistic interpretations of PDEs, and simulates paths of [[Brownian motion]] (or for some more general variants, [[diffusion processes]]), 
+by sampling only the exit-points out of successive spheres, rather than simulating in detail the path of the process. This often makes it less costly than "grid-based" algorithms, and it is today one of the most widely used "grid-free" algorithms for generating Brownian paths.
+
+==Informal description==
+
+Let <math>\Omega</math> be a bounded [[Domain (mathematical analysis)|domain]] in <math>\mathbb{R}^d</math> with a sufficiently regular boundary <math>\Gamma</math>, let ''h'' be a function on <math>\Gamma</math>, and let <math>x</math> be a point inside <math>\Omega</math>.
+
+Consider the [[Dirichlet problem]]:
+
+:<math>\begin{cases} \Delta u (x) =0  & \mbox{if }x \in \Omega \\
+ u(x) = h(x) & \mbox{if }x \in  \Gamma. \end{cases}</math>
+
+It can be easily shown{{efn| The link was first established by Kakutani for the 2-dimensional Brownian motion,<ref>{{cite journal|last1=Kakutani|first1=Shizuo|title=Two-dimensional Brownian motion and harmonic functions|journal=Proceedings of the Imperial Academy|date=1944|volume=20|issue=10|pages=706–714|doi=10.3792/pia/1195572706|doi-access=free}}</ref> it can now be seen as a trivial case of the Feynman−Kac formula.}} that when the solution <math>u</math> exists, for <math>x \in \Omega</math>:
+
+:<math>u(x) = \mathbb{E}_x[ h(W_{\tau}) ]</math>
+
+where {{math|''W''}} is a {{math|''d''}}-dimensional [[Wiener process]], the [[expected value]] is taken conditionally on {{math|{{mset|''W''<sub>0</sub> {{=}} ''x''}}}}, and {{math|<var>&tau;</var>}} is the first-exit time out of {{math|&Omega;}}.
+
+To compute a solution using this formula, we only have to simulate the first exit point of independent Brownian paths since with the [[law of large numbers]]:
+
+:<math> \mathbb{E}_x[ h(W_\tau) ] \sim \frac{1}{n} \sum_{i=1}^n h(W^i_\tau) </math>
+
+The WoS method provides an efficient way of sampling the first exit point of a Brownian motion from the domain, by remarking that for any {{math|(''d''&nbsp;−&nbsp;1)}}-sphere centred on {{math|''x''}}, the first point of exit of {{math|''W''}} out of the sphere has a uniform distribution over its surface. Thus, it starts with {{math|''x''<SUP>(''0'')</SUP>}} equal to {{math|''x''}}, and draws the largest sphere <math>\mathcal{S}_0</math> centered on {{math|''x''<SUP>(''0'')</SUP>}} and contained inside the domain. The first point of exit {{math|''x''<SUP>(''1'')</SUP>}} from <math>\mathcal{S}_0</math> is uniformly distributed on its surface. By repeating this step inductively, the WoS provides a sequence {{math|(''x''<SUP>(''n'')</SUP>)}} of positions of the Brownian motion.
+
+According to intuition, the process will converge to the first exit point of the domain. However, this algorithm takes almost surely an infinite number of steps to end. For computational implementation, the process is usually stopped when it gets sufficiently close to the border, and returns the projection of the process on the border. This procedure is sometimes called introducing an <math>\varepsilon</math>-shell, or <math>\varepsilon</math>-layer.<ref name="mascagniEpsilonShell"/>
+
+== Formulation of the method ==
+
+[[File:Walk on Spheres illustration.jpg|thumb|right|380px|Illustration of a run of the Walk-on-spheres algorithm on an arbitrary domain <math>\Omega</math> with an <math>\varepsilon</math>-shell]]
+
+Choose <math>\varepsilon > 0</math>. Using the same notations as above, the Walk-on-spheres algorithm is described as follows:
+
+# Initialize : <math>x^{(0)} = x</math>
+# While <math>d(x^{(n)}, \Gamma) > \varepsilon</math>:
+##Set <math>r_n = d(x^{(n)}, \Gamma)</math>.
+##Sample <math>\gamma_n</math> a vector uniformly distributed over the [[unit sphere]], independently from the preceding ones.
+##Set <math> x^{(n+1)} := x^{(n)} + r_n \gamma_n</math>
+#When <math>d(x^{(n)}, \Gamma) \le \varepsilon</math>:
+#<math>x_f := p_{\Gamma}(x^{(n)})</math>, the orthogonal projection of <math>x^{(n)}</math> on <math>\Gamma</math>
+#Return <math>x_f</math>
+
+The result <math> x_f </math> is an estimator of the first exit point from <math>\Omega</math> of a Wiener process starting from <math>x</math>, in the sense that they have close probability distributions (see below for comments on the error).
+
+== Comments and practical considerations ==
+
+=== Radius of the spheres ===
+
+In some cases the distance to the border might be difficult to compute, and it is then preferable to replace the radius of the sphere by a lower bound of this distance. One must then ensure that the radius of the spheres stays large enough so that the process reaches the border.<ref name="muller"/>
+
+=== Bias in the method and GFFP ===
+
+[[File:Improved WoS method illustration.png|thumb|left|360px|The Walk-on-spheres method is used until the process gets <math>\delta</math>-close to the border. Then the sphere is replaced by its "intersection" with the boundary of the domain.]]
+As it is a Monte-Carlo method, the error of the estimator can be decomposed into the sum of a [[Bias of an estimator|bias]], and a [[Errors and residuals in statistics|statistical error]]. The statistical error is reduced by increasing the number of paths sampled, or by using [[variance reduction]] methods.
+
+The WoS theoretically provides exact (or unbiased) simulations of the paths of the Brownian motion. However, as it is formulated here, the <math>\varepsilon</math>-shell introduced to ensure that the algorithm terminates also adds an error, usually of order <math>\mathcal{O}(\varepsilon)</math>.<ref name="mascagniEpsilonShell">{{cite journal|last1=Mascagni|first1=Michael|last2=Hwang|first2=Chi-Ok|title=ϵ-Shell error analysis for "Walk On Spheres" algorithms|journal=Mathematics and Computers in Simulation|date=June 2003|volume=63|issue=2|pages=93–104|doi=10.1016/S0378-4754(03)00038-7}}</ref> This error has been studied, and can be avoided in some geometries by using [[Green's function|Green's Functions]] First Passage method:<ref>{{cite journal|last1=Given|first1=James A.|last2=Hubbard|first2=Joseph B.|last3=Douglas|first3=Jack F.|title=A first-passage algorithm for the hydrodynamic friction and diffusion-limited reaction rate of macromolecules|journal=The Journal of Chemical Physics|date=1997|volume=106|issue=9|pages=3761|doi=10.1063/1.473428|bibcode=1997JChPh.106.3761G|url=https://zenodo.org/record/1232952}}</ref> one can change the geometry of the "spheres" when close enough to the border, so that the probability of reaching the border in one step becomes positive. This requires the knowledge of Green's functions for the specific domains. (see also [[Harmonic measure]])
+
+When it is possible to use it, the [[Green's function]] first-passage (GFFP) method is usually preferred, as it is both faster and more accurate than the classical WoS.<ref name="mascagniEpsilonShell"/>
+
+=== Complexity ===
+
+It can be shown that the number of steps taken for the WoS process to reach the <math>\varepsilon</math>-shell is of order <math> \mathcal{O} (  | \log(\varepsilon) |) </math>.<ref name="sabelfeld"/> Therefore, one can increase the precision to a certain extent without making the number of steps grow notably.
+
+As it is commonly the case for Monte-Carlo methods, this algorithm performs particularly well when the dimension is higher than <math>3</math>, and one only needs a small set of values. Indeed, the computational cost increases linearly with the dimension, whereas the cost of grid dependent methods increase exponentially with the dimension.<ref name="sabelfeld"/>
+
+== Variants, extensions ==
+
+This method has been largely studied, generalized and improved. For example, it is now extensively used for the computation of physical properties of materials (such as [[capacitance]], electrostatic [[internal energy]] of molecules, etc.). Some notable extensions include:
+
+=== Elliptic equations ===
+
+The WoS method can be modified to solve more general problems. In particular, the method has been generalized to solve Dirichlet problems for equations of the form <math>\Delta u = cu + f </math> <ref>{{cite journal|last1=Elepov|first1=B.S.|last2=Mikhailov|first2=G.A.|title=Solution of the dirichlet problem for the equation Δ''u''&nbsp;−&nbsp;''cu''&nbsp;=&nbsp;−''q'' by a model of "walks on spheres"|journal=USSR Computational Mathematics and Mathematical Physics|date=January 1969|volume=9|issue=3|pages=194–204|doi=10.1016/0041-5553(69)90070-6}}</ref> (which include the [[Poisson equation|Poisson]] and linearized [[Poisson–Boltzmann equation|Poisson−Boltzmann]] equations) or for any [[elliptic partial differential equation]] with constant coefficients.<ref>{{cite journal|last1=Booth|first1=Thomas E|title=Exact Monte Carlo solution of elliptic partial differential equations|journal=Journal of Computational Physics|date=February 1981|volume=39|issue=2|pages=396–404|doi=10.1016/0021-9991(81)90159-5|bibcode=1981JCoPh..39..396B}}</ref>
+
+More efficient ways of solving the linearized Poisson–Boltzmann equation have also been developed, relying on [[Feynman−Kac]] representations of the solutions.<ref>{{cite journal|last1=Hwang|first1=Chi-Ok|last2=Mascagni|first2=Michael|last3=Given|first3=James A.|title=A Feynman–Kac path-integral implementation for Poisson's equation using an ''h''-conditioned Green's function|journal=Mathematics and Computers in Simulation|date=March 2003|volume=62|issue=3–6|pages=347–355|doi=10.1016/S0378-4754(02)00224-0}}</ref>
+
+=== Time dependency ===
+
+Again, within a regular enough border, it is possible to use the WoS method to solve the following problem :
+
+:<math>\begin{cases} \partial_t u(x,t) + \frac{1}{2}\Delta_x u (x, t) =0  & \mbox{if }x \in \Omega \mbox{ and } t < T\\
+u(x, T) = h(x, T) & \mbox{if } x \in \bar{\Omega}\\
+ u(x, t) = h(x, t) & \mbox{if } x \in  \Gamma. \end{cases}</math>
+
+of which the solution can be represented as:<ref>{{cite book|last1=Gobet|first1=Emmanuel|title=Méthodes de Monte-Carlo et processus stochastiques du linéaire au non-linéaire|date=2013|publisher=Editions de l'Ecole polytechnique|location=Palaiseau|isbn=978-2-7302-1616-6}}</ref>
+
+:<math>u(x,t) = \mathbb{E}_{t,x} (h(X_{T \wedge \tau}, T \wedge \tau)) </math>,
+
+where the expectation is taken conditionally on <math>X_t = x</math>
+
+To use the WoS through this formula, one needs to sample the exit-time from each sphere drawn, which is an [[Dependent and independent variables|independent variable]] <math>\tau_0</math> with [[Laplace transform]] (for a sphere of radius <math>R</math>):<ref>{{cite book|last1=Salminen|first1=Andrei N. Borodin; Paavo|title=Handbook of Brownian motion : facts and formulae|date=2002|publisher=Birkhäuser|location=Basel [u.a.]|isbn=978-3-7643-6705-3|edition=2.}}</ref>
+
+:<math> \mathbb{E}(\exp(- s \tau_0)) = \frac{R \sqrt{2s}}{\sinh(R \sqrt{2s})} </math>
+
+The total time of exit from the domain <math>\tau</math> can be computed as the sum of the exit-times from the spheres. The process also has to be stopped when it has not exited the domain at time <math>T</math>.
+
+=== Other extensions ===
+The WoS method has been generalized to estimate the solution to elliptic partial differential equations everywhere in a domain, rather than at a single point.<ref>{{cite journal|last1=Booth|first1=Thomas|title=Regional Monte Carlo solution of elliptic partial differential equations|journal=Journal of Computational Physics|date=August 1982|volume= 47|issue=2|pages=281–290|doi=10.1016/0021-9991(82)90079-1|ref=13|bibcode=1982JCoPh..47..281B|url=https://digital.library.unt.edu/ark:/67531/metadc1105394/m2/1/high_res_d/6245003.pdf}}</ref>
+
+The WoS method has also been generalized in order to compute hitting times for processes other than Brownian motions. For example, hitting times of [[Bessel processes]] can be computed via an algorithm called "Walk on moving spheres".<ref>{{cite journal|last1=Deaconu|first1=Madalina|last2=Herrmann|first2=Samuel|title=Hitting time for Bessel processes—walk on moving spheres algorithm (WoMS)|journal=The Annals of Applied Probability|date=December 2013|volume=23|issue=6|pages=2259–2289|doi=10.1214/12-AAP900|arxiv=1111.3736|s2cid=25036031 }}</ref> This problem has applications in [[mathematical finance]].
+
+The WoS can be adapted to solve the Poisson and Poisson–Boltzmann equation with flux conditions on the boundary.<ref>{{cite book|last1=Simonov|first1=Nikolai A.|title=Numerical Methods and Applications |chapter=Random Walks for Solving Boundary-Value Problems with Flux Conditions|date=2007|volume=4310|pages=181–188|doi=10.1007/978-3-540-70942-8_21|series=Lecture Notes in Computer Science|isbn=978-3-540-70940-4}}</ref>
+
+Finally, WoS can be used to solve problems where coefficients vary continuously in space, via connections with the [[volume rendering]] equation.<ref>{{cite journal|last1=Sawhney|first1=Rohan|last2=Seyb|first2=Dario|last3=Jarosz|first3=Wojciech|last4=Crane|first4=Keenan|title=Grid-Free Monte Carlo for PDEs with Spatially Varying Coefficients|journal=ACM Transactions on Graphics|date=July 2022|volume=41|issue=4|pages=1–17|doi=10.1145/3528223.3530134|arxiv=2201.13240|s2cid=246430740 }}</ref>
+
+== See also ==
+* [[Feynman–Kac formula]]
+* [[Stochastic processes and boundary value problems]]
+* [[Euler–Maruyama method]] to sample the paths of general diffusion processes
+
+==Notes==
+{{notelist}}
+
+==References==
+{{Reflist}}
+
+== Further reading ==
+*{{cite book|last1=Sabelfeld|first1=Karl K.|title=Monte Carlo methods in boundary value problems|date=1991|publisher=Springer-Verlag|location=Berlin [etc.]|isbn=9783540530015}}
+
+== External links ==
+* [http://www.cs.fsu.edu/~mascagni/Muller_1956_Annals_Mathematical_Statistics.pdf Some continuous Monte-Carlo methods for the Dirichlet problem] The paper in which Marvin Edgar Muller introduced the method.
+* [http://people.bath.ac.uk/maspm/book.pdf Brownian Motion] by Peter Mörters and Yuval Peres. See Chapter 3.3 on harmonic measure, Green's functions and exit-points.
+
+[[Category:Variants of random walks]]
+[[Category:Numerical differential equations]]
+[[Category:Boundary value problems]]
+[[Category:Partial differential equations]]

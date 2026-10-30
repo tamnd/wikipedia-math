@@ -1,0 +1,147 @@
+<!-- wikipedia: en
+     page: 8519857
+     title: Monte Carlo method in statistical mechanics
+     revision: 1341258110
+     timestamp: 2026-03-02T05:28:13Z
+     history: https://en.wikipedia.org/w/index.php?curid=8519857&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1341258110 -->
+'''Monte Carlo in statistical physics''' refers to the application of the [[Monte Carlo method]] to problems in [[statistical physics]], or [[statistical mechanics]].
+
+==Overview==
+
+The general motivation to use the Monte Carlo method in statistical physics is to evaluate a multivariable integral. The typical problem begins with a system for which the Hamiltonian is known, it is at a given temperature and it follows the [[Boltzmann statistics]]. To obtain the mean value of some macroscopic variable, say A, the general approach is to compute, over all the [[phase space]], PS for simplicity, the mean value of A using the Boltzmann distribution:
+
+:<math>\langle A\rangle=\int_{PS} A_{\vec{r}} \frac{e^{-\beta E_{\vec{r}}}}{Z} d\vec{r}</math>.
+
+where 
+<math>E(\vec{r})=E_{\vec{r}}</math> is the energy of the system for a given state defined by  
+<math>\vec{r}</math> -  a vector with all the degrees of freedom (for instance, for a mechanical system, <math> \vec{r} = \left(\vec{q}, \vec{p} \right) </math>), 
+<math>\beta\equiv 1/k_bT</math> and
+
+:<math>Z= \int_{PS} e^{-\beta E_{\vec{r}}}d\vec{r}</math>
+
+is the [[Partition function (statistical mechanics)|partition function]].
+
+One possible approach to solve this multivariable integral is to exactly enumerate all possible configurations of the system, and calculate averages at will. This is done in [[exactly solvable]] systems, and in simulations of simple systems with few particles. In realistic systems, on the other hand, an exact enumeration can be difficult or impossible to implement.
+
+For those systems, the [[Monte Carlo integration]] (and not to be confused with [[Monte Carlo method]], which is used to simulate molecular chains) is generally employed. The main motivation for its use is the fact that, with the Monte Carlo integration, the error goes as <math> 1/\sqrt{N}</math>, independently of the dimension of the integral. Another important concept related to the Monte Carlo integration is the [[importance sampling]], a technique that improves the computational time of the simulation.
+
+In the following sections, the general implementation of the Monte Carlo integration for solving this kind of problems is discussed.
+
+==Importance sampling==
+An estimation, under Monte Carlo integration, of an integral defined as
+
+:<math>\langle A\rangle = \int_{PS} A_{\vec{r}} e^{-\beta E_{\vec{r}}}d\vec{r}/Z</math>
+
+is
+
+:<math>\langle A\rangle \simeq \frac{1}{N}\sum_{i=1}^N A_{\vec{r}_i} e^{-\beta E_{\vec{r}_i}}/Z</math>
+
+where <math>\vec{r}_i</math> are uniformly obtained from all the phase space (PS) and N is the number of sampling points (or function evaluations).
+
+From all the phase space, some zones of it are generally more important to the mean of the variable <math>A</math> than others. In particular, those that have the value of <math>e^{-\beta E_{\vec{r}_i}}</math> sufficiently high when compared to the rest of the energy spectra are the most relevant for the integral. Using this fact, the natural question to ask is: is it possible to choose, with more frequency, the states that are known to be more relevant to the integral? The answer is yes, using the [[importance sampling]] technique.
+
+Lets assume <math>p(\vec{r})</math> is a distribution that chooses the states that are known to be more relevant to the integral.
+
+The mean value of <math>A</math> can be rewritten as
+
+:<math>\langle A\rangle = \int_{PS} p^{-1}(\vec{r}) \frac{A_{\vec{r}} }{p^{-1}(\vec{r})}e^{-\beta E_{\vec{r}}}/Zd\vec{r} = \int_{PS} p^{-1}(\vec{r}) A^{*}_{\vec{r}} e^{-\beta E_{\vec{r}}}/Zd\vec{r} </math>,
+
+where <math>A^{*}_{\vec{r}}</math> are the sampled values taking into account the importance probability <math>p(\vec{r})</math>. This integral can be estimated by
+
+:<math>\langle A\rangle \simeq \frac{1}{N}\sum_{i=1}^N p^{-1}(\vec{r}_i) A^{*}_{\vec{r}_i} e^{-\beta E_{\vec{r}_i} }/Z </math>
+
+where <math>\vec{r}_i</math> are now randomly generated using the <math>p(\vec{r})</math> distribution. Since most of the times it is not easy to find a way of generating states with a given distribution, the [[Metropolis algorithm]] must be used.
+
+===Canonical===
+
+Because it is known that the most likely states are those that maximize the Boltzmann distribution, a good distribution, <math>p(\vec{r})</math>, to choose for the importance sampling is the Boltzmann distribution or canonic distribution. Let
+
+:<math>p(\vec{r}) = \frac{ e^{-\beta E_\vec{r}}}{Z}</math>
+
+be the distribution to use. Substituting on the previous sum,
+
+:<math>\langle A\rangle \simeq \frac{1}{N}\sum_{i=1}^N A^{*}_{\vec{r}_i}</math>.
+
+So, the procedure to obtain a mean value of a given variable, using metropolis algorithm, with the canonical distribution, is to use the Metropolis algorithm to generate states given by the distribution <math>p(\vec{r})</math> and perform means over <math>A^{*}_{\vec{r}}</math>.
+
+One important issue must be considered when using the metropolis algorithm with the canonical distribution: when performing a given measure, i.e. realization of <math>\vec{r}_i</math>, one must ensure that that realization is not correlated with the previous state of the system (otherwise the states are not being "randomly" generated). On systems with relevant energy gaps, this is the major drawback of the use of the canonical distribution because the time needed to the system de-correlate from the previous state can tend to infinity.
+
+===Multi-canonical===
+{{main|multicanonic ensemble}}
+
+As stated before, micro-canonical approach has a major drawback, which becomes relevant in most of the systems that use Monte Carlo Integration. For those systems with "rough energy landscapes", the multicanonic approach can be used.
+
+The multicanonic approach uses a different choice for importance sampling:
+
+:<math>p(\vec{r}) = \frac{1}{\Omega(E_\vec{r})}</math>
+
+where <math>\Omega(E)</math> is the [[density of states]] of the system. The major advantage of this choice is that the energy histogram is flat, i.e. the generated states are equally distributed on energy. This means that, when using the Metropolis algorithm, the simulation doesn't see the "rough energy landscape", because every energy is treated equally.
+
+The major drawback of this choice is the fact that, on most systems, <math>\Omega(E)</math> is unknown. To overcome this, the [[Wang and Landau algorithm]] is normally used to obtain the DOS during the simulation. Note that after the DOS is known, the mean values of every variable can be calculated for every temperature, since the generation of states does not depend on <math>\beta</math>.
+
+==Implementation==
+
+On this section, the implementation will focus on the [[Ising model]]. Lets consider a two-dimensional [[spin network]], with L spins (lattice sites) on each side. There are naturally <math>N = L^2</math> spins, and so, the phase space is discrete and is characterized by N spins, <math>\vec{r} = (\sigma_1,\sigma_2,...,\sigma_N)</math> where <math>\sigma_i\in \{-1,1\}</math> is the spin of  each lattice site. The system's energy is given by <math>E(\vec{r}) = \sum_{i=1}^N\sum_{j\in viz_i} (1 - J_{ij}\sigma_i \sigma_j)</math>, where <math>viz_i</math> are the set of first neighborhood spins of i and J is the interaction matrix (for a [[Ferromagnetism|ferromagnetic]] ising model, J is the [[identity matrix]]). The problem is stated.
+
+On this example, the objective is to obtain <math>\langle M \rangle</math> and <math>\langle M^2 \rangle</math> (for instance, to obtain the [[magnetic susceptibility]] of the system) since it is straightforward to generalize to other observables. According to the definition, <math>M(\vec{r}) = \sum_{i=1}^N \sigma_i</math>.
+
+===Canonical===
+First, the system must be initialized: let <math>\beta=1/k_b T</math> be the system's Boltzmann temperature and initialize the system with an initial state (which can be anything since the final result should not depend on it).
+
+With micro-canonic choice, the metropolis method must be employed. Because there is no right way of choosing which state is to be picked, one can particularize and choose to try to flip one spin at the time. This choice is usually called ''single spin flip''. The following steps are to be made to perform a single measurement.
+
+step 1: generate a state that follows the <math>p(\vec{r})</math> distribution:
+
+step 1.1: Perform TT times the following iteration:
+
+step 1.1.1: pick a lattice site at random (with probability 1/N), which will be called i, with spin <math>\sigma_i</math>.
+
+step 1.1.2: pick a random number <math>\alpha \in[0,1]</math>.
+
+step 1.1.3: calculate the energy change of trying to flip the spin i:
+
+:<math>\Delta E = 2\sigma_i \sum_{j\in viz_i}\sigma_j</math>
+
+and its [[magnetization]] change: <math>\Delta M = -2\sigma_i </math>
+
+step 1.1.4: if <math>\alpha < \min(1, e^{-\beta \Delta E} )</math>, flip the spin (<math>\sigma_i = -\sigma_i</math> ), otherwise, don't.
+
+step 1.1.5: update the several macroscopic variables in case the spin flipped: <math>E = E + \Delta E</math>, <math>M = M + \Delta M</math>
+
+after TT times, the system is considered to be not correlated from its previous state, which means that, at this moment, the probability of the system to be on a given state follows the Boltzmann distribution, which is the objective proposed by this method.
+
+step 2: perform the measurement:
+
+step 2.1: save, on a histogram, the values of M and M<sup>2</sup>.
+
+TT is not easy to estimate because it is not easy to say when the system is de-correlated from the previous state. To surpass this point, one generally do not use a fixed TT, but TT as a ''tunneling time''. One tunneling time is defined as the number of steps 1. the system needs to make to go from the minimum of its energy to the maximum of its energy and return.
+
+A major drawback of this method with the ''single spin flip'' choice in systems like Ising model is that the tunneling time scales as a [[power law]] as <math> N^{2+z}</math> where z is greater than 0.5, phenomenon known as ''critical slowing down''.
+
+==Applicability==
+
+The method thus neglects dynamics, which can be a major drawback, or a great advantage. Indeed, the method can only be applied to static quantities,  but the freedom to choose moves makes the method very flexible. An additional advantage is that some systems, such as the [[Ising model]], lack a dynamical description and are only defined by an energy prescription; for these the Monte Carlo approach is the only one feasible.
+
+==Generalizations==
+
+The great success of this method in statistical mechanics has led to various generalizations such as the method of [[simulated annealing]] for optimization, in which a fictitious temperature is introduced and then gradually lowered.
+
+==See also==
+* [[Monte Carlo integration]]
+* [[Metropolis algorithm]]
+* [[Importance sampling]]
+* [[Quantum Monte Carlo]]
+* [[Monte Carlo molecular modeling]]
+
+==References==
+
+* {{cite book |author1=Allen, M.P.  |author2=Tildesley, D.J.  |name-list-style=amp | title=Computer Simulation of Liquids |url=https://archive.org/details/computersimulati0000alle  |url-access=registration  | publisher=Oxford University Press | year=1987 | isbn=0-19-855645-4}}
+* {{cite book |author1=Frenkel, D.  |author2=Smit, B.  |name-list-style=amp | title=Understanding Molecular Simulation | publisher=Academic Press | year=2001 | isbn=0-12-267351-4}}
+* {{cite book |author1=Binder, K.  |author2=Heermann, D.W.  |name-list-style=amp | title=Monte Carlo Simulation in Statistical Physics. An Introduction |edition=4th | publisher= Springer | year=2002 | isbn=3-540-43221-3}}
+* {{cite book |first1=Jerome |last1=Spanier |first2=Ely M. |last2=Gelbard |title=Monte Carlo Principles and Neutron Transport Problems |location= |publisher=Dover |year=2008 |isbn=978-0-486-46293-6 |chapter=Importance Sampling |pages=110–124 }}
+
+[[Category:Computational chemistry]]
+[[Category:Theoretical chemistry]]
+[[Category:Computational physics]]

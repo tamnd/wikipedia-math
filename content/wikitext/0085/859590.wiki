@@ -1,0 +1,384 @@
+<!-- wikipedia: en
+     page: 859590
+     title: CORDIC
+     revision: 1375750449
+     timestamp: 2026-09-19T20:52:52Z
+     history: https://en.wikipedia.org/w/index.php?curid=859590&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375750449 -->
+{{short description|Algorithm for computing trigonometric, hyperbolic, logarithmic and exponential functions}}
+{{redirect|Pseudo-division|polynomial pseudo-division|Pseudo-remainder}}
+{{use list-defined references|date=January 2022}}
+{{use dmy dates|date=February 2020|cs1-dates=y}}
+{{anchor|Differential CORDIC|Branching CORDIC|Compensated CORDIC|Redundant CORDIC|Hybrid CORDIC|Merged CORDIC|All-serial CORDIC|Pipelined CORDIC|hyperbolic mode|modified rotation mode|Generalized Hyperbolic CORDIC|GH CORDIC}}
+{{Trigonometry}}
+'''CORDIC''', short for '''coordinate rotation digital computer''', is a simple and efficient [[algorithm]] to calculate [[trigonometric functions]], [[hyperbolic functions]], [[square root]]s, [[multiplication]]s, [[Division (mathematics)|divisions]], [[Exponentiation|exponentials]], and [[logarithm]]s with arbitrary base, typically converging with one digit (or bit) per iteration. CORDIC is therefore an example of a '''digit-by-digit algorithm'''.<!-- however, there are other digit-by-digit algorithms, which are not related to CORDIC, see f.e. http://www.cs.nyu.edu/cs/faculty/overton/book/docs/KahanTalk.pdf --> The original system is sometimes referred to as '''Volder's algorithm'''.
+
+CORDIC and closely related methods known as '''pseudo-multiplication''' and '''pseudo-division''' or '''factor combining''' are commonly used when no [[hardware multiplier]] is available (e.g. in simple [[microcontroller]]s and [[field-programmable gate array]]s or FPGAs), as the only operations they require are [[addition]], [[subtraction]], [[bitshift]] and [[lookup table]]s. As such, they all belong to the class of [[shift-and-add algorithm]]s. In computer science, CORDIC is often used to implement [[floating-point arithmetic]] when the target platform lacks the hardware to multiply for cost or space reasons. This was the case for most early [[microcomputer]]s based on processors like the [[MOS 6502]] and [[Zilog Z80]].
+
+Over the years, a number of variations on the concept emerged, including '''circular CORDIC''' ([[Jack E. Volder]]),<ref name="Volder_1959_1"/><ref name="Volder_1959_2"/> '''linear CORDIC''', '''hyperbolic CORDIC''' (John Stephen Walther),<ref name="Walther_1971"/><ref name="Walther_2000"/> and '''generalized hyperbolic CORDIC''' ('''GH CORDIC''') (Yuanyong Luo et al.),<ref name="Luo_2019_TVLSI"/><ref name="Luo_2019_TVLSI_c"/>
+
+== Concept ==
+
+At a high level, the basic CORDIC algorithm involves applying a sequence of scaled rotations to a vector. The scale factors and angles of rotation are known in advance; only the direction of each rotation is dependent on the input. In rotation mode, a target rotation angle is taken as input, and the rotation directions are chosen so that the accumulated rotation angle approaches the target. The output is the final vector. In vectoring mode, a vector is taken as input, and the rotation directions are chosen so that the ''y'' coordinate of the vector approaches 0. The output is the total rotation angle. See [[#Modes of operation|Modes of operation]] for the full details.
+
+The scale factors and angles of rotation are chosen so that the scaled rotations can be computed using only addition, subtraction, and bit shifting. The angles are looked up in a table that has been computed in advance.
+
+==<span class="anchor" id="Binary CORDIC"></span><span class="anchor" id="Decimal CORDIC"></span><span class="anchor" id="Unified CORDIC"></span>History==
+Similar mathematical techniques were published by [[Henry Briggs (mathematician)|Henry Briggs]] as early as 1624<ref name="Briggs_1624"/><ref name="Laporte_2014_Briggs"/> and Robert&nbsp;Flower in 1771,<ref name="Flower_1771"/> but CORDIC is better optimized for low-complexity finite-state CPUs.
+
+CORDIC was conceived in 1956<ref name="Volder_1956"/><ref name="Volder_2000"/> by [[Jack&nbsp;E.&nbsp;Volder]] at the [[aeroelectronics]] department of [[Convair]] out of necessity to replace the [[analog resolver]] in the [[B-58 Hustler|B-58 bomber]]'s navigation computer with a more accurate and faster real-time digital solution.<ref name="Volder_2000"/> Therefore, CORDIC is sometimes referred to as a [[digital resolver]].<ref name="Perle_1971"/><ref name="Schmid_1983"/>
+
+In his research, Volder was inspired by a formula in the 1946 edition of the ''[[CRC Handbook of Chemistry and Physics]]'':<ref name="Volder_2000"/>{{Failed verification|date=September 2026|reason=The CRC Handbook had basic angle addition equations, which were "massaged" by Volder to yield the "interesting" equations below.\}}
+: <math>
+\begin{align}
+ K_n R \sin(\theta \pm \varphi) &= R \sin(\theta) \pm 2^{-n} R \cos(\theta), \\
+ K_n R \cos(\theta \pm \varphi) &= R \cos(\theta) \mp 2^{-n} R \sin(\theta), \\
+\end{align}
+</math>
+where <math>\varphi</math> is such that <math>\tan(\varphi) = 2^{-n}</math>, and <math>K_n := \sqrt{1 + 2^{-2n}}</math>.
+
+His research led to an internal technical report proposing the CORDIC algorithm to solve [[sine]] and [[cosine]] functions and a prototypical computer implementing it.<ref name="Volder_1956"/><ref name="Volder_2000"/> The report also discussed the possibility to compute hyperbolic [[coordinate rotation]], [[logarithm]]s and [[exponential function]]s with modified CORDIC algorithms.<ref name="Volder_1956"/><ref name="Volder_2000"/> Utilization of CORDIC for [[multiplication]] and [[division (mathematics)|division]] was also conceived at this time.<ref name="Volder_2000"/> Based on the CORDIC principle, Dan&nbsp;H.&nbsp;Daggett, a colleague of Volder at Convair, developed conversion algorithms between binary and [[binary-coded decimal]] (BCD).<ref name="Volder_2000"/><ref name="Daggett_1959"/>
+
+{{anchor|CORDIC I|CORDIC II}}In 1958, Convair finally started to build a demonstration system to solve [[radar fix]]–taking problems named ''CORDIC I'', completed in 1960 without Volder, who had left the company already.<ref name="Volder_1959_1"/><ref name="Volder_2000"/> More universal ''CORDIC II'' models ''A'' (stationary) and ''B'' (airborne) were built and tested by Daggett and Harry Schuss in 1962.<ref name="Volder_2000"/><ref name="ASG_1962"/>
+
+Volder's CORDIC algorithm was first described publicly in 1959,<ref name="Volder_1959_1"/><ref name="Volder_1959_2"/><ref name="Volder_2000"/><ref name="Schmid_1983"/><ref name="Schmid_1974"/> which caused it to be incorporated into navigation computers by companies including [[Martin-Orlando]], [[Computer Control]], [[Litton Industries|Litton]], [[Kearfott Guidance & Navigation|Kearfott]], [[Lear-Siegler]], [[Sperry Rand|Sperry]], [[Raytheon]], and [[Collins Radio]].<ref name="Volder_2000"/>
+
+{{anchor|Pseudo-division|Pseudo-multiplication|Athena|Green Machine}}Volder teamed up with Malcolm McMillan to build ''Athena'', a [[fixed-point arithmetic|fixed-point]] [[desktop calculator]] utilizing his binary CORDIC algorithm.<ref name="Leibson_2010_2"/> The design was introduced to [[Hewlett-Packard]] in June 1965, but not accepted.<ref name="Leibson_2010_2"/> Still, McMillan introduced [[David S. Cochran]] (HP) to Volder's algorithm and when Cochran later met Volder he referred him to a similar approach [[John&nbsp;E. Meggitt]] (IBM<ref name="Meggitt_1962"/>) had proposed as ''pseudo-multiplication'' and ''pseudo-division'' in 1961.<ref name="Meggitt_1962"/><ref name="Cochran_2010_2"/> Meggitt's method also suggested the use of base 10<ref name="Meggitt_1962"/> rather than [[binary numeral system|base 2]], as used by Volder's CORDIC so far. These efforts led to the [[ROMable]] logic implementation of a decimal CORDIC prototype machine inside of Hewlett-Packard in 1966,<ref name="Cochran_1966"/><ref name="Cochran_2010_2"/> built by and conceptually derived from [[Tom Osborne (engineer)|Thomas E. Osborne]]'s prototypical ''Green Machine'', a four-function, [[floating-point]] desktop calculator he had completed in [[Diode–transistor logic|DTL]] logic<ref name="Leibson_2010_2"/> in December 1964.<ref name="Osborne_1994"/> This project resulted in the public demonstration of Hewlett-Packard's first desktop calculator with scientific functions, the [[HP&nbsp;9100A]] in March 1968, with series production starting later that year.<ref name="Leibson_2010_2"/><ref name="Osborne_1994"/><ref name="Leibson_2010_1"/><ref name="Cochran_1968"/>
+
+{{anchor|Logarithmic Computing Instrument|Factor combining}}When [[Wang Laboratories]] found that the HP&nbsp;9100A used [[multiple discovery|an approach similar]] to the ''factor combining'' method in their earlier [[Wang LOCI-1|LOCI-1]]<ref name="Wang_1964_LOCI-1"/> (September 1964) and [[Wang LOCI-2|LOCI-2]] (January 1965)<ref name="Bensene_2013"/><ref name="Wang_1967_LOCI"/> ''Logarithmic Computing Instrument'' desktop calculators,<ref name="Bensene_2004"/> they unsuccessfully accused Hewlett-Packard of infringement of one of [[An Wang]]'s patents in 1968.<ref name="Cochran_2010_2"/><ref name="Cochran_2010_1"/><ref name="Wang_US3402285"/><ref name="Wang_DE1499281B1"/>
+
+[[John Stephen Walther]] at Hewlett-Packard generalized the algorithm into the ''Unified CORDIC'' algorithm in 1971, allowing it to calculate [[hyperbolic functions]], [[natural exponential]]s, [[natural logarithm]]s, [[multiplication]]s, [[Division (mathematics)|division]]s, and [[square root]]s.<ref name="Swartzlander_1990"/><ref name="Walther_1971"/><ref name="Walther_2000"/><ref name="Petrocelli_1972"/> The CORDIC [[subroutines]] for trigonometric and hyperbolic functions could share most of their code.<ref name="Cochran_2010_1"/> This development resulted in the first [[scientific calculator|scientific]] [[handheld calculator]], the [[HP-35]] in 1972.<ref name="Cochran_2010_1"/><ref name="Cochran_1972"/><ref name="Laporte_2005_Trig"/><ref name="Laporte_2005_Secret"/><ref name="Laporte_2012_Digit"/><ref name="Laporte_2012_HP35Log"/> Based on hyperbolic CORDIC, [[Yuanyong Luo]] et al. further proposed a Generalized Hyperbolic CORDIC (GH CORDIC) to directly compute logarithms and exponentials with an arbitrary fixed base in 2019.<ref name="Luo_2019_TVLSI"/><ref name="Luo_2019_TVLSI_c"/><ref name="Wang_2020_tvlsi"/><ref name="Mopuri_2019_Nth"/><ref name="Vachhani_2020"/> Theoretically, Hyperbolic CORDIC is a special case of GH CORDIC.<ref name="Luo_2019_TVLSI"/>
+
+Originally, CORDIC was implemented only using the [[binary numeral system]] and despite Meggitt suggesting the use of the decimal system for his pseudo-multiplication approach, decimal CORDIC continued to remain mostly unheard of for several more years, so that [[Hermann Schmid (computer scientist)|Hermann Schmid]] and Anthony Bogacki still suggested it as a novelty as late as 1973<ref name="Schmid_1974"/><ref name="Schmid_1983"/><ref name="Schmid_1973"/><ref name="Franke_1973"/><ref name="Muller_2006"/> and it was found only later that Hewlett-Packard had implemented it in 1966 already.<ref name="Volder_2000"/><ref name="Schmid_1983"/><ref name="Cochran_1966"/><ref name="Cochran_2010_1"/>
+
+Decimal CORDIC became widely used in [[pocket calculator]]s,<ref name="Schmid_1983"/> most of which operate in binary-coded decimal (BCD) rather than binary. This change in the input and output format did not alter CORDIC's core calculation algorithms. CORDIC is particularly well-suited for handheld calculators, in which low cost – and thus low chip gate count – is much more important than speed.
+
+CORDIC has been implemented in the [[ARM architecture|ARM-based]] [[STM32|STM32G4]], [[Intel 8087]],<ref name="Muller_2006"/><ref name="Nave_1983"/><ref name="Palmer_1984"/><ref name="Glass_1990"/><ref name="Jarvis_1990"/> [[Intel 80287|80287]],<ref name="Jarvis_1990"/><ref name="Yuen_1988"/> [[Intel 80387|80387]]<ref name="Jarvis_1990"/><ref name="Yuen_1988"/> up to the [[Intel 80486|80486]]<ref name="Muller_2006"/> coprocessor series as well as in the [[Motorola 68881]]<ref name="Muller_2006"/><ref name="Nave_1983"/> and [[Motorola 68882|68882]] for some kinds of floating-point instructions, mainly as a way to reduce the gate counts (and complexity) of the [[floating-point unit|FPU]] sub-system.
+
+== Applications ==
+CORDIC uses simple shift-add operations for several computing tasks such as the calculation of trigonometric, hyperbolic and logarithmic functions, real and complex multiplication, division, square-root calculation, solution of linear systems, [[eigenvalue]] estimation, [[singular value decomposition]], [[QR factorization]] and many others. As a consequence, CORDIC has been used for applications in diverse areas such as [[signal processing|signal]] and [[image processing]], [[communication systems]], [[robotics]] and [[3D graphics]] apart from general scientific and technical computation.<ref name="Meher_2009"/><ref name="Meher_2013_CORDIC"/>
+
+=== Hardware ===
+
+The algorithm was used in the navigational system of the [[Apollo program]]'s [[Lunar Roving Vehicle]] to compute [[Bearing (navigation)|bearing]] and range, or distance from the [[Lunar module]].<ref name="Heffron-LaPiana_1970"/><ref name="Smith-Mastin_1973"/> CORDIC was used to implement the [[Intel 8087]] math coprocessor in 1980, avoiding the need to implement hardware multiplication.<ref name="Shirriff_2020"/>
+
+CORDIC is generally faster than other approaches when a hardware multiplier is not available (e.g., a microcontroller), or when the number of gates required to implement the functions it supports should be minimized (e.g., in an FPGA or [[ASIC]]). In fact, CORDIC is a standard drop-in [[Semiconductor intellectual property core|IP]] in FPGA development applications such as Vivado for Xilinx, while a power series implementation is not due to the specificity of such an IP, i.e. CORDIC can compute many different functions (general purpose) while a hardware multiplier configured to execute power series implementations can only compute the function it was designed for.
+
+On the other hand, when a hardware multiplier is available (''e.g.'', in a [[digital signal processing|DSP]] microprocessor), table-lookup methods and [[power series]] are generally faster than CORDIC. In recent years, the CORDIC algorithm has been used extensively for various biomedical applications, especially in FPGA implementations.{{Citation needed|date=March 2021}}
+
+The [[STM32#STM32G4|STM32G4]], [[STM32#STM32U5|STM32U5]] and [[STM32#STM32H5|STM32H5]] series and certain [[STM32#STM32H7|STM32H7]] series of MCUs implement a CORDIC module to accelerate computations in various mixed signal applications such as graphics for [[User interface|human-machine interface]] and [[Vector control (motor)|field oriented control]] of motors. While not as fast as a power series approximation, CORDIC is indeed faster than interpolating table based implementations such as the ones provided by the ARM CMSIS and C standard libraries.<ref name="STM_2021"/> Though the results may be slightly less accurate as the CORDIC modules provided only achieve 20 bits of precision in the result. For example, most of the performance difference compared to the ARM implementation is due to the overhead of the interpolation algorithm, which achieves full floating point precision (24 bits) and can likely achieve relative error to that precision.<ref name="ARM_2021"/> Another benefit is that the CORDIC module is a coprocessor and can be run in parallel with other CPU tasks.
+
+The issue with using [[Taylor series]] is that while they do provide small absolute error, they do not exhibit well behaved relative error.<ref name="Error_2021"/> Other means of polynomial approximation, such as [[Minimax approximation algorithm|minimax]] optimization, may be used to control both kinds of error.
+
+=== Software ===
+Many older systems with integer-only CPUs have implemented CORDIC to varying extents as part of their [[IEEE floating-point]] libraries. As most modern general-purpose CPUs have floating-point registers with common operations such as add, subtract, multiply, divide, sine, cosine, square root, log<sub>10</sub>, natural log, the need to implement CORDIC in them with software is nearly non-existent. Only microcontroller or special safety and time-constrained software applications would need to consider using CORDIC.
+
+== Modes of operation ==
+
+=== <span class="anchor" id="rotation mode"></span> Rotation mode ===
+CORDIC can be used to calculate a number of different functions. This explanation shows how to use CORDIC in ''rotation mode'' to calculate the sine and cosine of an angle, assuming that the desired angle is given in [[radian]]s and represented in a fixed-point format. To determine the sine or cosine for an angle {{nowrap|<math>\beta</math>,}} the ''y'' or ''x'' coordinate of a point on the [[unit circle]] corresponding to the desired angle must be found. Using CORDIC, one would start with the vector <math>v_0</math>:
+
+: <math>v_0 = \begin{bmatrix} 1 \\ 0 \end{bmatrix}.</math>
+
+[[Image:CORDIC-illustration.svg|thumb|300px|An illustration of the CORDIC algorithm in progress]]
+In the first iteration, this vector is rotated 45° counterclockwise to get the vector <math>v_1</math>. Successive iterations rotate the vector in one or the other direction by size-decreasing steps, until the desired angle has been achieved. Each step angle is <math>\gamma_i = \arctan{(2^{-i})}</math> for <math>i = 0, 1, 2, \dots</math>.
+
+More formally, every iteration calculates a rotation, which is performed by multiplying the vector <math>v_i</math> with the [[rotation matrix]] <math>R_{i}</math>:
+
+: <math>v_{i+1} = R_i v_i.</math>
+
+The rotation matrix is given by
+
+: <math>R_i = \begin{bmatrix}
+ \cos(\gamma_i) & -\sin(\gamma_i) \\
+ \sin(\gamma_i) & \cos(\gamma_i)
+\end{bmatrix}.</math>
+
+Using the [[List of trigonometric identities|trigonometric identity]]:
+
+: <math>\begin{align} 
+ \tan(\gamma_i) &\equiv \frac{\sin(\gamma_i)}{\cos(\gamma_i)},
+\end{align}</math>
+
+the cosine factor can be taken out to give:
+
+: <math>R_i = \cos(\gamma_i) \begin{bmatrix}
+ 1 & -\tan(\gamma_i) \\
+ \tan(\gamma_i) & 1
+\end{bmatrix}.</math>
+
+The expression for the rotated vector <math>v_{i+1} = R_i v_i</math> then becomes:
+
+: <math>\begin{bmatrix}
+ x_{i+1} \\
+ y_{i+1}
+\end{bmatrix} = \cos(\gamma_i) \begin{bmatrix}
+ 1 & -\tan(\gamma_i) \\
+ \tan(\gamma_i) & 1
+\end{bmatrix} \begin{bmatrix}
+ x_i \\
+ y_i
+\end{bmatrix},</math>
+
+where <math>x_i</math> and <math>y_i</math> are the components of <math>v_i</math>. Setting the angle <math>\gamma_i</math> for each iteration such that <math>\tan(\gamma_i) = \pm 2^{-i}</math> still yields a series that converges to every possible output value. The multiplication with the tangent can therefore be replaced by a division by a power of two, which is efficiently done in digital computer hardware using a [[bit shift]]. The expression then becomes:
+
+: <math>\begin{bmatrix}
+ x_{i+1} \\
+ y_{i+1}
+\end{bmatrix} = \cos(\arctan(2^{-i})) \begin{bmatrix}
+ 1 & -\sigma_i 2^{-i} \\
+ \sigma_i 2^{-i} & 1
+\end{bmatrix} \begin{bmatrix}
+ x_i \\
+ y_i
+\end{bmatrix},</math>
+
+in which <math>\sigma_i</math> determines the direction of the rotation. If the rotation angle <math>\gamma_i</math> is to be positive, <math>\sigma_i</math> is +1, otherwise it is −1.
+
+The following trigonometric identity can be used to replace the cosine:
+
+: <math>\cos(\gamma_i) \equiv \frac{1}{\sqrt{1 + \tan^2{\gamma_i}}}</math>,
+
+giving this multiplier for each iteration:
+
+: <math>K_i = \cos(\arctan(2^{-i})) = \frac{1}{\sqrt{1 + 2^{-2i}}}.</math>
+
+The <math>K_i</math> factors can then be taken out of the iterative process and applied all at once afterwards with a scaling factor <math>K(n)</math>:
+
+: <math>K(n) = \prod_{i=0}^{n-1} K_i = \prod_{i=0}^{n-1} \frac{1}{\sqrt{1 + 2^{-2i}}},</math>
+
+which is calculated in advance and stored in a table or as a single constant, if the number of iterations is fixed. This correction could also be made in advance, by scaling <math>v_0</math> and hence saving a multiplication. Additionally, it can be noted that<ref name="Muller_2006"/>
+
+: <math>K = \lim_{n \to \infty} K(n) \approx 0.6072529350088812561694</math>
+
+to allow further reduction of the algorithm's complexity. Some applications may avoid correcting for <math>K</math> altogether, resulting in a processing gain <math>A</math>:<ref name="Andraka_1998"/>
+
+: <math>A = \frac{1}{K} = \lim_{n \to \infty} \prod_{i=0}^{n-1} \sqrt{1 + 2^{-2i}} \approx 1.64676025812107.</math>
+
+After a sufficient number of iterations, the vector's angle will be close to the wanted angle <math>\beta</math>. For most ordinary purposes, 40 iterations (''n''&nbsp;=&nbsp;40) are sufficient to obtain the correct result to the 10th decimal place.
+
+The only task left is to determine whether the rotation should be clockwise or counterclockwise at each iteration (choosing the value of <math>\sigma</math>). This is done by keeping track of how much the angle was rotated at each iteration and subtracting that from the wanted angle; then in order to get closer to the wanted angle <math>\beta</math>, if <math>\beta_{n+1}</math> is positive, the rotation is clockwise, otherwise it is negative and the rotation is counterclockwise:
+
+: <math>\beta_0 = \beta </math>
+
+: <math>\beta_{i+1} = \beta_i - \sigma_i \gamma_i, \quad \gamma_i = \arctan(2^{-i}).</math>
+
+The values of <math>\gamma_n</math> must also be precomputed and stored. For small angles it can be approximated with <math>\arctan(\gamma_n) \approx \gamma_n</math> to reduce the table size.
+
+As can be seen in the illustration above, the sine of the angle <math>\beta</math> is the ''y'' coordinate of the final vector <math>v_n,</math> while the ''x'' coordinate is the cosine value.
+
+=== <span class="anchor" id="vectoring mode"></span> Vectoring mode ===
+The rotation-mode algorithm described above can rotate any vector (not only a unit vector aligned along the ''x'' axis) by an angle between −90° and +90°. Decisions on the direction of the rotation depend on <math>\beta_i</math> being positive or negative.
+
+The vectoring-mode of operation requires a slight modification of the algorithm. It starts with a vector whose ''x'' coordinate is positive whereas the ''y'' coordinate is arbitrary. Successive rotations have the goal of rotating the vector to the ''x'' axis (and therefore reducing the ''y'' coordinate to zero). At each step, the value of ''y'' determines the direction of the rotation. The final value of <math>\beta_i</math> contains the total angle of rotation. The final value of ''x'' will be the magnitude of the original vector scaled by ''K''. So, an obvious use of the vectoring mode is the transformation from rectangular to polar coordinates.
+
+== Implementation ==
+
+In Java, the Math class has a <code>scalb(double x, int scale)</code> method to perform such a shift,<ref name="Java_Math"/> C has the [[ldexp]] function,<ref name="ldexp"/> and the x86 class of processors have the <code>fscale</code> floating point operation.<ref name="Intel_2016"/>
+
+=== Software example (Python) ===
+<syntaxhighlight lang="python3" line="1" start="1">
+from math import atan2, sqrt, sin, cos, radians
+
+ITERS = 16
+theta_table = [atan2(1, 2**i) for i in range(ITERS)]
+
+def compute_K(n):
+    """
+    Compute K(n) for n = ITERS. This could also be
+    stored as an explicit constant if ITERS above is fixed.
+    """
+    k = 1.0
+    for i in range(n):
+        k *= 1 / sqrt(1 + 2 ** (-2 * i))
+    return k
+
+def cordic(alpha: float, n: int) -> tuple[float, float]:
+    assert n <= ITERS
+    K_n = compute_K(n)
+    theta = 0.0
+    x = 1.0
+    y = 0.0
+    P2i = 1  # This will be 2**(-i) in the loop below
+    for arc_tangent in theta_table[:n]:
+        sigma = +1 if theta < alpha else -1
+        theta += sigma * arc_tangent
+        x, y = x - sigma * y * P2i, sigma * P2i * x + y
+        P2i /= 2
+    return x * K_n, y * K_n
+
+if __name__ == "__main__":
+    # Print a table of computed sines and cosines, from -90° to +90°, in steps of 15°,
+    # comparing against the available math routines.
+    print("  x       sin(x)     diff. sine     cos(x)    diff. cosine ")
+    for x in range(-90, 91, 15):
+        cos_x, sin_x = cordic(radians(x), ITERS)
+        print(
+            f"{x:+05.1f}°  {sin_x:+.8f} ({sin_x-sin(radians(x)):+.8f}) {cos_x:+.8f} ({cos_x-cos(radians(x)):+.8f})"
+        )
+
+</syntaxhighlight>
+
+==== Output ====
+<syntaxhighlight lang="console">
+$ python cordic.py
+  x       sin(x)     diff. sine     cos(x)    diff. cosine
+-90.0°  -1.00000000 (+0.00000000) -0.00001759 (-0.00001759)
+-75.0°  -0.96592181 (+0.00000402) +0.25883404 (+0.00001499)
+-60.0°  -0.86601812 (+0.00000729) +0.50001262 (+0.00001262)
+-45.0°  -0.70711776 (-0.00001098) +0.70709580 (-0.00001098)
+-30.0°  -0.50001262 (-0.00001262) +0.86601812 (-0.00000729)
+-15.0°  -0.25883404 (-0.00001499) +0.96592181 (-0.00000402)
++00.0°  +0.00001759 (+0.00001759) +1.00000000 (-0.00000000)
++15.0°  +0.25883404 (+0.00001499) +0.96592181 (-0.00000402)
++30.0°  +0.50001262 (+0.00001262) +0.86601812 (-0.00000729)
++45.0°  +0.70709580 (-0.00001098) +0.70711776 (+0.00001098)
++60.0°  +0.86601812 (-0.00000729) +0.50001262 (+0.00001262)
++75.0°  +0.96592181 (-0.00000402) +0.25883404 (+0.00001499)
++90.0°  +1.00000000 (-0.00000000) -0.00001759 (-0.00001759)
+</syntaxhighlight>
+
+=== Hardware example ===
+The number of [[logic gate]]s for the implementation of a CORDIC is roughly comparable to the number required for a multiplier as both require combinations of shifts and additions. The choice for a multiplier-based or CORDIC-based implementation will depend on the context. The multiplication of two [[complex number]]s represented by their real and imaginary components (rectangular coordinates), for example, requires 4 multiplications, but could be realized by a single CORDIC operating on complex numbers represented by their polar coordinates, especially if the magnitude of the numbers is not relevant (multiplying a complex vector with a vector on the unit circle actually amounts to a rotation). CORDICs are often used in circuits for telecommunications such as [[digital down converter]]s.
+
+== Double iterations CORDIC ==
+In two of the publications by Vladimir Baykov,<ref>{{Cite web |last=Baykov |first=Vladimir |title=The outline (autoreferat) of my PhD, published in 1972 |url=http://baykov.de/CORDIC1972.htm |access-date=2023-05-03 |website=baykov.de}}</ref><ref>{{Cite web |first=Vladimir |last=Baykov |title=Hardware implementation of elementary functions in computers |url=http://baykov.de/Cordic1975.htm |access-date=2023-05-03 |website=baykov.de}}</ref> it was proposed to use the '''double iterations''' method for the implementation of the functions: arcsine, arccosine, natural logarithm, exponential function, as well as for the calculation of the hyperbolic functions. Double iterations method consists in the fact that unlike the classical CORDIC method, where the iteration step value changes ''every'' time, i.e. on each iteration, in the double iteration method, the iteration step value is repeated twice and changes only through one iteration. At the same time, when the value of i is unchanged, the sign (direction) of the iteration, i.e., + or - (clockwise or counterclockwise) depends on the sign of the variable being reduced to zero. Hence the designation for the degree indicator for double iterations appeared: <math>i = 0, 0, 1, 1, 2, 2\dots</math>. Whereas with ordinary iterations: <math>i = 0, 1, 2\dots</math>. The double iteration method guarantees the convergence of the method throughout the valid range of argument changes.
+
+The generalization of the CORDIC convergence problems for the arbitrary positional number system with radix <math>R</math> showed<ref name="Baykov 1985" >{{Cite web
+  |title=Special-purpose processors: iterative algorithms and structures
+  |first=Vladimir  |last=Baykov 
+  |url=http://baykov.de/Cordic1985.htm
+  |access-date=2023-05-03
+  |website=baykov.de
+}}</ref> that for the functions sine, cosine, arctangent, it is enough to perform <math>R - 1</math> iterations for each value of i (i = 0 or 1 to n, where n is the number of digits), i.e. for each digit of the result. For the natural logarithm, exponential, hyperbolic sine, cosine and arctangent, <math>R</math> iterations should be performed for each value <math>i</math>. For the functions arcsine and arccosine, two <math>R - 1</math> iterations should be performed for each number digit, i.e. for each value of <math>i</math>.<ref name="Baykov 1985" />
+
+For inverse hyperbolic sine and arcosine functions, the number of iterations will be <math>2R</math> for each <math>i</math>, that is, for each result digit.
+
+== Related algorithms ==
+CORDIC is part of the class of [[shift-and-add algorithm|"shift-and-add" algorithm]]s, as are the logarithm and exponential algorithms derived from Henry Briggs' work. Another shift-and-add algorithm which can be used for computing many elementary functions is the [[BKM algorithm]], which is a generalization of the logarithm and exponential algorithms to the complex plane. For instance, BKM can be used to compute the sine and cosine of a real angle <math>x</math> (in radians) by computing the exponential of <math>0+ix</math>, which is [[cis (mathematics)|<math>\operatorname{cis}(x) = \cos(x) + i \sin(x)</math>]]. The BKM algorithm is slightly more complex than CORDIC, but has the advantage that it does not need a scaling factor (''K'').
+
+==See also==
+* [[Methods of computing square roots]]
+* [[IEEE 754]]
+* [[Floating-point unit]]s
+* [[b:Digital Circuits/CORDIC|Digital Circuits/CORDIC]] in Wikibooks
+
+==References==
+{{Reflist|refs=
+<ref name="Volder_1959_1">{{cite journal |author-first=Jack E. |author-last=Volder |title=The CORDIC Computing Technique |location=San Francisco, California, USA |type=presentation |journal=Proceedings of the Western Joint Computer Conference  |publisher=[[National Joint Computer Committee]] |date=1959-03-03<!--/05--> |pages=257–261 |url=http://www.computer.org/csdl/proceedings/afips/1959/5054/00/50540257.pdf |access-date=2016-01-02}}</ref>
+<ref name="Volder_1959_2">{{cite journal |author-first=Jack E. |author-last=Volder |title=The CORDIC Trigonometric Computing Technique |journal=[[IRE Transactions on Electronic Computers]] |publisher=[[The Institute of Radio Engineers, Inc.]] (IRE) |pages=330–334 (reprint: 226–230) |issue=3 |volume=8 |id=EC-8(3):330–334 |publication-date=September 1959 |date=1959-05-25 |doi=10.1109/TEC.1959.5222693 |bibcode=1959IRTEC...8..330V |url=http://home.citycable.ch/pierrefleur/Jacques-Laporte/Volder_CORDIC.pdf |access-date=2016-01-01 |archive-date=2021-06-12  |archive-url=https://web.archive.org/web/20210612204749/http://home.citycable.ch/pierrefleur/Jacques-Laporte/Volder_CORDIC.pdf |url-status=dead }}</ref>
+<ref name="Swartzlander_1990">{{cite book |title=Computer Arithmetic |author-first=Earl E. |author-last=Swartzlander, Jr. |volume=1 |date=1990 |edition=2 |publisher=[[IEEE Computer Society Press]] |location=Los Alamitos |isbn=9780818689314 |id=0818689315 |url=https://books.google.com/books?id=egIpAQAAMAAJ |access-date=2016-01-02}}</ref>
+<ref name="Briggs_1624">{{cite book |title=Arithmetica Logarithmica |title-link=Arithmetica Logarithmica |author-last=Briggs |author-first=Henry |date=1624 |location=London |author-link=Henry Briggs (mathematician)}} (Translation: [http://www-gap.dcs.st-and.ac.uk/~history/Miscellaneous/Briggs/index.html] {{Webarchive|url=https://web.archive.org/web/20160304192134/http://www-gap.dcs.st-and.ac.uk/~history/Miscellaneous/Briggs/index.html |date=4 March 2016 }})</ref>
+<ref name="Laporte_2014_Briggs">{{cite web |url=http://www.jacques-laporte.org/Briggs%20and%20the%20HP35.htm |title=Henry Briggs and the HP 35 |author-last=Laporte |author-first=Jacques |date=2014 |location=Paris, France |orig-date=2005 |archive-url=https://web.archive.org/web/20150309055201/http://www.jacques-laporte.org/Briggs%20and%20the%20HP35.htm |archive-date=2015-03-09 |url-status=dead |access-date=2016-01-02 }} [http://home.citycable.ch/pierrefleur/Jacques-Laporte/Briggs%20and%20the%20HP35.htm] {{Webarchive|url=https://web.archive.org/web/20200810150426/http://home.citycable.ch/pierrefleur/Jacques-Laporte/Briggs%20and%20the%20HP35.htm |date=2020-08-10  }}</ref>
+<ref name="Flower_1771">{{cite book |title=The Radix. A new way of making logarithms. |date=1771 |author-first=Robert |author-last=Flower |publisher=J. Beecroft |location=London |url=https://books.google.com/books?id=mYpaAAAAcAAJ |access-date=2016-01-02}}</ref>
+<ref name="Volder_1956">{{citation |author-first=Jack E. |author-last=Volder |title=Binary Computation Algorithms for Coordinate Rotation and Function Generation |type=internal report |id=IAR-1.148 |publisher=[[Convair]], Aeroelectronics group |date=1956-06-15}}</ref>
+<ref name="Volder_2000">{{cite journal |date=June 2000 |title=The Birth of CORDIC |url=http://late-dpedago.urv.cat/site_media/papers/fulltext_2.pdf |journal=Journal of VLSI Signal Processing |location=Hingham, MA, USA |publisher=[[Kluwer Academic Publishers]] |volume=25 |issue=2 (Special issue on CORDIC) |pages=101–105 |issn=0922-5773 |access-date=2016-01-02 |author-first=Jack E. |author-last=Volder |doi=10.1023/A:1008110704586 |bibcode=2000JSPSy..25..101V |s2cid=112881 |archive-url=https://web.archive.org/web/20160304064804/http://late-dpedago.urv.cat/site_media/papers/fulltext_2.pdf |archive-date=2016-03-04 |url-status=dead}}</ref>
+<ref name="Perle_1971">{{citation |title=CORDIC Technique Reduces Trigonometric Function Look-Up |author-first=Michael D. |author-last=Perle |date=June 1971 |journal=Computer Design |publisher=Computer Design Publishing Corp. |location=Boston, MA, USA |pages=72–78}} (NB. Some sources erroneously refer to this as by ''P. Z. Perle'' or in ''Component Design''.)</ref>
+<ref name="Daggett_1959">{{cite journal |author-last=Daggett |author-first=Dan H. |title=Decimal-Binary Conversions in CORDIC |journal=[[IRE Transactions on Electronic Computers]] |volume=8 |issue=3  |id=EC-8(3):335–339 |pages=335–339 |publisher=[[The Institute of Radio Engineers, Inc.]] (IRE) |date=September 1959 |doi=10.1109/TEC.1959.5222694 |bibcode=1959IRTEC...8..335D |issn=0367-9950 |url=https://www.researchgate.net/researcher/74881302_D_H_Daggett |access-date=2016-01-02}}</ref>
+<ref name="ASG_1962">{{citation |title=Technical Description of Fix-taking Tie-in Equipment |author=Advanced Systems Group |publisher=[[General Dynamics]] |location=Fort Worth, Texas, USA |date=1962-08-06 |type=report |id=FZE-052}}</ref>
+<ref name="Leibson_2010_2">{{cite web |title=The HP 9100 Project: An Exothermic Reaction |date=2010 |author-first=Steven<!-- Steve --> |author-last=Leibson |url=http://www.hp9825.com/html/the_9100_part_2.html |access-date=2016-01-02}}</ref>
+<ref name="Meggitt_1962">{{cite journal |date=1961-08-29 |title=Pseudo Division and Pseudo Multiplication Processes |url=http://home.citycable.ch/pierrefleur/Jacques-Laporte/Meggitt_62.pdf |journal=[[IBM Journal of Research and Development]] |location=Riverton, New Jersey, USA |publisher=[[IBM Corporation]] |publication-date=April 1962 |volume=6 |issue=2 |pages=210–226, 287 |doi=10.1147/rd.62.0210 |access-date=2016-01-09 |quote=John E. Meggitt B.A., 1953; PhD, 1958, [[Cambridge University]]. Awarded the First [[Smith Prize]] at Cambridge in 1955 and elected a Research Fellowship at [[Emmanuel College, Cambridge|Emmanuel College]]. […] Joined [[IBM Hursley|IBM British Laboratory at Hursley, Winchester]] in 1958. Interests include [[error-correcting code]]s and small microprogrammed computers. |author-first=John E. |author-last=Meggitt |archive-date=2022-02-04  |archive-url=https://web.archive.org/web/20220204062801/http://home.citycable.ch/pierrefleur/Jacques-Laporte/Meggitt_62.pdf |url-status=dead }} ([https://ieeexplore.ieee.org/stamp/stamp.jsp?reload=true&tp=&arnumber=5392370], [https://ieeexplore.ieee.org/stamp/stamp.jsp?reload=true&tp=&arnumber=5392370])</ref>
+<ref name="Cochran_2010_2">{{cite web |url=http://www.hpmemoryproject.org/timeline/dave_cochran/a_quarter_century_at_hp_00.htm#chapter_07 |title=A Quarter Century at HP |author-last=Cochran |author-first=David S. |date=2010-11-19 |publisher=[[Computer History Museum]] / HP Memories |at=7: Scientific Calculators, circa 1966 |type=interview typescript |id=CHM X5992.2011 |access-date=2016-01-02 |quote=I even flew down to Southern California to talk with Jack Volder who had implemented the transcendental functions in the ''Athena'' machine and talked to him for about an hour. He referred me to the original papers by Meggitt where he'd gotten the pseudo division, pseudo multiplication generalized functions. […] I did quite a bit of literary research leading to some very interesting discoveries. […] I found a treatise from 1624 by [[Henry Briggs (mathematician)|Henry Briggs]] discussing the calculation of common logarithms, interestingly used the same pseudo-division/pseudo-multiplication method that MacMillan and Volder used in ''Athena''. […] We had purchased a [[Wang LOCI-2|LOCI-2]] from [[Wang Labs]] and recognized that Wang Labs LOCI&nbsp;II used [[multiple discovery|the same algorithm]] to do square root as well as log and exponential. After the introduction of the [[hp 9100A|9100]] our legal department got a letter from Wang saying that we had infringed on their patent. And I just sent a note back with the Briggs reference in Latin and it said, "It looks like [[prior art]] to me." We never heard another word.}} ([http://www.hpmemoryproject.org/an/pdf/A_Quarter_Century_at_HP110829.pdf])</ref>
+<ref name="Osborne_1994">{{cite web |title=Tom Osborne's Story in His Own Words |author-first=Thomas<!-- Tom --> E. |author-last=Osborne |orig-date=1994 |date=2010 |url=http://www.hp9825.com/html/osborne_s_story.html |access-date=2016-01-01}}</ref>
+<ref name="Leibson_2010_1">{{cite web |title=The HP 9100: The Initial Journey |date=2010 |author-first=Steven<!-- Steve --> |author-last=Leibson |url=http://www.hp9825.com/html/the_9100_project.html |access-date=2016-01-02}}</ref>
+<ref name="Cochran_1968">{{cite journal |date=September 1968 |title=Internal Programming of the 9100A Calculator |url=http://www.hpmemoryproject.org/timeline/dave_cochran/hpj_sep68.htm |journal=[[Hewlett-Packard Journal]] |location=Palo Alto, California, USA |publisher=[[Hewlett-Packard]] |pages=14–16 |access-date=2016-01-02 |author-first=David S. |author-last=Cochran}} ([http://www.hparchive.com/Journals/HPJ-1968-09.pdf])</ref>
+<ref name="Wang_1964_LOCI-1">{{citation |publisher=[[Wang Laboratories, Inc.]] |title=Extend your Personal Computing Power with the new LOCI-1 Logarithmic Computing Instrument |date=1964 |pages=2–3 |url=http://www.oldcalculatormuseum.com/a-loci1br-23.html |access-date=2016-01-03}}</ref>
+<ref name="Bensene_2013">{{cite web |author-first=Rick |author-last=Bensene |title=Wang LOCI-2 |date=2013-08-31 |orig-date=1997 |work=Old Calculator Web Museum |location=Beavercreek, Oregon City, Oregon, USA |url=http://www.oldcalculatormuseum.com/wangloci.html |access-date=2016-01-03}}</ref>
+<ref name="Bensene_2004">{{cite web |author-first=Rick |author-last=Bensene |title=Wang Model 360SE Calculator System |date=2004-10-23 |orig-date=1997 |work=Old Calculator Web Museum |location=Beavercreek, Oregon City, Oregon, USA |url=http://www.oldcalculatormuseum.com/wang360.html |access-date=2016-01-03}}</ref>
+<ref name="Wang_US3402285">{{cite patent |country=US |number=3402285A |title=Calculating apparatus |status=patent |pubdate=1968-09-17 |fdate=1964-09-22 |pridate=1964-09-22 |gdate=1968-09-17 |inventor1-last=Wang |inventor1-first=An |assign1=[[Wang Laboratories]] |inventor1-link=An Wang}} ([http://www.freepatentsonline.com/3402285.html], [https://patents.google.com/patent/US3402285])</ref>
+<ref name="Wang_DE1499281B1">{{cite patent |country=DE |number=1499281B1 |title=Rechenmaschine fuer logarithmische Rechnungen |status=patent |pubdate=1970-05-06 |fdate=1965-09-17 |pridate=1964-09-22 |gdate=1970-05-06 |inventor1-last=Wang |inventor1-first=An |assign1=[[Wang Laboratories]] |inventor1-link=An Wang}} ([https://patents.google.com/patent/DE1499281B1])</ref>
+<ref name="Walther_1971">{{cite journal |url=http://home.citycable.ch/pierrefleur/Jacques-Laporte/Welther-Unified%20Algorithm.pdf |author-first=John Stephen |author-last=Walther |title=A unified algorithm for elementary functions |journal=[[Proceedings of the Spring Joint Computer Conference]] |volume=38 |publication-place=Atlantic City, New Jersey, USA |via=[[American Federation of Information Processing Societies]] (AFIPS) |pages=379–385 |date=May 1971 |publisher=[[Hewlett-Packard Company]] |location=Palo Alto, California, USA |access-date=2016-01-01  |archive-date=2021-06-12  |archive-url=https://web.archive.org/web/20210612202952/http://home.citycable.ch/pierrefleur/Jacques-Laporte/Welther-Unified%20Algorithm.pdf |url-status=dead }}</ref>
+<ref name="Walther_2000">{{cite journal |author-first=John Stephen |author-last=Walther |title=The Story of Unified CORDIC |journal=The Journal of VLSI Signal Processing |publisher=[[Kluwer Academic Publishers]] |location=Hingham, MA, USA |issn=0922-5773 |volume=25 |issue=2 (Special issue on CORDIC) |pages=107–112 |date=June 2000 |url=https://dl.acm.org/citation.cfm?id=2812970 |doi=10.1023/A:1008162721424|bibcode=2000JSPSy..25..107W |s2cid=26922158 |url-access=subscription }}</ref>
+<ref name="Petrocelli_1972">{{citation |title=The Best Computer Papers of 1971 |page=71 |editor-first=Orlando R. |editor-last=Petrocelli |publisher=[[Auerbach Publishers]] |date=1972 |isbn=0877691274 |url=https://books.google.com/books?id=f6ezAAAAIAAJ |access-date=2016-01-02}}</ref>
+<ref name="Cochran_2010_1">{{cite web |author-first=David S. |author-last=Cochran |title=The HP-35 Design, A Case Study in Innovation |date=June 2010 |publisher=HP Memory Project |url=http://www.hpmemoryproject.org/wb_pages/d_cochran_01.htm |access-date=2016-01-02 |quote=During the development of the desktop [[Hewlett-Packard 9100A|HP 9100]] calculator I was responsible for developing the algorithms to fit the architecture suggested by Tom Osborne. Although the suggested methodology for the algorithms came from Malcolm McMillan I did considerable amount of reading to understand the core calculations […] Although [[Wang Laboratories]] had used similar methods of calculation, my study found [[prior art]] dated 1624 that read on their patents. […] This research enabled the adaption of the [[transcendental function]]s through the use of the algorithms to match the needs of the customer within the constraints of the hardware. This proved invaluable during the development of the [[HP-35]], […] [[Power series]], [[polynomial expansion]]s, [[continued fraction]]s, and [[Chebyshev polynomial]]s were all considered for the transcendental functions. All were too slow because of the number of multiplications and divisions required. The generalized algorithm that best suited the requirements of speed and programming efficiency for the HP-35 was an iterative pseudo-division and pseudo-multiplication method first described in 1624 by [[Henry Briggs (mathematician)|Henry Briggs]] in '[[Arithmetica Logarithmica]]' and later by Volder and Meggitt. This is the same type of algorithm that was used in previous HP desktop calculators. […] The complexity of the algorithms made multilevel programming a necessity. This meant the calculator had to have subroutine capability, […] To generate a transcendental function such as Arc-Hyperbolic-Tan required several levels of subroutines. […] Chris Clare later documented this as ''Algorithmic State Machine'' (ASM) methodology. Even the simple Sine or Cosine used the Tangent routine, and then calculated the Sine from trigonometric identities. These arduous manipulations were necessary to minimize the number of unique programs and program steps […] The arithmetic instruction set was designed specifically for a decimal transcendental-function calculator. The basic arithmetic operations are performed by a [[10's complement]] adder-subtractor which has data paths to three of the registers that are used as working storage.}}</ref>
+<ref name="Cochran_1972">{{cite journal |author-first=David S. |author-last=Cochran |title=Algorithms and Accuracy in the HP-35 |journal=[[Hewlett-Packard Journal]] |date=June 1972 |volume=23 |issue=10 |pages=10–11 |url=http://www.hpl.hp.com/hpjournal/72jun/jun72a2.pdf |access-date=2016-01-02  |archive-date=2013-10-04  |archive-url=https://web.archive.org/web/20131004225515/http://www.hpl.hp.com/hpjournal/72jun/jun72a2.pdf |url-status=dead }}</ref>
+<ref name="Laporte_2005_Trig">{{cite web |url=http://www.jacques-laporte.org//Trigonometry.htm |title=HP35 trigonometric algorithm |author-last=Laporte |author-first=Jacques |date=2005-12-06 |location=Paris, France |archive-url=https://web.archive.org/web/20150309055210/http://www.jacques-laporte.org/Trigonometry.htm |archive-date=2015-03-09 |url-status=dead |access-date=2016-01-02 }} [http://home.citycable.ch/pierrefleur/Jacques-Laporte/Trigonometry.htm] {{Webarchive|url=https://web.archive.org/web/20200810155919/http://home.citycable.ch/pierrefleur/Jacques-Laporte/Trigonometry.htm |date=2020-08-10  }}</ref>
+<ref name="Luo_2019_TVLSI">{{cite journal |author-first1=Yuanyong |author-last1=Luo |author-first2=Yuxuan |author-last2=Wang |author-first3=Yajun |author-last3=Ha |author-first4=Zhongfeng |author-last4=Wang |author-first5=Siyuan |author-last5=Chen |author-first6=Hongbing |author-last6=Pan |title=Generalized Hyperbolic CORDIC and Its Logarithmic and Exponential Computation With Arbitrary Fixed Base |journal= IEEE Transactions on Very Large Scale Integration (VLSI) Systems|volume=27 |issue=9 |pages=2156–2169 |date=September 2019 |doi=10.1109/TVLSI.2019.2919557|bibcode=2019ITVL...27.2156L |s2cid=196171166 }}</ref>
+<ref name="Laporte_2005_Secret">{{cite journal |date=February 2005 |orig-date=1981<!-- February 1981 --> |title=The secret of the algorithms |url=http://www.jacques-laporte.org/TheSecretOfTheAlgorithms.htm |url-status=dead |journal=L'Ordinateur Individuel<!-- original French publication in 1981 --> |location=Paris, France |issue=24 |archive-url=https://web.archive.org/web/20160818122704/http://www.jacques-laporte.org/TheSecretOfTheAlgorithms.htm |archive-date=2016-08-18 |access-date=2016-01-02 |author-first=Jacques |author-last=Laporte }} [http://home.citycable.ch/pierrefleur/Jacques-Laporte/TheSecretOfTheAlgorithms.htm] {{Webarchive|url=https://web.archive.org/web/20210612210655/http://home.citycable.ch/pierrefleur/Jacques-Laporte/TheSecretOfTheAlgorithms.htm |date=2021-06-12  }}</ref>
+<ref name="Laporte_2012_Digit">{{cite web |url=http://www.jacques-laporte.org/digit_by_digit.htm |title=Digit by digit methods |author-last=Laporte |author-first=Jacques |date=February 2012 |location=Paris, France |orig-date=2006<!-- 2006-06-09, 2006-11-13 --> |archive-url=https://web.archive.org/web/20160818121038/http://www.jacques-laporte.org/digit_by_digit.htm |archive-date=2016-08-18 |url-status=dead |access-date=2016-01-02 }} [http://home.citycable.ch/pierrefleur/Jacques-Laporte/digit_by_digit.htm] {{Webarchive|url=https://web.archive.org/web/20210612210056/http://home.citycable.ch/pierrefleur/Jacques-Laporte/digit_by_digit.htm |date=2021-06-12  }}</ref>
+<ref name="Laporte_2012_HP35Log">{{cite web |url=http://www.jacques-laporte.org/Logarithm_1.htm |title=HP 35 Logarithm Algorithm |author-last=Laporte |author-first=Jacques |date=February 2012 |location=Paris, France |orig-date=2007 |archive-url=https://web.archive.org/web/20160818120118/http://www.jacques-laporte.org/Logarithm_1.htm |archive-date=2016-08-18 |url-status=dead |access-date=2016-01-07 }} [http://home.citycable.ch/pierrefleur/Jacques-Laporte/Logarithm_1.htm] {{Webarchive|url=https://web.archive.org/web/20200810145358/http://home.citycable.ch/pierrefleur/Jacques-Laporte/Logarithm_1.htm |date=2020-08-10  }}</ref>
+<ref name="Luo_2019_TVLSI_c">{{cite journal |author-first1=Yuanyong |author-last1=Luo |author-first2=Yuxuan |author-last2=Wang |author-first3=Yajun |author-last3=Ha |author-first4=Zhongfeng |author-last4=Wang |author-first5=Siyuan |author-last5=Chen |author-first6=Hongbing |author-last6=Pan |title=Corrections to "Generalized Hyperbolic CORDIC and Its Logarithmic and Exponential Computation With Arbitrary Fixed Base" |journal= IEEE Transactions on Very Large Scale Integration (VLSI) Systems|volume=27 |issue=9 |pages=2222 |date=September 2019 |doi=10.1109/TVLSI.2019.2932174|bibcode=2019ITVL...27.2222L |s2cid=201711001 }}</ref>
+<ref name="Wang_2020_tvlsi">{{cite journal |author-first1=Yuxuan |author-last1=Wang |author-first2=Yuanyong |author-last2=Luo |author-first3=Zhongfeng |author-last3=Wang |author-first4=Qinghong |author-last4=Shen |author-first5=Hongbing |author-last5=Pan |title=GH CORDIC-Based Architecture for Computing Nth Root of Single-Precision Floating-Point Number |journal= IEEE Transactions on Very Large Scale Integration (VLSI) Systems|volume=28 |issue=4 |pages=864–875 |date=January 2020 |doi=10.1109/TVLSI.2019.2959847|s2cid=212975618 }}</ref>
+<ref name="Schmid_1974">{{cite book |title=Decimal Computation |author-first=Hermann |author-last=Schmid<!-- General Electric Company, Binghamton, New York, USA --> |author-link=Hermann Schmid (computer scientist) |date=1974 |edition=1 |publisher=[[John Wiley & Sons, Inc.]] |location=Binghamton, New York, USA |isbn=0-471-76180-X |url=https://archive.org/details/decimalcomputati0000schm |url-access=registration |access-date=2016-01-03 |pages=[https://archive.org/details/decimalcomputati0000schm/page/162 162], 165–176, 181–193 |quote=So far CORDIC has been known to be implemented only in binary form. But, as will be demonstrated here, the algorithm can be easily modified for a decimal system.* […] *In the meantime it has been learned that [[Hewlett-Packard]] and other calculator manufacturers employ the decimal CORDIC techniques in their scientific calculators.}}</ref>
+<ref name="Schmid_1983">{{cite book |title=Decimal Computation |author-first=Hermann |author-last=Schmid<!-- General Electric Company, Binghamton, New York, USA --> |author-link=Hermann Schmid (computer scientist) |orig-date=1974 |date=1983 |edition=1 (reprint) |publisher=Robert E. Krieger Publishing Company |location=Malabar, Florida, USA |pages=162, 165–176, 181–193 |isbn=0-89874-318-4 |url=https://books.google.com/books?id=uEYZAQAAIAAJ |access-date=2016-01-03}} (NB. At least some batches of this reprint edition were [[misprint]]s with defective pages 115–146.<!-- they contain the contents of another book -->)</ref>
+<ref name="Schmid_1973">{{cite journal |author-first1=Hermann |author-last1=Schmid |author-link1=Hermann Schmid (computer scientist) |author-first2=Anthony |author-last2=Bogacki |title=Use Decimal CORDIC for Generation of Many Transcendental Functions |journal=[[EDN (magazine)|EDN]] |date=1973-02-20 |pages=64–73}}</ref>
+<ref name="Franke_1973">{{cite book |author-first=Richard |author-last=Franke |title=An Analysis of Algorithms for Hardware Evaluation of Elementary Functions |date=1973-05-08 |publisher=[[United States Department of the Navy|Department of the Navy]], [[Naval Postgraduate School]] |location=Monterey, California, USA |id=NPS-53FE73051A |url=http://calhoun.nps.edu/bitstream/handle/10945/29706/analysisofalgori00fran.pdf |access-date=2016-01-03}}</ref>
+<ref name="Nave_1983">{{cite journal |author-first=Rafi |author-last=Nave |title=Implementation of Transcendental Functions on a Numerics Processor |journal=Microprocessing and Microprogramming |volume=11 |issue=3–4 |pages=221–225 |date=March<!-- /April--> 1983|doi=10.1016/0165-6074(83)90151-5 }}</ref>
+<ref name="Palmer_1984">{{cite book |title=The 8087 Primer |author-first1=John F. |author-last1=Palmer |author-first2=Stephen Paul |author-last2=Morse |author-link2=Stephen Paul Morse |publisher=[[John Wiley & Sons Australia, Limited]] |date=1984 |edition=1 |isbn=0471875694 |id=9780471875697 |url=https://archive.org/details/8087primer00palm |url-access=registration |access-date=2016-01-02}}</ref>
+<ref name="Glass_1990">{{cite journal |title=Math Coprocessors: A look at what they do, and how they do it |author-first=L. Brent |author-last=Glass |journal=[[Byte (magazine)|Byte]] |volume=15 |issue=1 |date=January 1990 |pages=337–348 |issn=0360-5280}}</ref>
+<ref name="Jarvis_1990">{{cite journal |title=Implementing CORDIC algorithms – A single compact routine for computing transcendental functions |author-first=Pitts |author-last=Jarvis |date=1990-10-01 |journal=[[Dr. Dobb's Journal]] |pages=152–156 |url=http://www.drdobbs.com/database/implementing-cordic-algorithms/184408428 |access-date=2016-01-02 |archive-url=https://web.archive.org/web/20160304085613/http://www.drdobbs.com/database/implementing-cordic-algorithms/184408428 |archive-date=4 March 2016 |url-status=dead }}</ref>
+<ref name="Yuen_1988">{{cite journal |title=Intel's Floating-Point Processors |author-first=A. K. |author-last=Yuen |journal=Electro/88 Conference Record |pages=48/5/1–7 |date=1988}}</ref>
+<ref name="Meher_2009">{{cite journal |date=2008-08-22<!-- revised 26 November, 2008-11-26, 2009-04-10, first published: 2009-06-19, current version first published: 2009-09-02 --> |title=50 Years of CORDIC: Algorithms, Architectures and Applications |journal= IEEE Transactions on Circuits and Systems I: Regular Papers|publication-date=2009-09-09 |volume=56 |issue=9 |pages=1893–1907 |author-first1=Pramod Kumar |author-last1=Meher |author-first2=Javier |author-last2=Valls |author-first3=Tso-Bing |author-last3=Juang |author-first4=K. |author-last4=Sridharan |author-first5=Koushik |author-last5=Maharatna|doi=10.1109/TCSI.2009.2025803 |s2cid=5465045 |url=https://eprints.soton.ac.uk/267873/1/tcas1_cordic_review.pdf }}<!-- ([http://www1.i2r.a-star.edu.sg/~pkmeher/papers/CORDIC-TUT-TACS-I.pdf]) --></ref>
+<ref name="Meher_2013_CORDIC">{{cite journal |author-first1=Pramod Kumar |author-last1=Meher |author-first2=Sang Yoon |author-last2=Park |title=Low Complexity Generic VLSI Architecture Design Methodology for Nth Root and Nth Power Computations |journal= IEEE Transactions on Very Large Scale Integration (VLSI) Systems|volume=21 |issue=2 |pages=217–228 |date=February 2013 |doi=10.1109/TVLSI.2012.2187080|s2cid=7059383 }}</ref>
+<ref name="Vachhani_2020">{{cite journal |author-first1=Leena |author-last1=Vachhani |title=CORDIC as a Switched Nonlinear System |journal= Circuits, Systems and Signal Processing|volume=39 |pages=3234–3249 |date=November 2019 |issue=6 |doi=10.1007/s00034-019-01295-8|s2cid=209904108 }}</ref>
+<ref name="Mopuri_2019_Nth">{{cite journal |author-first1=Suresh |author-last1=Mopuri |author-first2=Amit |author-last2=Acharyya |title=Low Complexity Generic VLSI Architecture Design Methodology for Nth Root and Nth Power Computations |journal= IEEE Transactions on Circuits and Systems I: Regular Papers|volume=66 |issue=12 |pages=4673–4686 |date=September 2019 |doi=10.1109/TCSI.2019.2939720|s2cid=203992880 }}</ref>
+<ref name="Muller_2006">{{cite book |author-first=Jean-Michel |author-last=Muller |title=Elementary Functions: Algorithms and Implementation |edition=2 |publisher=[[Birkhäuser]] |location=Boston |date=2006 |page=134 |isbn=978-0-8176-4372-0 |lccn=2005048094 |url=http://perso.ens-lyon.fr/jean-michel.muller/SecondEdition.html |access-date=2015-12-01}}</ref>
+<ref name="Andraka_1998">{{cite book | last1=Andraka | first1=Ray | title=Proceedings of the 1998 ACM/SIGDA sixth international symposium on Field programmable gate arrays - FPGA '98 | chapter=A survey of CORDIC algorithms for FPGA based computers | date=1998 | pages=191–200 | doi=10.1145/275107.275139 | isbn=0-89791-978-5 |doi-access=free }}</ref>
+<ref name="Java_Math">{{cite web |title=Class Math |work=Java Platform Standard |edition=8 |date=2018 |orig-date=1993 |publisher=[[Oracle Corporation]] |url=https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html#scalb-double-int- |access-date=2018-08-06 |url-status=live |archive-url=https://web.archive.org/web/20180806221131/https://docs.oracle.com/javase/8/docs/api/java/lang/Math.html |archive-date=2018-08-06}}</ref>
+<ref name="ldexp">{{cite web |title=ldexp, ldexpf, ldexpl |date=2015-06-11 |website=cppreference.com |url=http://en.cppreference.com/w/c/numeric/math/ldexp |access-date=2018-08-06 |url-status=live |archive-url=https://web.archive.org/web/20180806130141/https://en.cppreference.com/w/c/numeric/math/ldexp |archive-date=2018-08-06}}</ref>
+<ref name="Intel_2016">{{cite book |publisher=[[Intel Corporation]] |title=Intel 64 and IA-32 Architectures Software Developer's Manual Volume 1: Basic Architecture |url=http://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-1-manual.pdf |section=Section 8.3.9 Logarithmic, Exponential, and Scale |pages=8–22 |date=September 2016}}</ref>
+<ref name="Wang_1967_LOCI">{{cite web |title=Wang LOCI Service Manual |publisher=Wang Laboratories, Inc. |date=1967 |id=L55-67 |url=http://bitsavers.informatik.uni-stuttgart.de/pdf/wang/loci/Wang_LOCI_Service_Manual.pdf |access-date=2018-09-14}}</ref>
+<ref name="Cochran_1966">{{citation|author-first=David S. |author-last=Cochran |title=About utilizing CORDIC for computing transcendental functions in BCD |date=1966-03-14 |type=private communication with Jack E. Volder}}</ref>
+<ref name="Heffron-LaPiana_1970">{{cite web |url=https://www.hq.nasa.gov/alsj/19790072520_1979072520.pdf |author-last1=Heffron |author-first1=W. G. |author-last2=LaPiana |author-first2=F. |title=Technical Memorandum 70-2014-8: The Navigation System of the Lunar Roving Vehicle |date=1970-12-11 |location=Washington, D.C., USA |publisher=[[Bellcomm]] |website=NASA |page=14}}</ref>
+<ref name="Smith-Mastin_1973">{{cite web |url=https://www.hq.nasa.gov/alsj/19740003321_1974003321.pdf |author-last1=Smith |author-first1=Earnest C. |author-last2=Mastin |author-first2=William C. |title=Technical Note D-7469: Lunar Roving Vehicle Navigation System Performance Review |date=November 1973 |location=Huntsville, Alabama, USA |publisher=[[Marshall Space Flight Center]] |website=NASA |page=17}}</ref>
+<ref name="Shirriff_2020">{{cite web |url=http://www.righto.com/2020/05/extracting-rom-constants-from-8087-math.html |title=Extracting ROM constants from the 8087 math coprocessor's die |author-last=Shirriff |author-first=Ken |date=May 2020 |website=righto.com |access-date=2020-09-03 |quote=The ROM contains 16 arctangent values, the arctans of 2<sup>−n</sup>. It also contains 14 log values, the base-2 logs of (1+2<sup>−n</sup>). These may seem like unusual values, but they are used in an efficient algorithm called CORDIC, which was invented in 1958.}}</ref>
+<ref name="STM_2021">{{cite web |title=Getting started with the CORDIC accelerator using STM32CubeG4 MCU Package |url=https://www.st.com/resource/en/application_note/dm00614795-getting-started-with-the-cordic-accelerator-using-stm32cubeg4-mcu-package-stmicroelectronics.pdf |publisher=[[STMicroelectronics]] |access-date=2021-01-01}}</ref>
+<ref name="ARM_2021">{{cite web |title=CMSIS/CMSIS/DSP_Lib/Source/ControllerFunctions/arm_sin_cos_f32.c |url=https://github.com/ARM-software/CMSIS/blob/master/CMSIS/DSP_Lib/Source/ControllerFunctions/arm_sin_cos_f32.c |website=Github |publisher=ARM |access-date=2021-01-01}}</ref>
+<ref name="Error_2021">{{cite web |title=Error bounds of Taylor Expansion for Sine |url=https://math.stackexchange.com/q/2464759 |website=Math Stack Exchange |access-date=2021-01-01}}</ref>
+}}
+
+==Further reading==
+* {{anchor|DIVIC}}{{cite journal |title=DIVIC Gives Answer to Complex Navigation Questions |author-first=Joseph A.<!-- sometimes erroneously cited as J. M. in literature, but: https://onlinelibrary.wiley.com/doi/full/10.1002/j.2161-4296.1967.tb02211.x https://patentimages.storage.googleapis.com/b2/10/6c/412d125b909281/US3375520.pdf --> |author-last=Parini |date=1966-09-05 |journal=[[Electronics (magazine)|Electronics]] |pages=105–111 |issn=0013-5070}} (NB. ''DIVIC'' stands for ''DIgital Variable Increments Computer''. Some sources erroneously refer to this as by ''J. M. Parini''.)
+* {{cite journal |author-last1=Anderson |author-first1=Stanley F. |author-last2=Earle |author-first2=John G. |author-last3=Goldschmidt |author-first3=Robert Elliott |author-last4=Powers |author-first4=Don M. |title=The IBM System/360 Model 91: Floating-Point Execution Unit |journal=[[IBM Journal of Research and Development]] |volume=11 |issue=1 |publication-date=January 1967 |date=1965-11-01 |location=Riverton, New Jersey, USA |doi=10.1147/rd.111.0034 |pages=34–53 |url=http://home.citycable.ch/pierrefleur/Jacques-Laporte/ibmrd1101E.pdf |access-date=2016-01-02 |archive-date=2016-03-05  |archive-url=https://web.archive.org/web/20160305034314/http://home.citycable.ch/pierrefleur/Jacques-Laporte/ibmrd1101E.pdf |url-status=dead }}
+* {{cite book |title=An Interconnect Processor with Emphasis on CORDIC Mode Operation |author-first=Michael A. |author-last=Liccardo |date=September 1968 |type=MSc thesis |publisher=[[University of California, Berkeley]], Department of Electrical Engineering |location=Berkeley, CA, USA |oclc=500565168 }}
+* {{cite patent |country=US |number=3576983A |status=patent |title=Digital calculator system for computing square roots |pubdate=1971-05-04 |gdate=1971-05-04 |fdate=1968-10-02 |pridate=1968-10-02 |inventor1-first=David S. |inventor1-last=Cochran |assign1=[[Hewlett-Packard Co.]]}} ([https://patents.google.com/patent/US3576983])
+* {{cite journal |author-first=Tien Chi |author-last=Chen |author-link=Tien Chi Chen |title=Automatic Computation of Exponentials, Logarithms, Ratios, and Square Roots |journal=[[IBM Journal of Research and Development]] |date=July 1972 |volume=16 |issue=4 |issn=0018-8646 |doi=10.1147/rd.164.0380 |pages=380–388 |url=http://home.citycable.ch/pierrefleur/Jacques-Laporte/chen.pdf |access-date=2016-01-02 |archive-date=2016-08-12  |archive-url=https://web.archive.org/web/20160812131940/http://home.citycable.ch/pierrefleur/Jacques-Laporte/chen.pdf |url-status=dead }}
+* {{cite journal |author-first=William<!-- Bill --> E. |author-last=Egbert |title=Personal Calculator Algorithms I: Square Roots |journal=[[Hewlett-Packard Journal]] |publisher=[[Hewlett-Packard]] |location=Palo Alto, California, USA |volume=28 |issue=9 |date=May 1977 |pages=22–24 |url=http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1977-05.pdf |access-date=2016-01-02 |archive-date=2015-12-18  |archive-url=https://web.archive.org/web/20151218024130/http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1977-05.pdf |url-status=dead }} ([http://www.hparchive.com/Journals/HPJ-1977-05.pdf])
+* {{cite journal |author-first=William<!-- Bill --> E. |author-last=Egbert |title=Personal Calculator Algorithms II: Trigonometric Functions |journal=[[Hewlett-Packard Journal]] |publisher=[[Hewlett-Packard]] |location=Palo Alto, California, USA |volume=28 |issue=10 |date=June 1977 |pages=17–20 |url=http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1977-06.pdf |access-date=2016-01-02 |archive-date=2016-03-04  |archive-url=https://web.archive.org/web/20160304113302/http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1977-06.pdf |url-status=dead }} ([http://www.hparchive.com/Journals/HPJ-1977-06.pdf])
+* {{cite journal |author-first=William<!-- Bill --> E. |author-last=Egbert |title=Personal Calculator Algorithms III: Inverse Trigonometric Functions |journal=[[Hewlett-Packard Journal]] |publisher=[[Hewlett-Packard]] |location=Palo Alto, California, USA |volume=29 |issue=3 |date=November 1977 |pages=22–23 |url=http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1977-11.pdf |access-date=2016-01-02 |archive-date=2016-03-04  |archive-url=https://web.archive.org/web/20160304110115/http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1977-11.pdf |url-status=dead }} ([http://www.hparchive.com/Journals/HPJ-1977-11.pdf])
+* {{cite journal |author-first=William<!-- Bill --> E. |author-last=Egbert |title=Personal Calculator Algorithms IV: Logarithmic Functions |journal=[[Hewlett-Packard Journal]] |publisher=[[Hewlett-Packard]] |location=Palo Alto, California, USA |volume=29 |issue=8 |date=April 1978 |pages=29–32 |url=http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1978-04.pdf |access-date=2016-01-02 |archive-date=2016-03-04  |archive-url=https://web.archive.org/web/20160304050327/http://www.hpl.hp.com/hpjournal/pdfs/IssuePDFs/1978-04.pdf |url-status=dead }} ([http://www.hparchive.com/Journals/HPJ-1978-04.pdf])
+* {{cite journal |author-last=Senzig |author-first=Don |title=Calculator Algorithms |journal=IEEE Compcon Reader Digest |id=IEEE Catalog No. 75 CH 0920-9C |pages=139–141 |publisher=[[IEEE]] |date=1975}}
+* {{citation |author-first=Vladimir D.<!-- В. Д. --> |author-last=Baykov<!-- Байков --> |trans-title=Problems of elementary functions evaluation based on digit by digit (CORDIC) technique |script-title=ru:Вопросы исследования вычисления элементарных функций по методу «цифра за цифрой» |language=ru |type=PhD thesis |publisher=Leningrad State University of Electrical Engineering |date=1972 |url=http://baykov.de/cordic1972.htm}}
+* {{cite book |author-first1=Vladimir D.<!-- В. Д. --> |author-last1=Baykov<!-- Байков --> |author-first2=Vladimir B.<!-- В. Б. --> |author-last2=Smolov<!-- Смолов --> |trans-title=Hardware implementation of elementary functions in computers |script-title=ru:Аппаратурная реализация элементарных функций в ЦВМ |title=Apparaturnaja realizatsija elementarnikh funktsij v CVM |language=ru |publisher=Leningrad State University |date=1975<!-- 96 pages --> |url=http://baykov.de/cordic1975.htm |access-date=2019-03-02 |url-status=live |archive-url=https://web.archive.org/web/20190302110929/http://baykov.de/Cordic1975.htm |archive-date=2019-03-02}}
+* {{cite book |author-first1=Vladimir D.<!-- В. Д. --> |author-last=Baykov<!-- Байков --> |author-first2=S. A.<!-- С. А. --> |author-last2=Seljutin<!-- Селютин --> |trans-title=Elementary functions evaluation in microcalculators |script-title=ru:Вычисление элементарных функций в ЭКВМ |language=ru |location=Moscow |publisher=Radio i svjaz (Радио и связь) |date=1982}}
+* {{cite book |author-first1=Vladimir D.<!-- В. Д. --> |author-last1=Baykov<!-- Байков --> |author-first2=Vladimir B.<!-- В. Б. --> |author-last2=Smolov<!-- Смолов --> |trans-title=Special-purpose processors: iterative algorithms and structures |script-title=ru:Специализированные процессоры: итерационные алгоритмы и структуры |language=ru |location=Moscow |publisher=Radio i svjaz (Радио и связь) |date=1985 |url=http://baykov.de/cordic1985.htm}}
+* {{cite journal |title=CORDIC constants in TI 58/59 ROM |journal=Texas Instruments Software Exchange Newsletter |editor-first=Thomas |editor-last=Coppens |volume=2 |issue=2 |date=January<!-- January/February/March --> 1980 |publisher=TISOFT |location=Kapellen, Belgium}}
+* {{cite journal |title=Natural logarithm computation scheme / e<sup>x</sup> computing scheme / 1/x computing scheme |journal=Texas Instruments Software Exchange Newsletter |editor-first=Thomas |editor-last=Coppens |volume=2 |issue=3 |date=April–June 1980 |publisher=TISOFT |location=Kapellen, Belgium}} (about CORDIC in [[TI-58]]/[[TI-59]])
+* {{cite news |title=Transcendental function algorithms |author=TI Graphic Products Team |date=1995 |orig-date=1993 |publisher=[[Texas Instruments]], Consumer Products |location=Dallas, Texas, USA |url=https://perso.uclouvain.be/alphonse.magnus/num1a/cordic.txt<!-- former original links: http://devil.ece.utexas.edu/cordic.html, ftp://ftp.ti.com/pub/graph-ti/calc-apps/info/cordic.txt 2016-01-02 --> |access-date=2019-03-02 |url-status=live |archive-url=https://web.archive.org/web/20160317004110/https://perso.uclouvain.be/alphonse.magnus/num1a/cordic.txt |archive-date=2016-03-17}}
+* {{cite book |author-first1=Günter |author-last1=Jorke |author-first2=Bernhard |author-last2=Lampe |author-first3=Norbert |author-last3=Wengel |title=Arithmetische Algorithmen der Mikrorechentechnik |edition=1 |publisher=[[:de:VEB Verlag Technik|VEB Verlag Technik]] |location=Berlin, Germany |date=1989 |language=de |pages=219, 261, 271–296 |isbn=3341005153 |id={{EAN|9783341005156}}. MPN 5539165. License 201.370/4/89 |url=https://books.google.com/books?id=DqYWAQAAMAAJ |access-date=2015-12-01}}
+* {{cite journal |author-first=M. |author-last=Zechmeister |title=Solving Kepler's equation with CORDIC double iterations |journal=Monthly Notices of the Royal Astronomical Society |year=2021 |volume=500|issue=1|publisher=Institut für Astrophysik, Georg-August-Universität |location=Göttingen, Germany |pages=109–117|doi=10.1093/mnras/staa2441 |doi-access=free |arxiv=2008.02894 }}
+* {{cite book |author-first=Marvin E. |author-last=Frerking |title=Digital Signal Processing in Communication Systems |date=1994 |edition=1}}<!-- Springer US, softcover reprint of hardcover 1st ed. 1994 (2010) ISBN 144194740X / 978-1441947406 -->
+* {{cite journal |author-first=Vitit |author-last=Kantabutra |title=On hardware for computing exponential and trigonometric functions |journal=[[IEEE Transactions on Computers]] |volume=45 |issue=3 |pages=328–339 |date=1996|doi=10.1109/12.485571 |bibcode=1996ITCmp..45..328K }}
+* {{cite book |title=Low Power and Low Complexity Shift-and-Add Based Computations |chapter=6.5 Sine and Cosine Functions |author-first=Kenny |author-last=Johansson |series=Linköping Studies in Science and Technology |date=2008 |type=Dissertation thesis |id=No. 1201 |publisher=Department of Electrical Engineering, [[Linköping University]]<!-- printed by LiU-Tryck --> |publication-place=Linköping, Sweden |edition=1 |isbn=978-91-7393-836-5 |issn=0345-7524 |pages=244–250 |url=https://www.diva-portal.org/smash/get/diva2:1733/FULLTEXT02.pdf |access-date=2021-08-23 |url-status=live |archive-url=https://web.archive.org/web/20170813200504/http://www.diva-portal.org/smash/get/diva2:1733/FULLTEXT02.pdf |archive-date=2017-08-13}} (x+268 pages)
+* {{cite journal |author-first=Ayan |author-last=Banerjee |title=FPGA realization of a CORDIC based FFT processor for biomedical signal processing |journal=Microprocessors and Microsystems |volume=25 |issue=3 |pages=131–142 |location=Kharagpur, West Bengal, India |date=2001 |doi=10.1016/S0141-9331(01)00106-5}}
+* {{cite web |title=Pseudo-Division Algorithms for Floating-Point Logarithms and Exponentials |author-first=William Morton |author-last=Kahan |author-link=William Morton Kahan |date=2002-05-20 |publisher=[[University of California]] |location=Berkeley, CA, USA |url=http://www.cims.nyu.edu/~dbindel/class/cs279/logexp.pdf |access-date=2016-01-15 |archive-url=https://web.archive.org/web/20151225080205/http://cims.nyu.edu/%7Edbindel/class/cs279/logexp.pdf |archive-date=25 December 2015 |url-status=dead }}
+* {{cite web |title=Implementation of a CORDIC Algorithm in a Digital Down-Converter |author-first=Chris K. |author-last=Cockrum |date=Fall 2008 |url=http://cockrum.net/Cockrum_Fall_2008_Final_Paper.pdf}}
+* {{cite journal |title=CORDIC Architectures: A Survey |author-first1=Boppana |author-last1=Lakshmi |author-first2=Anindya Sundar |author-last2=Dhar |publisher=Department of Electronics and Electrical Communication Engineering, Indian Institute of Technology |location=Kharagpur, West Bengal, India |journal=VLSI Design |volume=2010 |pages=1–19 |publication-date=2010-10-10 |date=2009-10-06 |id=794891 |doi=10.1155/2010/794891 |doi-access=free }}
+* {{cite web |title=Advanced Arithmetic Techniques |author-first=John J. G. |author-last=Savard |date=2018 |orig-date=2006 |work=quadibloc |url=http://www.quadibloc.com/comp/cp0202.htm |access-date=2018-07-16 |url-status=live |archive-url=https://web.archive.org/web/20180703001722/http://www.quadibloc.com/comp/cp0202.htm |archive-date=2018-07-03}}
+
+==External links==
+{{Wikiversity|CORDIC Hardware Implementations}}
+* {{citation |title=CORDIC Bibliography Site |author-first=Shaoyun |author-last=Wang |date=July 2011|url=http://devil.ece.utexas.edu/|url-status=dead|archive-url=https://web.archive.org/web/20001017173921/http://devil.ece.utexas.edu/|archive-date=17 October 2000|via=Chandra Department of Electrical and Computer Engineering, Cockrell School of Engineering, The University of Texas at Austin}}
+* [https://github.com/srohit0/CORDIC Soft CORDIC IP (verilog HDL code)]
+* [https://web.archive.org/web/20001017173921/http://devil.ece.utexas.edu/ ''CORDIC Bibliography Site'']
+* [http://www.emesystems.com/BS2mathC.htm BASIC Stamp, CORDIC math implementation]
+* [http://srohit.googlepages.com CORDIC implementation in verilog]
+* [http://portal.acm.org/citation.cfm?id=626526.627179 CORDIC Vectoring with Arbitrary Target Value]
+* [http://code.activestate.com/recipes/576792 Python CORDIC implementation] {{Webarchive|url=https://web.archive.org/web/20170317235046/http://code.activestate.com/recipes/576792/ |date=2017-03-17  }}
+* [http://www.dcs.gla.ac.uk/~jhw/cordic/ Simple C code for fixed-point CORDIC]
+* [https://web.archive.org/web/20200928150815 Tutorial and MATLAB Implementation – Using CORDIC to Estimate Phase of a Complex Number (archive.org)]
+* [http://bibix.nl/index.php?menu1=arx_ip Descriptions of hardware CORDICs in Arx with testbenches in C++ and VHDL]
+* [https://www.allaboutcircuits.com/technical-articles/an-introduction-to-the-cordic-algorithm/ An Introduction to the CORDIC algorithm]
+* [https://cockrum.net/files/Cockrum_Fall_2008_Final_Paper.pdf Implementation of the CORDIC Algorithm in a Digital Down-Converter]
+*Implementation of the CORDIC Algorithm: [https://www.st.com/content/ccc/resource/technical/document/design_tip/group0/9c/20/c6/67/50/10/4e/9d/DM00441302/files/DM00441302.pdf/jcr:content/translations/en.DM00441302.pdf fixed point C code for trigonometric and hyperbolic functions], [https://www.st.com/content/ccc/resource/technical/document/design_tip/group0/ec/b8/82/cc/a0/e5/49/0d/DM00446487/files/DM00446487.pdf/jcr:content/translations/en.DM00446487.pdf C code for test and performance verification]
+
+{{CPU_technologies}}
+
+{{DEFAULTSORT:Cordic}}
+[[Category:Digit-by-digit algorithms]]
+[[Category:Shift-and-add algorithms]]
+[[Category:Root-finding algorithms]]
+[[Category:Computer arithmetic]]
+[[Category:Numerical analysis]]
+[[Category:Trigonometry]]

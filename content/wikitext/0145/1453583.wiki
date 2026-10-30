@@ -1,0 +1,315 @@
+<!-- wikipedia: en
+     page: 1453583
+     title: Predicate transformer semantics
+     revision: 1374898040
+     timestamp: 2026-09-14T18:38:51Z
+     history: https://en.wikipedia.org/w/index.php?curid=1453583&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374898040 -->
+{{Short description|Reformulation of Floyd-Hoare logic}}
+{{Semantics}}
+
+'''Predicate transformer semantics''' were introduced by [[Edsger W. Dijkstra|Edsger Dijkstra]] in his seminal paper "[[Guarded commands|Guarded commands, nondeterminacy and formal derivation of programs]]". They define the semantics of an [[imperative programming]] paradigm by assigning to each ''statement'' in this language a corresponding ''predicate transformer'': a [[total function]] between two ''[[predicate (mathematical logic)|predicates]]'' on the [[state space]] of the statement. In this sense, predicate transformer semantics are a kind of [[denotational semantics]]. Actually, in [[guarded commands]], Dijkstra uses only one kind of predicate transformer: the well-known '''weakest preconditions''' (see below).
+
+Moreover, predicate transformer semantics are a reformulation of [[Floyd–Hoare logic]]. Whereas Hoare logic is presented as a [[deductive system]], predicate transformer semantics (either by '''weakest-preconditions''' or by '''strongest-postconditions''' see below) are '''complete strategies''' to build [[Deductive reasoning|valid deductions]] of Hoare logic. In other words, they provide an effective [[algorithm]] to reduce the problem of verifying a Hoare triple to the problem of proving a [[First-order logic|first-order formula]]. Technically, predicate transformer semantics perform a kind of [[symbolic execution]] of statements into predicates: execution runs ''backward'' in the case of weakest-preconditions, or runs ''forward'' in the case of strongest-postconditions.
+
+== Weakest preconditions ==
+=== Definition ===
+For a statement ''S'' and a [[postcondition]] ''R'', a '''weakest precondition''' is a predicate ''Q'' such that for any [[precondition]] {{mvar|P}}, <math>\{ P \} S \{ R \}</math> if and only if <math> P \Rightarrow Q </math>. In other words, it is the "loosest" or least restrictive requirement needed to guarantee that ''R'' holds after ''S''. Uniqueness follows easily from the definition: If both ''Q'' and ''Q' '' are weakest preconditions, then by the definition <math>\{ Q' \} S \{ R \}</math> so <math> Q' \Rightarrow Q </math> and <math>\{ Q \} S \{ R \}</math> so <math> Q \Rightarrow Q' </math>, and thus <math> Q=Q' </math>. We often use <math>wp(S, R)</math> to denote the weakest precondition for statement ''S'' with respect to a postcondition ''R''.
+
+=== Conventions ===
+We use '' T '' to denote the predicate that is everywhere true and '' F '' to denote the one that is everywhere false.  We shouldn't at least conceptually confuse ourselves with a Boolean expression defined by some language syntax, which might also contain true and false as Boolean scalars. For such scalars we need to do a type coercion such that we have T = predicate(true) and F = predicate(false). Such a promotion is carried out often casually, so people tend to take T as true and F as false.
+
+=== Skip ===
+{| border="1" cellpadding="10"
+|<math>wp(\texttt{skip},R) \ =\ R</math>
+|}
+
+=== Abort ===
+{| border="1" cellpadding="10"
+|<math>wp(\texttt{abort},R) \ =\ \texttt{F}</math>
+|}
+
+=== Assignment ===
+We give below two equivalent weakest-preconditions for the assignment statement. In these formulas, <math>R[x \leftarrow E]</math> is a copy of ''R'' where [[Free variables and bound variables|free occurrences]] of ''x'' are replaced by ''E''. Hence, here, expression ''E'' is implicitly coerced into a ''valid term'' of the underlying logic: it is thus a ''pure'' expression, totally defined, terminating and without side effect. 
+* version 1:
+{| border="1" cellpadding="10"
+|<math> wp(x := E, R)\ =\ (\forall y. y = E \Rightarrow R[x \leftarrow y])</math>
+where ''y'' is a fresh variable and not free in E and R (representing the final value of variable ''x'')
+|} 
+* version 2:
+Provided that '' E '' is well defined, we apply the so-called ''one-point'' rule on version 1.  Then
+{| border="1" cellpadding="10"
+| <math> wp(x := E, R)\ =\ R[x \leftarrow E] </math> 
+|}
+
+The first version avoids a potential duplication of ''x'' in ''R'', whereas the second version is simpler when there is at most a single occurrence of ''x'' in ''R''. The first version also reveals a deep duality between weakest-precondition and strongest-postcondition (see below).
+
+An example of a valid calculation of ''wp'' (using version 2) for assignments with integer valued variable ''x'' is:
+:<math>\begin{array}{rcl}
+wp(x := x - 5, x > 10) & = & x - 5 > 10 \\
+                       & \Leftrightarrow & x > 15 
+\end{array}</math>
+
+This means that, for the postcondition ''x > 10'' to be true after the assignment, the precondition ''x > 15'' must be true before the assignment. This is also the "weakest precondition", in that it is the "weakest" restriction on the value of ''x'' which makes ''x > 10'' true after the assignment.
+
+=== Sequence ===
+{| border="1" cellpadding="10"
+|<math>wp(S_1;S_2,R)\ =\ wp(S_1,wp(S_2,R))</math>
+|}
+
+For example,
+:<math>\begin{array}[t]{rcl} wp(x:=x-5;x:=x*2\ ,\ x>20) & = & wp(x:=x-5,wp(x:=x*2, x > 20))\\ 
+  & = & wp(x:=x-5,x*2 > 20)\\
+  & = & (x-5)*2 > 20\\
+  & = & x > 15
+  \end{array}</math>
+
+=== Conditional ===
+{| border="1" cellpadding="10"
+|<math>wp(\texttt{if}\ E\ \texttt{then}\ S_1\ \texttt{else}\ S_2\ \texttt{end},R)\ =\ (E \Rightarrow wp(S_1,R)) \wedge (\neg E \Rightarrow wp(S_2,R))</math>
+|}
+
+As example:
+:<math>\begin{array}[t]{rcl} 
+wp(\texttt{if}\ x < y\ \texttt{then}\ x:=y\ \texttt{else}\;\;\texttt{skip}\;\;\texttt{end},\ x \geq y)
+& = & (x < y \Rightarrow wp(x:=y,x\geq y))\ \wedge\ (\neg (x<y) \Rightarrow wp(\texttt{skip}, x \geq y))\\
+& = & (x < y \Rightarrow y\geq y) \ \wedge\ (\neg (x<y) \Rightarrow x \geq y)\\
+& \Leftrightarrow & \texttt{true}
+\end{array}</math>
+
+=== While loop ===
+
+==== Partial correctness ====
+Ignoring termination for a moment, we can define the rule for the ''weakest liberal precondition'', denoted ''wlp'', using a predicate ''INV'', called the [[Loop invariant|Loop ''INV''ariant]], typically supplied by a programmer:
+{| border="1" cellpadding="10"
+|<math>wlp(\texttt{while}\ E\ \texttt{do}\ S\ \texttt{done}, R)\Leftarrow \ \textit{INV} \ \ \text{if} \ \ 
+            \begin{array}[t]{l} 
+            
+            \\ (E \wedge \textit{INV} \Rightarrow wlp(S,\textit{INV}))\\
+            \wedge\ (\neg E \wedge \textit{INV} \Rightarrow R)
+          \end{array}
+ </math> 
+|}
+
+==== Total correctness ====
+To show total correctness, we also have to show that the loop terminates. For this we define a [[well-founded relation]] on the state space denoted as ({{mvar|wfs}}, <)  and define a variant function {{mvar|vf}} , such that we have:
+{| border="1" cellpadding="10"
+|<math>wp(\texttt{while}\ E\ \texttt{do}\ S\ \texttt{done}, R)\ \Leftarrow \ \textit{INV} \ \ \text{if} \ \ \ \ 
+           \begin{array}[t]{l} 
+            \\ (E \wedge \textit{INV} \Rightarrow \textit{vf} \in \textit{wfs}) \\ 
+            \wedge\ (E \wedge \textit{INV} \wedge v=\textit{vf} \Rightarrow wp(S,\textit{INV} \wedge v < \textit{vf})) \\
+            \wedge\ (\neg E \wedge \textit{INV} \Rightarrow R)
+          \end{array}</math> 
+where {{mvar|v}} is a fresh tuple of variables
+|}
+Informally, in the above conjunction of three formulas: 
+* the first one means that the variant must be part of the well-founded relation before entering the loop;
+* the second one means that the body of the loop (i.e. statement {{mvar|S}}) must preserve the invariant and reduce the variant; 
+* the last one means that the loop postcondition {{mvar|R}} must be established when the loop finishes.
+
+However, the conjunction of those three is not a necessary condition.  Exactly, we have
+
+{| border="1" cellpadding="10"
+|<math>wp(\texttt{while}\ E\ \texttt{do}\ S\ \texttt{done}, R)\ \ = \ \ \text{the strongest solution of the recursive equation}  \  
+           \begin{array}[t]{l} 
+            Z: [Z\equiv(E\wedge wp(S, Z)) \vee (\neg E \wedge R)]
+          \end{array}</math> 
+|}
+
+=== Non-deterministic guarded commands ===
+Actually, Dijkstra's [[Guarded Command Language]] (GCL) is an extension of the simple imperative language given until here with non-deterministic statements. Indeed, GCL aims to be a formal notation to define algorithms. Non-deterministic statements represent choices left to the actual implementation (in an effective programming language): properties proved on non-deterministic statements are ensured for all possible choices of implementation. In other words, weakest-preconditions of non-deterministic statements ensure
+* that there exists a terminating execution (e.g. there exists an implementation),
+* and, that the final state of all terminating execution satisfies the postcondition.
+
+The definitions of weakest-precondition given above (in particular for '''while-loop''') preserve this property.
+
+==== Selection ====
+Selection is a generalization of '''if''' statement:
+{| border="1" cellpadding="10"
+|<math>wp(\texttt{if}\ E_1 \rightarrow S_1 \ [\!] \ \ldots\ [\!]\ E_n \rightarrow S_n\ \texttt{fi}, R)\ = \begin{array}[t]{l}
+    (E_1 \vee \ldots \vee E_n) \\
+    \wedge\ (E_1 \Rightarrow wp(S_1,R)) \\
+    \ldots\\
+    \wedge\ (E_n \Rightarrow wp(S_n,R)) \\
+    \end{array}</math>
+|}{{Citation needed|reason=The first clause seems inconsistent with how "assume"'s wp is handled|date=November 2021}}
+
+Here, when two guards <math>E_i</math> and <math>E_j</math> are simultaneously true, then execution of this statement can run any of the associated statement <math>S_i</math> or <math>S_j</math>.
+
+==== Repetition ====
+Repetition is a generalization of '''while''' statement in a similar way.
+
+=== Specification statement ===
+[[Refinement calculus]] extends GCL with the notion of ''specification statement''. Syntactically, we prefer to write a specification statement as 
+      <math> x:l[pre,  post] </math>
+which specifies a computation that starts in a state satisfying ''pre'' and is guaranteed 
+to end in a state satisfying ''post''
+by changing only ''x''.  We call <math>l</math> a logical constant employed to aid in a specification.  For example, we can specify a computation that increment x by 1 as 
+
+      <math> x:l[x = l, x = l+1] </math>
+
+Another example is a computation of a square root of an integer.
+      <math> x:l[x = l^2, x = l] </math>
+The specification statement appears like a primitive in the sense that it does not contain other statements. However, it is very expressive, as ''pre'' and ''post'' are arbitrary predicates. Its weakest precondition is as follows.
+
+{| border="1" cellpadding="10"
+|<math>wp(x:l[pre,  post], R) = (\exists l:: pre) \wedge (\forall s: (\forall l : pre : post(x \leftarrow s)) : 
+R(x \leftarrow s)) </math>
+where ''s'' is fresh.
+|}
+
+It combines Morgan's syntactic idea with the sharpness idea by Bijlsma, Matthews and Wiltink.<ref>Chen, Wei and Udding, Jan Tijmen, "The Specification Statement Refined" WUCS-89-37 (1989). 
+https://openscholarship.wustl.edu/cse_research/749</ref>  The very advantage of this is its capability of defining wp of goto L and other jump statements.<ref>Chen, Wei, "A wp Characterization of Jump Statements," 2021 International Symposium on Theoretical Aspects of Software Engineering (TASE), 2021, pp. 15-22. doi: 10.1109/TASE52547.2021.00019.</ref>
+
+=== Goto statement ===
+Formalization of jump statements like ''{{mono|goto}} L'' takes a very long bumpy process. A common belief seems to indicate the goto statement could only be argued operationally. This is probably due to a failure to recognize that ''{{mono|goto}} L'' is actually miraculous (i.e. non-strict) and does not follow Dijkstra's coined Law of Miracle Excluded, as stood in itself. But it enjoys an extremely simple operational view from the weakest precondition perspective, which was unexpected. We define
+		
+{| border="1" cellpadding="10"
+|<math>wp(\texttt{goto}\ L, R)  =   wpL</math>
+where ''wpL'' is the weakest precondition at label ''L''.
+|}
+
+For ''{{mono|goto}} L'' execution transfers control to label ''L'' at which the weakest precondition must hold. The way that ''wpL'' is referred to in the rule should not be taken as a big surprise. It is only {{tmath|wp(L:S, Q)}} for some ''Q'' computed to that point. This is like any wp rules, using constituent statements to give wp definitions, even though ''goto L'' appears a primitive. The rule does not require the uniqueness for locations where ''wpL'' holds within a program, so theoretically it allows the same label to appear in multiple locations as long as the weakest precondition at each location is the same wpL. The goto statement can jump to any of such locations. This actually justifies that we could place the same labels at the same location multiple times, as {{tmath|S(L:L: S1)}}, which is the same as {{tmath|S(L: S1)}}. Also, it does not imply any scoping rule, thus allowing a jump into a loop body, for example. Let us calculate wp of the following program S, which has a jump into the loop body.
+
+      wp(do x > 0 → L: x := x-1 od;  if x < 0 → x := -x; goto L ⫿ x ≥ 0 → skip fi,  post)
+    =   { sequential composition and alternation rules }
+      wp(do x > 0 → L: x := x-1 od, (x<0 ∧ wp(x := -x; goto L, post)) ∨ (x ≥  0 ∧ post)
+    =   { sequential composition, goto, assignment rules }
+      wp(do x > 0 → L: x := x-1 od, x<0 ∧ wpL(x ← -x) ∨ x≥0 ∧ post)
+    =   { repetition rule }
+      the strongest solution of 
+               Z: [ Z ≡ x > 0 ∧ wp(L: x := x-1, Z) ∨ x < 0 ∧ wpL(x ← -x) ∨ x=0 ∧ post ]    
+    =  { assignment rule, found wpL = Z(x ← x-1) }
+      the strongest solution of 
+               Z: [ Z ≡ x > 0 ∧ Z(x ← x-1) ∨ x < 0 ∧ Z(x ← x-1) (x ← -x) ∨ x=0 ∧ post]
+    =  { substitution }
+      the strongest solution of 
+               Z:[ Z ≡ x > 0 ∧ Z(x ← x-1) ∨ x < 0 ∧ Z(x ← -x-1) ∨ x=0 ∧ post ]
+    =  { solve the equation by approximation }
+      post(x ← 0)
+
+Therefore,
+ wp(S, post) = post(x ← 0).
+
+== Other predicate transformers ==
+=== Weakest liberal precondition {{anchor|Weakest liberal precondition}} ===
+An important variant of the weakest precondition is the '''weakest liberal precondition''' 
+<math>wlp(S, R)</math>, which yields the weakest condition under which ''S'' either does not terminate or establishes ''R''. It therefore differs from ''wp'' in not guaranteeing termination. Hence it corresponds to [[Hoare logic]] in partial correctness: for the statement language given above, ''wlp'' differs with ''wp'' only on '''while-loop''', in not requiring a variant (see above).
+
+=== Strongest postcondition ===
+Given ''S'' a statement and ''R'' a [[precondition]] (a predicate on the initial state), then
+<math>sp(S, R)</math> is their '''strongest-postcondition''': it implies any postcondition satisfied by the final state of any execution of S, 
+for any initial state satisfying R. In other words, a Hoare triple <math>\{ P \} S \{ Q \}</math> is provable in Hoare logic if and only if the predicate below hold:
+:<math>\forall x, sp(S,P) \Rightarrow Q</math>
+Usually, '''strongest-postconditions''' are used in partial correctness.
+Hence, we have the following relation between weakest-liberal-preconditions and strongest-postconditions: 
+:<math>(\forall x, P \Rightarrow wlp(S,Q)) \ \Leftrightarrow\ (\forall x, sp(S,P) \Rightarrow Q)</math>
+
+Thus, ''wlp'' and ''sp'' form a [[Galois connection]] where ''wlp'' is the upper adjoint and ''sp'' is the lower adjoint.
+
+For example, on assignment we have:
+{| border="1" cellpadding="10"
+|<math> sp(x := E, R)\ =\ \exists y, x=E[x \leftarrow y] \wedge R[x \leftarrow y]</math>
+where ''y'' is fresh
+|}
+
+Above, the logical variable ''y'' represents the initial value of variable ''x''.
+Hence,
+:<math> sp(x := x - 5, x > 15)\ =\ \exists y, x = y - 5 \wedge y > 15 \ \Leftrightarrow \ x > 10</math>
+
+On sequence, it appears that ''sp'' runs forward (whereas ''wp'' runs backward):
+{| border="1" cellpadding="10"
+|<math>sp(S_1;S_2\ ,\ R)\ =\ sp(S_2,sp(S_1,R))</math>
+|}
+
+=== Win and sin predicate transformers ===
+[[Leslie Lamport]] has suggested ''win'' and ''sin'' as ''predicate transformers'' for [[concurrent programming]].<ref>{{cite journal |author-link=Leslie Lamport |first=Leslie |last=Lamport |title=''win'' and ''sin'': Predicate Transformers for Concurrency |journal=[[ACM Transactions on Programming Languages and Systems]] |volume=12 |issue=3 |pages=396–428 |date=July 1990 |doi=10.1145/78969.78970 |url=http://research.microsoft.com/users/lamport/pubs/pubs.html#lamport-win |s2cid=209901}}</ref>
+
+== Predicate transformers properties ==
+This section presents some characteristic properties of predicate transformers.<ref>{{cite book |first1=Ralph-Johan |last1=Back |first2=Joakim |last2=Wright |title=Refinement Calculus: A Systematic Introduction |url=https://books.google.com/books?id=cAEMCAAAQBAJ |orig-date=1978 |year=2012 |publisher=Springer |isbn=978-1-4612-1674-2 |series=Texts in Computer Science}}</ref> Below, ''S'' denotes a predicate transformer (a function between two predicates on the state space) and ''P'' a predicate. For instance, ''S(P)'' may denote ''wp(S,P)'' or ''sp(S,P)''. We keep ''x'' as the variable of the state space.
+
+=== Monotonic ===
+Predicate transformers of interest (''wp'', ''wlp'', and ''sp'') are [[monotonic]]. A predicate transformer ''S'' is '''monotonic''' if and only if:
+:<math>(\forall x: P : Q) \Rightarrow (\forall x: S(P): S(Q))</math>
+
+This property is related to the [[Hoare logic#Consequence rule|consequence rule of Hoare logic]].
+
+=== Strict ===
+A predicate transformer ''S'' is '''strict''' iff:
+:<math>S(\texttt{F})\ \Leftrightarrow\ \texttt{F}</math>
+
+For instance, ''wp'' is artificially made strict, whereas ''wlp'' is generally not. In particular, if statement ''S'' may not terminate then
+<math>wlp(S,\texttt{F})</math> is satisfiable. We have
+:<math>wlp(\texttt{while}\ \texttt{true}\ \texttt{do}\ \texttt{skip}\ \texttt{done}, \texttt{F}) \ \Leftrightarrow \texttt{T}</math>
+Indeed, '''T''' is a valid invariant of that loop.
+
+The non-strict but monotonic or conjunctive predicate transformers are called miraculous and can also be used to define a class of programming constructs, in particular, jump statements, which Dijkstra cared less about. Those jump statements include straight goto L, break and continue in a loop and return statements in a procedure body, exception handling, etc. It turns out that all jump statements are executable miracles,<ref>Chen, Wei, "Exit Statements are Executable Miracles" WUCS-91-53 (1991). https://openscholarship.wustl.edu/cse_research/671</ref> i.e. they can be implemented but not strict.
+
+=== Terminating ===
+A predicate transformer ''S'' is '''terminating''' if:
+:<math>S(\texttt{T})\ \Leftrightarrow\ \texttt{T}</math>
+
+Actually, this terminology makes sense only for strict predicate transformers: indeed, <math>wp(S,\texttt{T})</math> is the weakest-precondition ensuring termination of ''S''.
+
+It seems that naming this property '''non-aborting''' would be more appropriate: in total correctness, non-termination is abortion, whereas in partial correctness, it is not.
+
+=== Conjunctive ===
+A predicate transformer ''S'' is '''conjunctive''' iff:
+:<math>S(P \wedge Q)\ \Leftrightarrow\ S(P) \wedge S(Q)</math>
+
+This is the case for <math>wp(S,.)</math>, even if statement ''S'' is non-deterministic as a selection statement or a specification statement.
+
+=== Disjunctive ===
+A predicate transformer ''S'' is '''disjunctive''' iff:
+:<math>S(P \vee Q)\ \Leftrightarrow\ S(P) \vee S(Q)</math>
+
+This is generally not the case of <math>wp(S,.)</math> when ''S'' is non-deterministic. Indeed, consider a non-deterministic statement ''S'' choosing an arbitrary Boolean. This statement is given here as the following ''selection statement'':
+:<math>S\ =\ \texttt{if}\ \texttt{true} \rightarrow x:=0\  [\!]\  \texttt{true} \rightarrow x:=1\ \texttt{fi}</math>
+
+Then, <math>wp(S,R)</math> reduces to the formula <math>R[x \leftarrow 0] \wedge R[x \leftarrow 1]</math>.
+
+Hence, <math>wp(S,\ x=0 \vee x=1)</math> reduces to the ''tautology'' <math>(0=0 \vee 0=1) \wedge (1=0 \vee 1=1)</math>
+
+Whereas, the formula <math>wp(S, x=0) \vee wp(S,x=1)</math>
+reduces to the ''wrong proposition'' <math>(0=0 \wedge 1=0) \vee (1=0 \wedge 1=1)</math>.
+
+== Applications ==
+* Computations of weakest-preconditions are largely used to statically check [[Assertion (computing)|assertions in programs]] using a theorem-prover (like a [[satisfiability modulo theories]] (SMT) solver or [[interactive theorem proving]] assistant): see [[Frama-C]] or [[ESC/Java]]2.
+* Unlike many other semantic formalisms, predicate transformer semantics was not designed as an investigation into foundations of computation. Rather, it was intended to provide programmers with a methodology to develop their programs as "correct by construction" in a "calculation style". This "top-down" style was advocated by Dijkstra<ref>{{cite journal |first=Edsger W. |last=Dijkstra |title=A Constructive Approach to the Problem of Program Correctness |journal=BIT Numerical Mathematics |volume=8 |issue=3 |pages=174–186 |year=1968 |doi=10.1007/bf01933419 |s2cid=62224342}}</ref> and [[Niklaus Wirth|N. Wirth]].<ref>{{cite journal |author-link=Niklaus Wirth |first=N. |last=Wirth |title=Program development by stepwise refinement |journal=Comm. ACM |volume=14 |issue=4 |pages=221–7 |date=April 1971 |doi=10.1145/362575.362577 |hdl=20.500.11850/80846 |s2cid=13214445 |url=http://e-collection.library.ethz.ch/eserv/eth:3026/eth-3026-01.pdf |hdl-access=free}}</ref> It has been formalized further by [[Ralph-Johan Back|R.-J. Back]] and others in the [[refinement calculus]]. Some tools like [[B-Method]] now provide [[automated reasoning]] to promote this methodology.
+* In the meta-theory of [[Hoare logic]], weakest-preconditions appear as a key notion in the proof of [[Gödel's completeness theorem|relative completeness]].<ref>[https://github.com/rocq-community/hoare-tut A Tutorial on Reflecting in Coq the generation of Hoare proof obligations (tutorial on Hoare Logic)]: a [[Rocq]] [[Library (computing)library]], giving a simple but formal proof that [[Hoare logic]] is sound and complete with respect to an [[operational semantics]].</ref>
+
+== Beyond predicate transformers ==
+=== Weakest-preconditions and strongest-postconditions of imperative expressions ===
+In predicate transformers semantics, expressions are restricted to terms of the logic (see above). However, this restriction seems too strong for most existing programming languages, where expressions may have side effects (call to a function having a side effect), may not terminate or abort (like ''division by zero''). There are many proposals to extend weakest-preconditions or strongest-postconditions for imperative expression languages and in particular for [[Monad (functional programming)|monads]].
+
+Among them, ''Hoare Type Theory'' combines [[Hoare logic]] for a [[Haskell]]-like language, [[separation logic]] and [[type theory]].<ref>{{cite journal |first1=Aleksandar |last1=Nanevski |first2=Greg |last2=Morrisett |first3=Lars |last3=Birkedal |title=Hoare Type Theory, Polymorphism and Separation |journal=Journal of Functional Programming |volume=18 |issue=5–6 |pages=865–911 |date=September 2008 |doi=10.1017/S0956796808006953 |s2cid=6956622 |url=https://www.cambridge.org/core/services/aop-cambridge-core/content/view/D6B10CE5025B4C895C2FC7438393195E/S0956796808006953a.pdf/hoare_type_theory_polymorphism_and_separation1.pdf}}</ref> This system is implemented as a [[Rocq]] library named ''Ynot''.<ref>[http://ynot.cs.harvard.edu/ Ynot] a [[Rocq]] library implementing Hoare Type Theory.</ref> In this language, [[Evaluation strategy|evaluation of expressions]] corresponds to computations of ''strongest-postconditions''.
+
+=== Probabilistic predicate transformers ===
+''Probabilistic predicate transformers'' are an extension of predicate transformers for [[Randomized algorithm|probabilistic programs]]. Such programs have many uses in [[cryptography]] (hiding information using some randomized noise), [[distributed computing]] (symmetry breaking).<ref>{{cite journal |first1=Carroll |last1=Morgan |first2=Annabelle |last2=McIver|author2-link=Annabelle McIver |first3=Karen |last3=Seidel |title=Probabilistic Predicate Transformers |journal=[[ACM Transactions on Programming Languages and Systems]] |volume=18 |issue=3 |pages=325–353 |date=May 1996 |doi=10.1145/229542.229547 |url=http://www.cse.unsw.edu.au/~carrollm/probs/Papers/Morgan-96d.pdf |s2cid=5812195}}</ref>
+
+== See also ==
+* [[Axiomatic semantics]] – includes predicate transformer semantics
+* [[Dynamic logic (modal logic)|Dynamic logic]] – where predicate transformers appear as modalities
+* [[Formal semantics of programming languages]] – an overview
+
+== Notes ==
+{{Reflist}}
+
+== References ==
+{{Refbegin}}
+*{{cite book |first=J. W. |last=de Bakker |title=Mathematical theory of program correctness |url=https://archive.org/details/mathematicaltheo0000bakk |url-access=registration |publisher=Prentice-Hall |year=1980 |isbn=978-0-13-562132-5}}
+*{{cite journal |first1=Marcello M. |last1=Bonsangue |first2=Joost N. |last2=Kok |title=The weakest precondition calculus: Recursion and duality |journal=[[Formal Aspects of Computing]] |volume=6 |issue=6 |pages=788–800 |date=November 1994 |doi=10.1007/BF01213603 |s2cid=40323488}}
+*{{cite journal |first=Edsger W. |last=Dijkstra |title=Guarded Commands, Nondeterminacy and Formal Derivation of Programs |journal=Comm. ACM |volume=18 |issue=8 |pages=453–7 |date=August 1975 |doi=10.1145/360933.360975 |s2cid=1679242 |doi-access=free}}
+*{{cite book |first=Edsger W. |last=Dijkstra |title=A Discipline of Programming |url=https://archive.org/details/disciplineofprog0000dijk |url-access=registration |publisher=Prentice Hall |year=1976 |isbn=978-0-613-92411-5}} – A systematic introduction to a version of the guarded command language with many worked examples
+*{{cite book |first1=Edsger W. |last1=Dijkstra |author2-link=Carel S. Scholten |last2=Scholten |first2=Carel S. |title=Predicate Calculus and Program Semantics |publisher=Springer-Verlag |year=1990 |isbn=978-0-387-96957-2 |series=Texts and Monographs in Computer Science |url=https://books.google.com/books?id=cCbjBwAAQBAJ}} – A more abstract, formal and definitive treatment
+*{{cite book |author-link=David Gries |first=David |last=Gries |title=The Science of Programming |url=https://archive.org/details/scienceofprogram0000grie |url-access=registration |publisher=Springer-Verlag |year=1981 |isbn=978-0-387-96480-5}}
+{{Refend}}
+
+{{Edsger Dijkstra}}
+
+{{DEFAULTSORT:Predicate Transformer Semantics}}
+[[Category:Formal methods]]
+[[Category:Program logic]]
+[[Category:Edsger W. Dijkstra]]
+[[Category:Articles with example code]]

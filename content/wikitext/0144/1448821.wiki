@@ -1,0 +1,665 @@
+<!-- wikipedia: en
+     page: 1448821
+     title: Conjugate gradient method
+     revision: 1373884805
+     timestamp: 2026-09-08T14:43:41Z
+     history: https://en.wikipedia.org/w/index.php?curid=1448821&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373884805 -->
+{{Short description|Mathematical optimization algorithm}}
+[[File:Conjugate gradient illustration.svg|right|thumb|A comparison of the convergence of [[gradient descent]] with optimal step size (in green) and conjugate vector (in red) for minimizing a quadratic function associated with a given linear system. Conjugate gradient, assuming exact arithmetic, converges in at most ''n'' steps, where ''n'' is the size of the matrix of the system (here ''n''&nbsp;=&nbsp;2).]]
+
+In [[mathematics]], the '''conjugate gradient method''' is an [[algorithm]] for the [[numerical solution]] of particular [[system of linear equations|systems of linear equations]], namely those whose matrix is [[positive-semidefinite matrix|positive-semidefinite]]. The conjugate gradient method is often implemented as an [[iterative method|iterative algorithm]], applicable to [[sparse matrix|sparse]] systems that are too large to be handled by a direct implementation or other direct methods such as the [[Cholesky decomposition]]. Large sparse systems often arise when numerically solving [[partial differential equation]]s or optimization problems.
+
+The conjugate gradient method can also be used to solve unconstrained [[Mathematical optimization|optimization]] problems such as [[energy minimization]]. It is commonly attributed to [[Magnus Hestenes]] and [[Eduard Stiefel]],<ref>{{cite journal|last = Hestenes|author-link = Magnus Hestenes|first = Magnus R.  |author2=Stiefel, Eduard |author-link2=Eduard Stiefel |title = Methods of Conjugate Gradients for Solving Linear Systems|journal = Journal of Research of the National Bureau of Standards|volume = 49|issue = 6|page = 409|date=December 1952|doi=10.6028/jres.049.044|doi-access = free| url=http://nvlpubs.nist.gov/nistpubs/jres/049/6/V49.N06.A08.pdf}}</ref><ref>{{cite thesis |degree=PhD |last=Straeter |first=T. A. |date=1971 |title=On the Extension of the Davidon–Broyden Class of Rank One, Quasi-Newton Minimization Methods to an Infinite Dimensional Hilbert Space with Applications to Optimal Control Problems |via=NASA Technical Reports Server |publisher=North Carolina State University |hdl=2060/19710026200 |hdl-access=free}}</ref> who programmed it on the [[Z4 (computer)|Z4]],<ref>{{cite book |author-link=Ambros Speiser |last=Speiser |first=Ambros |trans-chapter=Konrad Zuse and the ERMETH: A worldwide comparison of architectures |chapter=Konrad Zuse und die ERMETH: Ein weltweiter Architektur-Vergleich |editor-first=Hans Dieter |editor-last=Hellige |title=Geschichten der Informatik. Visionen, Paradigmen, Leitmotive |location=Berlin |publisher=Springer |year=2004 |isbn=3-540-00217-0 |page=185 |language=de }}</ref> and extensively researched it.<ref name="BP">{{cite book |author-link=Boris T. Polyak |last=Polyak |first=Boris |title=Introduction to Optimization |year=1987 |language=en |url=https://www.researchgate.net/publication/342978480 }}</ref><ref name="AG">{{cite book |author-link=Anne Greenbaum |last=Greenbaum |first=Anne |title=Iterative Methods for Solving Linear Systems |year=1997 |language=en |isbn=978-0-89871-396-1 |doi=10.1137/1.9781611970937  }}</ref>
+
+The [[biconjugate gradient method]] provides a generalization to non-symmetric matrices. Various [[nonlinear conjugate gradient method]]s seek minima of nonlinear optimization problems.
+
+==Description of the problem addressed by conjugate gradients==
+
+Suppose we want to solve the [[system of linear equations]]
+
+:<math>\mathbf{A}\mathbf{x} = \mathbf{b}</math>
+
+for the vector <math>\mathbf{x}</math>, where the known <math>n \times n</math> matrix <math>\mathbf{A}</math> is [[Symmetric matrix|symmetric]] (i.e., <math>\mathbf{A}^\mathsf{T} = \mathbf{A} </math>), [[positive-definite matrix|positive-definite]] (i.e. <math>\mathbf{x}^\mathsf{T}\mathbf{Ax} > 0 </math> for all non-zero vectors <math>\mathbf{x}</math> in <math>\mathbb{R}^n</math>), and [[real number|real]], and <math>\mathbf{b}</math> is known as well. We denote the unique solution of this system by <math>\mathbf{x}_*</math>.
+
+==Derivation as a direct method==
+
+{{Main|Derivation of the conjugate gradient method}}
+
+The conjugate gradient method can be derived from several different perspectives, including specialization of the conjugate direction method for optimization, and variation of the [[Arnoldi iteration|Arnoldi]]/[[Lanczos iteration|Lanczos]] iteration for [[eigenvalue]] problems. Despite differences in their approaches, these derivations share a common topic—proving the orthogonality of the residuals and conjugacy of the search directions. These two properties are crucial to developing the well-known succinct formulation of the method.
+
+We say that two non-zero vectors <math>\mathbf{u}</math> and <math>\mathbf{v}</math> are conjugate (with respect to <math>\mathbf{A}</math>) if
+
+:<math> \mathbf{u}^\mathsf{T} \mathbf{A} \mathbf{v} = 0. </math>
+
+Since <math>\mathbf{A}</math> is symmetric and positive-definite, the left-hand side defines an [[inner product space|inner product]]
+
+:<math>
+ \mathbf{u}^\mathsf{T} \mathbf{A} \mathbf{v} =
+ \langle \mathbf{u}, \mathbf{v} \rangle_\mathbf{A} :=
+ \langle \mathbf{A} \mathbf{u}, \mathbf{v}\rangle =
+ \langle \mathbf{u}, \mathbf{A}^\mathsf{T} \mathbf{v}\rangle =
+ \langle \mathbf{u}, \mathbf{A}\mathbf{v}\rangle.
+</math>
+
+Two vectors are conjugate if and only if they are orthogonal with respect to this inner product. Being conjugate is a symmetric relation: if <math>\mathbf{u}</math> is conjugate to <math>\mathbf{v}</math>, then <math>\mathbf{v}</math> is conjugate to <math>\mathbf{u}</math>. Suppose that
+
+:<math>P = \{ \mathbf{p}_1, \dots, \mathbf{p}_n \}</math>
+
+is a set of <math>n</math> mutually conjugate vectors with respect to <math>\mathbf{A}</math>, i.e. <math>\mathbf{p}_i^\mathsf{T} \mathbf{A} \mathbf{p}_j = 0</math> for all <math>i \neq j</math>. 
+Then <math>P</math> forms a [[basis (linear algebra)|basis]] for <math>\mathbb{R}^n</math>, and we may express the solution <math>\mathbf{x}_*</math> of <math>\mathbf{Ax} = \mathbf{b}</math> in this basis:
+
+:<math>\mathbf{x}_* = \sum^{n}_{i=1} \alpha_i \mathbf{p}_i \Rightarrow \mathbf{A} \mathbf{x}_* = \sum^{n}_{i=1} \alpha_i \mathbf{A} \mathbf{p}_i.</math>
+
+Left-multiplying the problem <math>\mathbf{Ax} = \mathbf{b}</math> with the vector <math>\mathbf{p}_k^\mathsf{T}</math> yields
+
+:<math>
+\mathbf{p}_k^\mathsf{T} \mathbf{b} 
+= \mathbf{p}_k^\mathsf{T} \mathbf{A} \mathbf{x}_* 
+= \sum^{n}_{i=1} \alpha_i \mathbf{p}_k^\mathsf{T} \mathbf{A} \mathbf{p}_i 
+= \sum^{n}_{i=1} \alpha_i \left \langle \mathbf{p}_k, \mathbf{p}_i \right \rangle_{\mathbf{A}} 
+= \alpha_k \left \langle \mathbf{p}_k, \mathbf{p}_k \right \rangle_{\mathbf{A}} </math>
+and so
+:<math>\alpha_k = \frac{\langle \mathbf{p}_k, \mathbf{b} \rangle}{\langle \mathbf{p}_k, \mathbf{p}_k \rangle_\mathbf{A}}.</math>
+
+This gives the following method<ref name="BP" /> for solving the equation <math>\mathbf{Ax} = \mathbf{b}</math>: find a sequence of <math>n</math> conjugate directions, and then compute the coefficients <math>\alpha_k</math>.
+
+==As an iterative method==
+
+If we choose the conjugate vectors <math>\mathbf{p}_k</math> carefully, then we may not need all of them to obtain a good approximation to the solution <math>\mathbf{x}_*</math>. So, we want to regard the conjugate gradient method as an iterative method. This also allows us to approximately solve systems where <math>n</math> is so large that the direct method would take too much time.
+ 
+We denote the initial guess for <math>\mathbf{x}_*</math> by <math>\mathbf{x}_0</math> (we can assume without loss of generality that <math>\mathbf{x}_0 = \mathbf{0}</math>, otherwise consider the system <math>\mathbf{Az} = \mathbf{b} - \mathbf{Ax}_0</math> instead). Starting with <math>\mathbf{x}_0</math> we search for the solution and in each iteration we need a metric to tell us whether we are closer to the solution <math>\mathbf{x}_*</math> (that is unknown to us). This metric comes from the fact that the solution <math>\mathbf{x}_*</math> is also the unique minimizer of the following [[quadratic function]]
+
+:<math> 
+  f(\mathbf{x}) = \tfrac12 \mathbf{x}^\mathsf{T} \mathbf{A}\mathbf{x} - \mathbf{x}^\mathsf{T} \mathbf{b}, \qquad \mathbf{x}\in\mathbb{R}^n \,. 
+</math>
+The existence of a unique minimizer is apparent as its [[Hessian matrix]] of second derivatives is symmetric positive-definite
+:<math>
+  \mathbf{H}(f(\mathbf{x})) = \mathbf{A} \,,
+</math>
+and that the minimizer (use <math>Df(\mathbf{x}) = 0</math>) solves the initial problem follows from its first derivative
+:<math>
+  \nabla f(\mathbf{x}) = \mathbf{A} \mathbf{x} - \mathbf{b} \,.
+</math>
+
+<!--  so if f('''x''') becomes smaller in an iteration it means that we are closer to {{math|'''x'''<sub>∗</sub>}}.Note that the +c has been added to the equation above. Without the c the trivial solution of x=0 is the minimum and the solution of the original equation. If x0 is the minimum, then the quadratic can be described as (x^T-x0^T)*A*(x-x0)-c0=0 (c0 is f at the minimum while x0 is the solution at the minimum). Expanding this you get x^T*X*x-x^T*b+c where b=2*A*x0 and c=x0^T*A*x0-c0 ... wait a minute... for the purposes of minimization c0 does not matter... if this is the case then c0 could be selected such that c0=x0^T*A*x0 in which case the original form x^T*X*x-x^T*b is still valid... -->
+This suggests taking the first basis vector <math>\mathbf{p}_0</math> to be the negative of the gradient of <math>f</math> at <math>\mathbf{x} = \mathbf{x}_0</math>. The gradient of <math>f</math> equals <math>\mathbf{Ax} - \mathbf{b}</math>. Starting with an initial guess <math>\mathbf{x}_0</math>, this means we take <math>\mathbf{p}_0 = \mathbf{b} - \mathbf{Ax}_0 </math>. The other vectors in the basis will be conjugate to the gradient, hence the name ''conjugate gradient method''.  Note that <math>\mathbf{p}_0</math> is also the [[residual (numerical analysis)|residual]] provided by this initial step of the algorithm.
+
+Let <math>\mathbf{r}_k</math> be the [[residual (numerical analysis)|residual]] at the <math>k</math>th step:
+:<math> \mathbf{r}_k = \mathbf{b} - \mathbf{Ax}_k.</math>
+As observed above, <math>\mathbf{r}_k</math> is the negative gradient of <math>f</math> at <math>\mathbf{x}_k</math>, so the [[gradient descent]] method would require to move in the direction '''r'''<sub>''k''</sub>. Here, however, we insist that the directions <math>\mathbf{p}_k</math> must be conjugate to each other. A practical way to enforce this is by requiring that the next search direction be built out of the current residual and all previous search directions. The conjugation constraint is an orthonormal-type constraint and hence the algorithm can be viewed as an example of [[Gram–Schmidt process|Gram-Schmidt orthonormalization]]. This gives the following expression:
+:<math>\mathbf{p}_{k} = \mathbf{r}_{k} - \sum_{i < k}\frac{\mathbf{r}_{k}^\mathsf{T} \mathbf{A} \mathbf{p}_i}{\mathbf{p}_i^\mathsf{T}\mathbf{A} \mathbf{p}_i} \mathbf{p}_i</math>
+(see the picture at the top of the article for the effect of the conjugacy constraint on convergence). Following this direction, the next optimal location is given by
+:<math> \mathbf{x}_{k+1} = \mathbf{x}_k + \alpha_k \mathbf{p}_k </math>
+with 
+:<math> \alpha_{k} = \frac{\mathbf{p}_k^\mathsf{T} (\mathbf{b} - \mathbf{Ax}_k )}{\mathbf{p}_k^\mathsf{T} \mathbf{A} \mathbf{p}_k} = \frac{\mathbf{p}_{k}^\mathsf{T} \mathbf{r}_{k}}{\mathbf{p}_{k}^\mathsf{T} \mathbf{A} \mathbf{p}_{k}},  </math>
+
+where the last equality follows from the definition of <math>\mathbf{r}_k</math> .
+The expression for <math> \alpha_k </math> can be derived if one substitutes the expression for '''x'''<sub>''k''+1</sub> into ''f'' and minimizing it with respect to <math> \alpha_k </math>
+:<math>
+\begin{align}
+f(\mathbf{x}_{k+1}) &= f(\mathbf{x}_k + \alpha_k \mathbf{p}_k) =: g(\alpha_k)
+  \\
+g'(\alpha_k) &\overset{!}{=} 0
+  \quad \Rightarrow \quad
+  \alpha_{k} = \frac{\mathbf{p}_k^\mathsf{T} (\mathbf{b} - \mathbf{Ax}_k)}{\mathbf{p}_k^\mathsf{T} \mathbf{A} \mathbf{p}_k} \,.
+\end{align}
+</math>
+
+===The resulting algorithm===
+The above algorithm gives the most straightforward explanation of the conjugate gradient method.  Seemingly, the algorithm as stated requires storage of all previous searching directions and residual vectors, as well as many matrix–vector multiplications, and thus can be computationally expensive. However, a closer analysis<ref>{{Cite book |last=Botev |first=Zdravko I. |title=Data Science and Machine Learning: Mathematical and Statistical Methods |last2=Kroese |first2=Dirk P. |last3=Taimre |first3=Thomas |date= |publisher=CRC Press |year=2025 |isbn=978-1-032-48868-4 |edition=2nd |series= |location=Boca Raton; London |publication-date=2025 |pages=558–559 |language=English}}</ref>{{rp|p.558}} of the algorithm shows that <math>\mathbf{r}_i</math> is orthogonal to <math>\mathbf{r}_j</math>, i.e. <math>\mathbf{r}_i^\mathsf{T} \mathbf{r}_j=0 </math>, for <math>i \neq j</math>. And <math>\mathbf{p}_i</math> is <math>\mathbf{A}</math>-orthogonal to <math>\mathbf{p}_j</math>,   i.e. <math>\mathbf{p}_i^\mathsf{T} \mathbf{A} \mathbf{p}_j=0 </math>, for <math>i \neq j</math>. This can be regarded that as the algorithm progresses, <math>\mathbf{p}_i</math> and <math>\mathbf{r}_i</math> span the same [[Krylov subspace]], where <math>\mathbf{r}_i</math> form the orthogonal basis with respect to the standard inner product, and <math>\mathbf{p}_i</math> form the orthogonal basis with respect to the inner product induced by <math>\mathbf{A}</math>. Therefore, <math>\mathbf{x}_k</math> can be regarded as the projection of <math>\mathbf{x}</math> on the Krylov subspace.
+
+That is, if the CG method starts with <math>\mathbf{x}_0 = 0</math>, then<ref>{{Cite journal |last1=Paquette |first1=Elliot |last2=Trogdon |first2=Thomas |date=March 2023 |title=Universality for the Conjugate Gradient and MINRES Algorithms on Sample Covariance Matrices |url=https://onlinelibrary.wiley.com/doi/10.1002/cpa.22081 |journal=Communications on Pure and Applied Mathematics |language=en |volume=76 |issue=5 |pages=1085–1136 |doi=10.1002/cpa.22081 |issn=0010-3640|arxiv=2007.00640 }}</ref><math display="block">x_k =
+\mathrm{argmin}_{y \in \mathbb{R}^n}
+{\left\{(x_*-y)^{\top} A(x_*-y): y \in \operatorname{span}\left\{b, A b, \ldots, A^{k-1} b\right\}\right\}}</math> where <math>x_*</math> is the solution to <math>\mathbf{A} \mathbf{x}= \mathbf{b}</math>.
+
+The algorithm is detailed below for solving <math>\mathbf{A} \mathbf{x}= \mathbf{b}</math> where <math>\mathbf{A}</math> is a real, symmetric, positive-definite matrix. The input vector <math>\mathbf{x}_0</math> can be an approximate initial solution or <math>\mathbf{0}</math>. It is a different formulation of the exact procedure described above.
+
+:<math>\begin{align}
+& \mathbf{r}_0 := \mathbf{b} - \mathbf{A x}_0 \\
+& \hbox{if } \mathbf{r}_{0} \text{ is sufficiently small, then return } \mathbf{x}_{0} \text{ as the result}\\
+& \mathbf{p}_0 := \mathbf{r}_0 \\
+& k := 0 \\
+& \text{repeat} \\
+& \qquad \alpha_k := \frac{\mathbf{r}_k^\mathsf{T} \mathbf{r}_k}{\mathbf{p}_k^\mathsf{T} \mathbf{A p}_k}  \\
+& \qquad \mathbf{x}_{k+1} := \mathbf{x}_k + \alpha_k \mathbf{p}_k \\
+& \qquad \mathbf{r}_{k+1} := \mathbf{r}_k - \alpha_k \mathbf{A p}_k \\
+& \qquad \hbox{if } \mathbf{r}_{k+1} \text{ is sufficiently small, then exit loop} \\
+& \qquad \beta_k := \frac{\mathbf{r}_{k+1}^\mathsf{T} \mathbf{r}_{k+1}}{\mathbf{r}_k^\mathsf{T} \mathbf{r}_k} \\
+& \qquad \mathbf{p}_{k+1} := \mathbf{r}_{k+1} + \beta_k \mathbf{p}_k \\
+& \qquad k := k + 1 \\
+& \text{end repeat} \\
+& \text{return } \mathbf{x}_{k+1} \text{ as the result}
+\end{align}</math>
+
+This is the most commonly used algorithm. The same formula for <math>\beta_k</math> is also used in the Fletcher–Reeves [[nonlinear conjugate gradient method]].
+
+====Explicit residual calculation====
+The formulas <math>\mathbf{x}_{k+1} := \mathbf{x}_k + \alpha_k \mathbf{p}_k</math> and <math>\mathbf{r}_k := \mathbf{b} - \mathbf{A x}_k</math>, which both hold in exact arithmetic, make the formulas <math>\mathbf{r}_{k+1} := \mathbf{r}_k - \alpha_k \mathbf{A p}_k</math> and <math>\mathbf{r}_{k+1} := \mathbf{b} - \mathbf{A x}_{k+1}</math> mathematically equivalent. The former is used in the algorithm to avoid an extra multiplication by <math>\mathbf{A}</math> since the vector <math>\mathbf{A p}_k</math> is already computed to evaluate <math>\alpha_k</math>. The latter may be more accurate, substituting the explicit calculation <math>\mathbf{r}_{k+1} := \mathbf{b} - \mathbf{A x}_{k+1}</math> for the implicit one by the recursion subject to [[round-off error]] accumulation, and is thus recommended for an occasional evaluation.<ref>{{cite book | first=Jonathan R | last=Shewchuk |title=An Introduction to the Conjugate Gradient Method Without the Agonizing Pain |year=1994 |url=http://www.cs.cmu.edu/~quake-papers/painless-conjugate-gradient.pdf  }}</ref>
+
+A norm of the residual is typically used for stopping criteria. The norm of the explicit residual <math>\mathbf{r}_{k+1} := \mathbf{b} - \mathbf{A x}_{k+1}</math> provides a guaranteed level of accuracy both in exact arithmetic and in the presence of the [[rounding errors]], where convergence naturally stagnates. In contrast, the implicit residual <math>\mathbf{r}_{k+1} := \mathbf{r}_k - \alpha_k \mathbf{A p}_k</math> is known to keep getting smaller in amplitude well below the level of [[rounding errors]] and thus cannot be used to determine the stagnation of convergence.
+
+====Computation of alpha and beta====
+In the algorithm, <math>\alpha_k</math> is chosen such that <math>\mathbf{r}_{k+1}</math> is orthogonal to <math>\mathbf{r}_{k}</math>. The denominator is simplified from
+
+:<math>\alpha_k = \frac{\mathbf{r}_{k}^\mathsf{T} \mathbf{r}_{k}}{\mathbf{r}_{k}^\mathsf{T} \mathbf{A} \mathbf{p}_k} = \frac{\mathbf{r}_k^\mathsf{T} \mathbf{r}_k}{\mathbf{p}_k^\mathsf{T} \mathbf{A p}_k} </math>
+
+since <math>\mathbf{r}_{k+1} = \mathbf{p}_{k+1}-\mathbf{\beta}_{k}\mathbf{p}_{k}</math>. The <math>\beta_k</math> is chosen such that <math>\mathbf{p}_{k+1}</math> is conjugate to <math>\mathbf{p}_{k}</math>. Initially, <math>\beta_k</math> is
+
+:<math>\beta_k = - \frac{\mathbf{r}_{k+1}^\mathsf{T} \mathbf{A} \mathbf{p}_k}{\mathbf{p}_k^\mathsf{T} \mathbf{A} \mathbf{p}_k}</math>
+
+using
+
+:<math>\mathbf{r}_{k+1} = \mathbf{r}_{k} - \alpha_{k} \mathbf{A} \mathbf{p}_{k}</math>
+
+and equivalently
+
+<math> \mathbf{A} \mathbf{p}_{k} = \frac{1}{\alpha_{k}} (\mathbf{r}_{k} - \mathbf{r}_{k+1}), </math>
+
+the numerator of <math>\beta_k</math> is rewritten as
+
+:<math> \mathbf{r}_{k+1}^\mathsf{T} \mathbf{A} \mathbf{p}_k = \frac{1}{\alpha_k} \mathbf{r}_{k+1}^\mathsf{T} (\mathbf{r}_k - \mathbf{r}_{k+1}) = - \frac{1}{\alpha_k} \mathbf{r}_{k+1}^\mathsf{T} \mathbf{r}_{k+1} </math>
+
+because <math>\mathbf{r}_{k+1}</math> and <math>\mathbf{r}_{k}</math> are orthogonal by design. The denominator is rewritten as
+ 
+:<math> \mathbf{p}_k^\mathsf{T} \mathbf{A} \mathbf{p}_k = (\mathbf{r}_k + \beta_{k-1} \mathbf{p}_{k-1})^\mathsf{T} \mathbf{A} \mathbf{p}_k = \frac{1}{\alpha_k} \mathbf{r}_k^\mathsf{T} (\mathbf{r}_k - \mathbf{r}_{k+1}) = \frac{1}{\alpha_k} \mathbf{r}_k^\mathsf{T} \mathbf{r}_k </math>
+
+using that the search directions <math>\mathbf{p}_k</math> are conjugated and again that the residuals are orthogonal. This gives the <math>\beta</math> in the algorithm after cancelling <math>\alpha_k</math>.
+
+====Example code in [[Julia (programming language)]]====
+<syntaxhighlight lang="julia" line="1" start="1">
+using LinearAlgebra
+
+"""
+    x = conjugate_gradient(A, b, x0 = zero(b); atol=length(b)*eps(norm(b))
+
+Return the solution to `A * x = b` using the conjugate gradient method.
+`A` must be a positive definite matrix or other linear operator.
+`x0` is the initial guess for the solution (default is the zero vector).
+`atol` is the absolute tolerance on the magnitude of the residual `b - A * x`
+for convergence (default is machine epsilon).
+
+Returns the approximate solution vector `x`.
+"""
+function conjugate_gradient(
+    A, b::AbstractVector, x0::AbstractVector = zero(b); atol=length(b)*eps(norm(b))
+)
+    x = copy(x0)                        # initialize the solution
+    r = b - A * x0                      # initial residual
+    p = copy(r)                         # initial search direction
+    r²old = r' * r                      # squared norm of residual
+
+    k = 0
+    while r²old > atol^2                # iterate until convergence
+        Ap = A * p                      # search direction
+        α = r²old / (p' * Ap)           # step size
+        @. x += α * p                   # update solution
+        # Update residual:
+        if (k + 1) % 16 == 0            # every 16 iterations, recompute residual from scratch 
+            r .= b .- A * x             # to avoid accumulation of numerical errors
+        else
+            @. r -= α * Ap              # use the updating formula that saves one matrix-vector product
+        end
+        r²new = r' * r
+        @. p = r + (r²new / r²old) * p  # update search direction
+        r²old = r²new                   # update squared residual norm
+        k += 1
+    end
+
+    return x
+end
+</syntaxhighlight>
+
+====Example code in [[MATLAB]]====
+<syntaxhighlight lang="matlab" line="1" start="1">
+function x = conjugate_gradient(A, b, x0, tol)
+% Return the solution to `A * x = b` using the conjugate gradient method.
+% Reminder: A should be symmetric and positive definite.
+
+    if nargin < 4
+        tol = eps;
+    end
+
+    r = b - A * x0;
+    p = r;
+    rsold = r' * r;
+
+    x = x0;
+
+    while sqrt(rsold) > tol
+        Ap = A * p;
+        alpha = rsold / (p' * Ap);
+        x = x + alpha * p;
+        r = r - alpha * Ap;
+        rsnew = r' * r;
+        p = r + (rsnew / rsold) * p;
+        rsold = rsnew;
+    end
+end
+</syntaxhighlight>
+
+===Restarts===
+
+Setting <math>\beta_k=0</math> in the recurrence above makes the next
+search direction equal to the new residual,
+<math>\mathbf{p}_{k+1}=\mathbf{r}_{k+1}</math>, and hence restarts the
+conjugate gradient iteration from <math>\mathbf{x}_{k+1}</math>. A
+fixed-length restart after every <math>s</math> iterations can be
+implemented by setting <math>\beta_{js-1}=0</math> for
+<math>j=1,2,\ldots</math>. Restarts may slow convergence, but can improve
+stability when the conjugacy of the computed search directions is degraded
+by [[round-off error]].<ref name="BP" />
+
+====Forsythe conjecture====
+
+For a real [[Symmetric matrix|symmetric]]
+[[positive-definite matrix|positive-definite]] matrix <math>A</math>,
+applying <math>s</math> steps of the conjugate gradient method and then
+restarting is mathematically equivalent, in exact arithmetic, to the
+''optimum <math>s</math>-gradient method'' studied by
+[[George Forsythe]] in 1968.<ref name="Forsythe1968">{{cite journal
+ |last=Forsythe
+ |first=George E.
+ |title=On the asymptotic directions of the s-dimensional optimum gradient method
+ |journal=Numerische Mathematik
+ |volume=11
+ |pages=57–76
+ |year=1968
+ |doi=10.1007/BF02165472
+}}</ref><ref name="FaberLiesenTichy2023">{{cite journal
+ |last1=Faber
+ |first1=Vance
+ |last2=Liesen
+ |first2=Jörg
+ |last3=Tichý
+ |first3=Petr
+ |title=On the Forsythe conjecture
+ |journal=BIT Numerical Mathematics
+ |volume=63
+ |at=Article 49
+ |year=2023
+ |doi=10.1007/s10543-023-00991-x
+ |doi-access=free
+}}</ref>
+
+Let <math>\mathbf{r}^{(j)}</math> denote the residual at the beginning of
+the <math>j</math>th restart cycle and, when it is nonzero, define its
+normalized direction by
+
+:<math>\mathbf{y}_j=
+\frac{\mathbf{r}^{(j)}}{\lVert\mathbf{r}^{(j)}\rVert}.</math>
+
+Forsythe conjectured that, for every fixed restart length
+<math>2\leq s<d(A)</math>, where <math>d(A)</math> is the degree of the
+[[minimal polynomial (linear algebra)|minimal polynomial]] of
+<math>A</math>, the even and odd subsequences
+<math>(\mathbf{y}_{2j})</math> and
+<math>(\mathbf{y}_{2j+1})</math> each converge to a single limiting
+direction, unless the restarted method terminates.<ref
+name="Forsythe1968" /><ref name="FaberLiesenTichy2023" /> The case <math>s=1</math> is the
+[[Gradient descent#Solution of a linear system|steepest descent method]],
+for which the corresponding asymptotic two-cycle behavior had already been
+proved.<ref name="FaberLiesenTichy2023" /> A 2026 preprint by Colbrook, Stepaniants, and Townsend presents a Lean verified proof of the conjecture for all restart lengths.<ref name="Complete2026">Matthew J. Colbrook, George Stepaniants, and Alex Townsend (2026). ''A Complete Resolution of Forsythe's Conjecture for Restarted Conjugate Gradients''.[https://arxiv.org/abs/2609.04659 arXiv:2609.04659] [math.NA]. Zenodo, version 2, [https://doi.org/10.5281/zenodo.22557261 doi:10.5281/zenodo.22557261].</ref>
+
+===Numerical example===
+
+Consider the linear system '''Ax''' = '''b''' given by
+
+:<math>\mathbf{A} \mathbf{x}= \begin{bmatrix} 4 & 1 \\ 1 & 3 \end{bmatrix} \begin{bmatrix} x_1 \\ x_2 \end{bmatrix} = \begin{bmatrix} 1 \\ 2 \end{bmatrix},</math>
+
+we will perform two steps of the conjugate gradient method beginning with the initial guess
+
+:<math>\mathbf{x}_0 = \begin{bmatrix} 2 \\ 1 \end{bmatrix}</math>
+
+in order to find an approximate solution to the system.
+
+====Solution====
+For reference, the exact solution is 
+:<math> \mathbf{x} = \begin{bmatrix} \frac{1}{11} \\\\ \frac{7}{11} \end{bmatrix} \approx \begin{bmatrix} 0.0909 \\\\ 0.6364 \end{bmatrix}</math>
+Our first step is to calculate the residual vector '''r'''<sub>0</sub> associated with '''x'''<sub>0</sub>.  This residual is computed from the formula '''r'''<sub>0</sub> = '''b''' - '''Ax'''<sub>0</sub>, and in our case is equal to
+
+:<math>\mathbf{r}_0 = \begin{bmatrix} 1 \\ 2 \end{bmatrix} - 
+\begin{bmatrix} 4 & 1 \\ 1 & 3 \end{bmatrix}
+\begin{bmatrix} 2 \\ 1 \end{bmatrix} = 
+\begin{bmatrix}-8 \\ -3 \end{bmatrix} = \mathbf{p}_0.</math>
+
+Since this is the first iteration, we will use the residual vector '''r'''<sub>0</sub> as our initial search direction '''p'''<sub>0</sub>; the method of selecting '''p'''<sub>''k''</sub> will change in further iterations.
+
+We now compute the scalar {{math|''α''<sub>0</sub>}} using the relationship
+
+:<math> \alpha_0 = \frac{\mathbf{r}_0^\mathsf{T} \mathbf{r}_0}{\mathbf{p}_0^\mathsf{T} \mathbf{A p}_0} = \frac{\begin{bmatrix} -8 & -3 \end{bmatrix} \begin{bmatrix} -8 \\ -3 \end{bmatrix}}{  \begin{bmatrix} -8 & -3 \end{bmatrix} \begin{bmatrix} 4 & 1 \\ 1 & 3 \end{bmatrix} \begin{bmatrix} -8 \\ -3 \end{bmatrix}  } =\frac{73}{331}\approx0.2205</math>
+
+We can now compute '''x'''<sub>1</sub> using the formula
+
+:<math>\mathbf{x}_1 = \mathbf{x}_0 + \alpha_0\mathbf{p}_0 = \begin{bmatrix} 2 \\ 1 \end{bmatrix} + \frac{73}{331} \begin{bmatrix} -8 \\ -3 \end{bmatrix} \approx \begin{bmatrix} 0.2356 \\ 0.3384 \end{bmatrix}.</math>
+
+This result completes the first iteration, the result being an "improved" approximate solution to the system, '''x'''<sub>1</sub>. We may now move on and compute the next residual vector '''r'''<sub>1</sub> using the formula
+
+:<math>\mathbf{r}_1 = \mathbf{r}_0 - \alpha_0 \mathbf{A} \mathbf{p}_0 = \begin{bmatrix} -8 \\ -3 \end{bmatrix} - \frac{73}{331} \begin{bmatrix} 4 & 1 \\ 1 & 3 \end{bmatrix} \begin{bmatrix} -8 \\ -3 \end{bmatrix} \approx \begin{bmatrix} -0.2810 \\ 0.7492 \end{bmatrix}.</math>
+
+Our next step in the process is to compute the scalar {{math|''β''<sub>0</sub>}} that will eventually be used to determine the next search direction '''p'''<sub>1</sub>.
+
+:<math>\beta_0 = \frac{\mathbf{r}_1^\mathsf{T} \mathbf{r}_1}{\mathbf{r}_0^\mathsf{T} \mathbf{r}_0} \approx \frac{\begin{bmatrix} -0.2810 & 0.7492 \end{bmatrix} \begin{bmatrix} -0.2810 \\ 0.7492 \end{bmatrix}}{\begin{bmatrix} -8 & -3 \end{bmatrix} \begin{bmatrix} -8 \\ -3 \end{bmatrix}} = 0.0088.</math>
+
+Now, using this scalar {{math|''β''<sub>0</sub>}}, we can compute the next search direction '''p'''<sub>1</sub> using the relationship
+
+:<math>\mathbf{p}_1 = \mathbf{r}_1 + \beta_0 \mathbf{p}_0 \approx \begin{bmatrix} -0.2810 \\ 0.7492 \end{bmatrix} + 0.0088 \begin{bmatrix} -8 \\ -3 \end{bmatrix} = \begin{bmatrix} -0.3511 \\ 0.7229 \end{bmatrix}.</math>
+
+We now compute the scalar {{math|''α''<sub>1</sub>}} using our newly acquired '''p'''<sub>1</sub> using the same method as that used for {{math|''α''<sub>0</sub>}}.
+
+:<math> \alpha_1 = \frac{\mathbf{r}_1^\mathsf{T} \mathbf{r}_1}{\mathbf{p}_1^\mathsf{T} \mathbf{A p}_1} \approx \frac{\begin{bmatrix} -0.2810 & 0.7492 \end{bmatrix} \begin{bmatrix} -0.2810 \\ 0.7492 \end{bmatrix}}{  \begin{bmatrix} -0.3511 & 0.7229 \end{bmatrix} \begin{bmatrix} 4 & 1 \\ 1 & 3 \end{bmatrix} \begin{bmatrix} -0.3511 \\ 0.7229 \end{bmatrix}  } = 0.4122.</math>
+
+Finally, we find '''x'''<sub>2</sub> using the same method as that used to find '''x'''<sub>1</sub>.
+
+:<math>\mathbf{x}_2 = \mathbf{x}_1 + \alpha_1 \mathbf{p}_1 \approx \begin{bmatrix} 0.2356 \\ 0.3384 \end{bmatrix} + 0.4122 \begin{bmatrix} -0.3511 \\ 0.7229 \end{bmatrix} = \begin{bmatrix} 0.0909 \\ 0.6364 \end{bmatrix}.</math>
+
+The result, '''x'''<sub>2</sub>, is a "better" approximation to the system's solution than '''x'''<sub>1</sub> and '''x'''<sub>0</sub>.  If exact arithmetic were to be used in this example instead of limited-precision, then the exact solution would theoretically have been reached after ''n'' = 2 iterations (''n'' being the order of the system).
+
+==Finite Termination Property==
+
+Under exact arithmetic, the number of iterations required is no more than the order of the matrix. This behavior is known as the '''finite termination property''' of the conjugate gradient method. It refers to the method's ability to reach the exact solution of a linear system in a finite number of steps—at most equal to the dimension of the system—when exact arithmetic is used. This property arises from the fact that, at each iteration, the method generates a residual vector that is orthogonal to all previous residuals. These residuals form a mutually orthogonal set.
+
+In an ''n''-dimensional space, it is impossible to construct more than ''n'' linearly independent and mutually orthogonal vectors unless one of them is the zero vector. Therefore, once a zero residual appears, the method has reached the solution and must terminate. This ensures that the conjugate gradient method converges in at most ''n'' steps.
+
+To demonstrate this, consider the system:
+
+<math>
+A = \begin{bmatrix}
+3 & -2 \\
+-2 & 4
+\end{bmatrix}, \quad
+\mathbf{b} = \begin{bmatrix} 1 \\ 1 \end{bmatrix}
+</math>
+
+We start from an initial guess <math>\mathbf{x}_0 = \begin{bmatrix} 1 \\ 2 \end{bmatrix}</math>. Since <math>A</math> is symmetric positive-definite and the system is 2-dimensional, the conjugate gradient method should find the exact solution in no more than 2 steps. The following MATLAB code demonstrates this behavior:
+
+<syntaxhighlight lang="matlab">
+A = [3, -2; -2, 4];
+x_true = [1; 1];
+b = A * x_true;
+
+x = [1; 2];             % initial guess
+r = b - A * x;
+p = r;
+
+for k = 1:2
+    Ap = A * p;
+    alpha = (r' * r) / (p' * Ap);
+    x = x + alpha * p;
+    r_new = r - alpha * Ap;
+    beta = (r_new' * r_new) / (r' * r);
+    p = r_new + beta * p;
+    r = r_new;
+end
+
+disp('Exact solution:');
+disp(x);
+</syntaxhighlight>
+
+The output confirms that the method reaches <math>\begin{bmatrix} 1 \\ 1 \end{bmatrix}</math> after two iterations, consistent with the theoretical prediction. This example illustrates how the conjugate gradient method behaves as a direct method under idealized conditions.
+
+=== Application to Sparse Systems===
+
+The finite termination property also has practical implications in solving large sparse systems, which frequently arise in scientific and engineering applications. For instance, discretizing the two-dimensional Laplace equation <math>\nabla^2 u = 0</math> using finite differences on a uniform grid leads to a sparse linear system <math>A \mathbf{x} = \mathbf{b}</math>, where <math>A</math> is symmetric and positive definite.
+
+Using a <math>5 \times 5</math> interior grid yields a <math>25 \times 25</math> system, and the coefficient matrix <math>A</math> has a five-point stencil pattern. Each row of <math>A</math> contains at most five nonzero entries corresponding to the central point and its immediate neighbors. For example, the matrix generated from such a grid may look like:
+
+<math>
+A = \begin{bmatrix}
+4 & -1 & 0 & \cdots & -1 & 0 & \cdots \\
+-1 & 4 & -1 & \cdots & 0 & 0 & \cdots \\
+0 & -1 & 4 & -1 & 0 & 0 & \cdots \\
+\vdots & \vdots & \ddots & \ddots & \ddots & \vdots \\
+-1 & 0 & \cdots & -1 & 4 & -1 & \cdots \\
+0 & 0 & \cdots & 0 & -1 & 4 & \cdots \\
+\vdots & \vdots & \cdots & \cdots & \cdots & \ddots
+\end{bmatrix}
+</math>
+
+Although the system dimension is 25, the conjugate gradient method is theoretically guaranteed to terminate in at most 25 iterations under exact arithmetic. In practice, convergence often occurs in far fewer steps due to the matrix's spectral properties. This efficiency makes CGM particularly attractive for solving large-scale systems arising from partial differential equations, such as those found in heat conduction, fluid dynamics, and electrostatics.
+
+==Convergence properties==
+The conjugate gradient method can theoretically be viewed as a direct method, as in the absence of [[round-off error]] it produces the exact solution after a finite number of iterations, which is not larger than the size of the matrix. In practice, the exact solution is never obtained since the conjugate gradient method is unstable with respect to even small perturbations, e.g., most directions are not in practice conjugate, due to a degenerative nature of generating the Krylov subspaces.
+
+As an [[iterative method]], the conjugate gradient method monotonically (in the energy norm) improves approximations <math>\mathbf{x}_{k}</math> to the exact solution and may reach the required tolerance after a relatively small (compared to the problem size) number of iterations. The improvement is typically linear and its speed is determined by the [[condition number]] <math>\kappa(A)</math> of the system matrix <math>A</math>: the larger <math>\kappa(A)</math> is, the slower the improvement.<ref name=saad1996iterative>{{cite book|last=Saad|first=Yousef|title=Iterative methods for sparse linear systems|year=2003|publisher=Society for Industrial and Applied Mathematics|location=Philadelphia, Pa.|isbn=978-0-89871-534-7|pages=[https://archive.org/details/iterativemethods0000saad/page/195 195]|edition=2nd|url=https://archive.org/details/iterativemethods0000saad/page/195}}</ref>
+
+However, an interesting case appears when the eigenvalues are spaced logarithmically for a large symmetric matrix. For example, let <math>A = Q D Q^T</math> where <math>Q</math> is a random orthogonal matrix and <math>D</math> is a diagonal matrix with eigenvalues ranging from <math>\lambda_n = 1</math> to <math>\lambda_1 = 10^6</math>, spaced logarithmically. Despite the finite termination property of CGM, where the exact solution should theoretically be reached in at most <math>n</math> steps, the method may exhibit stagnation in convergence. In such a scenario, even after many more iterations—e.g., ten times the matrix size—the error may only decrease modestly (e.g., to <math>10^{-5}</math>). Moreover, the iterative error may oscillate significantly, making it unreliable as a stopping condition. This poor convergence is not explained by the condition number alone (e.g., <math>\kappa_2(A) = 10^6</math>), but rather by the eigenvalue distribution itself. When the eigenvalues are more evenly spaced or randomly distributed, such convergence issues are typically absent, highlighting that CGM performance depends not only on <math>\kappa(A)</math> but also on how the eigenvalues are distributed.<ref>{{Cite book | author1=Holmes, M.| title=Introduction to Scientific Computing and Data Analysis, 2nd Ed | year=2023 | publisher=Springer | isbn=978-3-031-22429-4}}</ref>
+
+If <math>\kappa(A)</math> is large,  [[preconditioning]] is commonly used to replace the original system <math>\mathbf{A x}-\mathbf{b} = 0</math> with <math>\mathbf{M}^{-1}(\mathbf{A x}-\mathbf{b}) = 0</math> such that <math>\kappa(\mathbf{M}^{-1}\mathbf{A})</math> is smaller than <math>\kappa(\mathbf{A})</math>, see below.
+
+=== Convergence theorem ===
+
+Define a subset of polynomials as
+:<math>
+  \Pi_k^* := \left\lbrace \ p \in \Pi_k \ : \ p(0)=1 \ \right\rbrace \,,
+</math>
+where <math> \Pi_k </math> is the set of [[Polynomial ring|polynomials]] of maximal degree <math> k </math>.
+
+Let <math> \left( \mathbf{x}_k \right)_k </math> be the iterative approximations of the exact solution <math> \mathbf{x}_* </math>, and define the errors as <math> \mathbf{e}_k := \mathbf{x}_k - \mathbf{x}_* </math>.
+Now, the rate of convergence can be approximated as <ref name="BP" /><ref>{{Cite book |title=Iterative solution of large sparse systems of equations |last=Hackbusch |first=W. |isbn=978-3-319-28483-5 |edition=2nd |location=Switzerland |publisher=Springer |oclc=952572240|date=2016-06-21 }}</ref>
+:<math>
+\begin{align}
+  \left\| \mathbf{e}_k \right\|_\mathbf{A}
+  &= \min_{p \in \Pi_k^*}  \left\| p(\mathbf{A}) \mathbf{e}_0 \right\|_\mathbf{A}
+  \\
+  &\leq \min_{p \in \Pi_k^*} \,  \max_{ \lambda \in \sigma(\mathbf{A})} | p(\lambda) | \  \left\|  \mathbf{e}_0 \right\|_\mathbf{A}
+  \\
+  &\leq 2 \left( \frac{ \sqrt{\kappa(\mathbf{A})}-1 }{ \sqrt{\kappa(\mathbf{A})}+1 } \right)^k \ \left\|  \mathbf{e}_0 \right\|_\mathbf{A}
+  \\
+  &\leq 2 \exp\left(\frac{-2k}{\sqrt{\kappa(\mathbf{A})}}\right) \ \left\|  \mathbf{e}_0 \right\|_\mathbf{A}
+  \,,
+\end{align}
+</math>
+where <math> \sigma(\mathbf{A}) </math> denotes the [[Spectrum of a matrix|spectrum]], and <math> \kappa(\mathbf{A}) </math> denotes the [[condition number]].
+
+This shows <math>k = \tfrac{1}{2}\sqrt{\kappa(\mathbf{A})} \log\left(\left\|  \mathbf{e}_0 \right\|_\mathbf{A} \varepsilon^{-1}\right)</math> iterations suffices to reduce the error to <math>2\varepsilon</math> for any <math>\varepsilon>0</math>.
+
+Note, the important limit when <math> \kappa(\mathbf{A}) </math> tends to <math> \infty </math>
+:<math>
+  \frac{ \sqrt{\kappa(\mathbf{A})}-1 }{ \sqrt{\kappa(\mathbf{A})}+1 }
+  \approx 1 - \frac{2}{\sqrt{\kappa(\mathbf{A})}}
+  \quad \text{for} \quad
+  \kappa(\mathbf{A}) \gg 1
+  \,.
+</math>
+This limit shows a faster convergence rate compared to the iterative methods of [[Jacobi method|Jacobi]] or [[Gauss–Seidel method|Gauss–Seidel]] which scale as <math> \approx 1 - \frac{2}{\kappa(\mathbf{A})} </math>.
+
+No [[round-off error]] is assumed in the convergence theorem, but the convergence bound is commonly valid in practice as theoretically explained<ref name="AG" /> by [[Anne Greenbaum]].
+
+=== Practical convergence ===
+
+If initialized randomly, the first stage of iterations is often the fastest, as the error is eliminated within the Krylov subspace that initially reflects a smaller effective condition number. The second stage of convergence is typically well defined by the theoretical convergence bound with <math display="inline"> \sqrt{\kappa(\mathbf{A})}</math>, but may be super-linear, depending on a distribution of the spectrum of the matrix <math>A</math> and the spectral distribution of the error.<ref name="AG" /> In the last stage, the smallest attainable accuracy is reached and the convergence stalls or the method may even start diverging. In typical scientific computing applications in [[double-precision floating-point format]] for matrices of large sizes, the conjugate gradient method uses a stopping criterion with a tolerance that terminates the iterations during the first or second stage.
+
+==The preconditioned conjugate gradient method==
+{{See also|Preconditioner}}
+In most cases, [[preconditioning]] is necessary to ensure fast convergence of the conjugate gradient method. If <math>\mathbf{M}^{-1}</math> is symmetric positive-definite and <math>\mathbf{M}^{-1}\mathbf{A}</math> has a better condition number than <math>\mathbf{A},</math> a preconditioned conjugate gradient method can be used. It takes the following form:<ref>
+{{cite book
+| first1 = Richard
+| last1 = Barrett
+| first2 = Michael
+| last2 = Berry
+| first3 = Tony F.
+| last3 = Chan
+| first4 = James
+| last4 = Demmel
+| first5 = June
+| last5 = Donato
+| first6 = Jack
+| last6 = Dongarra
+| first7 = Victor
+| last7 = Eijkhout
+| first8 = Roldan
+| last8 = Pozo
+| first9 = Charles
+| last9 = Romine
+| first10 = Henk
+| last10 = van der Vorst
+| title = Templates for the Solution of Linear Systems: Building Blocks for Iterative Methods
+| edition = 2nd
+| language = en
+| publisher = SIAM
+| page = 13
+| url = http://www.netlib.org/templates/templates.pdf
+| location = Philadelphia, PA
+| access-date = 2020-03-31
+}}</ref>
+
+:<math>\mathbf{r}_0 := \mathbf{b} - \mathbf{A x}_0</math>
+:<math> \textrm{Solve:}\mathbf{M}\mathbf{z}_0 := \mathbf{r}_0</math>
+:<math>\mathbf{p}_0 := \mathbf{z}_0</math>
+:<math>k := 0 \, </math>
+:'''repeat'''
+::<math>\alpha_k := \frac{\mathbf{r}_k^\mathsf{T} \mathbf{z}_k}{\mathbf{p}_k^\mathsf{T} \mathbf{A p}_k}</math>
+::<math>\mathbf{x}_{k+1} := \mathbf{x}_k + \alpha_k \mathbf{p}_k</math>
+::<math>\mathbf{r}_{k+1} := \mathbf{r}_k - \alpha_k \mathbf{A p}_k</math>
+::'''if''' '''r'''<sub>''k''+1</sub> is sufficiently small '''then''' exit loop '''end if'''
+::<math>\mathrm{Solve}\ \mathbf{M}\mathbf{z}_{k+1} := \mathbf{r}_{k+1}</math>
+::<math>\beta_k := \frac{\mathbf{r}_{k+1}^\mathsf{T} \mathbf{z}_{k+1}}{\mathbf{r}_k^\mathsf{T} \mathbf{z}_k}</math>
+::<math>\mathbf{p}_{k+1} := \mathbf{z}_{k+1} + \beta_k \mathbf{p}_k</math>
+::<math>k := k + 1 \, </math>
+:'''end repeat'''
+:The result is '''x'''<sub>''k''+1</sub>
+
+The above formulation is equivalent to applying the regular conjugate gradient method to the preconditioned system<ref>{{cite book|first1=Gene H.|last1=Golub|first2= Charles F.|last2= Van Loan|title=Matrix Computations|edition=4th|at=sec. 11.5.2|publisher=Johns Hopkins University Press| isbn=978-1-4214-0794-4|date=2013}}</ref>
+:<math>\mathbf{E}^{-1}\mathbf{A}(\mathbf{E}^{-1})^\mathsf{T}\mathbf{\hat{x}}=\mathbf{E}^{-1}\mathbf{b}</math>
+where 
+:<math>\mathbf{EE}^\mathsf{T}=\mathbf{M}, \qquad \mathbf{\hat{x}}=\mathbf{E}^\mathsf{T}\mathbf{x}.</math>
+
+The Cholesky decomposition of the preconditioner must be used to keep the symmetry (and positive definiteness) of the system. However, this decomposition does not need to be computed, and it is sufficient to know <math>\mathbf{M}^{-1}</math>. It can be shown that <math>\mathbf{E}^{-1}\mathbf{A}(\mathbf{E}^{-1})^\mathsf{T}</math> has the same spectrum as <math>\mathbf{M}^{-1}\mathbf{A}</math>.
+
+The preconditioner matrix <math>\mathbf{M}</math> has to be symmetric positive-definite and fixed, i.e., cannot change from iteration to iteration. 
+If any of these assumptions on the preconditioner is violated, the behavior of the preconditioned conjugate gradient method may become unpredictable.
+
+An example of a commonly used [[preconditioner]] is the [[incomplete Cholesky factorization]].<ref>{{cite journal |first1=P. |last1=Concus |first2=G. H. |last2=Golub |first3=G. |last3=Meurant |year=1985 |title=Block Preconditioning for the Conjugate Gradient Method |journal=SIAM Journal on Scientific and Statistical Computing |volume=6 |issue=1 |pages=220–252 |doi=10.1137/0906018 |url=https://escholarship.org/uc/item/0j60b61v }}</ref>
+
+=== Using the preconditioner in practice ===
+It is important to keep in mind that we don't want to invert the matrix <math>\mathbf{M}</math> explicitly in order to get <math>\mathbf{M}^{-1}</math> for use in the process, since inverting <math>\mathbf{M}</math> would take more time/computational resources than solving the conjugate gradient algorithm itself. As an example, let's say that we are using a preconditioner coming from incomplete Cholesky factorization. The resulting matrix is the lower triangular matrix <math>\mathbf{L}</math>, and the preconditioner matrix is:
+
+<math>\mathbf{M}=\mathbf{LL}^\mathsf{T}</math>
+
+Then we have to solve:
+
+<math>\mathbf{Mz}=\mathbf{r}</math>
+
+<math>\mathbf{z}=\mathbf{M}^{-1}\mathbf{r}</math>
+
+But:
+
+<math>\mathbf{M}^{-1}=(\mathbf{L}^{-1})^\mathsf{T}\mathbf{L}^{-1}</math>
+
+Then:
+
+<math>\mathbf{z}=(\mathbf{L}^{-1})^\mathsf{T}\mathbf{L}^{-1}\mathbf{r}</math>
+
+Let's take an intermediary vector <math>\mathbf{a}</math>:
+
+<math>\mathbf{a}=\mathbf{L}^{-1}\mathbf{r}</math>
+
+<math>\mathbf{r}=\mathbf{L}\mathbf{a}</math>
+
+Since <math>\mathbf{r}</math> and <math>\mathbf{L}</math> and known, and <math>\mathbf{L}</math> is lower triangular, solving for <math>\mathbf{a}</math> is easy and computationally cheap by using [[Triangular matrix#Forward and back substitution|forward substitution]]. Then, we substitute <math>\mathbf{a}</math> in the original equation:
+
+<math>\mathbf{z}=(\mathbf{L}^{-1})^\mathsf{T}\mathbf{a}</math>
+
+<math>\mathbf{a}=\mathbf{L}^\mathsf{T}\mathbf{z}</math>
+
+Since <math>\mathbf{a}</math> and <math>\mathbf{L}^\mathsf{T}</math> are known, and <math>\mathbf{L}^\mathsf{T}</math> is upper triangular, solving for <math>\mathbf{z}</math> is easy and computationally cheap by using [[Triangular matrix#Forward and back substitution|backward substitution]].
+
+Using this method, there is no need to invert <math>\mathbf{M}</math> or <math>\mathbf{L}</math> explicitly at all, and we still obtain <math>\mathbf{z}</math>.
+
+==The flexible preconditioned conjugate gradient method==
+
+In numerically challenging applications, sophisticated preconditioners are used, which may lead to variable preconditioning, changing between iterations. Even if the preconditioner is symmetric positive-definite on every iteration, the fact that it may change makes the arguments above invalid, and in practical tests leads to a significant slow down of the convergence of the algorithm presented above. Using the [[nonlinear conjugate gradient method|Polak–Ribière]] formula
+
+:<math>\beta_k := \frac{\mathbf{r}_{k+1}^\mathsf{T} \left(\mathbf{z}_{k+1}-\mathbf{z}_{k}\right)}{\mathbf{r}_k^\mathsf{T} \mathbf{z}_k}</math>
+
+instead of the [[nonlinear conjugate gradient method|Fletcher–Reeves]] formula
+
+:<math>\beta_k := \frac{\mathbf{r}_{k+1}^\mathsf{T} \mathbf{z}_{k+1}}{\mathbf{r}_k^\mathsf{T} \mathbf{z}_k}</math>
+
+may dramatically improve the convergence in this case.<ref>{{cite journal |doi=10.1137/S1064827597323415 |title=Inexact Preconditioned Conjugate Gradient Method with Inner-Outer Iteration |year=1999 |last1=Golub |first1=Gene H. |last2=Ye |first2=Qiang |journal=SIAM Journal on Scientific Computing |volume=21 |issue=4 |page=1305}}</ref> This version of the preconditioned conjugate gradient method can be called<ref>{{cite journal|doi=10.1137/S1064827599362314|title=Flexible Conjugate Gradients|year=2000|last1=Notay|first1=Yvan|journal=SIAM Journal on Scientific Computing|volume=22|issue=4|pages=1444–1460}}</ref> '''flexible''', as it allows for variable preconditioning. 
+The flexible version is also shown<ref>{{Cite journal|doi=10.1016/j.procs.2015.05.241|title=Nonsymmetric Preconditioning for Conjugate Gradient and Steepest Descent Methods 1|year=2015|last1=Bouwmeester|first1=Henricus|last2=Dougherty|first2=Andrew|last3=Knyazev|first3=Andrew V.|journal=Procedia Computer Science|volume=51|pages=276–285|s2cid=51978658|doi-access=free|arxiv=1212.6680}}</ref> to be robust even if the preconditioner is not symmetric positive definite (SPD).
+
+The implementation of the flexible version requires storing an extra vector. For a fixed SPD preconditioner, <math>\mathbf{r}_{k+1}^\mathsf{T} \mathbf{z}_{k}=0,</math> so both formulas for {{mvar|β<sub>k</sub>}} are equivalent in exact arithmetic, i.e., without the [[round-off error]].
+
+The mathematical explanation of the better convergence behavior of the method with the [[nonlinear conjugate gradient method|Polak–Ribière]] formula is that the method is '''locally optimal''' in this case, in particular, it does not converge slower than the locally optimal steepest descent method.<ref>{{cite journal|doi=10.1137/060675290|title=Steepest Descent and Conjugate Gradient Methods with Variable Preconditioning| year=2008| last1=Knyazev|first1=Andrew V.|last2=Lashuk|first2=Ilya|journal=SIAM Journal on Matrix Analysis and Applications|volume=29|issue=4|page=1267|arxiv=math/0605767|s2cid=17614913}}</ref>
+
+==Vs. the locally optimal steepest descent method==
+
+In both the original and the preconditioned conjugate gradient methods one only needs to set  <math>\beta_k := 0</math> in order to make them locally optimal, using the [[line search]], [[steepest descent]] methods. With this substitution, vectors {{math|'''p'''}} are always the same as vectors {{math|'''z'''}}, so there is no need to store vectors {{math|'''p'''}}. Thus, every iteration of these [[steepest descent]] methods is a bit cheaper compared to that for the conjugate gradient methods. However, the latter converge faster, unless a (highly) variable and/or non-SPD [[preconditioner]] is used, see above.
+
+==Conjugate gradient method as optimal feedback controller for double integrator==
+
+The conjugate gradient method can also be derived using [[Optimal control|optimal control theory]].<ref name=":0">[[I. Michael Ross|Ross, I. M.]],  "An Optimal Control Theory for Accelerated Optimization," {{arXiv|1902.09004}}, 2019.</ref> In this approach, the conjugate gradient method falls out as an [[Feedback Control|optimal feedback controller]],<math display="block">u = k(x, v):= -\gamma_a \nabla f(x) - \gamma_b v </math> for the [[Double integrator|double integrator system]],<math display="block">\dot x = v, \quad \dot v = u </math> The quantities <math>\gamma_a</math> and <math>\gamma_b</math> are variable feedback gains.<ref name=":0" />
+
+==Conjugate gradient on the normal equations==
+
+The conjugate gradient method can be applied to an arbitrary ''n''-by-''m'' matrix by applying it to [[normal equations]] '''A'''<sup>T</sup>'''A''' and right-hand side vector '''A'''<sup>T</sup>'''b''', since  '''A'''<sup>T</sup>'''A''' is a symmetric [[Positive-definite matrix#Negative-definite.2C semidefinite and indefinite matrices|positive-semidefinite]] matrix for any '''A'''. The result is '''conjugate gradient on the normal equations''' ('''CGN''' or '''CGNR''').
+
+: '''A'''<sup>T</sup>'''Ax''' =  '''A'''<sup>T</sup>'''b'''
+
+As an iterative method, it is not necessary to form  '''A'''<sup>T</sup>'''A''' explicitly in memory but only to perform the matrix–vector and transpose matrix–vector multiplications. Therefore, CGNR is particularly useful when ''A'' is a [[sparse matrix]] since these operations are usually extremely efficient. However the downside of forming the normal equations is that the [[condition number]] κ('''A'''<sup>T</sup>'''A''') is equal to κ<sup>2</sup>('''A''') and so the rate of convergence of CGNR may be slow and the quality of the approximate solution may be sensitive to roundoff errors. Finding a good [[preconditioner]] is often an important part of using the CGNR method.
+
+Several algorithms have been proposed (e.g., CGLS, LSQR). The [https://web.stanford.edu/group/SOL/software/lsqr/   LSQR] algorithm purportedly has the best numerical stability when '''A''' is ill-conditioned, i.e., '''A''' has a large [[condition number]].
+
+==Conjugate gradient method for complex Hermitian matrices==
+
+The conjugate gradient method with a trivial modification is extendable to solving, given complex-valued matrix A and vector b, the system of linear equations <math>\mathbf {A} \mathbf {x} =\mathbf {b}</math> for the complex-valued vector x, where A is [[Hermitian]] (i.e., A' = A) and [[positive-definite matrix]], and the symbol ' denotes the [[conjugate transpose]]. The trivial modification is simply substituting the [[conjugate transpose]] for the real [[transpose]] everywhere.
+
+== Advantages and disadvantages ==
+The advantages and disadvantages of the conjugate gradient methods are summarized in the lecture notes by Nemirovsky and BenTal.<ref name=":02">{{Cite web |last=Nemirovsky and Ben-Tal |date=2023 |title=Optimization III: Convex Optimization |url=http://www2.isye.gatech.edu/~nemirovs/OPTIIILN2023Spring.pdf}}</ref>{{Rp|location=Sec.7.3}}
+
+=== A pathological example ===
+
+This example is from <ref>{{Cite web |last=Pennington |first=Fabian Pedregosa, Courtney Paquette, Tom Trogdon, Jeffrey |title=Random Matrix Theory and Machine Learning Tutorial |url=https://random-matrix-learning.github.io/ |access-date=2023-12-05 |website=random-matrix-learning.github.io |language=en-ca}}</ref>
+Let <math display="inline">t \in (0, 1)</math>, and define<math display="block">W= \begin{bmatrix}
+ t & \sqrt{t} & & & & \\
+ \sqrt{t} & 1+t & \sqrt{t} & & & \\
+ & \sqrt{t} & 1+t & \sqrt{t} & & \\
+ & & \sqrt{t} & \ddots & \ddots & \\
+ & & & \ddots & & \\
+ & & & & & \sqrt{t} \\
+ & & & & \sqrt{t} & 1+t
+ \end{bmatrix}, \quad b=\begin{bmatrix}
+ 1 \\
+ 0 \\
+ \vdots \\
+ 0
+ \end{bmatrix}</math>Since <math>W</math> is invertible, there exists a unique solution to <math display="inline">W x = b </math>. Solving it by conjugate gradient descent gives us rather bad convergence:<math display="block">\|b- Wx_k\|^2 = (1/t)^{k}, \quad \|b- Wx_n\|^2 =0</math>In words, during the CG process, the error grows exponentially, until it suddenly becomes zero as the unique solution is found.
+
+==See also==
+{{Div col|colwidth=20em}}
+* [[Biconjugate gradient method]] (BiCG)
+* [[Conjugate gradient squared method]] (CGS)
+* [[Conjugate residual method]]
+* [[Belief propagation#Gaussian belief propagation .28GaBP.29|Gaussian belief propagation]]
+* [[Iterative method#Linear systems|Iterative method: Linear systems]]
+* [[Krylov subspace]]
+* [[Nonlinear conjugate gradient method]]
+* [[Preconditioning]]
+* [[Sparse matrix–vector multiplication]]
+{{Div col end}}
+
+==References==
+{{Reflist}}
+
+==Further reading==
+* {{cite book|first=Kendell A. |last=Atkinson |year=1988|title=An introduction to numerical analysis|url=https://archive.org/details/introductiontonu0000atki |url-access=registration |edition=2nd |chapter= Section 8.9|publisher= John Wiley and Sons| isbn= 978-0-471-50023-0}}
+* {{cite book|first=Mordecai|last= Avriel |year=2003|title=Nonlinear Programming: Analysis and Methods|publisher= Dover Publishing| isbn= 978-0-486-43227-4}}
+* {{cite book|first1=Gene H.|last1=Golub|first2= Charles F.|last2= Van Loan|title=Matrix Computations|edition=4th|chapter=Chapter 11|publisher=Johns Hopkins University Press| isbn=978-1-4214-0794-4|date=2013}}
+* {{cite book|first=Yousef|last=Saad|title=Iterative methods for sparse linear systems|chapter-url=https://archive.org/details/iterativemethods0000saad|chapter-url-access=registration|edition=2nd|chapter=Chapter 6|publisher=SIAM|isbn=978-0-89871-534-7|date=2003-04-01|url-access=registration|url=https://archive.org/details/iterativemethods0000saad}}
+* Gérard Meurant: "Detection and correction of silent errors in the conjugate gradient algorithm", Numerical Algorithms, vol.92 (2023), pp.&nbsp;869–891. url=https://doi.org/10.1007/s11075-022-01380-1
+* {{Cite book|first1 =Gerard | last1 =Meurant |first2 =Petr | last2 =Tichy | date=2024|title =Error Norm Estimation in the Conjugate Gradient Algorithm |publisher=SIAM | isbn= 978-1-61197-785-1}}
+
+==External links==
+* {{springer|title=Conjugate gradients, method of|id=p/c025030}}
+
+{{Numerical linear algebra}}
+{{Artificial intelligence navbox}}
+{{Authority control}}
+
+{{DEFAULTSORT:Conjugate Gradient Method}}
+[[Category:Numerical linear algebra]]
+[[Category:Gradient methods]]
+[[Category:Articles with example MATLAB/Octave code]]

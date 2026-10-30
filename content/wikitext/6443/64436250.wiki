@@ -1,0 +1,67 @@
+<!-- wikipedia: en
+     page: 64436250
+     title: Hybrid stochastic simulation
+     revision: 1369639977
+     timestamp: 2026-08-16T05:44:38Z
+     history: https://en.wikipedia.org/w/index.php?curid=64436250&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1369639977 -->
+'''Hybrid stochastic simulations''' are a sub-class of [[Stochastic simulation|stochastic simulations]]. These simulations combine existing stochastic simulations with other stochastic simulations or [[Algorithm|algorithms]]. Generally they are used for [[physics]] and physics-related research. The goal of a hybrid stochastic simulation varies based on context, however they typically aim to either improve accuracy or reduce [[computational complexity]]. The first hybrid stochastic simulation was developed in 1985.<ref name=":0">{{Cite journal| vauthors = Duane S |date=1985-01-01|title=Stochastic quantization versus the microcanonical ensemble: Getting the best of both worlds |journal=Nuclear Physics B|language=en|volume=257|pages=652–662|doi=10.1016/0550-3213(85)90369-4|bibcode=1985NuPhB.257..652D|issn=0550-3213}}</ref>
+
+== History ==
+The first hybrid stochastic simulation was developed by Simon Duane at the [[University of Illinois Urbana-Champaign|University of Illinois at Urbana-Champaign]] in 1985.<ref name=":0" /> It combined the [[Langevin equation]] with [[Microcanonical ensemble|microcanonical ensembles]]. Duane's hybrid stochastic simulation was based upon the idea that the two algorithms complemented each other. The Langevin equation excelled at simulating long-time properties, but the addition of noise into the system created inefficient exploration of short-time properties.<ref>{{cite journal | vauthors = Duane S, Kogut JB | title = Hybrid stochastic differential equations applied to quantum chromodynamics | journal = Physical Review Letters | volume = 55 | issue = 25 | pages = 2774–2777 | date = December 1985 | pmid = 10032235 | doi = 10.1103/PhysRevLett.55.2774 | bibcode = 1985PhRvL..55.2774D }}</ref> The microcanonical ensemble approach meanwhile excelled at exploring short-time properties, but became less reliable for long-time properties. By combining the two methods, the weakness of each could be mitigated by the strength of the other. Duane's initial results using this hybrid stochastic simulation were positive when the model correctly supported the idea of an abrupt finite-temperature transition in [[quantum chromodynamics]], which was a controversial subject at the time.
+
+Since then many hybrid stochastic simulations have been developed, aiming to overcome deficiencies in the stochastic simulations that they were based upon.
+
+== Methods ==
+
+=== The Dobramysl and Holcman Method ===
+The Dobramysl and Holcman mixed analytical-stochastic simulation model was published in 2018 by Ulrich Dobramysl and [[David Holcman]], from the [[University of Cambridge]] and [[University of Oxford]] respectively.<ref name="pmid29456262">{{cite journal | vauthors = Dobramysl U, Holcman D | title = Mixed analytical-stochastic simulation method for the recovery of a Brownian gradient source from probability fluxes to small windows | journal = Journal of Computational Physics | volume = 355 | issue = | pages = 22–36 | date = February 2018 | pmid = 29456262 | pmc = 5765848 | doi = 10.1016/j.jcp.2017.10.058 | arxiv = 1710.09807 | bibcode = 2018JCoPh.355...22D }}</ref><ref>{{cite journal | vauthors = Dobramysl U, Holcman D | title = Reconstructing a point source from diffusion fluxes to narrow windows in three dimensions. | journal = Proceedings of the Royal Society A | date = September 2021 | volume = 477 | issue = 2253 | article-number = 20210271 | doi = 10.1098/rspa.2021.0271 | arxiv = 2001.01562 | bibcode = 2021RSPSA.47710271D | s2cid = 209862766 }}
+</ref> It simulates parts of [[Brownian motion|Brownian]] trajectories, instead of simulating the entire trajectory. This approach is particularly relevant when a Brownian particle evolves in an [[Infinite Space|infinite space]]. Trajectories are then simulated only in the neighborhood of small targets. Otherwise, explicit analytical expressions are used to map the initial point to a distribution located on an imaginary surface around the targets. This method has many possible applications, including generating gradient cues in an open space and simulating the diffusion of molecules that have to bind to cell [[Receptor (biochemistry)|receptors]].
+
+==== Principle of the algorithm ====
+The algorithm avoids the explicit simulation long trajectories with large excursions and thus it circumvents the need for an arbitrary cutoff distance for the infinite domain. The algorithm consists of mapping the source position to a half-sphere containing the absorbing windows. Inside the sphere, classical Brownian simulations are run until the particle is absorbed or exits through the sphere surface. The algorithm consists of the following steps:
+# The source releases a particle at position <math>x(t=0)=x_0</math>.
+# If <math>|x(t)|>R'</math>, map the particle's position to the surface of the sphere S(R), using the distribution of exit point <math>P_{map}</math>. In three dimensions, there is a finite probability for a Brownian  particle to escape to infinity upon which the trajectory is terminated.
+# In the first time step, <math>t=\Delta t, |x^t|>R',</math> use the mapping, <math>P_{map}</math>, to map the particle's position to the sphere S(R). This leads to a sequence of mapped position <math>x_1,..x_n</math> until the particle is absorbed. Note that for the mapping, there is again a finite probability that the particle escapes to infinity, in which case, the trajectory is terminated.
+# The [[Euler–Maruyama method|Euler-Maruyama]] scheme can be used to perform a Brownian step: <math>x(t)=x(t-\Delta t)+\sqrt{2D\Delta t}\mathbf{R},</math> where  <math>\mathbf{R}</math> is a vector of standard [[normal random variable]]s.
+# When either <math>x(t)\cdot \mathbf{e}_z \le 0</math> (in the case of half-space) or<math>|x(t)|\leq 1</math> (in the case of the sphere), and <math>|x(t)-x_i|<\epsilon</math> for any value '''i''', one considers that the particle is being absorbed by window '''i''' and terminate the trajectory.
+# If the particle crosses any reflective boundary, go back to step 3 to generate a new position. Otherwise return to step 2.
+
+==== Mapping the source for a ball in 3D ====
+One can map the source for a ball in 3D to get the first passage probability for hitting a ball before escaping to infinity. The mapping is as follows:
+
+<math>P_{map}(x|y)=\frac{|y|}{R}\frac{1}{4\pi}\frac{\beta^2-1}{(1+\beta^2-2\beta\cos\gamma)^{3/2}}</math>, with <math>\int_{\partial B(R)}P(x,y)dS_{x}=\beta^{-1}=\frac{R}{|y|},</math> and <math>|x||y|\cos\gamma=x\cdot y.</math> 
+
+The [[probability distribution]] of hitting is obtained by normalizing the integral of the flux.
+
+==== Remarks ====
+The choice of the radius R is arbitrary as long as the sphere S(R) encloses all windows with a buffer of at least size <math>\epsilon</math>. The radius R' should be chosen such that frequent re-crossings are avoided, e.g. <math>R'\leq R+10\sqrt{2D\Delta t}.</math> This algorithm can be used to simulate trajectories of Brownian particles at steady-state close to a [[region of interest]]. Note that there is no approximation involved.
+
+=== Two-regime method ===
+The Two-Regime Method for [[Reaction–diffusion system|reaction–diffusion]] simulations was created by Mark Flegg, Jonathan Chapman and Radek Erban at the [[University of Oxford]].<ref name="pmid22012973">{{cite journal | vauthors = Flegg MB, Chapman SJ, Erban R | title = The two-regime method for optimizing stochastic reaction-diffusion simulations | journal = Journal of the Royal Society, Interface | volume = 9 | issue = 70 | pages = 859–68 | date = May 2012 | pmid = 22012973 | pmc = 3306650 | doi = 10.1098/rsif.2011.0574 }}</ref> It combines molecular-based algorithms with compartment-based approaches at ideal points during calculations to reduce computational cost. The molecular-based algorithms are great at giving highly accurate detail on localized regions of interest. Compartment-based models excel at efficient simulations of large regions. The main use for this model is to increase both the speed and accuracy of reaction–diffusion simulations, and provide more control to the simulator over methods to characterize regions of interest.
+
+==== Principle of the algorithm ====
+The Two-Regime Method works by having two regimes of interest. One region is event-based and primarily uses compartment-based approaches, while the other region is time-based and relies on molecular-based regimes. The steps of the algorithm are as follows:
+
+# Divide the computational domain <math>\Omega</math> into two parts. The parts should be non-overlapping.
+# Determine which part of the domain would be better fit for a compartment-based approach, label that <math>\Omega_C</math>. The other domain will be <math>\Omega_M</math>. Ensure the following is true: <math>\Omega = \Omega_M \cup \Omega_C</math>.
+# Treat molecules in <math>\Omega_M</math> as free molecules in a continuous space. These molecules will diffuse and react through molecular-based approaches.
+
+Molecules jump between compartments while in region <math>\Omega_C</math> with the chance of jumping into <math>\Omega_M</math> where movement will then be simulated using [[Brownian motion]]. Many possibilities exist to couple these regions, which can vary based on the purpose of the simulation.
+
+==== Remarks ====
+This algorithm and ones built upon it are used to study the conversion of species. They can also be coupled with the [[Fokker–Planck equation|Fokker-Planck equation]] to simulate population and single trajectories using Brownian simulations.<ref>B. Franz, M. B. Flegg, S. J. Chapman and R. Erban, Multiscale reaction-diffusion algorithms: PDE-assisted Brownian dynamics, SIAM J. Appl. Math. 73 (2013), 1224-1247.</ref>
+
+== Applications ==
+Hybrid stochastic simulations have been used to:
+
+* Predict the impact of HIV-prophylaxis on patients, aiding in the development of exposure prophylaxis medications.<ref>{{cite journal | vauthors = Duwal S, Dickinson L, Khoo S, von Kleist M | title = Hybrid stochastic framework predicts efficacy of prophylaxis against HIV: An example with different dolutegravir prophylaxis schemes | journal = PLOS Computational Biology | volume = 14 | issue = 6 | article-number = e1006155 | date = June 2018 | pmid = 29902179 | pmc = 6001963 | doi = 10.1371/journal.pcbi.1006155 | bibcode = 2018PLSCB..14E6155D | veditors = Koelle K | doi-access = free }}</ref><ref>{{Cite web| vauthors = von-Kleist M |year=2018|title=New simulation tool predicts how well HIV-prophylaxis will work|url=https://www.eurekalert.org/news-releases/844275|access-date=2021-12-13|website=EurekAlert!|language=en}}</ref>
+* Model tumor suppression mechanisms in cancer research.<ref>{{cite journal | vauthors = Rodriguez-Brenes IA, Wodarz D, Komarova NL | title = Quantifying replicative senescence as a tumor suppressor pathway and a target for cancer therapy | journal = Scientific Reports | volume = 5 | issue = 1 | article-number = 17660 | date = December 2015 | pmid = 26647820 | pmc = 4673423 | doi = 10.1038/srep17660  | doi-access = free| bibcode = 2015NatSR...517660R }}</ref>
+* Simulate train trajectories, which helps in the development of railway traffic schedules.<ref>{{Cite journal| vauthors = Sessa PG, De Martinis V, Bomhauer-Beins A, Weidmann UA, Corman F |date=2021-10-01|title=A hybrid stochastic approach for offline train trajectory reconstruction|journal=Public Transport|language=en|volume=13|issue=3|pages=675–698|doi=10.1007/s12469-020-00230-4|s2cid=216246544|issn=1613-7159}}</ref>
+
+== References ==
+{{Reflist}}
+
+
+[[Category:Stochastic simulation]]

@@ -1,0 +1,100 @@
+<!-- wikipedia: en
+     page: 2172840
+     title: Luby transform code
+     revision: 1374459086
+     timestamp: 2026-09-12T04:28:27Z
+     history: https://en.wikipedia.org/w/index.php?curid=2172840&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374459086 -->
+{{Short description|Class of erasure-correcting fountain codes}}
+In [[computer science]], '''Luby transform codes''' ('''LT codes''') are the first class of practical [[fountain code]]s that are near-optimal [[erasure correcting code]]s. They were invented by [[Michael Luby]] in 1998 and published in 2002.<ref name="Luby">[https://ieeexplore.ieee.org/document/1181950/;jsessionid=758EBC54886BB9A881D8EDFB3E71FBF4?arnumber=1181950 M.Luby, "LT Codes", The 43rd Annual IEEE Symposium on Foundations of Computer Science, 2002.]</ref> Like some other [[fountain code]]s, LT codes depend on sparse [[bipartite graph]]s to trade reception overhead for encoding and decoding speed. The distinguishing characteristic of LT codes is in employing a particularly simple algorithm based on the [[exclusive or]] operation (<math>\oplus</math>) to encode and decode the message.<ref>The ''exclusive or'' (XOR) operation, symbolized by &oplus;, has the very useful property that ''A''&nbsp;&oplus;&nbsp;''A''&nbsp;=&nbsp;0, where ''A'' is an arbitrary string of [[bit]]s.</ref>
+
+LT codes are ''rateless'' because the encoding algorithm can in principle produce an infinite number of message packets (i.e., the percentage of packets that must be received to decode the message can be arbitrarily small). They are ''erasure correcting codes'' because they can be used to transmit digital data reliably on an [[binary erasure channel|erasure channel]].
+
+The next generation beyond LT codes are [[Raptor codes]] (see for example IETF RFC 5053 or IETF RFC 6330), which have linear time encoding and decoding.  Raptor codes are fundamentally based on LT codes, i.e., encoding for Raptor codes uses two encoding stages, where the second stage is LT encoding.  Similarly, decoding with Raptor codes primarily relies upon LT decoding, but LT decoding is intermixed with more advanced decoding techniques. The RaptorQ code specified in IETF RFC 6330, which is the most advanced fountain code, has vastly superior decoding probabilities and performance compared to using only an LT code.
+
+==Advantages==
+The traditional scheme for transferring data across an erasure channel depends on continuous two-way communication.
+*The sender encodes and sends a packet of information.
+*The receiver attempts to decode the received packet. If it can be decoded, the receiver sends an acknowledgment back to the transmitter. Otherwise, the receiver asks the transmitter to send the packet again.
+*This two-way process continues until all the packets in the message have been transferred successfully.
+
+Certain networks, such as ones used for cellular wireless broadcasting, do not have a feedback channel. Applications on these networks still require reliability. [[Fountain code]]s in general, and LT codes in particular, get around this problem by adopting an essentially one-way [[communication protocol]].
+*The sender encodes and sends packet after packet of information.
+*The receiver evaluates each packet as it is received. If there is an error, the erroneous packet is discarded. Otherwise the packet is saved as a piece of the message.
+*Eventually the receiver has enough valid packets to reconstruct the entire message. When the entire message has been received successfully the receiver signals that transmission is complete.
+
+As mentioned above, the RaptorQ code specified in IETF RFC 6330 outperforms an LT code in practice.
+
+==LT encoding==
+
+The encoding process begins by dividing the uncoded message into ''n'' blocks of roughly equal length. Encoded packets are then produced with the help of a [[pseudorandom number generator]].
+*The degree ''d'', 1&nbsp;≤&nbsp;''d''&nbsp;≤&nbsp;''n'', of the next packet is chosen at random.
+*Exactly ''d'' blocks from the message are randomly chosen.
+*If ''M''<sub>''i''</sub> is the ''i''-th block of the message, the data portion of the next packet is computed as
+
+::<math>
+M_{i_1} \oplus M_{i_2} \oplus \cdots \oplus M_{i_d}\,
+</math>
+
+:where {''i''<sub>1</sub>,&nbsp;''i''<sub>2</sub>,&nbsp;...,&nbsp;''i''<sub>''d''</sub>} are the randomly chosen indices for the ''d'' blocks included in this packet.
+*A prefix is appended to the encoded packet, defining how many blocks ''n'' are in the message, how many blocks ''d'' have been exclusive-ored into the data portion of this packet, and the list of indices {''i''<sub>1</sub>,&nbsp;''i''<sub>2</sub>,&nbsp;...,&nbsp;''i''<sub>''d''</sub>}.
+*Finally, some form of error-detecting code (perhaps as simple as a [[cyclic redundancy check]]) is applied to the packet, and the packet is transmitted.
+
+This process continues until the receiver signals that the message has been received and successfully decoded.
+
+==LT decoding==
+
+The decoding process uses the "[[exclusive or]]" operation to retrieve the encoded message.
+*If the current packet isn't clean, or if it replicates a packet that has already been processed, the current packet is discarded.
+*If the current cleanly received packet is of degree ''d''&nbsp;>&nbsp;1, it is first processed against all the fully decoded blocks in the message queuing area (as described more fully in the next step), then stored in a buffer area if its reduced degree is greater than 1.
+*When a new, clean packet of degree ''d''&nbsp;=&nbsp;1 (block ''M''<sub>''i''</sub>) is received (or the degree of the current packet is reduced to 1 by the preceding step), it is moved to the message queueing area, and then matched against all the packets of degree ''d''&nbsp;>&nbsp;1 residing in the buffer. It is exclusive-ored into the data portion of any buffered packet that was encoded using ''M''<sub>''i''</sub>, the degree of that matching packet is decremented, and the list of indices for that packet is adjusted to reflect the application of ''M''<sub>''i''</sub>.
+*When this process unlocks a block of degree ''d''&nbsp;=&nbsp;2 in the buffer, that block is reduced to degree 1 and is in its turn moved to the message queueing area, and then processed against the packets remaining in the buffer.
+*When all ''n'' blocks of the message have been moved to the message queueing area, the receiver signals the transmitter that the message has been successfully decoded.
+
+This decoding procedure works because ''A''&nbsp;<math>\oplus</math>&nbsp;''A''&nbsp;=&nbsp;0 for any bit string ''A''. After ''d''&nbsp;&minus;&nbsp;1 distinct blocks have been exclusive-ored into a packet of degree ''d'', the original unencoded content of the unmatched block is all that remains. In symbols we have
+
+:<math>
+\begin{align}
+& {} \qquad (M_{i_1} \oplus \dots \oplus M_{i_d}) \oplus
+(M_{i_1} \oplus \dots \oplus M_{i_{k-1}} \oplus M_{i_{k+1}} \oplus \dots \oplus M_{i_d}) \\
+& = M_{i_1} \oplus M_{i_1} \oplus \dots \oplus M_{i_{k-1}} \oplus M_{i_{k-1}} \oplus M_{i_k} \oplus
+M_{i_{k+1}} \oplus M_{i_{k+1}} \oplus \dots \oplus M_{i_d} \oplus M_{i_d} \\
+& = 0 \oplus \dots \oplus 0 \oplus M_{i_k} \oplus 0 \oplus \dots \oplus 0 \\
+& =  M_{i_k} \,
+\end{align}
+</math>
+
+==Variations==
+
+Several variations of the encoding and decoding processes described above are possible. For instance, instead of prefixing each packet with a list of the actual message block indices {''i''<sub>1</sub>,&nbsp;''i''<sub>2</sub>,&nbsp;...,&nbsp;''i''<sub>''d''</sub>}, the encoder might simply send a short "key" which served as the seed for the [[pseudorandom number generator]] (PRNG) or index table used to construct the list of indices. Since the receiver equipped with the same RNG or index table can reliably recreate the "random" list of indices from this seed, the decoding process can be completed successfully. Alternatively, by combining a simple LT code of low average degree with a robust error-correcting code, a [[raptor code]] can be constructed that will outperform an optimized LT code in practice.<ref name="MacKay">[http://switzernet.com/people/emin-gabrielyan/060112-capillary-references/ref/MacKay05.pdf Fountain codes], by D.J.C. MacKay, first published in IEEE Proc.-Commun., Vol. 152, No. 6, December 2005.</ref>
+
+==Optimization of LT codes==
+
+There is only one parameter that can be used to optimize a straight LT code: the [[degree distribution]] function (described as a pseudorandom number generator for the degree ''d'' in the '''LT encoding''' section above). In practice the other "random" numbers (the list of indices {&nbsp;''i''<sub>1</sub>,&nbsp;''i''<sub>2</sub>,&nbsp;...,&nbsp;''i''<sub>''d''</sub>&nbsp;}&nbsp;) are invariably taken from a uniform distribution on [0, ''n''), where ''n'' is the number of blocks into which the message has been divided.<ref name="Tirronen">[http://www.netlab.tkk.fi/tutkimus/abi/publ/lt-resim-2006.pdf Optimizing the Degree Distribution of LT Codes with an Importance Sampling Approach], by Esa Hyytiä, Tuomas Tirronen, and Jorma Virtamo (2006).</ref>
+
+Luby himself<ref name="Luby"/> discussed the "ideal [[soliton distribution]]" defined by
+
+:<math>
+\begin{align}
+\mathrm{P}\{d=1\}& = \frac{1}{n}\\[2pt]
+\mathrm{P}\{d=k\}& = \frac{1}{k(k-1)} \qquad (k=2,3,\dots,n). \,
+\end{align}
+</math>
+
+This degree distribution theoretically minimizes the expected number of [[redundant code]] words that will be sent before the decoding process can be completed. However the ideal soliton distribution does not work well in practice because any fluctuation around the expected behavior makes it likely that at some step in the decoding process there will be no available packet of (reduced) degree 1 so decoding will fail. Furthermore, some of the original blocks will not be xor-ed into any of the transmission packets. Therefore, in practice, a modified distribution, the "robust [[soliton distribution]]", is substituted for the ideal distribution. The effect of the modification is, generally, to produce more packets of very small degree (around 1) and fewer packets of degree greater than 1, except for a spike of packets at a fairly large quantity chosen to ensure that all original blocks will be included in some packet.<ref name="Tirronen"/>
+
+==See also==
+*[[Online codes]]
+*[[Raptor codes]]
+*[[Tornado codes]]
+
+==Notes and references==
+<references/>
+
+==External links==
+* [http://www.codeproject.com/Articles/425456/Your-Digital-Fountain "Implementation of Luby transform Code in C#"]
+* [https://github.com/suaybarslan/founsure "Implementation of Fountain Codes for storage in C/C++"]
+* [https://franpapers.com/en/algorithmic/2018-introduction-to-fountain-codes-lt-codes-with-python/ "Introduction to fountain codes: LT Codes with Python"]
+
+[[Category:Coding theory]]

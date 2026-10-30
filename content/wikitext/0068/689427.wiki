@@ -1,0 +1,487 @@
+<!-- wikipedia: en
+     page: 689427
+     title: Latent semantic analysis
+     revision: 1378438883
+     timestamp: 2026-10-04T13:53:36Z
+     history: https://en.wikipedia.org/w/index.php?curid=689427&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1378438883 -->
+{{short description|Technique in natural language processing}}
+{{semantics}}
+'''Latent semantic analysis''' ('''LSA''') is a technique in [[natural language processing]], in particular [[distributional semantics]], of analyzing relationships between a set of documents and the terms they contain by producing a set of concepts related to the documents and terms.  LSA assumes that words that are close in meaning will occur in similar pieces of text (the [[distributional hypothesis]]).  A matrix containing word counts per document (rows represent unique words and columns represent each document) is constructed from a large piece of text and a mathematical technique called [[singular value decomposition]] (SVD) is used to reduce the number of rows while preserving the similarity structure among columns.  Documents are then compared by [[cosine similarity]] between any two columns.  Values close to 1 represent very similar documents while values close to 0 represent very dissimilar documents.<ref>{{cite journal | title=Latent Semantic Analysis | author=Susan T. Dumais |year=2005 | doi=10.1002/aris.1440380105 | journal=Annual Review of Information Science and Technology | volume=38 | pages=188–230}}</ref>
+
+An information retrieval technique using latent semantic structure was patented in 1988<ref>{{Cite web | url=http://patft.uspto.gov/netacgi/nph-Parser?patentnumber=4839853 | title=US Patent 4,839,853 | archive-url=https://web.archive.org/web/20171202052723/http://patft.uspto.gov/netacgi/nph-Parser?patentnumber=4839853 | archive-date=2017-12-02 }} (now expired)</ref> by [[Scott Deerwester]], [[Susan Dumais]], [[George Furnas]], [[Richard Harshman]], [[Thomas Landauer]], [[Karen Lochbaum]] and [[Lynn Streeter]]. In the context of its application to [[information retrieval]], it is sometimes called '''latent semantic indexing''' ('''LSI''').<ref>{{cite web | url=http://lsa.colorado.edu/ | title=The Latent Semantic Indexing home page}}</ref>
+
+== Overview ==
+
+[[File:Topic model scheme.webm|thumb|600px|thumbtime=24|start=1|end=24|Animation of the topic detection process in a document-word matrix. Every column corresponds to a document, every row to a word. A cell stores the weighting of a word in a document (e.g. by [[tf-idf]]), dark cells indicate high weights. LSA groups both documents that contain similar words, as well as words that occur in a similar set of documents. The resulting patterns are used to detect latent components.<ref>{{cite web |title=image |url=http://topicmodels.west.uni-koblenz.de/ckling/tmt/svd_ap.html |website=topicmodels.west.uni-koblenz.de |archive-url=https://web.archive.org/web/20230317082631/http://topicmodels.west.uni-koblenz.de/ckling/tmt/svd_ap.html |archive-date=17 March 2023 |url-status=dead}}</ref>]]
+
+=== Occurrence matrix ===
+LSA can use a [[document-term matrix]] which describes the occurrences of terms in documents; it is a [[sparse matrix]] whose rows correspond to [[terminology|terms]] and whose columns correspond to documents. A typical example of the weighting of the elements of the matrix is [[tf-idf]] (term frequency–inverse document frequency): the weight of an element of the matrix is proportional to the number of times the terms appear in each document, where rare terms are upweighted to reflect their relative importance.
+
+This matrix is also common to standard semantic models, though it is not necessarily explicitly expressed as a matrix, since the mathematical properties of matrices are not always used.
+
+=== Rank lowering ===
+After the construction of the occurrence matrix, LSA finds a [[low-rank approximation]]<ref>Markovsky I. (2012) Low-Rank Approximation: Algorithms, Implementation, Applications, Springer, 2012, {{ISBN|978-1-4471-2226-5}} {{page needed|date=January 2012}}</ref> to the [[term-document matrix]]. There could be various reasons for these approximations:
+
+* The original term-document matrix is presumed too large for the computing resources; in this case, the approximated low rank  matrix is interpreted as an ''approximation'' (a "least and necessary evil").
+* The original term-document matrix is presumed ''noisy'': for example, anecdotal instances of terms are to be eliminated. From this point of view, the approximated matrix is interpreted as a ''de-noisified matrix'' (a better matrix than the original).
+* The original term-document matrix is presumed overly [[Sparse matrix|sparse]] relative to the "true" term-document matrix.  That is, the original matrix lists only the words actually ''in'' each document, whereas we might be interested in all words ''related to'' each document—generally a much larger set due to [[synonymy]].
+
+The consequence of the rank lowering is that some dimensions are combined and depend on more than one term:
+
+:: {(car), (truck), (flower)} → {(1.3452 * car + 0.2828 * truck), (flower)}
+
+This mitigates the problem of identifying synonymy, as the rank lowering is expected to merge the dimensions associated with terms that have similar meanings. It also partially mitigates the problem with [[polysemy]], since components of polysemous words that point in the "right" direction are added to the components of words that share a similar meaning. Conversely, components that point in other directions tend to either simply cancel out, or, at worst, to be smaller than components in the directions corresponding to the intended sense.
+
+=== Derivation ===
+Let <math>X</math> be a matrix where element <math>(i,j)</math> describes the occurrence of term <math>i</math> in document <math>j</math> (this can be, for example, the frequency). <math>X</math> will look like this:
+
+:<math>
+\begin{matrix} 
+ & \textbf{d}_j \\
+ & \downarrow \\
+\textbf{t}_i^T \rightarrow &
+\begin{bmatrix} 
+x_{1,1} & \dots & x_{1,j} & \dots & x_{1,n} \\
+\vdots & \ddots & \vdots & \ddots & \vdots \\
+x_{i,1} & \dots & x_{i,j} &  \dots & x_{i,n} \\
+\vdots & \ddots & \vdots & \ddots & \vdots \\
+x_{m,1} & \dots & x_{m,j} & \dots & x_{m,n} \\
+\end{bmatrix}
+\end{matrix}
+</math>
+
+Now a row in this matrix will be a vector corresponding to a term, giving its relation to each document:
+
+:<math>\textbf{t}_i^T = \begin{bmatrix} x_{i,1} & \dots & x_{i,j} & \dots & x_{i,n} \end{bmatrix}</math>
+
+Likewise, a column in this matrix will be a vector corresponding to a document, giving its relation to each term:
+
+:<math>\textbf{d}_j = \begin{bmatrix}
+x_{1,j} \\
+\vdots \\
+x_{i,j} \\
+\vdots \\
+x_{m,j} \\
+ \end{bmatrix}</math>
+
+Now the [[dot product]] <math>\textbf{t}_i^T \textbf{t}_p</math> between two term vectors gives the [[correlation]] between the terms over the set of documents. The [[matrix product]] <math>X X^T</math> contains all these dot products. Element <math>(i,p)</math> (which is equal to element <math>(p,i)</math>) contains the dot product <math>\textbf{t}_i^T \textbf{t}_p</math> (<math> = \textbf{t}_p^T \textbf{t}_i</math>). Likewise, the matrix <math>X^T X</math> contains the dot products between all the document vectors, giving their correlation over the terms: <math>\textbf{d}_j^T \textbf{d}_q = \textbf{d}_q^T \textbf{d}_j</math>.
+
+Now, from the theory of linear algebra, there exists a decomposition of <math>X</math> such that <math>U</math> and <math>V</math> are [[orthogonal matrix|orthogonal matrices]] and <math>\Sigma</math> is a [[diagonal matrix]]. This is called a [[singular value decomposition]] (SVD):
+
+:<math>
+\begin{matrix}
+X = U \Sigma V^T
+\end{matrix}
+</math>
+
+The matrix products giving us the term and document correlations then become
+
+:<math>
+\begin{matrix}
+X X^T &=& (U \Sigma V^T) (U \Sigma V^T)^T = (U \Sigma V^T) (V^{T^T} \Sigma^T U^T) = U \Sigma V^T V \Sigma^T U^T = U \Sigma \Sigma^T U^T  \\
+X^T X &=& (U \Sigma V^T)^T (U \Sigma V^T) = (V^{T^T} \Sigma^T U^T) (U \Sigma V^T) = V \Sigma^T U^T U \Sigma V^T = V \Sigma^T \Sigma V^T
+\end{matrix}
+</math>
+
+Since <math>\Sigma \Sigma^T</math> and <math>\Sigma^T \Sigma</math> are diagonal we see that <math>U</math> must contain the [[eigenvector]]s of <math>X X^T</math>, while <math>V</math> must be the eigenvectors of <math>X^T X</math>. Both products have the same non-zero eigenvalues, given by the non-zero entries of <math>\Sigma \Sigma^T</math>, or equally, by the non-zero entries of <math>\Sigma^T\Sigma</math>. Now the decomposition looks like this:
+
+:<math>
+\begin{matrix} 
+ & X & & & U & & \Sigma & & V^T \\
+ & (\textbf{d}_j) & & & & & & & (\hat{\textbf{d}}_j) \\
+ & \downarrow & & & & & & & \downarrow \\
+(\textbf{t}_i^T) \rightarrow 
+&
+\begin{bmatrix}
+x_{1,1} & \dots & x_{1,j} & \dots & x_{1,n} \\
+\vdots & \ddots & \vdots & \ddots & \vdots \\
+x_{i,1} & \dots & x_{i,j} &  \dots & x_{i,n} \\
+\vdots & \ddots & \vdots & \ddots & \vdots \\
+x_{m,1} & \dots & x_{m,j} & \dots & x_{m,n} \\
+\end{bmatrix}
+&
+=
+&
+(\hat{\textbf{t}}_i^T) \rightarrow
+&
+\begin{bmatrix} 
+\begin{bmatrix} \, \\ \, \\ \textbf{u}_1 \\ \, \\ \,\end{bmatrix} 
+\dots
+\begin{bmatrix} \, \\ \, \\ \textbf{u}_l \\ \, \\ \, \end{bmatrix}
+\end{bmatrix}
+&
+\cdot
+&
+\begin{bmatrix} 
+\sigma_1 & \dots & 0 \\
+\vdots & \ddots & \vdots \\
+0 & \dots & \sigma_l \\
+\end{bmatrix}
+&
+\cdot
+&
+\begin{bmatrix} 
+\begin{bmatrix} & & \textbf{v}_1 & & \end{bmatrix} \\
+\vdots \\
+\begin{bmatrix} & & \textbf{v}_l & & \end{bmatrix}
+\end{bmatrix}
+\end{matrix}
+</math>
+
+The values <math>\sigma_1, \dots, \sigma_l</math> are called the singular values, and <math>u_1, \dots, u_l</math> and <math>v_1, \dots, v_l</math> the left and right singular vectors.
+Notice the only part of <math>U</math> that contributes to <math>\textbf{t}_i</math> is the <math>i\textrm{'th}</math> row.
+Let this row vector be called <math>\hat{\textrm{t}}^T_i</math>.
+Likewise, the only part of <math>V^T</math> that contributes to <math>\textbf{d}_j</math> is the <math>j\textrm{'th}</math> column, <math>\hat{ \textrm{d}}_j</math>.
+These are ''not'' the eigenvectors, but ''depend'' on ''all'' the eigenvectors.
+
+It turns out that when you select the <math>k</math> largest singular values, and their corresponding singular vectors from <math>U</math> and <math>V</math>, you get the rank <math>k</math> approximation to <math>X</math> with the smallest error ([[Frobenius norm]]). This approximation has a minimal error.  But more importantly we can now treat the term and document vectors as a "semantic space". The row "term" vector <math>\hat{\textbf{t}}^T_i</math> then has <math>k</math> entries mapping it to a lower-dimensional space. These new dimensions do not relate to any comprehensible concepts. They are a lower-dimensional approximation of the higher-dimensional space. Likewise, the "document" vector <math>\hat{\textbf{d}}_j</math> is an approximation in this lower-dimensional space. We write this approximation as
+
+:<math>X_k = U_k \Sigma_k V_k^T</math>
+
+You can now do the following:
+* See how related documents <math>j</math> and <math>q</math> are in the low-dimensional space by comparing the vectors <math>\Sigma_k \cdot \hat{\textbf{d}}_j </math> and <math>\Sigma_k \cdot \hat{\textbf{d}}_q </math> (typically by [[vector space model|cosine similarity]]).
+* Comparing terms <math>i</math> and <math>p</math> by comparing the vectors <math>\Sigma_k \cdot \hat{\textbf{t}}_i</math> and <math>\Sigma_k \cdot \hat{\textbf{t}}_p</math>. Note that <math>\hat{\textbf{t}}</math> is now a column vector.
+* Documents and term vector representations can be clustered using traditional clustering algorithms like k-means using similarity measures like cosine.
+* Given a query, view this as a mini document, and compare it to your documents in the low-dimensional space.
+
+To do the latter, you must first translate your query into the low-dimensional space. It is then intuitive that you must use the same transformation that you use on your documents:
+
+:<math>\hat{\textbf{d}}_j = \Sigma_k^{-1}U_k^T{\textbf{d}}_j </math>
+
+Note here that the inverse of the diagonal matrix <math>\Sigma_k</math> may be found by inverting each nonzero value within the matrix.
+
+This means that if you have a query vector <math>q</math>, you must do the translation <math>\hat{\textbf{q}} = \Sigma_k^{-1} U_k^T \textbf{q}</math> before you compare it with the document vectors in the low-dimensional space. You can do the same for pseudo term vectors:
+
+:<math>\textbf{t}_i^T = \hat{\textbf{t}}_i^T \Sigma_k V_k^T</math>
+
+:<math>\hat{\textbf{t}}_i^T = \textbf{t}_i^T V_k^{-T} \Sigma_k^{-1} = \textbf{t}_i^T V_k \Sigma_k^{-1}</math>
+
+:<math>\hat{\textbf{t}}_i = \Sigma_k^{-1}  V_k^T \textbf{t}_i</math>
+
+== Applications ==
+
+The new low-dimensional space typically can be used to:
+* Compare the documents in the low-dimensional space ([[data clustering]], [[document classification]]).
+* Find similar documents across languages, after analyzing a base set of translated documents ([[cross-language information retrieval]]).
+* Find relations between terms ([[synonymy]] and [[polysemy]]).
+* Given a query of terms, translate it into the low-dimensional space, and find matching documents ([[information retrieval]]).
+* Find the best similarity between small groups of terms, in a semantic way (i.e. in a context of a knowledge corpus), as for example in multi choice questions [[Multiple choice question|MCQ]] answering model.<ref name="Alain2009">{{cite journal | url=http://hal.archives-ouvertes.fr/docs/00/38/41/43/PDF/eLSA1-brm20.pdf | title=Effect of tuned parameters on an LSA multiple choice questions answering model |author1=Alain Lifchitz |author2=Sandra Jhean-Larose |author3=Guy Denhière | journal=Behavior Research Methods | volume=41 | issue=4 | pages=1201–1209 | year=2009  | doi=10.3758/BRM.41.4.1201 | pmid=19897829 | arxiv=0811.0146 | s2cid=480826 | doi-access=free }}</ref>
+* Expand the feature space of machine learning / text mining systems <ref name="Galvez2017">{{cite journal | title=Assessing the usefulness of online message board mining in automatic stock prediction systems |author1=Ramiro H. Gálvez |author2=Agustín Gravano | journal=Journal of Computational Science | volume=19 | pages=1877–7503 | year=2017  | doi=10.1016/j.jocs.2017.01.001| hdl=11336/60065 | hdl-access=free }}</ref>
+* Analyze word association in text corpus <ref name="Altszyler2017">{{cite journal | title=The interpretation of dream meaning: Resolving ambiguity using Latent Semantic Analysis in a small corpus of text |author1=Altszyler, E. |author2=Ribeiro, S. | author3= Sigman, M.|author4=Fernández Slezak, D. | journal=Consciousness and Cognition | volume=56 | pages=178–187 | year=2017 | doi=10.1016/j.concog.2017.09.004| pmid=28943127 | arxiv=1610.01520 |s2cid=195347873 }}</ref>
+Synonymy and polysemy are fundamental problems in [[natural language processing]]: 
+* Synonymy is the phenomenon where different words describe the same idea. Thus, a query in a search engine may fail to retrieve a relevant document that does not contain the words which appeared in the query. For example, a search for "doctors" may not return a document containing the word "[[physicians]]", even though the words have the same meaning.
+* Polysemy is the phenomenon where the same word has multiple meanings. So a search may retrieve irrelevant documents containing the desired words in the wrong meaning. For example, a botanist and a computer scientist looking for the word "tree" probably desire different sets of documents.
+
+=== Commercial applications ===
+
+LSA has been used to assist in performing [[prior art]] searches for [[patents]].<ref name="Gerry2007">{{Cite journal | author=Gerry J. Elman | title=Automated Patent Examination Support - A proposal | journal=Biotechnology Law Report | date=October 2007 | doi=10.1089/blr.2007.9896 | volume=26 | issue=5 | pages=435–436 }}</ref>
+
+=== Applications in human memory ===
+
+The use of Latent Semantic Analysis has been prevalent in the study of human memory, especially in areas of [[free recall]] and memory search.  There is a positive correlation between the semantic similarity of two words (as measured by LSA) and the probability that the words would be recalled one after another in free recall tasks using study lists of random common nouns. They also noted that in these situations, the inter-response time between the similar words was much quicker than between dissimilar words.  These findings are referred to as the [[Semantic Proximity Effect]].<ref>{{cite journal | journal= Journal of Experimental Psychology: Learning, Memory, and Cognition| url= https://psycnet.apa.org/record/1999-05966-007 | title=Contextual Variability and Serial Position Effects in Free Recall | author1=Marc W. Howard | author2=Michael J. Kahana |year=1999 | volume= 25 | issue= 4 | pages= 923–941 |doi=10.1037/0278-7393.25.4.923 }}</ref>
+
+When participants made mistakes in recalling studied items, these mistakes tended to be items that were more semantically related to the desired item and found in a previously studied list.  These prior-list intrusions, as they have come to be called, seem to compete with items on the current list for recall.<ref>{{cite conference| url= https://memory.psych.upenn.edu/files/pubs/ZaroEtal06.pdf | title= Temporal Associations and Prior-List Intrusions in Free Recall | author=Franklin M. Zaromb| conference=Interspeech'2005|year=2006|display-authors=etal}}</ref>
+
+Another model, termed [[Word Association Spaces]] (WAS) is also used in memory studies by collecting free association data from a series of experiments and which includes measures of word relatedness for over 72,000 distinct word pairs.<ref>{{cite web|last=Nelson|first=Douglas|title=The University of South Florida Word Association, Rhyme and Word Fragment Norms|url=http://w3.usf.edu/FreeAssociation/Intro.html|access-date=May 8, 2011}}</ref>
+
+== Implementation ==
+
+The [[Singular Value Decomposition|SVD]] is typically computed using large matrix methods (for example, [[Lanczos method]]s) but may also be computed incrementally and with greatly reduced resources via a [[neural network]]-like approach, which does not require the large, full-rank matrix to be held in memory.<ref name="Genevi2005">{{cite conference | url=http://www.dcs.shef.ac.uk/~genevieve/gorrell_webb.pdf | title=Generalized Hebbian Algorithm for Latent Semantic Analysis | author1=Geneviève Gorrell | author2=Brandyn Webb | book-title=Interspeech'2005 | year=2005 | url-status=dead | archive-url=https://web.archive.org/web/20081221063926/http://www.dcs.shef.ac.uk/~genevieve/gorrell_webb.pdf | archive-date=2008-12-21 }}</ref>
+A fast, incremental, low-memory, large-matrix SVD algorithm has been developed.<ref name="brand2006">{{cite journal | title=Fast Low-Rank Modifications of the Thin Singular Value Decomposition | author=Matthew Brand | journal=Linear Algebra and Its Applications | volume=415 | pages=20–30 | year=2006 | doi=10.1016/j.laa.2005.07.021 | doi-access=free }}</ref> MATLAB<ref>{{Cite web | url=http://web.mit.edu/~wingated/www/resources.html | title=MATLAB | archive-url=https://web.archive.org/web/20140228014003/http://web.mit.edu/~wingated/www/resources.html | archive-date=2014-02-28}}</ref> and Python<ref>[http://radimrehurek.com/gensim Python]</ref> implementations of these fast algorithms are available. Unlike Gorrell and Webb's (2005) stochastic approximation, Brand's algorithm (2003) provides an exact solution.
+In recent years progress has been made to reduce the computational complexity of SVD; for instance, by using a parallel ARPACK algorithm to perform parallel eigenvalue decomposition it is possible to speed up the SVD computation cost while providing comparable prediction quality.<ref>{{cite book | doi = 10.1109/ICCSNT.2011.6182070 | pages=739–741 | year=2011 | last1 = Ding | first1 = Yaguang | last2 = Zhu | first2 = Guofeng | last3 = Cui | first3 = Chenyang | last4 = Zhou | first4 = Jian | last5 = Tao | first5 = Liang| title=Proceedings of 2011 International Conference on Computer Science and Network Technology | chapter=A parallel implementation of Singular Value Decomposition based on Map-Reduce and PARPACK | isbn=978-1-4577-1587-7 | s2cid=15281129 }}</ref>
+
+== Limitations ==
+Some of LSA's drawbacks include:
+
+* The resulting dimensions might be difficult to interpret. For instance, in
+:: {(car), (truck), (flower)} ↦  {(1.3452 * car + 0.2828 * truck), (flower)}
+:the (1.3452 * car + 0.2828 * truck) component could be interpreted as "vehicle". However, it is very likely that cases close to
+:: {(car), (bottle), (flower)} ↦  {(1.3452 * car + 0.2828 * '''bottle'''), (flower)}
+:will occur. This leads to results which can be justified on the mathematical level, but have no immediately obvious meaning in natural language. Though, the (1.3452 * car + 0.2828 * bottle) component could be justified because both bottles and cars have transparent and opaque parts, are man made and with high probability contain logos/words on their surface; thus, in many ways these two concepts "share semantics." That is, within a language in question, there may not be a readily available word to assign and explainability becomes an analysis task as opposed to simple word/class/concept assignment task.
+
+* LSA can only partially capture [[polysemy]] (i.e., multiple meanings of a word) because each occurrence of a word is treated as having the same meaning due to the word being represented as a single point in space. For example, the occurrence of "chair" in a document containing "The Chair of the Board" and in a separate document containing "the chair maker" are considered the same.  The behavior results in the vector representation being an ''average'' of all the word's different meanings in the corpus, which can make it difficult for comparison.<ref name=":0">{{Cite journal|last1=Deerwester|first1=Scott|last2=Dumais|first2=Susan T.|last3=Furnas|first3=George W.|last4=Landauer|first4=Thomas K.|last5=Harshman|first5=Richard|date=1990|title=Indexing by latent semantic analysis|journal=Journal of the American Society for Information Science|volume=41|issue=6|pages=391–407|citeseerx=10.1.1.108.8490|doi=10.1002/(SICI)1097-4571(199009)41:6<391::AID-ASI1>3.0.CO;2-9}}</ref>   However, the effect is often lessened due to words having a [[word sense disambiguation|predominant sense]] throughout a corpus (i.e. not all meanings are equally likely).
+* Limitations of [[bag of words model]] (BOW), where a text is represented as an unordered collection of words. To address some of the limitation of [[bag of words model]] (BOW), [[N-gram|multi-gram]] dictionary can be used to find direct and indirect association as well as [[Higher-order statistics|higher-order]] [[co-occurrence]]s among terms.<ref>{{cite journal|title=Empirical study using network of semantically related associations in bridging the knowledge gap|first1=Vida|last1=Abedi|first2=Mohammed|last2=Yeasin|first3=Ramin|last3=Zand|date=27 November 2014|volume=12|issue=1|pages=324|doi=10.1186/s12967-014-0324-9|pmid=25428570|pmc=4252998|journal=Journal of Translational Medicine |doi-access=free }}</ref>
+* The [[probabilistic model]] of LSA does not match observed data: LSA assumes that words and documents form a joint [[normal distribution|Gaussian]] model ([[ergodic hypothesis]]), while a [[Poisson distribution]] has been observed.  Thus, a newer alternative is [[probabilistic latent semantic analysis]], based on a [[multinomial distribution|multinomial]] model, which is reported to give better results than standard LSA.<ref name="Thomas1999">{{cite conference|title=Probabilistic Latent Semantic Analysis|author=Thomas Hofmann|book-title=Uncertainty in Artificial Intelligence|year=1999|arxiv = 1301.6705}}</ref>
+
+==Alternative methods==
+
+===Semantic hashing===
+In semantic hashing <ref>Salakhutdinov, Ruslan, and Geoffrey Hinton. "Semantic hashing." RBM 500.3 (2007): 500.</ref> documents are mapped to memory addresses by means of a [[neural network]] in such a way that semantically similar documents are located at nearby addresses. [[Deep learning|Deep neural network]] essentially builds a [[graphical model]] of the word-count vectors obtained from a large set of documents. Documents similar to a query document can then be found by simply accessing all the addresses that differ by only a few bits from the address of the query document. This way of extending the efficiency of hash-coding to approximate matching is much faster than [[locality sensitive hashing]], which is the fastest current method. {{clarify |date=November 2019 |reason=This implies that the fastest method currently known is slower than an older method, which is impossible. }}
+
+===Latent semantic indexing===
+'''Latent semantic indexing''' ('''LSI''') is an indexing and retrieval method that uses a mathematical technique called [[singular value decomposition]] (SVD) to identify patterns in the relationships between the [[terminology|term]]s and [[concept]]s contained in an unstructured collection of text.  LSI is based on the principle that words that are used in the same contexts tend to have similar meanings.  A key feature of LSI is its ability to extract the conceptual content of a [[Text corpus|body of text]] by establishing associations between those terms that occur in similar [[context (language use)|context]]s.<ref name=deerwester1988>Deerwester, S., et al, Improving Information Retrieval with Latent Semantic Indexing, Proceedings of the 51st Annual Meeting of the American Society for Information Science 25, 1988, pp. 36–40.</ref>
+
+LSI is also an application of [[correspondence analysis]], a multivariate statistical technique developed by [[Jean-Paul Benzécri]]<ref>{{ cite book
+ | author = Benzécri, J.-P.
+ | publisher=Dunod |location= Paris, France
+ | year = 1973
+ | title = L'Analyse des Données. Volume II. L'Analyse des Correspondences
+ }}</ref> in the early 1970s, to a [[contingency table]] built from word counts in documents.
+
+Called "{{em|latent semantic}} indexing" because of its ability to correlate {{em|semantically}} related terms that are {{em|latent}} in a collection of text, it was first applied to text at [[Bellcore]] in the late 1980s.   The method, also called latent semantic analysis (LSA), uncovers the underlying latent semantic structure in the usage of words in a body of text and how it can be used to extract the meaning of the text in response to user queries, commonly referred to as concept searches.  Queries, or concept searches, against a set of documents that have undergone LSI will return results that are conceptually similar in meaning to the search criteria even if the results don’t share a specific word or words with the search criteria.
+
+== Benefits of LSI ==
+
+LSI helps overcome synonymy by increasing [[Evaluation measures (information retrieval)#Recall|recall]], one of the most problematic constraints of [[Boolean search|Boolean keyword queries]] and vector space models.<ref name=":0" />  Synonymy is often the cause of mismatches in the vocabulary used by the authors of documents and the users of [[information retrieval]] systems.<ref>{{Cite journal | last1 = Furnas | first1 = G. W. | last2 = Landauer | first2 = T. K. | last3 = Gomez | first3 = L. M. | last4 = Dumais | first4 = S. T. | title = The vocabulary problem in human-system communication | doi = 10.1145/32206.32212 | journal = Communications of the ACM | volume = 30 | issue = 11 | pages = 964–971 | year = 1987 | citeseerx = 10.1.1.118.4768 | s2cid = 3002280 }}</ref>  As a result, Boolean or keyword queries often return irrelevant results and miss information that is relevant.
+
+LSI is also used to perform automated [[document categorization]].  In fact, several experiments have demonstrated that there are a number of correlations between the way LSI and humans process and categorize text.<ref name=landauer2008>Landauer, T., et al., [http://papers.nips.cc/paper/1468-learning-human-like-knowledge-by-singular-value-decomposition-a-progress-report.pdf Learning Human-like Knowledge by Singular Value Decomposition: A Progress Report], M. I. Jordan, M. J. Kearns & [[Sara Solla|S. A. Solla]] (Eds.), Advances in Neural Information Processing Systems 10, Cambridge: MIT Press, 1998, pp. 45–51.</ref>    Document categorization is the assignment of documents to one or more predefined categories based on their similarity to the conceptual content of the categories.<ref>{{Cite book | last1 = Dumais | first1 = S. | last2 = Platt | first2 = J. | last3 = Heckerman | first3 = D. | last4 = Sahami | first4 = M. | chapter = Inductive learning algorithms and representations for text categorization | doi = 10.1145/288627.288651 | title = Proceedings of the seventh international conference on Information and knowledge management - CIKM '98 | pages = [https://archive.org/details/proceedingsof1990000inte_e1r0/page/148 148] | year = 1998 | isbn = 978-1581130614 | chapter-url = http://research.microsoft.com/en-us/um/people/jplatt/cikm98.pdf | citeseerx = 10.1.1.80.8909 | s2cid = 617436 | url = https://archive.org/details/proceedingsof1990000inte_e1r0/page/148 }}</ref>   LSI uses ''example'' documents to establish the conceptual basis for each category.  During categorization processing, the concepts contained in the documents being categorized are compared to the concepts contained in the example items, and a category (or categories) is assigned to the documents based on the similarities between the concepts they contain and the concepts that are contained in the example documents.
+
+Dynamic clustering based on the conceptual content of documents can also be accomplished using LSI.  Clustering is a way to group documents based on their conceptual similarity to each other without using example documents to establish the conceptual basis for each cluster.  This is very useful when dealing with an unknown collection of unstructured text.
+
+Because it uses a strictly mathematical approach, LSI is inherently independent of language.  This enables LSI to elicit the semantic content of information written in any language without requiring the use of auxiliary structures, such as dictionaries and thesauri.  LSI can also perform cross-linguistic [[concept searching]] and example-based categorization.  For example, queries can be made in one language, such as English, and conceptually similar results will be returned even if they are composed of an entirely different language or of multiple languages.{{Citation needed|date=July 2015}}
+
+LSI is not restricted to working only with words.  It can also process arbitrary character strings.  Any object that can be expressed as text can be represented in an LSI vector space. For example, tests with MEDLINE abstracts have shown that LSI is able to effectively classify genes based on conceptual modeling of the biological information contained in the titles and abstracts of the MEDLINE citations.<ref>{{Cite journal | last1 = Homayouni | first1 = R. | last2 = Heinrich | first2 = K. | last3 = Wei | first3 = L. | last4 = Berry | first4 = M. W. | title = Gene clustering by Latent Semantic Indexing of MEDLINE abstracts | doi = 10.1093/bioinformatics/bth464 | journal = Bioinformatics | volume = 21 | issue = 1 | pages = 104–115 | year = 2004 | pmid =  15308538| doi-access = free }}</ref>
+
+LSI automatically adapts to new and changing terminology, and has been shown to be very tolerant of noise (i.e., misspelled words, typographical errors, unreadable characters, etc.).<ref>{{Cite book | last1 = Price | first1 = R. J. | last2 = Zukas | first2 = A. E. | chapter = Application of Latent Semantic Indexing to Processing of Noisy Text | doi = 10.1007/11427995_68 | title = Intelligence and Security Informatics | series = Lecture Notes in Computer Science | volume = 3495 | pages = 602 | year = 2005 | isbn = 978-3-540-25999-2 }}</ref>   This is especially important for applications using text derived from Optical Character Recognition (OCR) and speech-to-text conversion.  LSI also deals effectively with sparse, ambiguous, and contradictory data.
+
+Text does not need to be in sentence form for LSI to be effective.  It can work with lists, free-form notes, email, Web-based content, etc.  As long as a collection of text contains multiple terms, LSI can be used to identify patterns in the relationships between the important terms and concepts contained in the text.
+
+LSI has proven to be a useful solution to a number of conceptual matching problems.<ref>Ding, C., [https://cloudfront.escholarship.org/dist/prd/content/qt0713n15c/qt0713n15c.pdf A Similarity-based Probability Model for Latent Semantic Indexing], Proceedings of the 22nd International ACM SIGIR Conference on Research and Development in Information Retrieval, 1999, pp. 59–65.</ref><ref>Bartell, B., Cottrell, G., and Belew, R., [http://www.academia.edu/download/31070610/latent_semantic_indexing_is_an_optimal_special_case_of_multidimensional.pdf Latent Semantic Indexing is an Optimal Special Case of Multidimensional Scaling]{{dead link|date=July 2022|bot=medic}}{{cbignore|bot=medic}}, Proceedings, ACM SIGIR Conference on Research and Development in Information Retrieval, 1992, pp. 161–167.</ref>  The technique has been shown to capture key relationship information, including causal, goal-oriented, and taxonomic information.<ref>{{cite journal|author1=Graesser, A. |author2=Karnavat, A.|title=Latent Semantic Analysis Captures Causal, Goal-oriented, and Taxonomic Structures|journal=Proceedings of CogSci 2000|pages=184–189|citeseerx = 10.1.1.23.5444|year = 2000}}</ref>
+
+== LSI timeline ==
+
+*'''Mid-1960s''' – Factor analysis technique first described and tested (H. Borko and M. Bernick)
+*'''1988''' – Seminal paper on LSI technique published <ref name=deerwester1988/>
+*'''1989''' – Original patent granted <ref name=deerwester1988/>
+*'''1992''' – First use of LSI to assign articles to reviewers<ref>{{cite book|last1=Dumais |first1=S. |last2=Nielsen |first2=J. |title=Proceedings of the 15th annual international ACM SIGIR conference on Research and development in information retrieval - SIGIR '92 |chapter=Automating the assignment of submitted manuscripts to reviewers |year=1992|pages=233–244|doi=10.1145/133160.133205|isbn=978-0897915236 |citeseerx=10.1.1.16.9793 |s2cid=15038631 }}</ref>
+*'''1994''' – Patent granted for the cross-lingual application of LSI (Landauer et al.)
+*'''1995''' – First use of LSI for grading essays (Foltz, et al., Landauer et al.)
+*'''1999''' – First implementation of LSI technology for intelligence community for analyzing unstructured text ([[Science Applications International Corporation|SAIC]]).
+*'''2002''' – LSI-based product offering to intelligence-based government agencies (SAIC)
+
+== Mathematics of LSI ==
+
+LSI uses common linear algebra techniques to learn the conceptual correlations in a collection of text.  In general, the process involves constructing a weighted term-document matrix, performing a [[Singular value decomposition|'''Singular Value Decomposition''']] on the matrix, and using the matrix to identify the concepts contained in the text.
+
+=== Term-document matrix ===
+
+LSI begins by constructing a term-document matrix, <math>A</math>, to identify the occurrences of the <math>m</math> unique terms within a collection of <math>n</math> documents.  In a term-document matrix, each term is represented by a row, and each document is represented by a column, with each matrix cell, <math>a_{ij}</math>, initially representing the number of times the associated term appears in the indicated document, <math>\mathrm{tf_{ij}}</math>.  This matrix is usually very large and very sparse.
+
+Once a term-document matrix is constructed, local and global weighting functions can be applied to it to condition the data.  The weighting functions transform each cell, <math>a_{ij}</math> of <math>A</math>, to be the product of a local term weight, <math>l_{ij}</math>, which describes the relative frequency of a term in a document, and a global weight, <math>g_i</math>, which describes the relative frequency of the term within the entire collection of documents.
+
+Some common local weighting functions<ref>
+Berry, M. W., and Browne, M., Understanding Search Engines: Mathematical Modeling and Text Retrieval, Society for Industrial and Applied Mathematics, Philadelphia, (2005).</ref> are defined in the following table.
+
+{| style="width:60%" cellpadding="25" cellspacing="5" align="center"
+|-
+|  style="width:22%" | '''Binary''' ||
+| <math>l_{ij} = 1</math> if the term exists in the document, or else <math>0</math>
+|-
+|  style="width:22%" | '''TermFrequency''' ||
+| <math>l_{ij} = \mathrm{tf}_{ij}</math>, the number of occurrences of term <math>i</math> in document <math>j</math>
+|-
+|  style="width:22%" | '''Log''' ||
+| <math>l_{ij} = \log(\mathrm{tf}_{ij} + 1)</math>
+|-
+|  style="width:22%" | '''Augnorm''' ||
+| <math>l_{ij} = \frac{\Big(\frac{\mathrm{tf}_{ij}}{\max_i(\mathrm{tf}_{ij})}\Big) + 1}{2}</math>
+|}
+
+Some common global weighting functions are defined in the following table.
+
+{| style="width:60%" cellpadding="25" cellspacing="5" align="center"
+|-
+| style="width:22%" | '''Binary''' ||
+| <math>g_i = 1</math>
+|-
+| style="width:22%" | '''Normal''' ||
+| <math>g_i = \frac{1}{\sqrt{\sum_j \mathrm{tf}_{ij}^2}}</math>
+|-
+| style="width:22%" | '''GfIdf''' ||
+| <math>g_i = \mathrm{gf}_i / \mathrm{df}_i</math>, where <math>\mathrm{gf}_i</math> is the total number of times term <math>i</math> occurs in the whole collection, and <math>\mathrm{df}_i</math> is the number of documents in which term <math>i</math> occurs.
+|-
+| style="width:22%" | '''[[Tf–idf#Inverse document frequency 2|Idf (Inverse Document Frequency)]]''' ||
+| <math>g_i = \log_2 \frac{n}{1+ \mathrm{df}_i}</math>
+|-
+| style="width:22%" | '''Entropy''' ||
+| <math>g_i = 1 + \sum_j \frac{p_{ij} \log p_{ij}}{\log n}</math>, where <math>p_{ij} = \frac{\mathrm{tf}_{ij}}{\mathrm{gf}_i}</math>
+|}
+
+Empirical studies with LSI report that the Log and Entropy weighting functions work well, in practice, with many data sets.<ref>Landauer, T., et al., Handbook of Latent Semantic Analysis, Lawrence Erlbaum Associates, 2007.</ref>  In other words, each entry <math>a_{ij}</math> of <math>A</math> is computed as:
+
+:<math>g_i = 1 + \sum_j \frac{p_{ij} \log p_{ij}}{\log n}</math>
+
+:<math>a_{ij} = g_i \ \log (\mathrm{tf}_{ij} + 1)</math>
+
+=== Rank-reduced singular value decomposition ===
+
+A rank-reduced, [[singular value decomposition]] is performed on the matrix to determine patterns in the relationships between the terms and concepts contained in the text.  The SVD forms the foundation for LSI.<ref>Berry, Michael W., Dumais, Susan T., O'Brien, Gavin W., [http://delab.csd.auth.gr/~dimitris/courses/ir_spring06/page_rank_computing/01cc99333c00501ddab030.pdf Using Linear Algebra for Intelligent Information Retrieval], December 1994, SIAM Review 37:4 (1995), pp. 573–595.</ref>   It computes the term and document vector spaces by approximating the single term-frequency matrix, <math>A</math>, into three other matrices— an '''''m''''' by '''''r'''''  term-concept vector matrix <math>T</math>, an '''''r''''' by '''''r''''' singular values matrix <math>S</math>, and a '''''n''''' by '''''r''''' concept-document vector matrix, <math>D</math>, which satisfy the following relations:
+
+<math>A \approx TSD^T</math>
+
+<math>T^T T = I_r \quad D^T D = I_r </math>
+
+<math>S_{1,1} \geq S_{2,2} \geq \ldots \geq  S_{r,r} > 0 \quad S_{i,j} = 0 \; \text{where} \; i \neq j</math>
+
+In the formula, '''A''' is the supplied '''''m''''' by '''''n''''' weighted matrix of term frequencies in a collection of text where '''''m''''' is the number of unique terms, and '''''n''''' is the number of documents.  '''T''' is a computed '''''m''''' by '''''r''''' matrix of term vectors where '''''r''''' is the rank of '''A'''—a measure of its unique dimensions '''≤ min(''m,n'')'''.  '''S''' is a computed '''''r''''' by '''''r''''' diagonal matrix of decreasing singular values, and '''D''' is a computed '''''n''''' by '''''r''''' matrix of document vectors.
+
+The SVD is then [[Singular value decomposition#Truncated SVD|truncated]] to reduce the rank by keeping only the largest '''''k''''' « '''''r''''' diagonal entries in the singular value matrix '''S''',
+where '''''k''''' is typically on the order 100 to 300 dimensions.
+This effectively reduces the term and document vector matrix sizes to '''''m''''' by '''''k''''' and '''''n''''' by '''''k''''' respectively.  The SVD operation, along with this reduction, has the effect of preserving the most important semantic information in the text while reducing noise and other undesirable artifacts of the original space of '''A'''.  This reduced set of matrices is often denoted with a modified formula such as:
+
+:::::::'''A ≈ A<sub>''k''</sub> = T<sub>''k''</sub> S<sub>''k''</sub> D<sub>''k''</sub><sup>T</sup>'''
+
+Efficient LSI algorithms only compute the first '''''k''''' singular values and term and document vectors as opposed to computing a full SVD and then truncating it.
+
+Note that this rank reduction is essentially the same as doing [[Principal Component Analysis]] (PCA) on the matrix '''A''', except that PCA subtracts off the means.  PCA loses the sparseness of the '''A''' matrix, which can make it infeasible for large lexicons.
+
+== Querying and augmenting LSI vector spaces ==
+
+The computed '''T<sub>''k''</sub>''' and '''D<sub>''k''</sub>''' matrices define the term and document vector spaces, which with the computed singular values, '''S<sub>''k''</sub>''', embody the conceptual information derived from the document collection.  The similarity of terms or documents within these spaces is a factor of how close they are to each other in these spaces, typically computed as a function of the angle between the corresponding vectors.
+
+The same steps are used to locate the vectors representing the text of queries and new documents within the document space of an existing LSI index.  By a simple transformation of the '''A = T S D<sup>T</sup>''' equation into the equivalent '''D = A<sup>T</sup> T S<sup>−1</sup>''' equation, a new vector, '''''d''''', for a query or for a new document can be created by computing a new column in '''A''' and then multiplying the new column by '''T S<sup>−1</sup>'''.  The new column in '''A''' is computed using the originally derived global term weights and applying the same local weighting function to the terms in the query or in the new document.
+
+A drawback to computing vectors in this way, when adding new searchable documents, is that terms that were not known during the SVD phase for the original index are ignored.  These terms will have no impact on the global weights and learned correlations derived from the original collection of text.  However, the computed vectors for the new text are still very relevant for similarity comparisons with all other document vectors.
+
+The process of augmenting the document vector spaces for an LSI index with new documents in this manner is called ''folding in''.  Although the folding-in process does not account for the new semantic content of the new text, adding a substantial number of documents in this way will still provide good results for queries as long as the terms and concepts they contain are well represented within the LSI index to which they are being added.  When the terms and concepts of a new set of documents need to be included in an LSI index, either the term-document matrix, and the SVD, must be recomputed or an incremental update method (such as the one described in <ref name="brand2006"/>) is needed.
+
+== Additional uses of LSI ==
+
+It is generally acknowledged that the ability to work with text on a semantic basis is essential to modern information retrieval systems.  As a result, the use of LSI has significantly expanded in recent years as earlier challenges in scalability and performance have been overcome.
+
+LSI is being used in a variety of information retrieval and text processing applications, although its primary application has been for concept searching and automated document categorization.<ref>Dumais, S., Latent Semantic Analysis, ARIST Review of Information Science and Technology, vol. 38, 2004, Chapter 4.</ref>   Below are some other ways in which LSI is being used:
+
+* Information discovery<ref>Best Practices Commentary on the Use of Search and Information Retrieval Methods in E-Discovery, the Sedona Conference, 2007, pp. 189–223.</ref>  ([[Electronic Discovery|eDiscovery]], Government/Intelligence community, Publishing)
+* [[Automated document classification]] (eDiscovery, Government/Intelligence community, Publishing)<ref>Foltz, P. W. and Dumais, S. T. [https://web.archive.org/web/20190808204703/http://courses.ischool.utexas.edu/Turnbull_Don/2004/spring/i385q-dt/readings/Foltz_Dumais-1992-Personalized.pdf Personalized Information Delivery:  An analysis of information filtering methods], Communications of the ACM, 1992, 34(12), 51-60.</ref>
+* [[Automatic summarization|Text summarization]]<ref>Gong, Y., and Liu, X., [https://ieeexplore.ieee.org/abstract/document/953917/ Creating Generic Text Summaries], Proceedings, Sixth International Conference on Document Analysis and Recognition, 2001, pp. 903–907.</ref>  (eDiscovery, Publishing)
+* Relationship discovery<ref>Bradford, R., [https://www.researchgate.net/profile/Fei_Yue_Wang/publication/317002646_Intelligence_and_Security_InformaticsLecture_Notes_in_Computer_Science_LNCS_3495/links/591d7440aca272d31bcd75a5/Intelligence-and-Security-InformaticsLecture-Notes-in-Computer-Science-LNCS-3495.pdf#page=392 Efficient Discovery of New Information in Large Text Databases], Proceedings, IEEE International Conference on Intelligence and Security Informatics, Atlanta, Georgia, LNCS Vol. 3495, Springer, 2005, pp. 374–380.</ref>  (Government, Intelligence community, Social Networking)
+* Automatic generation of link charts of individuals and organizations<ref>{{cite book | chapter-url=https://link.springer.com/chapter/10.1007/11760146_84 | doi=10.1007/11760146_84 | chapter=Application of Latent Semantic Indexing in Generating Graphs of Terrorist Networks | title=Intelligence and Security Informatics | series=Lecture Notes in Computer Science | year=2006 | last1=Bradford | first1=R. B. | volume=3975 | pages=674–675 | isbn=978-3-540-34478-0 }}</ref>  (Government, Intelligence community)
+* Matching technical papers and grants with reviewers<ref>Yarowsky, D., and Florian, R., [https://www.aclweb.org/anthology/W99-0627 Taking the Load off the Conference Chairs: Towards a Digital Paper-routing Assistant], Proceedings of the 1999 Joint SIGDAT Conference on Empirical Methods in NLP and Very-Large Corpora, 1999, pp. 220–230.</ref>  (Government)
+* Online customer support<ref>Caron, J., Applying LSA to Online Customer Support: A Trial Study, Unpublished Master's Thesis, May 2000.</ref>  (Customer Management)
+* Determining document authorship<ref>Soboroff, I., et al, [https://www.researchgate.net/profile/David_Ebert/publication/2740116_Visualizing_Document_Authorship_Using_N-grams_and_Latent_Semantic_Indexing/links/0a85e53a81770c370c000000.pdf Visualizing Document Authorship Using N-grams and Latent Semantic Indexing],   Workshop on New Paradigms in Information Visualization and Manipulation, 1997, pp. 43–48.</ref>  (Education)
+* Automatic keyword annotation of images<ref>Monay, F., and Gatica-Perez, D., [https://infoscience.epfl.ch/record/82928/files/monay-acm-sp054.pdf On Image Auto-annotation with Latent Space Models], Proceedings of the 11th ACM international conference on Multimedia, Berkeley, CA, 2003, pp. 275–278.</ref>
+* Understanding software source code<ref>{{cite book|author1=Maletic, J. |author2=Marcus, A.|title=Proceedings 12th IEEE Internationals Conference on Tools with Artificial Intelligence. ICTAI 2000 |chapter=Using latent semantic analysis to identify similarities in source code to support program understanding |date=November 13–15, 2000|pages= 46–53|doi=10.1109/TAI.2000.889845|isbn=978-0-7695-0909-9|citeseerx=10.1.1.36.6652|s2cid=10354564}}</ref>  (Software Engineering)
+* Filtering [[Spam (electronic)|spam]]<ref>Gee, K., [http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.57.8321&rep=rep1&type=pdf Using Latent Semantic Indexing to Filter Spam], in: Proceedings, 2003 ACM Symposium on Applied Computing, Melbourne, Florida, pp. 460–464.</ref>  (System Administration)
+* Information visualization<ref name=landauer2004>Landauer, T., Laham, D., and Derr, M., [https://www.pnas.org/content/pnas/101/suppl_1/5214.full.pdf From Paragraph to Graph: Latent Semantic Analysis for Information Visualization], Proceedings of the National Academy of Sciences, 101, 2004, pp. 5214–5219.</ref>
+* [[Automated essay scoring|Essay scoring]]<ref>Foltz, Peter W., Laham, Darrell, and Landauer, Thomas K., [https://web.archive.org/web/19991002015443/http://www-psych.nmsu.edu/%7Epfoltz/reprints/Edmedia99.html Automated Essay Scoring: Applications to Educational Technology], Proceedings of EdMedia,  1999.</ref>  (Education)
+* [[Literature-based discovery]]<ref>Gordon, M., and Dumais, S., [https://deepblue.lib.umich.edu/bitstream/handle/2027.42/34255/2_ftp.pdf?sequence=1&isAllowed=y Using Latent Semantic Indexing for Literature Based Discovery], Journal of the American Society for Information Science, 49(8), 1998, pp. 674–685.</ref>
+* Stock returns prediction<ref name="Galvez2017"/>
+* Dream Content Analysis (Psychology)<ref name="Altszyler2017"/>
+
+LSI is increasingly being used for electronic document discovery (eDiscovery) to help enterprises prepare for litigation.  In eDiscovery, the ability to cluster, categorize, and search large collections of unstructured text on a conceptual basis is essential.  Concept-based searching using LSI has been applied to the eDiscovery process by leading providers as early as 2003.<ref>There Has to be a Better Way to Search, 2008, White Paper, Fios, Inc.</ref>
+
+== Challenges to LSI ==
+
+Early challenges to LSI focused on scalability and performance.  LSI requires relatively high computational performance and memory in comparison to other information retrieval techniques.<ref>Karypis, G., Han, E., [https://www.researchgate.net/profile/George_Karypis/publication/2437989_Fast_Supervised_Dimensionality_Reduction_Algorithm_with_Applications_to_Document_Categorization_Retrieval/links/549ee9c80cf267bdb8fdb8e1.pdf Fast Supervised Dimensionality Reduction Algorithm with Applications to Document Categorization and Retrieval], Proceedings of CIKM-00, 9th ACM Conference on Information and Knowledge Management.</ref>  However, with the implementation of modern high-speed processors and the availability of inexpensive memory, these considerations have been largely overcome.  Real-world applications involving more than 30 million documents that were fully processed through the matrix and SVD computations are common in some LSI applications. A fully scalable (unlimited number of documents, online training) implementation of LSI is contained in the open source [[gensim]] software package.<ref name="rehurek2011">{{cite book | chapter=Subspace Tracking for Latent Semantic Analysis | author=Radim Řehůřek | title=Advances in Information Retrieval | volume=6611 | pages=289–300 | year=2011 | doi=10.1007/978-3-642-20161-5_29 |series=Lecture Notes in Computer Science|isbn=978-3-642-20160-8}}</ref>
+
+Another challenge to LSI has been the alleged difficulty in determining the optimal number of dimensions to use for performing the SVD.  As a general rule, fewer dimensions allow for broader comparisons of the concepts contained in a collection of text, while a higher number of dimensions enable more specific (or more relevant) comparisons of concepts.  The actual number of dimensions that can be used is limited by the number of documents in the collection.  Research has demonstrated that around 300 dimensions will usually provide the best results with moderate-sized document collections (hundreds of thousands of documents) and perhaps 400 dimensions for larger document collections (millions of documents).<ref>Bradford, R., [https://dl.acm.org/citation.cfm?id=1458105 An Empirical Study of Required Dimensionality for Large-scale Latent Semantic Indexing Applications], Proceedings of the 17th ACM Conference on Information and Knowledge Management, Napa Valley, California, USA, 2008, pp. 153–162.</ref>   However, recent studies indicate that 50-1000 dimensions are suitable depending on the size and nature of the document collection.<ref name=landauer2008b>Landauer, Thomas K., and Dumais, Susan T., Latent Semantic Analysis, Scholarpedia, 3(11):4356, 2008.</ref> Checking the proportion of variance retained, similar to [[Principal component analysis|PCA]] or [[factor analysis]], to determine the optimal dimensionality is not suitable for LSI. Using a synonym test or prediction of missing words are two possible methods to find the correct dimensionality.<ref>Landauer, T. K., Foltz, P. W., & Laham, D. (1998). [https://mimno.infosci.cornell.edu/info6150/readings/dp1.LSAintro.pdf Introduction to Latent Semantic Analysis]. Discourse Processes, 25, 259-284</ref> When LSI topics are used as features in supervised learning methods, one can use prediction error measurements to find the ideal dimensionality.
+
+== See also ==
+* [[Coh-Metrix]]
+* [[Compound term processing]]
+* [[Distributional semantics]]
+* [[Explicit semantic analysis]]
+* [[Latent semantic mapping]]
+* [[Latent semantic structure indexing]]
+* [[Principal components analysis]]
+* [[Probabilistic latent semantic analysis]]
+* [[Spamdexing]]
+*[[Word vector]]
+* [[Topic model]]
+** [[Latent Dirichlet allocation]]
+
+== References ==
+{{Reflist|30em}}
+
+==Further reading==
+* {{cite journal
+ | url=http://lsa.colorado.edu/papers/dp1.LSAintro.pdf
+ | title=Introduction to Latent Semantic Analysis
+ | author-link1= Thomas Landauer |first1=Thomas |last1=Landauer |first2=Peter W. |last2=Foltz |first3=Darrell |last3=Laham
+ | journal=Discourse Processes
+ | volume=25
+ | pages=259–284
+ | year=1998
+ | doi=10.1080/01638539809545028
+ | issue=2–3
+| citeseerx=10.1.1.125.109
+ | s2cid=16625196
+ }}
+* {{cite journal
+ |url=http://lsi.research.telcordia.com/lsi/papers/JASIS90.pdf 
+ |title=Indexing by Latent Semantic Analysis 
+ |first1=Scott 
+ |last1=Deerwester 
+ |first2=Susan T. 
+ |last2=Dumais 
+ |first3=George W. 
+ |last3=Furnas 
+ |first4=Thomas K. 
+ |last4=Landauer 
+ |first5=Richard 
+ |last5=Harshman 
+ |author-link1=Scott Deerwester 
+ |author-link2=Susan Dumais 
+ |author-link3=George Furnas 
+ |author-link4=Thomas Landauer 
+ |author-link5=Richard Harshman 
+ |journal=Journal of the American Society for Information Science 
+ |volume=41 
+ |issue=6 
+ |pages=391–407 
+ |year=1990 
+ |doi=10.1002/(SICI)1097-4571(199009)41:6<391::AID-ASI1>3.0.CO;2-9 
+ |url-status=dead 
+ |archive-url=https://web.archive.org/web/20120717020428/http://lsi.research.telcordia.com/lsi/papers/JASIS90.pdf 
+ |archive-date=2012-07-17 
+|citeseerx=10.1.1.33.2447 
+ }} Original article where the model was first exposed.
+* {{cite web
+ | url=http://citeseer.ist.psu.edu/berry95using.html
+ | title=Using Linear Algebra for Intelligent Information Retrieval
+ | first1=Michael |last1= Berry |first2=Susan T. |last2=Dumais  |first3=Gavin W. |last3=O'Brien
+ | author-link1=Susan Dumais
+ |year=1995
+}} [http://lsirwww.epfl.ch/courses/dis/2003ws/papers/ut-cs-94-270.pdf (PDF)] {{Webarchive|url=https://web.archive.org/web/20181123122019/http://lsirwww.epfl.ch/courses/dis/2003ws/papers/ut-cs-94-270.pdf |date=2018-11-23 }}. Illustration of the application of LSA to document retrieval.
+* {{cite journal | last1 = Chicco | first1 = D | last2 = Masseroli | first2 = M | year = 2015 | title = Software suite for gene and protein annotation prediction and similarity search | journal = IEEE/ACM Transactions on Computational Biology and Bioinformatics | volume = 12 | issue = 4 | pages = 837–843 | doi=10.1109/TCBB.2014.2382127 | pmid = 26357324 | hdl = 11311/959408 | s2cid = 14714823 | url = https://doi.org/10.1109/TCBB.2014.2382127| hdl-access = free }}
+* {{cite web
+ | url=http://iv.slis.indiana.edu/sw/lsa.html
+ | title=Latent Semantic Analysis
+ | publisher=InfoVis
+ | access-date=2005-07-01
+ | archive-date=2020-02-18
+ | archive-url=https://web.archive.org/web/20200218073700/http://iv.slis.indiana.edu/sw/lsa.html
+ | url-status=dead
+ }}
+* {{cite web
+ | url=http://cran.at.r-project.org/web/packages/lsa/index.html
+ | title=An Open Source LSA Package for R
+ | publisher=CRAN
+ | author=Fridolin Wild
+ | date=November 23, 2005
+ | access-date=November 20, 2006
+}}
+* {{ cite web
+ | url=http://www.welchco.com/02/14/01/60/96/02/2901.HTM
+ | title=A Solution to Plato's Problem: The Latent Semantic Analysis Theory of Acquisition, Induction, and Representation of Knowledge
+ | author=[[Thomas Landauer]], [[Susan Dumais|Susan T. Dumais]]
+ | access-date=2007-07-02
+}}
+
+==External links==
+
+===Articles on LSA===
+* [http://www.scholarpedia.org/article/Latent_semantic_analysis Latent Semantic Analysis], a scholarpedia article on LSA written by Tom Landauer, one of the creators of LSA.
+
+===Talks and demonstrations===
+* [http://videolectures.net/slsfs05_hofmann_lsvm/ LSA Overview], talk by Prof. [https://www.inf.ethz.ch/department/faculty-profs/person-detail.html?persid=148752 Thomas Hofmann] {{Webarchive|url=https://web.archive.org/web/20171222052908/https://www.inf.ethz.ch/department/faculty-profs/person-detail.html?persid=148752 |date=2017-12-22 }} describing LSA, its applications in Information Retrieval, and its connections to [[probabilistic latent semantic analysis]].
+* [http://www.semanticquery.com/archive/semanticsearchart/researchLSA.html Complete LSA sample code in C# for Windows]. The demo code includes enumeration of text files, filtering stop words, stemming, making a document-term matrix and SVD.
+
+===Implementations===
+
+Due to its cross-domain applications in [[Information Retrieval]], [[Natural Language Processing]] (NLP), [[Cognitive Science]] and [[Computational Linguistics]], LSA has been implemented to support many different kinds of applications.
+* [http://www.d.umn.edu/~tpederse/senseclusters.html Sense Clusters], an Information Retrieval-oriented perl implementation of LSA
+* [http://code.google.com/p/airhead-research/ S-Space Package], a Computational Linguistics and Cognitive Science-oriented Java implementation of LSA
+* [http://code.google.com/p/semanticvectors/ Semantic Vectors] applies Random Projection, LSA, and Reflective Random Indexing to [[Lucene]] term-document matrices
+* [https://infomap-nlp.sourceforge.net/ Infomap Project], an NLP-oriented C implementation of LSA (superseded by semanticvectors project)
+* [http://scgroup20.ceid.upatras.gr:8000/tmg/index.php/Main_Page Text to Matrix Generator] {{Webarchive|url=https://archive.today/20130107231003/http://scgroup20.ceid.upatras.gr:8000/tmg/index.php/Main_Page |date=2013-01-07 }}, A MATLAB Toolbox for generating term-document matrices from text collections, with support for LSA
+* [[Gensim]] contains a Python implementation of LSA for matrices larger than RAM.
+
+{{Natural Language Processing}}
+
+[[Category:Information retrieval techniques]]
+[[Category:Natural language processing]]
+[[Category:Latent variable models]]
+[[Category:Semantic relations]]

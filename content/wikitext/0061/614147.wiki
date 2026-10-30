@@ -1,0 +1,250 @@
+<!-- wikipedia: en
+     page: 614147
+     title: Knuth–Bendix completion algorithm
+     revision: 1374771357
+     timestamp: 2026-09-14T00:56:31Z
+     history: https://en.wikipedia.org/w/index.php?curid=614147&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374771357 -->
+{{Short description|Semi-decision algorithm for transforming a set of equations}}
+The '''Knuth–Bendix completion algorithm''' (named after [[Donald E. Knuth|Donald Knuth]] and Peter Bendix<ref>[https://www.win.tue.nl/~mvdbrand/courses/seminar/0809/papers/ag-genesis.pdf D. Knuth, "The Genesis of Attribute Grammars"]</ref>) is a [[semidecidable|semi-decision]]<ref name="SchwartzCantone2011">{{cite book|author1=[[Jacob T. Schwartz]]|author2=Domenico Cantone|author3=Eugenio G. Omodeo|author4=Martin Davis|title=Computational Logic and Set Theory: Applying Formalized Logic to Analysis|year=2011|publisher=Springer Science & Business Media|isbn=978-0-85729-808-9|page=200}}</ref><ref>{{Cite book | doi = 10.1007/3-540-18088-5_6| chapter = On word problems in equational theories| title = Automata, Languages and Programming| volume = 267| pages = 54| series = Lecture Notes in Computer Science| year = 1987| last1 = Hsiang | first1 = J. | last2 = Rusinowitch | first2 = M. | isbn = 978-3-540-18088-3| chapter-url = https://hal.inria.fr/inria-00075875/file/RR-0678.pdf}}, p. 55</ref> [[algorithm]] for transforming a set of [[equation]]s (over [[term (logic)|terms]]) into a [[Confluence (term rewriting)|confluent]] [[term rewriting system]].  When the algorithm succeeds, it effectively solves the [[word problem (mathematics)|word problem]] for the specified [[algebra]].
+
+[[Buchberger's algorithm]] for computing [[Gröbner basis|Gröbner bases]] is a very similar algorithm. Although developed independently, it may also be seen as the instantiation of Knuth–Bendix algorithm in the theory of [[polynomial ring]]s.
+
+==Introduction==
+
+For a set ''E'' of equations, its '''deductive closure''' ({{Overunderset|⟷|⁎|''E''}})  is the set of all equations that can be derived by applying equations from ''E'' in any order.
+Formally, ''E'' is considered a [[binary relation]], ({{underset|''E''|⟶}}) is its [[rewrite closure]], and ({{Overunderset|⟷|⁎|''E''}}) is the [[equivalence closure]] of ({{underset|''E''|⟶}}).
+For a set ''R'' of rewrite rules, its '''deductive closure''' ({{Overunderset|⟶|⁎|''R''}} ∘ {{Overunderset|⟵|⁎|''R''}}) is the set of all equations that can be confirmed by applying rules from ''R'' left-to-right to both sides until they are literally equal.
+Formally, ''R'' is again viewed as a binary relation, ({{underset|''R''|⟶}}) is its rewrite closure, ({{underset|''R''|⟵}}) is its [[converse relation|converse]], and ({{Overunderset|⟶|⁎|''R''}} ∘ {{Overunderset|⟵|⁎|''R''}}) is the [[relation composition]] of their [[reflexive transitive closure]]s ({{Overunderset|⟶|⁎|''R''}} and {{Overunderset|⟵|⁎|''R''}}).
+
+For example, if {{math|1=''E'' = {{mset|1= 1⋅''x'' = ''x'', ''x''<sup>−1</sup>⋅''x'' = 1, (''x''⋅''y'')⋅''z'' = ''x''⋅(''y''⋅''z'') }}}} are the [[Group (mathematics)|group]] axioms, the derivation chain
+:{{math|''a''<sup>−1</sup>⋅(''a''⋅''b'') &nbsp; {{Overunderset|⟷|⁎|''E''}} &nbsp; (''a''<sup>−1</sup>⋅''a'')⋅''b'' &nbsp; {{Overunderset|⟷|⁎|''E''}} &nbsp; 1⋅''b'' &nbsp; {{Overunderset|⟷|⁎|''E''}} &nbsp; ''b''}}
+demonstrates that ''a''<sup>−1</sup>⋅(''a''⋅''b'')  {{Overunderset|⟷|⁎|''E''}} ''b'' is a member of ''E'''s deductive closure.
+If {{math|1=''R'' = {{mset| 1⋅''x'' → ''x'', ''x''<sup>−1</sup>⋅''x'' → 1, (''x''⋅''y'')⋅''z'' → ''x''⋅(''y''⋅''z'') }}}} is a "rewrite rule" version of ''E'', the derivation chains
+:{{math|(''a''<sup>−1</sup>⋅''a'')⋅''b'' &nbsp; {{Overunderset|⟶|⁎|''R''}} &nbsp;  1⋅''b'' &nbsp; {{Overunderset|⟶|⁎|''R''}} &nbsp; ''b''  &nbsp;  &nbsp;  &nbsp; and &nbsp;  &nbsp;  &nbsp; ''b'' &nbsp; {{Overunderset|⟵|⁎|''R''}} &nbsp; ''b''}}
+demonstrate that (''a''<sup>−1</sup>⋅''a'')⋅''b'' {{Overunderset|⟶|⁎|''R''}}∘{{Overunderset|⟵|⁎|''R''}} ''b'' is a member of ''R'''s deductive closure.
+However, there is no way to derive ''a''<sup>−1</sup>⋅(''a''⋅''b'') {{Overunderset|⟶|⁎|''R''}}∘{{Overunderset|⟵|⁎|''R''}} ''b'' similar to above, since a right-to-left application of the rule {{math|(''x''⋅''y'')⋅''z'' → ''x''⋅(''y''⋅''z'')}} is not allowed.
+
+The Knuth–Bendix algorithm takes a set ''E'' of equations between [[term (logic)|terms]], and a [[reduction ordering]] (>) on the set of all terms, and attempts to construct a confluent and terminating term rewriting system ''R'' that has the same deductive closure as ''E''.
+While proving consequences from ''E'' often requires human intuition, proving consequences from ''R'' does not.
+For more details, see [[Confluence (abstract rewriting)#Motivating examples]], which gives an example proof from group theory, performed both using ''E'' and using ''R''.
+
+==Rules==
+
+Given a set ''E'' of equations between [[term (logic)|terms]], the following inference rules can be used to transform it into an equivalent [[convergent term rewrite system]] (if possible):<ref>{{cite book |author=Bachmair, L. |author2=Dershowitz, N. |author3=Hsiang, J. | chapter=Orderings for Equational Proofs| title=Proc. IEEE Symposium on Logic in Computer Science|date=Jun 1986| pages=346–357}}</ref><ref>{{cite book |author=N. Dershowitz |author2=J.-P. Jouannaud |author2-link=J.-P. Jouannaud | title=Rewrite Systems| year=1990| volume=B| pages=243–320| publisher=Elsevier| editor=Jan van Leeuwen| series=Handbook of Theoretical Computer Science}} Here: sect.8.1, p.293</ref>
+They are based on a user-given [[reduction ordering]] (>) on the set of all terms; it is lifted to a well-founded ordering (▻) on the set of rewrite rules by defining {{math|(''s'' → ''t'') ▻ (''l'' → ''r'')}} if 
+* {{math|''s'' [[encompassment ordering|{{underset|e|>}}]] ''l''}} in the [[encompassment ordering]], or
+* {{mvar|s}} and {{mvar|l}} are [[variant (logic)|literally similar]] and {{math|''t'' > ''r''}}.
+
+{|
+|-
+| '''Delete'''
+| ‹ ''E''∪{''s'' = ''s''} 
+| , ''R'' › 
+| ⊢ 
+| ‹ ''E'' 
+| , ''R'' ›
+|-
+| '''Compose''' &nbsp; &nbsp; &nbsp; &nbsp;
+| ‹ ''E''
+| , ''R''∪{''s'' → ''t''} › &nbsp; &nbsp; &nbsp; &nbsp;
+| ⊢  &nbsp; &nbsp; &nbsp; &nbsp;
+| ‹ ''E'' 
+| , ''R''∪{''s'' → ''u''} › &nbsp; &nbsp; &nbsp; &nbsp;
+| if {{math|''t'' {{underset|''R''|⟶}} ''u''}}
+|-
+| '''Simplify'''
+| ‹ ''E''∪{''s'' = ''t''} 
+| , ''R'' › 
+| ⊢
+| ‹ ''E''∪{''s'' = ''u''}  
+| , ''R'' ›
+| if {{math|''t'' {{underset|''R''|⟶}} ''u''}}
+|-
+| '''Orient'''
+| ‹ ''E''∪{''s'' = ''t''} 
+| , ''R'' ›
+| ⊢
+| ‹ ''E''
+| , ''R''∪{''s'' → ''t''}   ›
+| if {{math|''s'' > ''t''}}
+|-
+| '''Collapse'''
+| ‹ ''E''
+| , ''R''∪{''s'' → ''t''} › 
+| ⊢
+| ‹ ''E''∪{''u'' = ''t''}
+| , ''R'' ›
+| if {{math|''s'' {{underset|''R''|⟶}} ''u''}} by {{math|''l'' → ''r''}} with {{math|(''s'' → ''t'') ▻ (''l'' → ''r'')}}
+|-
+| '''Deduce'''
+| ‹ ''E''
+| , ''R'' ›
+| ⊢
+| ‹ ''E''∪{''s'' = ''t''}
+| , ''R'' ›
+| if {{math|(''s'',''t'')}} is a [[critical pair (logic)|critical pair]] of ''R''
+|}
+
+==Example==
+
+The following example run, obtained from the [[E theorem prover]], computes a completion of the (additive) group axioms as in Knuth, Bendix (1970).
+It starts with the three initial equations for the group (neutral element 0, inverse elements, associativity), using <code>f(X,Y)</code> for ''X''+''Y'', and <code>i(X)</code> for −''X''. 
+The 10 starred equations turn out to constitute the resulting convergent rewrite system.
+"pm" is short for "[[Resolution (logic)#Paramodulation|paramodulation]]", implementing ''deduce''. Critical pair computation is an instance of paramodulation for equational unit clauses.
+"rw" is rewriting, implementing ''compose'', ''collapse'', and ''simplify''.
+Orienting of equations is done implicitly and not recorded.
+{| class=wikitable
+|-
+| '''Nr''' || || ALIGN=RIGHT | '''Lhs''' || || '''Rhs''' || '''Source'''
+|-
+| 1:    || <sup>*</sup> || ALIGN=RIGHT | f(X,0)                 || =    || X                    || initial("GROUP.lop", at_line_9_column_1)
+|-
+| 2:    || <sup>*</sup> || ALIGN=RIGHT | f(X,i(X))              || =    || 0                    || initial("GROUP.lop", at_line_12_column_1)
+|-
+| 3:    || <sup>*</sup> || ALIGN=RIGHT | f(f(X,Y),Z)            || =    || f(X,f(Y,Z))          || initial("GROUP.lop", at_line_15_column_1)
+|-
+| 5:    ||              || ALIGN=RIGHT | f(X,Y)                 || =    || f(X,f(0,Y))          || pm(3,1)
+|-
+| 6:    ||              || ALIGN=RIGHT | f(X,f(Y,i(f(X,Y))))    || =    || 0                    || pm(2,3)
+|-
+| 7:    ||              || ALIGN=RIGHT | f(0,Y)                 || =    || f(X,f(i(X),Y))       || pm(3,2)
+|-
+| 27:   ||              || ALIGN=RIGHT | f(X,0)                 || =    || f(0,i(i(X)))         || pm(7,2)
+|-
+| 36:   ||              || ALIGN=RIGHT | X                      || =    || f(0,i(i(X)))         || rw(27,1)
+|-
+| 46:   ||              || ALIGN=RIGHT | f(X,Y)                 || =    || f(X,i(i(Y)))         || pm(5,36)
+|-
+| 52:   || <sup>*</sup> || ALIGN=RIGHT | f(0,X)                 || =    || X                    || rw(36,46)
+|-
+| 60:   || <sup>*</sup> || ALIGN=RIGHT | i(0)                   || =    || 0                    || pm(2,52)
+|-
+| 63:   ||              || ALIGN=RIGHT | i(i(X))                || =    || f(0,X)               || pm(46,52)
+|-
+| 64:   || <sup>*</sup> || ALIGN=RIGHT | f(X,f(i(X),Y))         || =    || Y                    || rw(7,52)
+|-
+| 67:   || <sup>*</sup> || ALIGN=RIGHT | i(i(X))                || =    || X                    || rw(63,52)
+|-
+| 74:   || <sup>*</sup> || ALIGN=RIGHT | f(i(X),X)              || =    || 0                    || pm(2,67)
+|-
+| 79:   ||              || ALIGN=RIGHT | f(0,Y)                 || =    || f(i(X),f(X,Y))       || pm(3,74)
+|-
+| 83:   || <sup>*</sup> || ALIGN=RIGHT | Y                      || =    || f(i(X),f(X,Y))       || rw(79,52)
+|-
+| 134:  ||              || ALIGN=RIGHT | f(i(X),0)              || =    || f(Y,i(f(X,Y)))       || pm(83,6)
+|-
+| 151:  ||              || ALIGN=RIGHT | i(X)                   || =    || f(Y,i(f(X,Y)))       || rw(134,1)
+|-
+| 165:  || <sup>*</sup> || ALIGN=RIGHT | f(i(X),i(Y))           || =    || i(f(Y,X))            || pm(83,151)
+
+|}
+See also [[Word problem (mathematics)]] for another presentation of this example.
+
+==String rewriting systems in group theory==
+
+An important case in [[computational group theory]] is string rewriting systems which can be used to give canonical labels to elements or [[coset]]s of a [[finitely presented group]] as products of the [[Generating set of a group|generator]]s.  This special case is the focus of this section.
+
+=== Motivation in group theory ===
+The [[critical pair lemma]] states that a term rewriting system is [[confluence (term rewriting)|locally confluent]] (or weakly confluent) if and only if all its [[critical pair (logic)|critical pairs]] are convergent. Furthermore, we have [[Newman's lemma]] which states that if an (abstract) rewriting system is [[Normal form (abstract rewriting)|strongly normalizing]] and weakly confluent, then the rewriting system is confluent. So, if we can add rules to the term rewriting system in order to force all critical pairs to be convergent while maintaining the strong normalizing property, then this will force the resultant rewriting system to be confluent.
+
+Consider a [[finitely presented monoid]] <math>M = \langle X \mid R \rangle</math> where X is a finite set of generators and R is a set of defining relations on X.  Let X<sup>*</sup> be the set of all words in X (i.e. the free monoid generated by X).  Since the relations R generate an equivalence relation on X*, one can consider elements of M to be the equivalence classes of X<sup>*</sup> under R.  For each class ''{w<sub>1</sub>, w<sub>2</sub>, ... }'' it is desirable to choose a standard representative ''w<sub>k</sub>''.  This representative is called the '''canonical''' or '''normal form''' for each word ''w<sub>k</sub>'' in the class.  If there is a computable method to determine for each ''w<sub>k</sub>'' its normal form ''w<sub>i</sub>'' then the word problem is easily solved.  A confluent rewriting system allows one to do precisely this.
+
+Although the choice of a canonical form can theoretically be made in an arbitrary fashion this approach is generally not computable.  (Consider that an equivalence relation on a language can produce an infinite number of infinite classes.)  If the language is [[well-ordered]] then the order < gives a consistent method for defining minimal representatives, however computing these representatives may still not be possible.  In particular, if a rewriting system is used to calculate minimal representatives then the order < should also have the property:
+
+: A < B → XAY < XBY for all words A,B,X,Y
+
+This property is called '''translation invariance'''.  An order that is both translation-invariant and a well-order is called a '''reduction order'''.
+
+From the presentation of the monoid it is possible to define a rewriting system given by the relations R.  If A x B is in R then either A&nbsp;<&nbsp;B in which case B&nbsp;→&nbsp;A is a rule in the rewriting system, otherwise A&nbsp;>&nbsp;B and A&nbsp;→&nbsp;B.  Since < is a reduction order a given word W can be reduced W > W_1 > ... > W_n where W_n is irreducible under the rewriting system.  However, depending on the rules that are applied at each W<sub>i</sub>&nbsp;→&nbsp;W<sub>i+1</sub> it is possible to end up with two different irreducible reductions W<sub>n</sub>&nbsp;≠&nbsp;W'<sub>m</sub> of W.  However, if the rewriting system given by the relations is converted to a confluent rewriting system via the Knuth–Bendix algorithm, then all reductions are guaranteed to produce the same irreducible word, namely the normal form for that word.
+
+===Description of the algorithm for finitely presented monoids===
+
+Suppose we are given a [[presentation of a group|presentation]] <math> \langle X \mid R \rangle </math>, where <math> X </math> is a set of [[generating set of a group|generator]]s and <math> R </math> is a set of [[Relation (mathematics)|relations]] giving the rewriting system.  Suppose further that we have a reduction ordering <math> < </math> among the words generated by <math> X </math> (e.g., [[shortlex order]]).  For each relation <math> P_i = Q_i </math> in <math> R </math>, suppose <math> Q_i < P_i </math>.  Thus we begin with the set of reductions <math> P_i \rightarrow Q_i </math>.
+
+First, if any relation <math> P_i = Q_i </math> can be reduced, replace <math> P_i </math> and <math> Q_i </math> with the reductions.
+
+Next, we add more reductions (that is, rewriting rules) to eliminate possible exceptions of confluence.  Suppose that <math> P_i </math> and <math> P_j </math> overlap.
+
+# Case 1: either the prefix of <math> P_i</math> equals the suffix of <math> P_j </math>, or vice versa.  In the former case, we can write <math> P_i = BC </math> and <math> P_j = AB </math>; in the latter case, <math> P_i = AB </math> and <math> P_j = BC </math>.
+#Case 2: either <math> P_i</math> is completely contained in (surrounded by)  <math> P_j </math>, or vice versa. In the former case, we can write <math> P_i = B </math> and <math> P_j = ABC </math>; in the latter case, <math> P_i = ABC </math> and <math> P_j = B </math>.
+
+Reduce the word <math> ABC </math> using <math> P_i </math> first, then using <math> P_j </math> first.  Call the results <math> r_1, r_2 </math>, respectively.  If <math> r_1 \neq r_2 </math>, then we have an instance where confluence could fail.  Hence, add the reduction <math> \max r_1, r_2 \rightarrow \min r_1, r_2 </math> to <math> R </math>.
+
+After adding a rule to <math> R </math>, remove any rules in <math> R </math> that might have reducible left sides (after checking if such rules have critical pairs with other rules).
+
+Repeat the procedure until all overlapping left sides have been checked.
+
+===Examples===
+
+==== A terminating example ====
+Consider the monoid: 
+:<math> \langle x, y \mid x^3 = y^3 = (xy)^3 = 1 \rangle </math>.  
+We use the [[shortlex order]]. This is an infinite monoid but nevertheless, the Knuth–Bendix algorithm is able to solve the word problem.
+
+Our beginning three reductions are therefore
+{{NumBlk|:|<math> x^3 \rightarrow 1 </math>|{{EquationRef|1}}}} 
+{{NumBlk|:|<math> y^3 \rightarrow 1 </math>|{{EquationRef|2}}}}
+
+{{NumBlk|:|<math> (xy)^3 \rightarrow 1 </math>.|{{EquationRef|3}}}}
+
+A suffix of <math>x^3</math> (namely <math>x</math>) is a prefix of <math>(xy)^3=xyxyxy</math>, so consider the word <math> x^3yxyxy </math>.  Reducing using ({{EquationNote|1}}), we get <math> yxyxy </math>.  Reducing using ({{EquationNote|3}}), we get <math> x^2 </math>.  Hence, we get <math> yxyxy = x^2 </math>, giving the reduction rule
+
+{{NumBlk|:|<math> yxyxy \rightarrow x^2 </math>.|{{EquationRef|4}}}}
+
+Similarly, using <math> xyxyxy^3 </math> and reducing using ({{EquationNote|2}}) and ({{EquationNote|3}}), we get <math> xyxyx = y^2 </math>.  Hence the reduction
+
+{{NumBlk|:|<math> xyxyx \rightarrow y^2 </math>.|{{EquationRef|5}}}}
+
+Both of these rules obsolete ({{EquationNote|3}}), so we remove it.
+
+Next, consider <math> x^3yxyx </math> by overlapping ({{EquationNote|1}}) and ({{EquationNote|5}}). Reducing we get <math> yxyx = x^2y^2 </math>, so we add the rule
+
+{{NumBlk|:|<math> yxyx \rightarrow x^2y^2</math>.|{{EquationRef|6}}}}
+Considering <math> xyxyx^3 </math> by overlapping ({{EquationNote|1}}) and ({{EquationNote|5}}), we get <math> xyxy = y^2x^2 </math>, so we add the rule
+
+{{NumBlk|:|<math> y^2x^2 \rightarrow xyxy </math>.|{{EquationRef|7}}}}
+These obsolete rules ({{EquationNote|4}}) and ({{EquationNote|5}}), so we remove them.
+
+Now, we are left with the rewriting system
+{{NumBlk|:|<math> x^3 \rightarrow 1 </math>|({{EquationNote|1}})|RawN=.}}
+{{NumBlk|:|<math> y^3 \rightarrow 1 </math>|({{EquationNote|2}})|RawN=.}}
+
+{{NumBlk|:|<math> yxyx \rightarrow x^2y^2 </math>|({{EquationNote|6}})|RawN=.}}
+{{NumBlk|:|<math> y^2 x^2 \rightarrow xyxy </math>.|({{EquationNote|7}})|RawN=.}}
+
+Checking the overlaps of these rules, we find no potential failures of confluence.  Therefore, we have a confluent rewriting system, and the algorithm terminates successfully.
+
+==== A non-terminating example ====
+The order of the generators may crucially affect whether the Knuth–Bendix completion terminates. As an example, consider the [[free Abelian group]] by the monoid presentation:
+
+: <math>\langle x, y, x^{-1}, y^{-1}\, |\, xy=yx, xx^{-1} = x^{-1}x = yy^{-1} = y^{-1}y = 1 \rangle  .</math>
+
+The Knuth–Bendix completion with respect to lexicographic order <math>x < x^{-1} < y < y^ {-1}</math> finishes with a convergent system, however considering the length-lexicographic order <math>x < y < x^{-1} < y^{-1}</math> it does not finish for there are no finite convergent systems compatible with this latter order.<ref name="BogopolskiBumagin2011">{{cite book |editor=Oleg Bogopolski |editor2=Inna Bumagin |editor3=Olga Kharlampovich |editor4=Enric Ventura|title=Combinatorial and Geometric Group Theory: Dortmund and Ottawa-Montreal conferences|year=2011|publisher=Springer Science & Business Media|isbn=978-3-7643-9911-5|page=62|chapter=Geodesic Rewriting Systems and Pregroups|author=V. Diekert |author2=A.J. Duncan |author3=A.G. Myasnikov}}</ref>
+
+==Generalizations==
+
+If Knuth–Bendix does not succeed, it will either run forever and produce successive approximations to an infinite complete system, or fail when it encounters an unorientable equation (i.e. an equation that it cannot turn into a rewrite rule). An enhanced version will not fail on unorientable equations and produces a [[ground confluent]] system, providing a [[semi-algorithm]] for the word problem.<ref>{{cite journal |last1=Bachmair |first1=Leo |last2=Dershowitz |first2=Nachum |last3=Plaisted |first3=David A. |title=Completion Without Failure |journal=Rewriting Techniques |date=1989 |pages=1–30 |doi=10.1016/B978-0-12-046371-8.50007-9 |url=https://www.cs.tau.ac.il/~nachumd/papers/unfail-paper.pdf |access-date=24 December 2021}}</ref>
+
+The notion of [[logged rewriting]] discussed in the paper by Heyworth and Wensley listed below allows some recording or logging of the rewriting process as it proceeds. This is useful for computing identities among relations for presentations of groups.
+
+==References==
+{{Reflist}}
+* {{cite book|author1=D. Knuth |author2=P. Bendix | title=Simple Word Problems in Universal Algebras| year=1970| pages=263–297| publisher=Pergamon Press| editor=J. Leech|url=https://www.cs.tufts.edu/~nr/cs257/archive/don-knuth/knuth-bendix.pdf}}
+* {{cite journal| author=Gérard Huet| title=A Complete Proof of Correctness of the Knuth-Bendix Completion Algorithm| journal=J. Comput. Syst. Sci.| year=1981| volume=23| number=1| pages=11–21| url=https://hal.inria.fr/inria-00076536/file/RR-0025.pdf| doi=10.1016/0022-0000(81)90002-7}}
+* C. Sims. 'Computations with finitely presented groups.' Cambridge, 1994.
+* Anne Heyworth and C.D. Wensley. "[https://books.google.com/books?id=UytXH6rLUDwC&dq=%22Logged+rewriting+and+identities+among+relators%22&pg=PA256 Logged rewriting and identities among relators]."  ''Groups St. Andrews 2001 in Oxford. Vol. I,'' 256–276, London Math. Soc. Lecture Note Ser., 304, Cambridge Univ. Press, Cambridge, 2003.
+
+==External links==
+* {{MathWorld | urlname=Knuth-BendixCompletionAlgorithm | title=Knuth–Bendix Completion Algorithm}}
+* [http://cl-informatik.uibk.ac.at/software/kbcv/ <s>Knuth-Bendix Completion Visualizer (Defunct)</s>]
+* [https://smimram.github.io/ocaml-alg/kb/ Online tool implementing the Knuth-Bendix Completion Algorithm]
+
+{{Donald Knuth navbox}}
+
+{{DEFAULTSORT:Knuth-Bendix completion algorithm}}
+[[Category:Computational group theory]]
+[[Category:Donald Knuth]]
+[[Category:Combinatorics on words]]
+[[Category:Rewriting systems]]

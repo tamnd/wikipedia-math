@@ -1,0 +1,395 @@
+<!-- wikipedia: en
+     page: 38472580
+     title: Crypt (C)
+     revision: 1358387232
+     timestamp: 2026-06-08T10:54:13Z
+     history: https://en.wikipedia.org/w/index.php?curid=38472580&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1358387232 -->
+{{Short description|Key derivation function of password hash}}
+{{about|the Unix C library function|the Unix utility|Crypt (Unix)}}
+{{Lowercase title}}
+'''crypt''' is a [[C POSIX library|POSIX C library]] function. It is typically used to compute the [[cryptographic hash function|hash]] of user account passwords. The function outputs a text string which also [[code|encode]]s the [[salt (cryptography)|salt]] (usually the first two characters are the salt itself and the rest is the hashed result), and identifies the hash algorithm used (defaulting to the "traditional" one explained below). This output string forms a password record, which is usually stored in a text file.
+
+More formally, crypt provides cryptographic [[key derivation function]]s for password validation and storage on Unix systems.
+
+== Relationship to Unix crypt utility ==
+There is an unrelated [[Crypt (Unix)|crypt]] utility in Unix, which is often confused with the C library function.  To distinguish between the two, writers often refer to the utility program as '''''crypt(1)''''', because it is documented in section 1 of the Unix [[Manual page (Unix)|manual pages]], and refer to the C library function as '''''crypt(3)''''', because its documentation is in manual section 3.<ref name=fbsd3/>
+
+== Details ==
+This same ''crypt'' function is used both to generate a new hash for storage and also to hash a proffered password with a recorded [[Salt (cryptography)|salt]] for comparison.<!-- TODO: example in pseudocode or Perl -->
+
+Modern Unix implementations of the crypt library routine support a variety of hash schemes. The particular hash algorithm used can be identified by a unique code prefix in the resulting hashtext, following a ''de facto'' standard called Modular Crypt Format.<ref>
+Simson Garfinkel, Alan Schwartz, Gene Spafford.
+[https://books.google.com/books?id=50maN7VmpusC&q=Modular+Crypt+Format "Practical Unix & Internet Security"].
+2003.
+[http://docstore.mik.ua/orelly/other/puis3rd/0596003234_puis3-chp-4-sect-3.html section "4.3.2.3 crypt16( ), DES Extended, and Modular Crypt Format"].
+"The Modular Crypt Format (MCF) specifies an extensible scheme for formatting encrypted passwords. MCF is one of the most popular formats for encrypted passwords"
+</ref><ref name=":0">{{cite web|url=http://pythonhosted.org/passlib/modular_crypt_format.html|title=Modular Crypt Format — Passlib v1.7.1 Documentation|website=Pythonhosted.org|access-date=2 December 2018}}</ref><ref>{{cite web|url=https://github.com/ademarre/binary-mcf|title=ademarre/binary-mcf|website=GitHub.com|access-date=2 December 2018}}</ref>
+
+The <code>crypt()</code> library function is also included in the [[Perl]],<ref>{{cite web|url=http://perldoc.perl.org/functions/crypt.html|title=crypt - perldoc.perl.org|website=Perldoc.perl.org|access-date=2 December 2018}}</ref> [[PHP]],<ref>{{cite web|url=http://us.php.net/manual/en/function.crypt.php|title=PHP: crypt - Manual|website=Us.php.net|access-date=2 December 2018}}</ref> [[Pike (programming language)|Pike]],<ref>{{cite web |url=http://pike.ida.liu.se/generated/manual/modref/ex/predef_3A_3A/crypt.html |title=crypt() |access-date=2013-02-09 |archive-url=https://web.archive.org/web/20121002215125/http://pike.ida.liu.se/generated/manual/modref/ex/predef_3A_3A/crypt.html |archive-date=2012-10-02 }}</ref> [[Python (programming language)|Python]]<ref>{{cite web|url=https://docs.python.org/library/crypt.html|title=crypt — Function to check Unix passwords — Python 3.7.1 documentation|website=Docs.python.org|access-date=2 December 2018}}</ref> (although it is now deprecated as of 3.11), and [[Ruby (programming language)|Ruby]]<ref>{{cite web|url=http://ruby-doc.org/core/classes/String.html#M001174|title=Class: String (Ruby 2.5.3)|website=Ruby-doc.org|access-date=2 December 2018}}</ref> programming languages.
+
+== Key derivation functions supported by crypt ==
+Over time various algorithms have been introduced. To enable [[backward compatibility]], each scheme started using some convention of [[Serialization|serializing]] the [[password hash]]es that was later called the Modular Crypt Format (MCF).<ref name=":0" /> Old crypt(3) hashes generated before the de facto MCF standard may vary from scheme to scheme. A well-defined subset of the Modular Crypt Format was created during the [[Password Hashing Competition]].<ref name=":0" /> The format is defined as:<ref name="phc-string-format">{{cite web  | url=https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md | title=PHC string format|website=Github|author=Password Hash Competition}}</ref>
+
+<code>$<id>[$<param>=<value>(,<param>=<value>)*][$<salt>[$<hash>]]</code>
+
+where
+
+* <code>id</code>: an identifier representing the hashing algorithm (such as 1 for [[MD5]], 5 for [[SHA-2|SHA-256]] etc.)
+* <code>param</code> name and its <code>value</code>: hash complexity parameters, like rounds/iterations count
+* <code>salt</code>: [[Salt (cryptography)|salt]] following the [[radix-64]] alphabet (DES uses the decoded value)
+* <code>hash</code>: radix-64 encoded result of hashing the password and salt
+The radix-64 encoding in crypt is called B64 and uses the alphabet <code>./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz</code> which is different than the more common [[Base64#Implementations and history|RFC 4648 base64]] 
+{| class="wikitable"
+!Scheme id
+!Schema
+!Example
+|-
+|
+|[[Data Encryption Standard|DES]]
+|<code>Kyq4bCxAXJkbg</code>
+|-
+|{{mono|_}}
+|[[Berkeley Software Design|BSDi]]
+|<code>_EQ0.jzhSVeUyoSqLupI</code>
+|-
+|{{mono|1}}
+|md5crypt
+|<code>$1$etNnh7FA$OlM7eljE/B7F1J4XYNnk81</code>
+|-
+|{{mono|2}}, {{mono|2a}}, {{mono|2b}}, {{mono|2x}}, {{mono|2y}}
+|[[bcrypt]]
+|<code>$2a$10$VIhIOofSMqgdGlL4wzE//e.77dAQGqntF/1dT7bqCrVtquInWy2qi</code>
+|-
+|{{mono|3}}
+|[[NTLM Authentication|NTHASH]]
+|<code>$3$$8846f7eaee8fb117ad06bdd830b7586c</code>
+|-
+|{{mono|5}}
+|[[SHA-2|sha256crypt]]
+|<code>$5$9ks3nNEqv31FX.F$gdEoLFsCRsn/WRN3wxUnzfeZLoooVlzeF4WjLomTRFD</code>
+|-
+|{{mono|6}}
+|[[SHA-2|sha512crypt]]
+|<code>$6$qoE2letU$wWPRl.PVczjzeMVgjiA8LLy2nOyZbf7Amj3qLIL978o18gbMySdKZ7uepq9tmMQXxyTIrS12Pln.2Q/6Xscao0</code>
+|-
+|{{mono|7}}
+|[[scrypt]]
+|<code>$7$DU..../....2Q9obwLhin8qvQl6sisAO/$sHayJj/JBdcuD4lJ1AxiwCo9e5XSi8TcINcmyID12i8</code>
+|-
+|{{mono|8 (Cisco)}}
+|[[PBKDF2]] with [[SHA-256]]
+|<code>$8$mTj4RZG8N9ZDOk$elY/asfm8kD3iDmkBe3hD2r4xcA/0oWS5V3os.O91u.</code>
+|-
+|{{mono|8 (JunOS)}}
+|[[PBKDF2]]
+|<code>$8$crypt-algo$hash-algo$iterations$salt$iv$tag$encrypted</code>
+<code>$8$aes256-gcm$hmac-sha2-256$100$y/4YMC4YDLU$fzYDI4jjN6YCyQsYLsaf8A$Ilu4jLcZarD9YnyD /Hejww$okhBlc0cGakSqYxKww</code>
+|-
+|{{mono|9 (Cisco)}}
+|[[scrypt]] (80-bit salt, 16384 iterations, r=1, p=1, dklen=32)
+|<code>$9$haTNnnTnspcCiE$3we2J3rhnhdHKVPFM/iWg/bC8UGH6H/fyGns7jjQ/Lw</code>
+|-
+|{{mono|gy}}
+|gost-yescrypt
+|<code>$gy$jCT$HM87v.7RwpQLba8fDjNSk1$VgqS7k2OZWhFbAJVBye2vaA7ex/1VtU3a5fmL8Wv/26</code>
+|-
+|{{mono|md5}}
+|Solaris MD5
+|<code>$md5,rounds=5000$GUBv0xjJ$$mSwgIswdjlTY0YxV7HBVm0</code>
+|-
+|{{mono|sha1}}
+|[[PBKDF1]] with [[SHA-1]]
+|<code>$sha1$40000$jtNX3nZ2$hBNaIXkt4wBI2o5rsi8KejSjNqIq</code>
+|-
+|{{mono|y}}
+|[[yescrypt]]
+|<code>$y$j9T$F5Jx5fExrKuPp53xLKQ..1$X3DX6M94c7o.9agCG9G317fhZg9SqC.5i5rd.RhAtQ7</code>
+|}
+
+The PHC subset covers a majority of MCF hashes. A number of extra application-defined methods exist.<ref name=":0" />
+
+=== Original implementation using the password as a key ===
+The original implementation of the crypt() library function<ref name="passwd">{{cite web  | url=https://www.bell-labs.com/usr/dmr/www/passwd.ps | title=Password Security: A Case History. | work=Bell Laboratories |author1=Morris, Robert |author2=Thompson, Ken | date=1978-04-03 | access-date=2013-12-17 }}</ref> in Third Edition Unix<ref>{{cite web | url=http://minnie.tuhs.org/cgi-bin/utree.pl?file=V3/man/man3/crypt.3 | title=crypt – password encoding | work=UNIX Third Edition Programmers' Manual | date = 1973-01-15 }}</ref> mimicked the [[M-209]] cipher machine. Rather than encrypting the [[password]] with a key, which would have allowed the password to be recovered from the encrypted value and the key, it used the password itself as a key, and the password database contained the result of encrypting the password with this key.
+
+=== Traditional DES-based scheme ===
+The original password encryption scheme was found to be too fast and thus subject to brute force enumeration of the most likely passwords.<ref name="passwd"/> In [[Seventh Edition Unix]],<ref>{{cite web | url=http://minnie.tuhs.org/cgi-bin/utree.pl?file=V7/usr/man/man3/crypt.3 | title=crypt, setkey, encrypt – DES encryption | work=UNIX Seventh Edition Programmers' Manual | date = 1979 }}</ref> the scheme was changed to a modified form of the [[Data Encryption Standard|DES]] algorithm.  A goal of this change was to make encryption slower.  In addition, the algorithm incorporated a 12-bit [[salt (cryptography)|salt]] in order to ensure that an attacker would be forced to crack each password independently as opposed to being able to target the entire password database simultaneously.
+
+In detail, the user's password is truncated to eight characters, and those are coerced down to only 7-bits each; this forms the 56-bit DES key.  That key is then used to encrypt an all-bits-zero block, and then the ciphertext is encrypted again with the same key, and so on for a total of 25 DES encryptions.  A 12-bit salt is used to perturb the encryption algorithm, so standard DES implementations can't be used to implement crypt().  The salt and the final ciphertext are encoded into a printable string in a form of [[base64]].
+
+This is technically not encryption since the data (all bits zero) is not being kept secret; it's widely known to all in advance.  However, one of the properties of DES is that it was designed to be resistant to key recovery even in the face of [[known plaintext]] situations.  It is theoretically possible that two different passwords could result in exactly the same hash.  Thus the password is never "decrypted": it is merely used to compute a result, and the matching results are presumed to be proof that the passwords were "the same."
+
+The advantages of this method have been that the hashtext can be stored and copied among Unix systems without exposing the corresponding plaintext password to the system administrators or other users. This portability has worked for over 30 years across many generations of computing architecture, and across many versions of Unix from many vendors.
+
+==== Weaknesses of the traditional scheme ====
+The traditional DES-based ''crypt'' algorithm was originally chosen because DES was resistant to key recovery even in the face of "known plaintext" attacks, and because it was computationally expensive.  On the earliest Unix machines it took over a full second to compute a password hash.  This also made it reasonably resistant to [[dictionary attack]]s in that era.  At that time password hashes were commonly stored in an account file (<code>[[/etc/passwd]]</code>) which was readable to anyone on the system.  (This account file was also used to map user ID numbers into names, and user names into full names, etc.).
+
+In the three decades since that time, computers have become vastly more powerful.  [[Moore's Law]] has generally held true, so the computer speed and capacity available for a given financial investment has doubled over 20 times since Unix was first written.  This has long since left the DES-based algorithm vulnerable to dictionary attacks, and Unix and Unix-like systems such as [[Linux]] have used [[Shadow password|"shadow" files]] for a long time, migrating just the password hash values out of the account file (<code>/etc/passwd</code>) and into a file (conventionally named <code>[[/etc/shadow]]</code>) which can only be read by privileged processes.
+
+To increase the computational cost of password breaking, some Unix sites privately started increasing the number of encryption rounds on an ad hoc basis.{{Citation needed|date=July 2011}}  This had the side effect of making their <code>crypt()</code> incompatible with the standard <code>crypt()</code>: the hashes had the same textual form, but were now calculated using a different algorithm.  Some sites also took advantage of this incompatibility effect, by modifying the initial block from the standard all-bits-zero.{{Citation needed|date=July 2011}}  This did not increase the cost of hashing, but meant that precomputed hash dictionaries based on the standard {{mono|crypt()}} could not be applied.
+
+=== BSDi extended DES-based scheme ===
+[[Berkeley Software Design|BSDi]] used a slight modification of the classic DES-based scheme.  BSDi extended the salt to 24 bits and made the number of rounds variable (up to 2<sup>24</sup>-1).  The chosen number of rounds is encoded in the stored password hash, avoiding the incompatibility that occurred when sites modified the number of rounds used by the original scheme.  These hashes are identified by starting with an underscore (<code>_</code>), which is followed by 4 characters representing the number of rounds then 4 characters for the salt.
+
+The BSDi algorithm also supports longer passwords, using DES to fold the initial long password down to the eight 7-bit bytes supported by the original algorithm.
+
+=== MD5-based scheme ===
+[[Poul-Henning Kamp]] designed a baroque and (at the time) computationally expensive algorithm based on the [[MD5]] message digest algorithm.  MD5 itself would provide good cryptographic strength for the password hash, but it is designed to be quite quick to calculate relative to the strength it provides.  The crypt() scheme is designed to be expensive to calculate, to slow down dictionary attacks.  The printable form of MD5 password hashes starts with <code>$1$</code>.
+
+This scheme allows users to have any length password, and they can use any characters supported by their platform (not just 7-bit ASCII).  (In practice many implementations limit the password length, but they generally support passwords far longer than any person would be willing to type.)  The salt is also an arbitrary string, limited only by character set considerations.
+
+First the passphrase and salt are hashed together, yielding an MD5 message digest.  Then a new digest is constructed, hashing together the passphrase, the salt, and the first digest, all in a rather complex form.  Then this digest is passed through a thousand iterations of a function which rehashes it together with the passphrase and salt in a manner that varies between rounds.  The output of the last of these rounds is the resulting passphrase hash.
+
+The fixed iteration count has caused this scheme to lose the computational expense that it once enjoyed and variable numbers of rounds are now favoured. In June 2012, Poul-Henning Kamp declared the algorithm insecure and encouraged users to migrate to stronger password scramblers.<ref>{{cite web|url=http://phk.freebsd.dk/sagas/md5crypt_eol.html|title=Md5crypt Password scrambler is no longer considered safe by author — PHKs Bikeshed|website=Phk.freebsd.dk|access-date=2 December 2018|archive-url=https://web.archive.org/web/20180317164935/http://phk.freebsd.dk/sagas/md5crypt_eol.html|archive-date=17 March 2018}}</ref>
+
+=== Blowfish-based scheme ===
+{{Main|bcrypt}}
+[[Niels Provos]] and [[David Mazières]] designed a crypt() scheme called [[bcrypt]] based on [[Blowfish (cipher)|Blowfish]], and presented it at [[USENIX]] in 1999.<ref>{{cite journal | url = http://www.usenix.org/events/usenix99/provos/provos_html/node1.html | title = A Future-Adaptable Password Scheme | first = Niels | last = Provos |author2=Mazières, David | year = 1999 | journal = Proceedings of 1999 USENIX Annual Technical Conference | pages = 81–92}}</ref> The printable form of these hashes starts with <code>$2$</code>, <code>$2a$</code>, <code>$2b$</code>, <code>$2x$</code> or <code>$2y$</code> depending on which variant of the algorithm is used:
+
+* <code>$2$</code>{{snd}} Obsolete.
+* <code>$2a$</code>{{snd}} The current key used to identify this scheme.  Since a major security flaw was discovered in 2011 in a non-OpenBSD {{tt|crypt_blowfish}} implementation of the algorithm,<ref>{{cite web
+ | url = http://www.openwall.com/lists/announce/2011/06/21/1
+ | title = crypt_blowfish 1.1; Owl glibc security update | date = 2011-06-21
+ | first = Solar | last = Designer
+}} See also {{CVE|2011-2483}}.</ref> hashes indicated by this string are now ambiguous and might have been generated by the flawed implementation, or a subsequent fixed, implementation. The flaw may be triggered by some password strings containing non-ASCII (8th-bit-set) characters.
+* <code>$2b$</code>{{snd}} Used by recent OpenBSD implementations to include a mitigation to a wraparound problem.<ref>{{Cite web|url=http://cvsweb.openbsd.org/cgi-bin/cvsweb/src/lib/libc/crypt/bcrypt.c?rev=1.27&content-type=text/x-cvsweb-markup|title=src/lib/libc/crypt/bcrypt.c – view – 1.27|website=Cvsweb.openbsd.org|access-date=2016-05-14}}</ref> Previous versions of the algorithm have a problem with long passwords. By design, long passwords are truncated at 72 characters, but there is a byte integer wraparound problem with certain password lengths resulting in weak hashes.<ref>{{cite web
+ | url = http://www.openwall.com/lists/oss-security/2012/01/02/4
+ | title = OpenBSD bcrypt 8-bit key_len wraparound | date = 2012-01-02
+ | first = Solar | last = Designer
+}}</ref>
+* <code>$2x$</code>{{snd}} A flag added after the {{tt|crypt_blowfish}} bug discovery. Old hashes can be renamed to be <code>$2x$</code> to indicate that they were generated with the broken algorithm. These hashes are still weak, but at least it's clear which algorithm was used to generate them.
+* <code>$2y$</code>{{snd}} A flag in {{tt|crypt_blowfish}} to unambiguously use the new, corrected algorithm.  On an older implementation suffering from the bug, <code>$2y$</code> simply won't work.  On a newer, fixed implementation, it will produce the same result as using <code>$2b$</code>.
+
+Blowfish is notable among block ciphers for its expensive key setup phase.  It starts off with subkeys in a standard state, then uses this state to perform a block encryption using part of the key, and uses the result of that encryption (really, a hashing) to replace some of the subkeys.  Then it uses this modified state to encrypt another part of the key, and uses the result to replace more of the subkeys.  It proceeds in this fashion, using a progressively modified state to hash the key and replace bits of state, until all subkeys have been set.
+
+The number of rounds of keying is a power of two, which is an input to the algorithm.  The number is encoded in the textual hash, e.g. <code>$2y$10...</code>
+
+=== NT hash scheme ===
+FreeBSD implemented support for the [[NTLM|NT LAN Manager]] hash algorithm to provide easier compatibility with NT accounts via [[MS-CHAP]].<ref>{{cite web|url=http://www.mail-archive.com/freebsd-current@freebsd.org/msg52586.html|title=NT MD4 password hash as new password encryption method for FreeBSD|website=Mail-archive.com|access-date=2 December 2018}}</ref>  The NT-Hash algorithm is known to be weak, as it uses the deprecated [[MD4|md4]] hash algorithm without any salting.<ref>{{cite web|url=https://davenport.sourceforge.net/ntlm.html#theNtlmResponse|title=The NTLM Authentication Protocol and Security Support Provider|website=Davenport.sourceforge.net|access-date=2 December 2018}}</ref> FreeBSD used the <code>$3$</code> prefix for this. Its use is not recommended, as it is easily broken.<ref name=fbsd3>{{man|3|crypt|FreeBSD}}</ref>
+
+=== SHA2-based scheme ===
+The commonly used MD5 based scheme has become easier to attack as computer power has increased. Although the Blowfish-based system has the option of adding rounds and thus remain a challenging password algorithm, it does not use a [[National Institute of Standards and Technology|NIST]]-approved algorithm. In light of these facts, {{ill|Ulrich Drepper|de}} of [[Red Hat]] led an effort to create a scheme based on the [[SHA-2]] (SHA-256 and SHA-512) hash functions.<ref name="shacrypt">{{cite web 
+| first = Ulrich 
+| last = Drepper 
+| date = 2007-09-19
+| access-date = 2018-11-21
+| title = Unix crypt with SHA-256/512 
+| url = https://people.redhat.com/drepper/sha-crypt.html
+| df = dmy-all
+}}</ref> The printable form of these hashes starts with <code>$5$</code> (for SHA-256) or <code>$6$</code> (for SHA-512) depending on which SHA variant is used. Its design is similar to the MD5-based crypt, with a few notable differences:<ref name="shacrypt" />
+
+* It avoids adding constant data in a few steps.
+* The MD5 algorithm would repeatedly add the first letter of the password;{{Citation needed|date=April 2010}} this step was changed significantly.
+* Inspired by [[Sun Microsystems|Sun's]] crypt() implementation, functionality to specify the number of iterations (rounds) the main loop in the algorithm performs was added<ref>{{cite web | author = Sun Microsystems | title = crypt_sunmd5(5) man page | url = http://docs.sun.com/app/docs/doc/816-5175/6mbba7evg | access-date = 2008-03-05 | archive-url = https://web.archive.org/web/20080416021006/http://docs.sun.com/app/docs/doc/816-5175/6mbba7evg | archive-date = 2008-04-16 }}</ref><ref>{{cite web | title = OpenSolaris, Pluggable Crypt, and the SunMD5 Password Hash Algorithm | first = Alec | last = Muffett | url = http://dropsafe.crypticide.com/article/1389 | date = 2005-12-05 | access-date = 2012-08-11}}</ref>
+* The number of iterations is 5000 by default, with a minimum of 1000, and a maximum of 999,999,999.<ref name="shacryptcode"/>
+
+The specification and sample code have been released into the public domain; it is often referred to as "SHAcrypt".<ref name="shacryptcode">{{cite web | url = https://www.akkadia.org/drepper/SHA-crypt.txt | title = Unix crypt using SHA-256 and SHA-512 | first = Ulrich | last = Drepper }}</ref>
+
+=== Other hashes ===
+; {{code|$y$}}
+: [[yescrypt]] is an extension of [[scrypt]] ({{code|$7$}}) and a PHC finalist. It is used in several [[Linux distributions]] as an alternative to the existing schemes.<ref>{{cite web |title=FESCo Says "Yes" To Fedora 35 Using Yescrypt For Hashing Shadow Passwords - Phoronix |url=https://www.phoronix.com/scan.php?page=news_item&px=Fedora-35-Yescrypt-Yes |website=www.phoronix.com}}</ref> To use this hash, the {{code|libcrypt}} from glibc is replaced with a backward-compatible one from the "libxcrypt" project.<ref>{{cite web |title=Changes/yescrypt as default hashing method for shadow - Fedora Project Wiki |url=https://fedoraproject.org/wiki/Changes/yescrypt_as_default_hashing_method_for_shadow |website=libxcrypt: Is already capable for computing yescrypt hashes since v4.3.}}</ref>
+; {{code|$argon2d$}}, {{code|$argon2i$}}, {{code|$argon2ds$}}
+: These are PHC-assigned names for the [[Argon2]] algorithm, but do not seem to be widely used.
+
+Additional formats, if any, are described in the [[man pages]] of implementations.<ref>
+* {{man|5|crypt|ManKier}} &ndash; libxcrypt implementation
+* {{man|3|crypt|FreeBSD}}
+</ref>
+
+==== Archaic Unix schemes ====
+'''BigCrypt''' is the modified version of DES-Crypt used on HP-UX, Digital Unix, and OSF/1. The main difference between it and DES is that BigCrypt uses all the characters of a password, not just the first 8, and has a variable length hash.<ref>{{cite web|url=https://pythonhosted.org/passlib/lib/passlib.hash.bigcrypt.html|title=passlib.hash.bigcrypt - BigCrypt — Passlib v1.7.1 Documentation|website=Pythonhosted.org|access-date=2 December 2018}}</ref>
+
+'''Crypt16''' is the minor modification of DES, which allows passwords of up to 16 characters. Used on Ultrix and Tru64.<ref>{{cite web|url=https://pythonhosted.org/passlib/lib/passlib.hash.crypt16.html|title=passlib.hash.crypt16 - Crypt16 — Passlib v1.7.1 Documentation|website=Pythonhosted.org|access-date=2 December 2018}}</ref>
+
+== Support in operating systems ==
+{| class="wikitable" style="margin-bottom: 10px;"
+!Scheme id
+!Scheme
+!Linux ([[glibc]])
+!Linux (libxcrypt)<ref>[https://github.com/besser82/libxcrypt libxcrypt - Extended crypt library for descrypt, md5crypt, bcrypt, and others ]</ref><ref name="debian-manpage-crypt">{{cite web|url=https://manpages.debian.org/experimental/libcrypt-dev/crypt.5.en.html|title=Debian manpage crypt|website=manpages.debian.org|access-date=11 Jan 2022}} &ndash; Debian bullseye uses libxcrypt. See https://tracker.debian.org/pkg/libxcrypt .</ref>
+!Linux ([[musl]])
+!Linux ([[uClibc]])
+!FreeBSD
+!NetBSD
+!OpenBSD
+!Solaris
+!MacOS
+|-
+|
+|DES
+|{{yes}}
+|{{yes}}
+|{{yes}}
+|{{yes}}
+|{{yes}}
+|{{yes}}
+|{{no}}
+|{{yes}}
+|{{yes}}
+|-
+|_
+|BSDi
+|{{no}}
+|{{yes}}
+|{{no}}
+|{{no}}
+|{{yes}}
+|{{yes}}
+|{{no}}
+|{{no}}
+|{{yes}}
+|-
+|1
+|MD5
+|{{yes}}
+|{{yes}}
+|{{yes}}
+|{{yes}}
+|{{yes}}
+|{{yes}}
+|{{no}}
+|{{yes}}
+|{{no}}
+|-
+|2, 2a, 2b, 2x, 2y
+|bcrypt
+|{{no}}
+|{{yes}}
+|{{yes}}
+|{{no}}
+|{{yes}}
+|{{yes}}
+|{{yes}}
+|{{yes}}
+|{{no}}
+|-
+|3
+|NTHASH
+|{{no}}
+|{{yes}}
+|{{no}}
+|{{no}}
+|{{yes}}
+|{{no}}
+|{{no}}
+|{{no}}
+|{{no}}
+|-
+|5
+|SHA-256
+|{{yes|2.7+}}
+|{{yes}}
+|{{yes}}
+|{{yes}}
+|{{yes|8.3+}}
+|{{no}}
+|{{no}}
+|{{yes}}
+|{{no}}
+|-
+|6
+|SHA-512
+|{{yes|2.7+}}
+|{{yes}}
+|{{yes}}
+|{{yes}}
+|{{yes|8.3+}}
+|{{no}}
+|{{no}}
+|{{yes}}
+|{{no}}
+|-
+|7
+|scrypt
+|{{no}}
+|{{yes}}
+|{{no}}
+|{{no}}
+|{{yes}}
+|{{no}}
+|{{no}}
+|{{yes}}
+|{{no}}
+|-
+|md5
+|Solaris MD5
+|{{no}}
+|{{yes}}
+|{{no}}
+|{{no}}
+|{{no}}
+|{{no}}
+|{{no}}
+|{{yes}}
+|{{no}}
+|-
+|sha1
+|PBKDF1 with SHA1
+|{{no}}
+|{{yes}}
+|{{no}}
+|{{no}}
+|{{no}}
+|{{yes}}
+|{{no}}
+|{{no}}
+|{{no}}
+|-
+|gy
+|gost-yescrypt
+|{{no}}
+|{{yes}}
+|{{no}}
+|{{no}}
+|{{no}}
+|{{no}}
+|{{no}}
+|{{no}}
+|{{no}}
+|-
+|y
+|yescrypt
+|{{no}}
+|{{yes}}
+|{{no}}
+|{{no}}
+|{{no}}
+|{{no}}
+|{{no}}
+|{{no}}
+|{{no}}
+|}
+
+=== Linux ===
+The [[GNU C Library]] (glibc) used by almost all Linux distributions provides an implementation of the ''crypt'' function which supports the DES, MD5, and (since version 2.7) SHA-2 based hashing algorithms mentioned above.
+Ulrich Drepper, the glibc maintainer, rejected bcrypt (scheme 2) support since it isn't approved by [[National Institute of Standards and Technology|NIST]].<ref>{{cite web|url=https://access.redhat.com/articles/1519843|title=bcrypt support for passwords in /etc/shadow - Red Hat Customer Portal|website=Access.redhat.com|date=10 July 2018 |access-date=2 December 2018}}</ref> A public domain ''crypt_blowfish'' library is available for systems without bcrypt. It has been integrated into glibc in [[SUSE Linux]].<ref>{{cite web |title=bcrypt password hashing ("password encryption") for your software and your servers |url=https://www.openwall.com/crypt/ |website=www.openwall.com}}</ref>
+
+In August 2017, glibc announced plans to remove its crypt implementation completely. In response, a number of Linux distributions (including, but not limited to, Fedora and Debian) have switched to ''libxcrypt'', an ABI-compatible implementation that additionally supports new algorithms, including bcrypt and yescrypt.<ref>{{cite web |title=Changes/Replace glibc libcrypt with libxcrypt - Fedora Project Wiki |url=https://fedoraproject.org/wiki/Changes/Replace_glibc_libcrypt_with_libxcrypt |website=fedoraproject.org}}</ref>
+
+The [[musl]] C library supports schemes 1, 2, 5, and 6, plus the tradition DES scheme. The traditional DES code is based on the BSD ''FreeSec'', with modification to be compatible with the glibc ''UFC-Crypt''.<ref>{{cite web |title=crypt_r.c\crypt\src - musl - musl - an implementation of the standard library for Linux-based systems |url=https://git.musl-libc.org/cgit/musl/tree/src/crypt/crypt_r.c |website=git.musl-libc.org}}</ref>
+
+=== macOS ===
+Darwin's native <code>crypt()</code> provides limited functionality, supporting only DES and BSDi. OS X uses a few systems for its own password hashes, ranging from the old NeXTStep ''netinfo'' to the newer directory services (ds) system.<ref>{{cite web|url=http://www.dribin.org/dave/blog/archives/2006/04/07/os_x_passwords/|title=How Mac OS X Implements Password Authentication|website=Dribin.org|date=7 April 2006 |access-date=2 December 2018}}</ref><ref>{{cite web|url=http://www.onlinehashcrack.com/how-to-extract-hashes-crack-mac-osx-passwords.php|title=How to crack Mac OS X Passwords - Online Hash Crack|website=Onlinehashcrack.com|access-date=2 December 2018}}</ref>
+
+== See also ==
+* [[Key derivation function]]
+* [[Salt (cryptography)]]
+
+== References ==
+{{Reflist}}
+
+== External links ==
+* [http://minnie.tuhs.org/cgi-bin/utree.pl?file=V7/usr/src/libc/gen/crypt.c Source code for crypt(3)] from Seventh Edition Unix (implements proposed DES)
+* [http://openwall.info/wiki/john/sample-hashes Sample password hash encoding strings]
+* [http://www.zer7.com/software/cryptsharp .NET crypt implementation]
+
+{{cryptography navbox|hash}}
+
+[[Category:Password authentication]]
+[[Category:Broken cryptographic algorithms]]
+[[Category:Cryptographic hash functions]]
+[[Category:Computer access control protocols]]
+[[Category:Key derivation functions]]
+
+[[cs:Crypt (Unix)]]

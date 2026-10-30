@@ -1,0 +1,253 @@
+<!-- wikipedia: en
+     page: 2063558
+     title: Symplectic integrator
+     revision: 1341751154
+     timestamp: 2026-03-04T21:25:58Z
+     history: https://en.wikipedia.org/w/index.php?curid=2063558&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1341751154 -->
+{{Short description|Numerical integration scheme for Hamiltonian systems}}
+In [[mathematics]], a '''symplectic integrator''' ('''SI''') is a [[Numerical ordinary differential equations|numerical integration scheme]] for [[Hamiltonian system]]s. Symplectic integrators form the subclass of [[geometric integrator]]s which, by definition, are [[canonical transformation]]s. They are widely used in [[nonlinear dynamics]], [[molecular dynamics]], [[discrete element method]]s, [[particle accelerator|accelerator physics]], [[plasma physics]], [[quantum physics]], and [[celestial mechanics]].
+
+== Introduction ==
+
+Symplectic integrators are designed for the numerical solution of [[Hamilton's equations]], which read
+<math display="block">\dot p = -\frac{\partial H}{\partial q} \quad\mbox{and}\quad \dot q = \frac{\partial H}{\partial p},</math>
+where <math>q</math> denotes the position coordinates, <math>p</math> the momentum coordinates, and <math>H</math> is the Hamiltonian. 
+The set of position and momentum coordinates <math>(q,p)</math> are called [[canonical coordinates]].
+(See [[Hamiltonian mechanics]] for more background.)
+
+The [[time evolution]] of [[Hamilton's equations]] is a [[symplectomorphism]], meaning that it conserves the symplectic [[2-form]] {{nowrap|<math>dp \wedge dq</math>}}. A numerical scheme is a symplectic integrator if it also conserves this 2-form.
+
+Symplectic integrators possess, as a conserved quantity, a Hamiltonian which is slightly [[perturbation theory|perturbed]] from the original one.<ref>{{cite book |last1=Tuckerman |first1=Mark E. |title=Statistical Mechanics: Theory and Molecular Simulation |date=2010 |publisher=Oxford University Press |isbn=978-0-19-852526-4 |pages=121–124 |edition=1}}</ref> By virtue of these advantages, the SI scheme has been widely applied to the calculations of long-term evolution of chaotic Hamiltonian systems ranging from the [[Kepler problem]] to the classical and semi-classical simulations in [[molecular dynamics]].
+
+Most of the usual numerical methods, such as the primitive [[Euler integration|Euler scheme]] and the classical [[Runge–Kutta methods|Runge–Kutta scheme]], are not symplectic integrators.
+
+== Methods for constructing symplectic algorithms ==
+=== Splitting methods for separable Hamiltonians ===
+
+A widely used class of symplectic integrators is formed by the splitting methods.
+
+Assume that the Hamiltonian is separable, meaning that it can be written in the form
+
+{{NumBlk||<math display="block">H(p,q) = T(p) + V(q). </math>|{{EquationRef|1}}}}
+
+This happens frequently in Hamiltonian mechanics, with {{mvar|T}} being the [[kinetic energy]] and {{mvar|V}} the [[potential energy]].
+
+For the notational simplicity, let us introduce the symbol <math>z=(q,p)</math> to denote the canonical coordinates including both the position and momentum coordinates. Then, the set of the Hamilton's equations given in the introduction can be expressed in a single expression as
+
+{{NumBlk||<math display="block">\dot{z} = \{z,H(z)\},</math>|{{EquationRef|2}}}}
+
+where <math>\{\cdot, \cdot\}</math> is a [[Poisson bracket]]. Furthermore, by introducing an operator <math>D_H \cdot = \{\cdot, H\}</math>, which returns a [[Poisson bracket]] of the operand with the [[Hamiltonian mechanics#Mathematical formalism|Hamiltonian]], the expression of the Hamilton's equation can be further simplified to
+
+<math display="block">\dot{z} = D_H z.</math>
+
+The formal solution of this set of equations at time <math>t</math> is given as a [[matrix exponential]]:
+
+{{NumBlk||<math display="block">z(t) = \exp(t D_H) \, z(0).</math>|{{EquationRef|3}}}}
+Note the positivity of <math>t D_H</math> in the matrix exponential.
+
+When the Hamiltonian has the form of equation ({{EquationNote|1}}), the solution ({{EquationNote|3}}) is equivalent to
+
+{{NumBlk||<math display="block">z(t) = \exp\left[t (D_T + D_V)\right] \, z(0).</math>|{{EquationRef|4}}}}
+
+The SI scheme approximates the time-evolution operator <math>\exp[t (D_T + D_V)]</math> in the formal solution ({{EquationNote|4}}) by a product of operators as
+
+{{NumBlk||<math display="block">\begin{align}
+\exp[t (D_T + D_V)] & = \prod_{i=k, \dots, 1} \exp(t d_i D_T) \exp(t c_i D_V) + O(t^{k+1}) \\
+&= \exp(t d_k D_T) \exp(t c_k D_V) \cdots \exp(t d_1 D_T) \exp(t c_1 D_V) + O(t^{k+1}),
+\end{align}</math>|{{EquationRef|5}}}}
+
+where <math>c_i</math> and <math>d_i</math> are real numbers, <math>k</math> is an integer, which is called the order of the integrator, and where <math display="inline">\sum_{i=1}^k c_i = \sum_{i=1}^k d_i = 1</math>. Note that each of the operators <math>\exp(t c_i D_V)</math> and <math>\exp(t d_i D_T)</math> provides a [[symplectomorphism|symplectic map]], so their product appearing in the right-hand side of ({{EquationNote|5}}) also constitutes a symplectic map.
+
+Since <math>D_T^2 z = \{\{z,T\},T\} = \{(\dot{q}, 0),T\} = (0,0)</math> for all <math>z</math>, we can conclude that
+
+{{NumBlk||<math display="block">D_T^2 = 0.</math>|{{EquationRef|6}}}}
+
+By using a [[Taylor series]], <math>\exp(a D_T)</math> can be expressed as
+
+{{NumBlk||<math display="block">\exp(a D_T) = \sum_{n=0}^\infty \frac{{\left(a D_T\right)}^n}{n!},</math>|{{EquationRef|7}}}}
+
+where <math>a</math> is an arbitrary [[real number]]. Combining ({{EquationNote|6}}) and ({{EquationNote|7}}), and by using the same reasoning for <math>D_V</math> as we have used for <math>D_T</math>, we get
+
+{{NumBlk||<math display="block">\begin{cases}
+ \exp(a D_V) = 1 + a D_V, \\[2pt]
+ \exp(a D_T) = 1 + a D_T.
+\end{cases}</math>|{{EquationRef|8}}}}
+
+In concrete terms, <math>\exp(t c_i D_V)</math> gives the mapping
+
+<math display="block">
+\begin{pmatrix} q \\ p \end{pmatrix}
+\mapsto
+\begin{pmatrix}
+ q \\
+ p - t c_i \frac{\partial V}{\partial q}(q)
+\end{pmatrix},
+</math>
+
+and <math>\exp(t d_i D_T)</math> gives
+
+<math display="block">
+\begin{pmatrix} q \\ p \end{pmatrix}
+\mapsto
+\begin{pmatrix}
+ q + t d_i \frac{\partial T}{\partial p}(p) \\
+ p
+\end{pmatrix}.
+</math>
+
+Note that both of these maps are practically computable.
+
+==== Algorithm ====
+In each time step, the general algorithm for this class of symplectic integrators maps some initial state <math>(q_0, p_0)</math> to the state <math>(q_k, p_k)</math> one timestep <math>t</math> later. This is done through the sequence of substeps <math>(q_0, p_0) \mapsto (q_1, p_1) \mapsto \dots \mapsto (q_{k-1}, p_{k-1}) \mapsto (q_k, p_k)</math>. For every <math>i = 1, \dots, k</math>, the following equations are used to compute the substep <math>(q_{i-1}, p_{i-1}) \mapsto (q_i, p_i)</math>:
+
+<math display="block">\begin{align}
+p_i &= p_{i-1} + t c_i F(q_{i-1}) \\[1ex]
+q_i &= q_{i-1} + t d_i \frac{p_i}{m}
+\end{align}</math>
+
+where <math>q</math> is the position, <math>p</math> is the momentum, <math>F(q) = -\tfrac{\partial V}{\partial q}(q)</math> is the force vector at <math>q</math>, and <math>m</math> is the scalar quantity of mass.
+
+Equivalently, after converting into Lagrangian coordinates, each substep becomes
+
+<math display="block">\begin{align}
+v_i &= v_{i-1} + t c_i a(x_{i-1}) \\[1ex]
+x_i &= x_{i-1} + t d_i v_i
+\end{align}</math>
+
+where <math>x</math> is the position, <math>v</math> is the velocity, and <math>a(x)</math> is the acceleration vector at <math>x</math>.
+
+Several symplectic integrators are given below.
+
+==== A first-order example ====
+The [[symplectic Euler method]] is the first-order integrator with <math>k=1</math> and coefficients
+<math display="block">c_1 = d_1 = 1.</math>
+
+Note that the algorithm above does not work if time-reversibility is needed. The algorithm has to be implemented in two parts, one for positive time steps, one for negative time steps.
+
+==== A second-order example ====
+The [[Verlet integration|Verlet method]] is the second-order symplectic integrator with <math>k=2</math> and coefficients
+
+<math display="block">c_1 = \tfrac{1}{2}, \qquad d_1 = 1, \qquad c_2 = \tfrac{1}{2}, \qquad d_2 = 0.</math>
+
+Note that the coefficients
+
+<math display="block">c_1 = 0, \qquad d_1 = \tfrac{1}{2}, \qquad c_2 = 1, \qquad d_2 = \tfrac{1}{2}</math>
+
+also form a second-order symplectic integrator<ref name="forest1990" /><ref name="yoshida1990" />, which is the Verlet method but shifted by half a time step <math>t</math>.
+
+Since <math>d_2 = 0</math> in the first set of coefficients and <math>c_1 = 0</math> in the second set of coefficients, in both algorithms above one update can be ignored. There are thus only 3 steps to the algorithm, and step 1 and 3 are exactly the same, leading to the algorithm being symmetric in time, so the positive time version can also be used for negative time.
+
+==== A third-order example ====
+
+A third-order symplectic integrator (with <math>k=3</math>) was discovered by Ronald Ruth in 1983.<ref>{{cite journal | last = Ruth | first = Ronald D. | title = A Canonical Integration Technique | journal = IEEE Transactions on Nuclear Science | date = August 1983 |volume = NS-30 | pages = 2669–2671 | doi = 10.1109/TNS.1983.4332919 | bibcode = 1983ITNS...30.2669R | issue = 4 | s2cid = 5911358 | url = https://cds.cern.ch/record/143981 | url-access = subscription }}</ref>
+One of the many solutions is given by
+<math display="block">\begin{align}
+ c_1 &= \tfrac{7}{24}, & c_2 &= \tfrac{3}{4}, & c_3 &= -\tfrac{1}{24}, \\[1ex]
+ d_1 &= \tfrac{2}{3}, & d_2 &= -\tfrac{2}{3}, & d_3 &= 1.
+\end{align}</math>
+
+==== A fourth-order example ====
+A fourth-order integrator (with <math>k=4</math>) was also discovered by Ruth in 1983 and distributed privately to the particle-accelerator community at that time.  This was described in a lively review article by Forest.<ref>{{cite journal | last = Forest | first = Etienne | title = Geometric Integration for Particle Accelerators | journal = J. Phys. A: Math. Gen. | year = 2006 | volume = 39 | pages = 5321–5377 | doi = 10.1088/0305-4470/39/19/S03 | bibcode = 2006JPhA...39.5321F | issue = 19 }}</ref>
+This fourth-order integrator was published in 1990 by Forest and Ruth and also independently discovered by two other groups around that same time:<ref name="forest1990">{{cite journal | last1 = Forest | first1 = E. | title = Fourth-order symplectic integration | journal = Physica D |year = 1990 | volume = 43 | pages = 105–117 | doi = 10.1016/0167-2789(90)90019-L | bibcode = 1990PhyD...43..105F | last2 = Ruth | first2 = Ronald D. | osti = 1449044 | url = https://cloudfront.escholarship.org/dist/prd/content/qt35h9v2k9/qt35h9v2k9.pdf }}</ref><ref name="yoshida1990">{{cite journal | last = Yoshida | first = H. | title = Construction of higher order symplectic integrators | journal = Phys. Lett. A | year = 1990 | volume = 150 | pages = 262–268 | doi = 10.1016/0375-9601(90)90092-3 | bibcode = 1990PhLA..150..262Y | issue = 5–7 }}</ref><ref>{{cite journal | last1 = Candy | first1 = J. | title = A Symplectic Integration Algorithm for Separable Hamiltonian Functions | journal = J. Comput. Phys. | year = 1991 |volume = 92 | pages = 230–256 | doi = 10.1016/0021-9991(91)90299-Z | bibcode = 1991JCoPh..92..230C | last2 = Rozmus | first2 = W | issue = 1 }}
+</ref>
+<math display="block">\begin{align}
+ c_1 &= c_4 = \frac{1}{2 \left(2-2^{1/3}\right)}, &
+ c_2 &= c_3 = \frac{1 - 2^{1/3}}{2\left(2 - 2^{1/3}\right)}, \\[1ex]
+ d_1 &= d_3 = \frac{1}{2-2^{1/3}}, &
+ d_2 &= -\frac{2^{1/3}}{2-2^{1/3}}, \qquad d_4 = 0,
+\end{align}</math>
+or alternatively,
+<math display="block">\begin{align}
+ c_1 &= 0, \qquad c_3 = -\frac{2^{1/3}}{2-2^{1/3}}, &
+ c_2 &= c_4 = \frac{1}{2-2^{1/3}}, \\[1ex]
+ d_1 &= d_4 = \frac{1}{2 \left(2-2^{1/3}\right)}, &
+ d_2 &= d_3 = \frac{1 - 2^{1/3}}{2\left(2 - 2^{1/3}\right)}.
+\end{align}</math>
+
+To determine these coefficients, the [[Baker–Campbell–Hausdorff formula]] can be used. [[Haruo Yoshida|Yoshida]], in particular, gives an elegant derivation of coefficients for [[Leapfrog_integration#Yoshida_algorithms|higher-order integrators]].<ref name="yoshida1990" /> Later on, Blanes and Moan<ref>{{cite journal | last1 = Blanes | first1 = S.| last2 = Moan | first2 = P. C. | title = Practical symplectic partitioned Runge–Kutta and Runge–Kutta–Nyström methods | journal = Journal of Computational and Applied Mathematics | date = May 2002 | volume = 142 | issue = 2 | pages = 313–330 | doi = 10.1016/S0377-0427(01)00492-7 | bibcode = 2002JCoAM.142..313B | doi-access = free}}</ref> further developed partitioned [[Runge–Kutta methods]] for the integration of systems with separable Hamiltonians with very small error constants.
+[[Numerov%27s method]], developed by the Russian astronomer [[Boris Vasil'evich Numerov]] in 1924, is also a fourth-order symplectic integrator.<ref>{{cite journal | last1 = Skeel | first1 = Robert D. | last2 = Zhang | first2 = Guihua | last3 = Schlick | first3 = Tamar | title = A Family of Symplectic Integrators: Stability, Accuracy, and Molecular Dynamics Applications | journal = SIAM Journal on Scientific Computing | year = 1997 | volume = 18 | issue = 1 | pages = 203–222 | doi = 10.1137/S1064827595282350}}</ref>
+
+=== Splitting methods for general nonseparable Hamiltonians ===
+General nonseparable Hamiltonians can also be explicitly and symplectically integrated.
+
+To do so, Tao introduced a restraint that binds two copies of phase space together to enable an explicit splitting of such systems.<ref>{{cite journal | last = Tao | first = Molei | title = Explicit symplectic approximation of nonseparable Hamiltonians: Algorithm and long time performance | journal = Phys. Rev. E | year = 2016 | volume = 94 | issue = 4 | article-number = 043303 | doi = 10.1103/PhysRevE.94.043303 | pmid = 27841574 | arxiv = 1609.02212 | bibcode = 2016PhRvE..94d3303T | s2cid = 41468935 }}</ref>
+The idea is, instead of <math>H(Q,P)</math>, one simulates
+<math display="block">\bar{H}(q,p,x,y) = H(q,y) + H(x,p) + \omega \left( \tfrac{1}{2} {\left\|q-x\right\|}_2^2 + \tfrac{1}{2} {\left\|p-y\right\|}_2^2\right),</math>
+whose solution agrees with that of <math>H(Q,P)</math> in the sense that {{nowrap|<math>q(t) = x(t) = Q(t)</math>,}} {{nowrap|<math>p(t) = y(t) = P(t)</math>.}}
+
+The new Hamiltonian is advantageous for explicit symplectic integration, because it can be split into the sum of three sub-Hamiltonians, <math>H_A = H(q,y)</math>, <math>H_B=H(x,p)</math>, and <math display="inline">H_C = \omega \left(\frac{1}{2}\left\|q-x\right\|_2^2 + \frac{1}{2} \left\|p-y\right\|_2^2\right)</math>. Exact solutions of all three sub-Hamiltonians can be explicitly obtained: both <math>H_A, H_B</math> solutions correspond to shifts of mismatched position and momentum, and <math>H_C</math> corresponds to a linear transformation. To symplectically simulate the system, one simply composes these solution maps.
+
+== Applications ==
+=== In plasma physics ===
+In recent decades symplectic integrator in plasma physics has become an active research topic,<ref>{{cite journal| last=Qin| first=H.|author2=Guan, X.|journal=Physical Review Letters|date=2008|volume=100|article-number=035006|title=A Variational Symplectic Integrator for the Guiding Center Motion of Charged Particles for Long Time Simulations in General Magnetic Fields| issue=3| doi=10.1103/PhysRevLett.100.035006 | pmid=18232993| url=https://digital.library.unt.edu/ark:/67531/metadc932923/m2/1/high_res_d/960290.pdf}}</ref> because straightforward applications of the standard symplectic methods do not suit the need of large-scale plasma simulations enabled by the peta- to exa-scale computing hardware. Special symplectic algorithms need to be customarily designed, tapping into the special structures of the physics problem under investigation. One such example is the [[charged particle]] dynamics in an [[electromagnetic field]]. With the canonical symplectic structure, the Hamiltonian of the dynamics is <math display="block">H(\boldsymbol{p},\boldsymbol{x}) = \tfrac{1}{2} \left(\boldsymbol{p}-\boldsymbol{A}\right)^2 + \phi,</math> whose <math display="inline">\boldsymbol{p}</math>-dependence and <math display="inline">\boldsymbol{x}</math>-dependence are not separable, and standard explicit symplectic methods do not apply. For large-scale simulations on massively parallel clusters, however, explicit methods are preferred. 
+To overcome this difficulty, we can explore the specific way that the <math display="inline">\boldsymbol{p}</math>-dependence and <math display="inline">\boldsymbol{x}</math>-dependence are entangled in this Hamiltonian, and try to design a symplectic algorithm just for this or this type of problem. First, we note that the <math display="inline">\boldsymbol{p}</math>-dependence is quadratic, therefore the first order symplectic Euler method implicit in <math display="inline">\boldsymbol{p}</math> is actually explicit. This is what is used in the canonical symplectic [[particle-in-cell]] (PIC) algorithm.<ref>{{cite journal| last=Qin|first=H.|author2=Liu, J.|author3=Xiao, J.|journal=Nuclear Fusion|date=2016|volume=56|article-number=014001|title=Canonical symplectic particle-in-cell method for long-term large-scale simulations of the Vlasov–Maxwell equations| issue=1| doi=10.1088/0029-5515/56/1/014001|arxiv=1503.08334|bibcode=2016NucFu..56a4001Q|s2cid=29190330 }}</ref> To build high order explicit methods, we further note that the <math display="inline">\boldsymbol{p}</math>-dependence and <math display="inline">\boldsymbol{x}</math>-dependence in this <math display="inline">H(\boldsymbol{p},\boldsymbol{x})</math> are product-separable, 2nd and 3rd order explicit symplectic algorithms can be constructed using generating functions,<ref>{{cite journal|last=Zhang|first=R.|author2=Qin, H.|author3=Tang, Y.|journal=Physical Review E|date=2016|volume=94|title=Explicit symplectic algorithms based on generating functions for charged particle dynamics| issue=1| article-number=013205| doi=10.1103/PhysRevE.94.013205| pmid=27575228|arxiv=1604.02787|bibcode=2016PhRvE..94a3205Z |s2cid=2166879 }}</ref> and arbitrarily high-order explicit symplectic integrators for time-dependent electromagnetic fields can also be constructed using Runge-Kutta techniques.<ref>{{cite journal|last=Tao|first=M.|journal=Journal of Computational Physics|date=2016|volume=327|title=Explicit high-order symplectic integrators for charged particles in general electromagnetic fields|page=245|doi=10.1016/j.jcp.2016.09.047|arxiv=1605.01458|bibcode=2016JCoPh.327..245T |s2cid=31262651 }}</ref>
+
+A more elegant and versatile alternative is to look at the following non-canonical symplectic structure of the problem,
+<math display="block">\begin{align}
+i_{(\dot{\boldsymbol{x}},\dot{\boldsymbol{v}})} \Omega &= -dH, \\
+\Omega &= d(\boldsymbol{v}+\boldsymbol{A}) \wedge d\boldsymbol{x}, \\[1ex]
+H &= \tfrac{1}{2}\boldsymbol{v}^{2}+\phi.
+\end{align}</math>
+Here <math display="inline">\Omega</math> is a non-constant non-canonical symplectic form. General symplectic integrator for non-constant non-canonical symplectic structure, explicit or implicit, is not known to exist. However, for this specific problem, a family of high-order explicit non-canonical symplectic integrators can be constructed using the He splitting method.<ref>{{cite journal|last=He|first=Y.|author2=Qin, H.|author3=Sun, Y.|journal=Physics of Plasmas|date=2015|volume=22|title=Hamiltonian integration methods for Vlasov-Maxwell equations|page=124503| doi=10.1063/1.4938034 |arxiv=1505.06076 |s2cid=118560512 }}</ref> Splitting <math display="inline">H</math> into 4 parts, <math display="block">H = H_x + H_y + H_z + H_\phi,</math><math display="block">\begin{align}
+H_x &= \tfrac{1}{2} v_x^2, & H_y &= \tfrac{1}{2} v_y^2, \\[2pt]
+H_z &= \tfrac{1}{2} v_z^2, & H_\phi &= \phi,
+\end{align}</math> we find serendipitously that for each subsystem, e.g., <math display="block">i_{(\dot{\boldsymbol{x}},\dot{\boldsymbol{v}})}\Omega=-dH_{x}</math> and
+<math display="block"> i_{(\dot{\boldsymbol{x}},\dot{\boldsymbol{v}})} \Omega = -dH_{\phi},</math> the solution map can be written down explicitly and calculated exactly. Then explicit high-order non-canonical symplectic algorithms can be constructed using different compositions. Let <math display="inline">\Theta_{x},\Theta_{y},\Theta_{z}</math> and <math display="inline">\Theta_{\phi}</math> denote the exact solution maps for the 4 subsystems. A 1st-order symplectic scheme is <math display="block">\begin{aligned}
+\Theta_1{\left(\Delta\tau\right)} = \Theta_x{\left(\Delta\tau\right)} \, \Theta_y{\left(\Delta\tau\right)} \, \Theta_z{\left(\Delta\tau\right)} \, \Theta_\phi{\left(\Delta\tau\right)} \,.
+\end{aligned}</math>
+A symmetric 2nd-order symplectic scheme is,
+<math display="block">\begin{aligned}
+\Theta_2{\left(\Delta\tau\right)} = {}
+& \Theta_x{\left(\tfrac{\Delta\tau}{2}\right)} \, \Theta_y{\left(\tfrac{\Delta\tau}{2}\right)} \, \Theta_z{\left(\tfrac{\Delta\tau}{2}\right)} \, \Theta_\phi{\left(\Delta\tau\right)} \\
+& \Theta_z{\left(\tfrac{\Delta t}{2}\right)}   \, \Theta_y{\left(\tfrac{\Delta t}{2}\right)}   \, \Theta_x{\left(\tfrac{\Delta t}{2}\right)},
+\end{aligned}</math> which is a customarily modified [[Strang splitting]]. A <math display="inline">2(\ell+1)</math>-th order scheme can be constructed from a <math display="inline">2\ell</math>-th order scheme using the method of triple jump,
+<math display="block">
+\Theta_{2(\ell+1)}(\Delta\tau) = \Theta_{2\ell}(\alpha_{\ell}\Delta\tau) \, \Theta_{2\ell}(\beta_{\ell}\Delta\tau) \, \Theta_{2\ell}(\alpha_{\ell}\Delta\tau) \, , 
+</math>
+<math display="block">\begin{align}
+\alpha_{\ell} & = \frac{1}{2-2^{1/(2\ell+1)}}, &
+\beta_{\ell} & = 1 - 2\alpha_{\ell}\,.
+\end{align}</math>
+The He splitting method is one of key techniques used in the structure-preserving geometric [[particle-in-cell]] (PIC) algorithms.<ref>{{cite journal|last=Xiao|first=J.|author2=Qin, H.|author3=Liu, J.|journal=Physics of Plasmas| date=2015|volume=22|title=Explicit high-order non-canonical symplectic particle-in-cell algorithms for Vlasov-Maxwell systems| issue=11|page=112504|doi=10.1063/1.4935904|arxiv=1510.06972|bibcode=2015PhPl...22k2504X |s2cid=12893515 }}</ref><ref>{{cite journal| last=Kraus| first=M|author2=Kormann, K|author3=Morrison, P.|author4=Sonnendrucker, E|journal=Journal of Plasma Physics |date=2017| volume=83| title=GEMPIC: geometric electromagnetic particle-in-cell methods| issue=4| page=905830401| doi=10.1017/S002237781700040X| arxiv=1609.03053| bibcode=2017JPlPh..83d9001K| s2cid=8207132}}</ref><ref>{{cite journal|last=Xiao|first=J.|author2=Qin, H.|author3=Liu, J.|journal=Plasma Science and Technology | date=2018|volume=20|title=Structure-preserving geometric particle-in-cell methods for Vlasov-Maxwell systems| issue=11| page=110501|doi=10.1088/2058-6272/aac3d1|arxiv=1804.08823|bibcode=2018PlST...20k0501X |s2cid=250801157 }}</ref><ref>{{cite journal| last1=Glasser| first1=A.|last2=Qin | first2 = H.| journal=Journal of Plasma Physics |date=2022| volume=88| title=A gauge-compatible Hamiltonian splitting algorithm for particle-in-cell simulations using finite element exterior calculus| issue=2| page=835880202| doi=10.1017/S0022377822000290| arxiv=2110.10346| bibcode= 2022JPlPh..88b8302G| s2cid=239049433}}</ref>
+
+== See also ==
+* [[Energy drift]]
+* [[Multisymplectic integrator]]
+* [[Variational integrator]]
+* [[Verlet integration]]
+
+== References ==
+{{Reflist}}
+{{refbegin}}
+* {{cite book 
+  | last1 = Leimkuhler
+  | first1 = Ben 
+  | first2 = Sebastian|last2= Reich
+  | title = Simulating Hamiltonian Dynamics 
+  | publisher = Cambridge University Press
+  | year = 2005 
+  | isbn = 0-521-77290-7}}
+* {{cite book
+  | last1 = Hairer
+  | first1 = Ernst
+  | first2 = Christian|last2= Lubich|first3= Gerhard |last3=Wanner
+  | title = Geometric Numerical Integration: Structure-Preserving Algorithms for Ordinary Differential Equations
+  | publisher = Springer
+  | year = 2006
+  | isbn = 978-3-540-30663-4
+  | edition = 2}}
+* {{cite book
+  | last1 = Kang
+  | first1 = Feng
+  | first2 = Mengzhao|last2= Qin
+  | title = Symplectic geometric algorithms for Hamiltonian systems
+  | publisher = Springer
+  | year = 2010}}
+{{refend}}
+
+{{numerical integrators}}
+
+[[Category:Numerical differential equations]]
+[[Category:Hamiltonian mechanics]]

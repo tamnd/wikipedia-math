@@ -1,0 +1,324 @@
+<!-- wikipedia: en
+     page: 188999
+     title: Miller–Rabin primality test
+     revision: 1375754692
+     timestamp: 2026-09-19T21:30:59Z
+     history: https://en.wikipedia.org/w/index.php?curid=188999&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375754692 -->
+{{short description|Probabilistic primality test}}
+The '''Miller–Rabin primality test''' or '''Rabin–Miller primality test''' is a probabilistic [[primality test]]: an [[algorithm]] which determines whether a given number is [[probable prime|likely to be prime]], similar to the [[Fermat primality test]] and the [[Solovay–Strassen primality test]].
+
+It is of historical significance in the search for a [[polynomial-time]] deterministic primality test. Its probabilistic variant remains widely used in practice, as one of the simplest and fastest tests known.
+
+[[Gary Miller (computer scientist)|Gary L. Miller]] discovered the test in 1976. Miller's version of the test is [[deterministic algorithm|deterministic]], but its correctness relies on the unproven [[extended Riemann hypothesis]].<ref name="miller">{{Citation |last=Miller |first=Gary L. |year=1976 |title=Riemann's Hypothesis and Tests for Primality |author-link=Gary Miller (computer scientist) |journal=Journal of Computer and System Sciences |volume=13 |issue=3 |pages=300–317 |doi=10.1145/800116.803773 |s2cid=10690396 |doi-access=free }}</ref> [[Michael O. Rabin]] modified it to obtain an unconditional [[randomized algorithm|probabilistic algorithm]] in 1980.<ref name="rabin">{{Citation |last=Rabin |first=Michael O. |year=1980 |title=Probabilistic algorithm for testing primality |author-link=Michael O. Rabin |journal=Journal of Number Theory |volume=12 |issue=1 |pages=128–138 |doi=10.1016/0022-314X(80)90084-0 |doi-access= }}</ref>{{efn|
+The Miller–Rabin test is often incorrectly said to have been discovered by {{nobr|M. M. Artjuhov}} as soon as 1967; a reading of Artjuhov's paper<ref>{{citation
+ | last = Artjuhov | first = M. M.
+ | journal = Acta Arithmetica
+ | mr = 0213289
+ | pages = 355–364
+ | title = Certain criteria for primality of numbers connected with the little Fermat theorem
+ | volume = 12
+ | year = 1966–1967}}</ref>
+(particularly his {{nobr|Theorem E}}) shows that he actually discovered the Solovay–Strassen test.
+}}
+
+== Mathematical concepts ==
+Similarly to the Fermat and Solovay–Strassen tests, the Miller–Rabin primality test checks whether a specific property, which is known to hold for prime values, holds for the number under testing.
+
+=== Strong probable primes ===
+The property is the following. For a given odd integer <math>n>2</math>, let’s write <math>n-1</math> as <math>2^sd</math> where <math>s</math> is a positive integer and <math>d</math> is an odd positive integer. Let’s consider an integer <math>a</math>, called a ''base'', which is [[Coprime integers|coprime]] to <math>n</math>.
+Then, <math>n</math> is said to be a '''strong [[probable prime]] to base ''a''''' if one of these [[modular arithmetic|congruence relations]] holds:
+* <math>a^d \equiv 1 \!\!\!\pmod n</math>, or
+* <math>a^{2^r d} \equiv -1 \!\!\!\pmod n</math> for some <math>0
+\leq r<s</math>.
+This simplifies to first checking for <math>a^d \equiv 1 \pmod{n}</math> and then <math>a^{2^r d} \equiv n-1 \pmod{n} </math> for successive values of <math>r</math>. For each value of <math>r</math>, the value of the expression may be calculated using the value obtained for the previous value of <math>r</math> by squaring under the modulus of <math>n</math>.
+
+The idea beneath this test is that when <math>n</math> is an odd prime, it passes the test because of two facts:
+* by [[Fermat's little theorem]], <math>a^{n-1} \equiv 1 \pmod{n}</math> (this property alone defines the weaker notion of ''probable prime to base'' <math>a</math>, on which the Fermat test is based);
+* the only [[modular square root|square roots]] of 1 modulo <math>n</math> are 1 and −1.
+
+Hence, by [[contraposition]], if <math>n</math> is not a strong probable prime to base <math>a</math>, then <math>n</math> is definitely composite, and <math>a</math> is called a '''[[witness (mathematics)|witness]]''' for the compositeness of <math>n</math>.
+
+However, this property is not an exact characterization of prime numbers. If <math>n</math> is composite, it may nonetheless be a strong probable prime to base <math>a</math>, in which case it is called a '''[[strong pseudoprime]]''', and <math>a</math> is a '''strong liar'''.
+
+=== Choices of bases ===
+No composite number is a strong pseudoprime to all bases at the same time (contrary to the Fermat primality test for which Fermat pseudoprimes to all bases exist: the [[Carmichael number]]s). However no simple way of finding a witness is known. A naïve solution is to try all possible bases, which yields an inefficient deterministic algorithm. The Miller test is a more efficient variant of this (see [[#Miller test|section ''Miller test'' below]]).
+
+Another solution is to pick a base at random. This yields a fast [[primality test#Probabilistic tests|probabilistic test]]. When ''n'' is composite, most bases are witnesses, so the test will detect ''n'' as composite with a reasonably high probability (see [[#Accuracy|section ''Accuracy'' below]]). We can quickly reduce the probability of a [[false positive]] to an arbitrarily small rate, by combining the outcome of as many independently chosen bases as necessary to achieve the said rate. This is the Miller–Rabin test. There seems to be diminishing returns in trying many bases, because if ''n'' is a pseudoprime to some base, then it seems more likely to be a pseudoprime to another base.{{r|PSW}}{{rp|§8}}
+
+Note that {{math|''a''<sup>''d''</sup> ≡ 1 (mod ''n'')}} holds trivially for {{math|''a'' ≡ 1 (mod ''n'')}}, because the congruence relation is [[Modular arithmetic#Properties|compatible with exponentiation]]. And {{math|1=''a''<sup>''d''</sup> = ''a''<sup>2<sup>0</sup>''d''</sup> ≡ −1 (mod ''n'')}} holds trivially for {{math|''a'' ≡ −1 (mod ''n'')}} since {{mvar|d}} is odd, for the same reason. That is why random {{mvar|a}} are usually chosen in the interval {{math|1 < ''a'' < ''n'' − 1}}.
+
+For testing arbitrarily large {{mvar|n}}, choosing bases at random is essential, as we don't know the distribution of witnesses and strong liars among the numbers 2, 3, ..., {{math|''n'' − 2}}.{{efn|
+For instance, in 1995, Arnault gives a 397-digit composite number for which all bases less than 307 are strong liars; this number was reported to be prime by the [[Maple (software)|Maple]] <code>isprime()</code> function, because it implemented the Miller–Rabin test with the specific bases 2, 3, 5, 7 and 11.<ref name="Arnault397Digit">{{cite journal|title=Constructing Carmichael Numbers Which Are Strong Pseudoprimes to Several Bases |journal=Journal of Symbolic Computation|date=August 1995|volume=20|issue=2|pages=151–161 |author=F. Arnault |doi=10.1006/jsco.1995.1042|doi-access=free}}</ref>
+}}
+
+However, a pre-selected set of a few small bases guarantees the identification of all composites up to a pre-computed maximum. This maximum is generally quite large compared to the bases. This gives very fast deterministic tests for small enough ''n'' (see [[#Testing against small sets of bases|section ''Testing against small sets of bases'' below]]).
+
+=== Proofs ===
+Here is a proof that, if ''n'' is a prime, then the only square roots of 1 modulo ''n'' are 1 and −1.
+{{math proof|
+Certainly 1 and −1, when squared modulo ''n'', always yield 1. It remains to show that there are no other square roots of 1 modulo ''n''. This is a special case, here applied with the [[polynomial]] {{nowrap|X<sup>2</sup> − 1}} over the [[finite field]] {{nowrap|'''Z'''/''n'''''Z'''}}, of the more general fact that a polynomial over some [[field (mathematics)|field]] has no more [[Root of a polynomial|roots]] than its degree (this theorem follows from the existence of an [[Euclidean division of polynomials|Euclidean division for polynomials]]). Here follows a more elementary proof. Suppose that ''x'' is a square root of 1 modulo ''n''. Then:
+: <math> (x - 1)(x + 1) = x^2 - 1 \equiv 0 \pmod{n}.</math>
+In other words, ''n'' divides the product {{nowrap|(''x'' − 1)(''x'' + 1)}}. By [[Euclid's lemma]], since ''n'' is prime, it divides one of the factors {{nowrap|''x'' − 1}} or {{nowrap|''x'' + 1,}} implying that ''x'' is congruent to either 1 or −1 modulo ''n''.
+}}
+
+Here is a proof that, if ''n'' is an odd prime, then it is a strong probable prime to base ''a''.
+{{math proof|
+If ''n'' is an odd prime and we write {{nowrap|1=''n'' − 1= 2<sup>''s''</sup>''d''}} where ''s'' is a positive integer and ''d'' is an odd positive integer, by Fermat's little theorem:
+: <math>a^{2^s d} \equiv 1 \pmod{n}.</math>
+Each term of the sequence <math>a^{2^s d}, a^{2^{s-1} d}, \dots, a^{2d}, a^d</math> is a square root of the previous term. Since the first term is congruent to 1, the second term is a square root of 1 modulo ''n''. By the previous [[lemma (mathematics)|lemma]], it is congruent to either 1 or −1 modulo ''n''. If it is congruent to −1, we are done. Otherwise, it is congruent to 1 and we can [[mathematical induction|iterate the reasoning]]. At the end, either one of the terms is congruent to −1, or all of them are congruent to 1, and in particular the last term, ''a''<sup>''d''</sup>, is.
+}}
+
+== Example ==
+Suppose we wish to determine if <math>n = 221</math> is prime. We write <math>n - 1 \text{ as } 2^2 \times 55</math>, so that we have <math>s = 2 \text{ and } d = 55</math>. We randomly select a number <math>a</math> such that <math>2 \leq a \leq n-2</math>.
+
+Say <math>a = 174</math>:
+
+<math>
+\begin{align}
+a^{{s^0}d} \text{ mod } n \rightarrow & 174^{{2^0} 55} \text{ mod } 221 \equiv 174^{55} \equiv 47 \text{. Since } 47 \neq 1 \text{ and } 47 \neq n - 1 \text{, we continue.} \\
+& 174^{{2^1} 55} \text{ mod } 221 \equiv 174^{110} \equiv 220 = n - 1
+\end{align}
+</math>
+
+Since <math>220 \equiv -1 \text{ mod } n</math>, either 221 is prime, or 174 is a strong liar for 221.
+We try another random <math>a</math>, this time choosing <math>a = 137</math>:
+
+<math>
+\begin{align}
+a^{{s^0}d} \text{ mod } n \rightarrow & 137^{{2^0} 55} \text{ mod } 221 \equiv 137^{55} \equiv 188 \text{. Since } 188 \neq 1 \text{ and } 188 \neq n - 1 \text{, we continue.} \\
+& 137^{{2^1} 55} \text{ mod } 221 \equiv 137^{110} \equiv 205 \neq n - 1
+\end{align}
+</math>
+
+Hence 137 is a witness for the compositeness of 221, and 174 was in fact a strong liar. Note that this tells us nothing about the factors of 221 (which are 13 and 17). However, the example with 341 in [[#Variants for finding factors|a later section]] shows how these calculations can sometimes produce a factor of ''n''.
+
+For a practical guide to choosing the value of ''a'', see [[#Testing against small sets of bases|Testing against small sets of bases]].
+
+== Miller–Rabin test ==
+The algorithm can be written in [[pseudocode]] as follows. The parameter ''k'' determines the accuracy of the test. The greater the number of rounds, the more accurate the result.<ref>{{Introduction to Algorithms|edition=3|chapter=31|pages=968-971|notitlelink=1}}</ref>
+
+ '''Input #1''': ''n'' > 2, an odd integer to be tested for primality
+ '''Input #2''': ''k'', the number of rounds of testing to perform
+ '''Output''': “''composite''” if ''n'' is found to be composite, “''probably prime''” otherwise
+
+ '''let''' ''s'' > 0 and ''d'' odd > 0 such that ''n'' − 1 = 2<sup>''s''</sup>''d''  <u># by factoring out powers of 2 from ''n'' − 1</u>
+ '''repeat''' ''k'' '''times''':
+     ''a'' ← random(2, ''n'' − 2)  # ''n'' is always a probable prime to base 1 and ''n'' − 1
+     ''x'' ← ''a''<sup>''d''</sup> mod ''n''
+     '''repeat''' ''s'' '''times''':
+         ''y'' ← ''x''<sup>2</sup> mod ''n''
+         '''if''' ''y'' = 1 and ''x'' ≠ 1 and ''x'' ≠ ''n'' − 1 '''then''' <u># nontrivial square root of 1 modulo ''n''</u>
+             '''return''' “''composite''”
+         ''x'' ← ''y''
+     '''if''' ''y'' ≠ 1 '''then'''
+         '''return''' “''composite''”
+ '''return''' “''probably prime''”
+
+=== Complexity ===
+Using [[Exponentiation by squaring|repeated squaring]], the running time of this algorithm is {{math|[[Big O notation|O]](''k'' ''n''<sup>3</sup>)}}, for an ''n''-digit number, and ''k'' is the number of rounds performed; thus this is an efficient, polynomial-time algorithm. [[Fast Fourier transform|FFT]]-based multiplication, for example the [[Schönhage–Strassen algorithm]], can decrease the running time to {{math|O(''k'' ''n''<sup>2</sup> log ''n'' log log ''n'') {{=}} [[Big O notation#Extensions to the Bachmann–Landau notations|Õ]](''k'' ''n''<sup>2</sup>)}}.
+
+=== Accuracy ===
+The error made by the primality test is measured by the probability that a composite number is declared probably prime. The more bases ''a'' are tried, the better the accuracy of the test. It can be shown that if ''n'' is composite, then at most {{sfrac|1|4}} of the bases ''a'' are strong liars for ''n''.<ref name="rabin"/><ref name="schoof">{{Citation |last=Schoof |first=René |year=2004 |chapter=Four primality testing algorithms |title=Algorithmic Number Theory: Lattices, Number Fields, Curves and Cryptography |author-link=René Schoof|publisher=Cambridge University Press | chapter-url=http://www.mat.uniroma2.it/~schoof/millerrabinpom.pdf |isbn=978-0-521-80854-5 }}</ref><ref>{{cite OEIS|A329759|Odd composite numbers k for which the number of witnesses for strong pseudoprimality of k equals phi(k)/4}}</ref> As a consequence, if ''n'' is composite then running ''k'' iterations of the Miller–Rabin test will declare ''n'' probably prime with a probability at most 4<sup>−''k''</sup>.
+
+This is an improvement over the [[Solovay–Strassen primality test|Solovay–Strassen test]], whose worst‐case error bound is 2<sup>−''k''</sup>. Moreover, the Miller–Rabin test is strictly stronger than the Solovay–Strassen test in the sense that for every composite ''n'', the set of strong liars for ''n'' is a subset of the set of [[Euler liar]]s for ''n'', and for many ''n'', the subset is proper.
+
+In addition, for large values of ''n'', the probability for a composite number to be declared probably prime is often significantly smaller than 4<sup>−''k''</sup>. For instance, for most numbers ''n'', this probability is bounded by 8<sup>−''k''</sup>; the proportion of numbers ''n'' which invalidate this upper bound vanishes as we consider larger values of ''n''.<ref name="damgård-landrock-pomerance">{{Citation |last1=Damgård |first1=I. |author-link=Ivan Damgård |last2=Landrock |first2=P. |author-link2=Peter Landrock |last3=Pomerance |first3=C. | author-link3=Carl Pomerance |name-list-style=amp |year=1993 |title=Average case error estimates for the strong probable prime test |journal=Mathematics of Computation |volume=61 |issue=203 |pages=177–194 |url=http://www.math.dartmouth.edu/~carlp/PDF/paper88.pdf |doi=10.2307/2152945|jstor=2152945 |bibcode=1993MaCom..61..177D }}</ref> Hence the ''average'' case has a much better accuracy than 4<sup>−''k''</sup>, a fact which can be exploited for ''generating'' probable primes (see [[#Accuracy 2|below]]). However, such improved error bounds should not be relied upon to ''verify'' primes whose [[probability distribution]] is not controlled, since a [[cryptography|cryptographic]] adversary might send a carefully chosen pseudoprime in order to defeat the primality test.{{efn|
+For instance, in 2018, Albrecht et al. were able to construct, for many cryptographic libraries such as [[OpenSSL]] and [[GNU GMP]], composite numbers that these libraries declared prime, thus demonstrating that they were not implemented with an adversarial context in mind.<ref>{{cite conference |title = Prime and Prejudice: Primality Testing Under Adversarial Conditions | author1 = Martin R. Albrecht | author2 = Jake Massimo |author3 = Kenneth G. Paterson |author4 = Juraj Somorovsky | date = 15 October 2018 |pages = 281–298 |location = Toronto | conference = ACM SIGSAC Conference on Computer and Communications Security 2018 | publisher = [[Association for Computing Machinery]] | url = https://eprint.iacr.org/2018/749.pdf | doi = 10.1145/3243734.3243787 }}</ref>
+}}
+In such contexts, only the ''worst‐case'' error bound of 4<sup>−''k''</sup> can be relied upon.
+
+<!--These notations are easier to read but they exceed the page width:
+<math>\Pr(N\text{ passes }k\text{ rounds} \mid N\text{ is not prime})</math>
+where ''N'' is the number being tested for primality, seen as a [[random variable]] -->
+The above error measure is the probability for a composite number to be declared as a strong probable prime after ''k'' rounds of testing; in mathematical words, it is the [[conditional probability]]
+<math>\Pr(M\!R_k \mid \lnot P)</math>
+where ''P'' is the [[event (probability theory)|event]] that the number being tested is prime, and ''MR<sub>k</sub>'' is the event that it passes the Miller–Rabin test with ''k'' rounds. We are often interested instead in the inverse conditional probability <math>\Pr(\lnot P \mid M\!R_k)</math>: the probability that a number which has been declared as a strong probable prime is in fact composite. These two probabilities are related by [[Bayes' law]]:
+
+: <math>\begin{align}
+\Pr(\lnot P \mid M\!R_k)
+& =
+\frac{\Pr(\lnot P \land M\!R_k)}{\Pr(\lnot P \land M\!R_k) + \Pr(P \land M\!R_k)} \\
+& =
+\frac{1}{1 + \frac{\Pr(M\!R_k \mid P)}{\Pr(M\!R_k \mid \lnot P)} \frac{\Pr(P)}{\Pr(\lnot P)}} \\
+& =
+\frac{1}{1 + \frac{1}{\Pr(M\!R_k \mid \lnot P)} \frac{\Pr(P)}{1 - \Pr(P)}}
+\end{align}</math>
+
+In the last equation, we simplified the expression using the fact that all prime numbers are correctly reported as strong probable primes (the test has no [[false negative]]). By dropping the left part of the [[denominator]], we derive a simple upper bound:
+
+: <math>\Pr(\lnot P \mid M\!R_k) < \Pr(M\!R_k \mid \lnot P) \left(\tfrac{1}{\Pr(P)} - 1\right)</math>
+
+Hence this conditional probability is related not only to the error measure discussed above — which is bounded by 4<sup>−''k''</sup> — but also to the [[probability distribution]] of the input number. In the general case, as said earlier, this distribution is controlled by a cryptographic adversary, thus unknown, so we cannot deduce much about <math>\Pr(\lnot P \mid M\!R_k)</math>. However, in the case when we use the Miller–Rabin test to ''generate'' primes (see [[#Accuracy 2|below]]), the distribution is chosen by the generator itself, so we can exploit this result.
+
+=== Combining multiple tests ===
+Caldwell<ref name=prime-pages/> points out that strong probable prime tests to different bases sometimes provide an additional primality test.  Just as the strong test checks for the existence of more than two square roots of 1 modulo ''n'', two such tests can sometimes check for the existence of more than two square roots of −1.
+
+Suppose that, in the course of our probable prime tests, we come across two bases ''a'' and ''{{prime|a}}'' for which <math>a^{2^r d} \equiv a^{\prime\,2^{r'} d} \equiv -1 \pmod n</math> with {{nobr|''r'', ''{{prime|r}}'' ≥ 1}}.  This means that we have computed two square roots as part of the testing, and can check whether <math>a^{2^{r-1}d} \equiv \pm a^{\prime\,2^{r'-1} d}\pmod n</math>.  This must always hold if ''n'' is prime; if not, we have found more than two square roots of −1 and proved that ''n'' is composite.
+
+This is only possible if ''n'' ≡ 1 (mod 4), and we pass probable prime tests with two or more bases ''a'' such that ''a<sup>d</sup>'' ≢ ±1 (mod ''n''), but it is an inexpensive addition to the basic Miller–Rabin test.
+
+== Deterministic variants ==
+=== Miller test ===
+The Miller–Rabin algorithm can be made deterministic by trying all possible values of ''a'' below a certain limit. Taking ''n'' as the limit would imply {{math|O(''n'')}} trials, hence the running time would be exponential with respect to the size {{math|log ''n''}} of the input. To improve the running time, the challenge is then to lower the limit as much as possible while keeping the test reliable.
+
+If the tested number ''n'' is composite, the strong liars ''a'' coprime to ''n'' are contained in a proper [[subgroup]] of the group ('''Z'''/''n'''''Z''')*, which means that if we test all ''a'' from a set which [[generating set of a group|generates]] ('''Z'''/''n'''''Z''')*, one of them must lie outside the said subgroup, hence must be a witness for the compositeness of ''n''. Assuming the truth of the [[generalized Riemann hypothesis]] (which Miller, confusingly, calls the "[[extended Riemann hypothesis]]"), it is known that the group is generated by its elements smaller than {{math|O(([[Natural logarithm|ln]] ''n'')<sup>2</sup>)}}, which was already noted by Miller.<ref name="miller"/> The constant involved in the [[Big O notation]] was reduced to 2 by [[Eric Bach]].<ref>{{Citation |last=Bach |first=Eric |author-link=Eric Bach|year=1990 |title=Explicit bounds for primality testing and related problems |journal=Mathematics of Computation |volume=55 |issue=191 |pages=355–380 |doi=10.2307/2008811 |jstor=2008811 |bibcode=1990MaCom..55..355B |doi-access=free }}</ref> This leads to the following primality testing algorithm, known as the '''Miller test''', which is deterministic assuming the extended Riemann hypothesis:
+
+ '''Input''': ''n'' > 2, an odd integer to be tested for primality
+ '''Output''': “''composite''” if ''n'' is composite, “''prime''” otherwise
+
+ '''let''' ''s'' > 0 and ''d'' odd > 0 such that ''n'' − 1 = 2<sup>''s''</sup>''d''  <u># by factoring out powers of 2 from ''n'' − 1</u>
+ '''for all''' ''a'' '''in''' the range [2, min(''n'' − 2, ⌊2(ln ''n'')<sup>2</sup>⌋)]:
+     ''x'' ← ''a''<sup>''d''</sup> mod ''n''
+     '''repeat''' ''s'' '''times''':
+         ''y'' ← ''x''<sup>2</sup> mod ''n''
+         '''if''' ''y'' = 1 and ''x'' ≠ 1 and ''x'' ≠ ''n'' − 1 '''then'''  <u># nontrivial square root of 1 modulo ''n''</u>
+             '''return''' “''composite''”
+         ''x'' ← ''y''
+     '''if''' ''y'' ≠ 1 '''then'''
+         '''return''' “''composite''”
+ '''return''' “''prime''”
+
+The full power of the generalized Riemann hypothesis is not needed to ensure the correctness of the test: as we deal with subgroups of even [[index of a subgroup|index]], it suffices to assume the validity of GRH for [[Legendre symbol|quadratic]] [[Dirichlet character]]s.<ref name="schoof"/>
+
+The running time of the algorithm is, in the [[Big O notation#Extensions to the Bachmann–Landau notations|soft-O]] notation, {{math|Õ((log ''n'')<sup>4</sup>)}} (using FFT‐based multiplication).<ref>{{Cite journal |last=Zhang |first=Zhenxiang |date=2010-04-01 |title=On the effectiveness of a generalization of Miller’s primality theorem |url=https://www.sciencedirect.com/science/article/pii/S0885064X10000038 |journal=Journal of Complexity |volume=26 |issue=2 |pages=200–208 |doi=10.1016/j.jco.2010.01.002 |issn=0885-064X|url-access=subscription }}</ref>
+
+The Miller test is not used in practice.  For most purposes, proper use of the probabilistic Miller–Rabin test or the [[Baillie–PSW primality test]] gives sufficient confidence while running much faster.  It is also slower in practice than commonly used proof methods such as [[Adleman–Pomerance–Rumely primality test|APR-CL]] and [[Elliptic curve primality|ECPP]] which give results that do not rely on unproven assumptions. For theoretical purposes requiring a deterministic polynomial time algorithm, it was superseded by the [[AKS primality test]], which also does not rely on unproven assumptions.
+
+=== Testing against small sets of bases ===
+When the number ''n'' to be tested is small, trying all {{math|''a'' < 2(ln ''n'')<sup>2</sup>}} is not necessary, as much smaller sets of potential witnesses are known to suffice. For example, Pomerance, Selfridge, Wagstaff<ref name="PSW">{{cite journal |title=The pseudoprimes to {{nowrap|25 ⋅ 10<sup>9</sup>}} |journal=Mathematics of Computation |date=July 1980 |volume=35 |issue=151 |pages=1003–1026 |author1=Carl Pomerance |author1-link=Carl Pomerance |author2=John L. Selfridge |author2-link=John L. Selfridge |author3=Samuel S. Wagstaff, Jr. |author3-link=Samuel S. Wagstaff Jr. |doi=10.1090/S0025-5718-1980-0572872-7 |doi-access=free |url=http://www.math.dartmouth.edu/~carlp/PDF/paper25.pdf}}</ref> and Jaeschke<ref>{{Citation |last=Jaeschke |first=Gerhard |date=October 1993 |title=On strong pseudoprimes to several bases |journal=Mathematics of Computation |volume=61 |issue=204 |pages=915–926 |doi=10.2307/2153262 |jstor=2153262 |doi-access=free |url=https://www.ams.org/journals/mcom/1993-61-204/S0025-5718-1993-1192971-8/S0025-5718-1993-1192971-8.pdf }}</ref> have verified that
+* if ''n'' < 2,047, it is enough to test ''a'' = 2;
+* if ''n'' < 1,373,653, it is enough to test ''a'' = 2 and 3;
+* if ''n'' < 9,080,191, it is enough to test ''a'' = 31 and 73;
+* if ''n'' < 25,326,001, it is enough to test ''a'' = 2, 3, and 5;
+* if ''n'' < 3,215,031,751, it is enough to test ''a'' = 2, 3, 5, and 7;
+* if ''n'' < 4,759,123,141, it is enough to test ''a'' = 2, 7, and 61;
+* if ''n'' < 1,122,004,669,633, it is enough to test ''a'' = 2, 13, 23, and 1662803;
+* if ''n'' < 2,152,302,898,747, it is enough to test ''a'' = 2, 3, 5, 7, and 11;
+* if ''n'' < 3,474,749,660,383, it is enough to test ''a'' = 2, 3, 5, 7, 11, and 13;
+* if ''n'' < 341,550,071,728,321, it is enough to test ''a'' = 2, 3, 5, 7, 11, 13, and 17.
+* adding a test with ''a'' = 19 does not improve the preceding bound.
+
+Using the 2010 work of Feitsma and Galway<ref>{{cite web | first=Jan | last = Feitsma | editor-first=William |editor-last=Galway |title=Tables of pseudoprimes and related data |website=Centre for Experimental and Constructive Mathematics, [[Simon Fraser University]] | date=25 April 2013 | url=http://www.cecm.sfu.ca/Pseudoprimes/ | access-date=2024-11-22 }}</ref> enumerating all base 2 pseudoprimes up to 2<sup>64</sup>, this was extended (see {{OEIS2C|A014233}}), with the first result later shown using different methods in Jiang and Deng:<ref>{{cite journal | last1=Jiang | first1=Yupeng | last2=Deng | first2=Yingpu | title=Strong pseudoprimes to the first eight prime bases | journal=Mathematics of Computation | date=2014 | volume=83 | issue=290 | pages=2915–2924 | doi=10.1090/S0025-5718-2014-02830-5| s2cid=33599405 | doi-access=free }}</ref>
+* if ''n'' < 3,825,123,056,546,413,051, it is enough to test ''a'' = 2, 3, 5, 7, 11, 13, 17, 19, and 23.
+* adding tests with ''a'' = 29 and 31 does not improve the preceding bound.
+* if ''n'' < 2<sup>64</sup> = 18,446,744,073,709,551,616, it is enough to test ''a'' = 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, and 37.
+
+Sorenson and Webster<ref>{{cite journal | last1=Sorenson | first1=Jonathan | last2=Webster | first2=Jonathan | arxiv=1509.00864 | title=Strong Pseudoprimes to Twelve Prime Bases | journal=Mathematics of Computation | volume=86 | issue=304 | pages=985–1003 | date=2015| doi=10.1090/mcom/3134 | bibcode=2015arXiv150900864S | s2cid=6955806 }}</ref> verify the above and calculate precise results for these larger than 64‐bit results:
+* if ''n'' < 318,665,857,834,031,151,167,461, it is enough to test ''a'' = 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, and 37.
+* if ''n'' < 3,317,044,064,679,887,385,961,981, it is enough to test ''a'' = 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, and 41.
+
+Zhang (2007), by focusing on particular integers provides further predictions, e.g. that 18 consecutive primes would be enough for ''n'' < 1,543,267,864,443,420,616,877,677,640,751,301. 
+However, proving this to hold for all integers up to the bound is substantially more difficult. <ref>{{cite journal |last1=Zhang |first1=Zhenxiang |title=Two kinds of strong pseudoprimes up to $10^{36}$ |journal=Mathematics of Computation |date=1 October 2007 |volume=76 |issue=260 |pages=2095–2108 |doi=10.1090/S0025-5718-07-01977-1 |url=https://www.ams.org/journals/mcom/2007-76-260/S0025-5718-07-01977-1/S0025-5718-07-01977-1.pdf}}</ref>
+
+Other criteria of this sort, often more efficient (fewer bases required) than those shown above, exist by removing the requirement for the bases to be consecutive.<ref name="prime-pages">{{Cite web |url=https://primes.utm.edu/prove/prove2_3.html |title=Finding primes & proving primality — 2.3: Strong probable-primality and a practical test |last=Caldwell |first=Chris |website=The Prime Pages |access-date=February 24, 2019 }}</ref><ref>{{Citation |last1=Zhang |first1=Zhenxiang |last2=Tang |first2=Min |name-list-style=amp |date=October 2003 |title=Finding strong pseudoprimes to several bases. II |journal=Mathematics of Computation |volume=72 |issue=44 |pages=2085–2097 |doi=10.1090/S0025-5718-03-01545-X |bibcode=2003MaCom..72.2085Z |doi-access=free |url=https://www.ams.org/journals/mcom/2003-72-244/S0025-5718-03-01545-X/S0025-5718-03-01545-X.pdf}}</ref><ref>{{Cite OEIS| sequencenumber=A014233 |name=Smallest odd number for which Miller–Rabin primality test on bases <= n-th prime does not reveal compositeness}}</ref> For example, two bases ''a'' = 336,781,006,125 and 9,639,812,373,923,155 are sufficient for ''n'' < 1,050,535,501; seven bases are sufficient for ''n'' < 2<sup>64</sup>. Further optimization by Steve Worley and others, involves partitioning the integers less than N into subsets and preselecting witnesses that correctly evaluate all elements of that subset. Such a test can use only 2 witnesses for all N less than 2<sup>64</sup><ref>{{Cite web |url=https://miller-rabin.appspot.com |title=Deterministic variants of the Miller–Rabin primality test |last=Izykowski |first=Wojciech |access-date=February 24, 2019 }}</ref>
+
+There is a small list of potential witnesses for every possible input size (at most ''b'' values for ''b''‐bit numbers). However, no finite set of bases is sufficient for all composite numbers. Alford, Granville, and Pomerance have shown that there exist infinitely many composite numbers ''n'' whose smallest compositeness witness is at least {{math|(ln ''n'')<sup>1/(3ln ln ln ''n'')</sup>}}.<ref>{{Citation |last1=Alford |first1=W. R. |author-link=W. R. (Red) Alford |last2=Granville |first2=A. |author-link2=Andrew Granville |last3=Pomerance |first3=C. |title=Algorithmic Number Theory |chapter=On the difficulty of finding reliable witnesses |series=Lecture Notes in Computer Science |author-link3=Carl Pomerance |year=1994 |volume=877 |publisher=Springer-Verlag |pages=1–16 |url=http://www.math.dartmouth.edu/~carlp/PDF/reliable.pdf |doi=10.1007/3-540-58691-1_36 |isbn= 978-3-540-58691-3}}</ref> They also argue heuristically that the smallest number ''w'' such that every composite number below ''n'' has a compositeness witness less than ''w'' should be of order {{math|[[Big o notation#Family of Bachmann–Landau notations|Θ]](log ''n'' log log ''n'').}}
+
+== Variants for finding factors ==
+<!-- TODO: how often do these tricks find factors? -->
+By inserting [[greatest common divisor]] calculations into the above algorithm, we can sometimes obtain a factor of ''n'' instead of merely determining that ''n'' is composite. This occurs for example when ''n'' is a probable prime to base ''a'' but not a strong probable prime to base ''a''.<ref name="baillie">{{cite journal|title=Lucas Pseudoprimes|journal=Mathematics of Computation|date=October 1980|volume=35|issue=152|pages=1391–1417|url=http://mpqs.free.fr/LucasPseudoprimes.pdf|author=Robert Baillie|author2=Samuel S. Wagstaff, Jr.| mr=583518| doi=10.1090/S0025-5718-1980-0583518-6 |author2-link=Samuel S. Wagstaff Jr.|doi-access=free}}</ref>{{rp|1402}}
+
+If ''x'' is a nontrivial square root of 1 modulo ''n'',
+* since {{math|1=''x''<sup>2</sup> ≡ 1 (mod ''n'')}}, we know that ''n'' divides {{math|1=''x''<sup>2</sup> − 1 = (''x'' − 1)(''x'' + 1)}};
+* since {{math|1=''x'' ≢ ±1 (mod ''n'')}}, we know that ''n'' does not divide {{math|1=''x'' − 1}} nor {{math|1=''x'' + 1}}.
+
+From this we deduce that {{math|1=''A'' = gcd(''x'' − 1, ''n'')}} and {{math|1=''B'' = gcd(''x'' + 1, ''n'')}} are nontrivial (not necessarily prime) factors of ''n'' (in fact, since ''n'' is odd, these factors are coprime and ''n'' = ''AB''). Hence, if factoring is a goal, these gcd calculations can be inserted into the algorithm at little additional computational cost. This leads to the following pseudocode, where the added or changed code is highlighted:
+
+ '''Input #1''': ''n'' > 2, an odd integer to be tested for primality
+ '''Input #2''': ''k'', the number of rounds of testing to perform
+ '''Output''': {{font color||yellow|text=(“''multiple of''”, ''m'') if a nontrivial factor ''m'' of ''n'' is found,}}
+         “''composite''” if ''n'' is otherwise found to be composite,
+         “''probably prime''” otherwise
+
+ '''let''' ''s'' > 0 and ''d'' odd > 0 such that ''n'' − 1 = 2<sup>''s''</sup>''d''  # by factoring out powers of 2 from ''n'' − 1
+ '''repeat''' ''k'' '''times''':
+     ''a'' ← random(2, ''n'' − 2)  <u># ''n'' is always a probable prime to base 1 and ''n'' − 1</u>
+     ''x'' ← ''a''<sup>''d''</sup> mod ''n''
+     '''repeat''' ''s'' '''times''':
+         ''y'' ← ''x''<sup>2</sup> mod ''n''
+         '''if''' ''y'' = 1 and ''x'' ≠ 1 and ''x'' ≠ ''n'' − 1 '''then'''  <u># nontrivial square root of 1 modulo ''n''</u>
+             {{font color||yellow|text='''return''' (“''multiple of''”, gcd(''x'' − 1, ''n''))}}
+         ''x'' ← ''y''
+     '''if''' ''y'' ≠ 1 '''then'''
+         '''return''' “''composite''”
+ '''return''' “''probably prime''”
+
+This is ''not'' a probabilistic [[Integer factorization|factorization]] algorithm because it is only able to find factors for numbers ''n'' which are pseudoprime to base ''a'' (in other words, for numbers ''n'' such that {{math|1=''a''<sup>''n''−1</sup> ≡ 1 mod ''n''}}). For other numbers, the algorithm only returns "composite" with no further information.
+
+For example, consider ''n'' = 341 and ''a'' = 2. We have {{math|''n'' − 1 {{=}} 85 × 4}}. Then {{math|2<sup>85</sup> mod 341 {{=}} 32}} and {{math|32<sup>2</sup> mod 341 {{=}} 1}}. This tells us that ''n'' is a pseudoprime base 2, but not a strong pseudoprime base 2. By computing a gcd at this stage, we find a factor of 341: {{math|gcd(32 − 1, 341) {{=}} 31}}. Indeed, {{math|341 {{=}} 11 × 31}}.
+
+The same technique can be applied to the square roots of any other value, particularly the square roots of −1 mentioned in {{slink||Combining multiple tests}}.  If two (successful) strong probable prime tests find {{math|''x''<sup>2</sup> ≡ −1 (mod ''n'')}} and {{math|''y''<sup>2</sup> ≡ −1 (mod ''n'')}}, but {{math|''x'' ≢ ±''y'' (mod ''n'')}}, then {{math|gcd(''x'' − ''y'', ''n'')}} and {{math|gcd(''x'' + ''y'', ''n'')}} are nontrivial factors of ''n''.<ref name="prime-pages"/>
+
+For example, {{math|1=''n'' = 46,856,248,255,981}} is a strong pseudoprime to bases 2 and 7, but in the course of performing the tests we find
+: <math>2^{(n-1)/2} \equiv 7^{(n-1)/2} \equiv -1 \pmod n,</math>
+: <math>2^{(n-1)/4} \equiv 34456063004337 \pmod n,\text{ and}</math>
+: <math>7^{(n-1)/4} \equiv 21307242304265 \pmod n.</math>
+This gives us the factor {{math|1=gcd(34456063004337 − 21307242304265, ''n'') = 4840261}}.
+
+== Generation of probable primes ==
+The Miller–Rabin test can be used to generate strong probable primes, simply by drawing integers at random until one passes the test. This algorithm terminates [[almost surely]] (since at each iteration there is a chance to draw a prime number). <!-- TODO: expected number of draws? --> The pseudocode for generating ''b''‐[[bit]] strong probable primes (with the most significant bit set) is as follows:
+
+ '''Input #1''': ''b'', the number of bits of the result
+ '''Input #2''': ''k'', the number of rounds of testing to perform
+ '''Output''': a strong probable prime ''n''
+
+ '''while''' True:
+     pick a random odd integer ''n'' in the range [2<sup>''b''−1</sup>, 2<sup>''b''</sup>−1]
+     '''if''' the Miller–Rabin test with inputs ''n'' and ''k'' returns “''probably prime''” '''then'''
+         '''return''' ''n''
+
+=== Complexity ===
+Of course the [[worst-case complexity|worst-case running time]] is infinite, since the outer loop may never terminate, but that happens with probability zero. As per the [[geometric distribution]], the [[expected value|expected]] number of draws is <math>\tfrac{1}{\Pr(M\!R_k)}</math> (reusing notations from [[#Accuracy|earlier]]).
+
+As any prime number passes the test, the probability of being prime gives a coarse lower bound to the probability of passing the test. If we draw odd integers [[discrete uniform distribution|uniformly]] in the range [2<sup>''b''−1</sup>, 1<sup>''b''</sup>−1], then we get:
+
+: <math>\Pr(M\!R_k) > \Pr(1) = \frac{\pi\left(2^b\right) - \pi\left(2^{b-1}\right)}{2^{b-2}}</math>
+
+where π is the [[prime-counting function]]. Using an [[asymptotic expansion]] of π (an extension of the [[prime number theorem]]), we can approximate this probability when ''b'' grows towards infinity. We find:
+
+: <math>\Pr(P) = \tfrac{2}{\ln2} b^{-1} + \mathcal{O}\left(b^{-3}\right)</math>
+: <math>\tfrac{1}{\Pr(P)} = \tfrac{\ln2}{2} b + \mathcal{O}\left(b^{-1}\right)</math>
+
+Hence we can expect the generator to run no more Miller–Rabin tests than a number proportional to ''b''. Taking into account the worst-case complexity of each Miller–Rabin test (see [[#Complexity|earlier]]), the expected running time of the generator with inputs ''b'' and ''k'' is then bounded by {{math|O(''k'' ''b''<sup>4</sup>)}} (or {{math|Õ(''k'' ''b''<sup>3</sup>)}} using FFT-based multiplication).
+
+=== Accuracy ===
+The error measure of this generator is the probability that it outputs a composite number.
+
+Using the relation between conditional probabilities (shown in an [[#Accuracy|earlier section]]) and the asymptotic behavior of <math>\Pr(P)</math> (shown just before), this error measure can be given a coarse upper bound:
+
+: <math>\Pr(\lnot P \mid M\!R_k)
+<
+\Pr(M\!R_k \mid \lnot P) \left( \tfrac{1}{\Pr(P)} - 1 \right)
+\leq
+4^{-k} \left( \tfrac{\ln2}{2} b - 1 + \mathcal{O}\left(b^{-1}\right) \right).
+</math>
+
+Hence, for large enough ''b'', this error measure is less than <math>\tfrac{\ln2}{2} 4^{-k} b</math>. However, much better bounds exist.
+
+Using the fact that the Miller–Rabin test itself often has an error bound much smaller than 4<sup>−''k''</sup> (see [[#Accuracy|earlier]]), [[Ivan Damgård|Damgård]], [[Peter Landrock|Landrock]] and [[Carl Pomerance|Pomerance]] derived several error bounds for the generator, with various classes of parameters ''b'' and ''k''.<ref name="damgård-landrock-pomerance"/> These error bounds allow an implementor to choose a reasonable ''k'' for a desired accuracy.
+
+One of these error bounds is 4<sup>−''k''</sup>, which holds for all ''b'' ≥ 2 (the authors only showed it for ''b'' ≥ 51, while Ronald Burthe Jr. completed the proof with the remaining values 2 ≤ ''b'' ≤ 50<ref name="burthe">{{Citation |last=Burthe Jr. |first=Ronald J. |year=1996 |title=Further investigations with the strong probable prime test |journal=Mathematics of Computation |volume=65 |issue=213 |pages=373–381 |url=https://www.ams.org/journals/mcom/1996-65-213/S0025-5718-96-00695-3/S0025-5718-96-00695-3.pdf |doi=10.1090/S0025-5718-96-00695-3 |bibcode=1996MaCom..65..373B |doi-access=free }}</ref>). Again this simple bound can be improved for large values of ''b''. For instance, another bound derived by the same authors is:
+: <math>\left(\frac{1}{7} b^\frac{15}{4} 2^{-\frac b 2}\right) 4^{-k}</math>
+which holds for all ''b'' ≥ 21 and ''k'' ≥ ''b''/4. This bound is smaller than 4<sup>−''k''</sup> as soon as ''b'' ≥ 32.
+
+== Notes ==
+{{notelist}}
+
+== References ==
+{{reflist|2}}
+
+== External links ==
+{{wikibooks|Algorithm Implementation|Mathematics/Primality Testing|Primality testing}}
+* {{MathWorld|urlname=Rabin-MillerStrongPseudoprimeTest|title=Rabin-Miller Strong Pseudoprime Test}}
+* [http://gandraxa.com/miller_rabin_primality_test.xml Interactive Online Implementation of the Deterministic Variant] (stepping through the algorithm step-by-step)
+* [http://www.informationsuebertragung.ch/indexAlgorithmenRabinMiller.html Applet (German)]
+* [https://stackoverflow.com/questions/4236673/sample-code-for-fast-primality-testing-in-c-sharp/4236870#4236870 Miller–Rabin primality test in C#]
+* [http://www.javascripter.net/math/primes/millerrabinprimalitytest.htm Miller–Rabin primality test in JavaScript using arbitrary precision arithmetic]
+
+{{Number theoretic algorithms}}
+
+{{DEFAULTSORT:Miller-Rabin Primality Test}}
+[[Category:Primality tests]]
+[[Category:Finite fields]]

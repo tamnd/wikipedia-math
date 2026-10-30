@@ -1,0 +1,188 @@
+<!-- wikipedia: en
+     page: 4688415
+     title: Block matrix pseudoinverse
+     revision: 1342685628
+     timestamp: 2026-03-10T05:40:25Z
+     history: https://en.wikipedia.org/w/index.php?curid=4688415&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1342685628 -->
+{{Short description|Formula for the pseudoinverse of a partitioned matrix}}
+{{refimprove|date=December 2010}}
+In [[mathematics]], a '''block matrix pseudoinverse''' is a formula for the [[pseudoinverse]] of a [[partitioned matrix]]. This is useful for decomposing or approximating many algorithms updating parameters in [[signal processing]], which are based on the [[least squares]] method.
+
+== Derivation ==
+Consider a column-wise partitioned matrix:
+:<math>
+  \begin{bmatrix}\mathbf A & \mathbf B\end{bmatrix},\quad
+  \mathbf A \in \reals^{m \times n},\quad
+  \mathbf B \in \reals^{m \times p},\quad
+  m \geq n + p.
+</math>
+
+If the above matrix is full column rank, the [[Moore–Penrose inverse]] matrices of it and its transpose are
+:<math>\begin{align}
+  \begin{bmatrix}\mathbf A & \mathbf B\end{bmatrix}^+ &=
+  \left(
+    \begin{bmatrix}\mathbf A & \mathbf B\end{bmatrix}^\textsf{T}
+    \begin{bmatrix}\mathbf A & \mathbf B\end{bmatrix}
+  \right)^{-1} \begin{bmatrix}\mathbf A & \mathbf B\end{bmatrix}^\textsf{T}, \\
+
+  \begin{bmatrix}
+    \mathbf A^\textsf{T} \\
+    \mathbf B^\textsf{T}
+  \end{bmatrix}^+ &=
+  \begin{bmatrix}\mathbf A & \mathbf B\end{bmatrix} \left(
+    \begin{bmatrix}\mathbf A & \mathbf B\end{bmatrix}^\textsf{T}
+    \begin{bmatrix}\mathbf A & \mathbf B\end{bmatrix}
+  \right)^{-1}.
+\end{align}</math>
+
+This computation of the pseudoinverse requires (''n''&nbsp;+&nbsp;''p'')-square matrix inversion and does not take advantage of the block form.
+
+To reduce computational costs to ''n''- and ''p''-square matrix inversions and to introduce parallelism, treating the blocks separately, one derives <ref name=Baksalary>{{cite journal|author=[[Jerzy Baksalary|J.K. Baksalary]] and O.M. Baksalary|title=Particular formulae for the Moore–Penrose inverse of a columnwise partitioned matrix|journal=Linear Algebra Appl.|volume=421|date=2007|pages=16–23|doi=10.1016/j.laa.2006.03.031|doi-access=}}</ref>
+:<math>\begin{align}
+  \begin{bmatrix}\mathbf A & \mathbf B\end{bmatrix}^+ &=
+  \begin{bmatrix}
+    \mathbf P_B^\perp \mathbf A\left(\mathbf A^\textsf{T} \mathbf P_B^\perp \mathbf A\right)^{-1} \\
+    \mathbf P_A^\perp \mathbf B\left(\mathbf B^\textsf{T} \mathbf P_A^\perp \mathbf B\right)^{-1}
+  \end{bmatrix} =
+  \begin{bmatrix}
+    \left(\mathbf P_B^\perp\mathbf A\right)^+ \\
+    \left(\mathbf P_A^\perp\mathbf B\right)^+
+  \end{bmatrix}, \\
+
+  \begin{bmatrix}
+    \mathbf A^\textsf{T} \\
+    \mathbf B^\textsf{T}
+  \end{bmatrix}^+ &=
+  \begin{bmatrix}
+    \mathbf P_B^\perp \mathbf A\left(\mathbf A^\textsf{T} \mathbf P_B^\perp \mathbf A\right)^{-1},\quad
+    \mathbf P_A^\perp \mathbf B\left(\mathbf B^\textsf{T} \mathbf P_A^\perp \mathbf B\right)^{-1}
+  \end{bmatrix} =
+  \begin{bmatrix}
+    \left(\mathbf A^\textsf{T} \mathbf P_B^\perp\right)^+ &
+    \left(\mathbf B^\textsf{T} \mathbf P_A^\perp\right)^+
+  \end{bmatrix},
+\end{align}</math>
+
+where [[orthogonal projection]] matrices are defined by
+::<math>\begin{align}
+  \mathbf P_A^\perp &= \mathbf I - \mathbf A \left(\mathbf A^\textsf{T} \mathbf A\right)^{-1} \mathbf A^\textsf{T}, \\
+  \mathbf P_B^\perp &= \mathbf I - \mathbf B \left(\mathbf B^\textsf{T} \mathbf B\right)^{-1} \mathbf B^\textsf{T}.
+\end{align}</math>
+
+The above formulas are not necessarily valid if <math>\begin{bmatrix}\mathbf A & \mathbf B\end{bmatrix}</math> does not have full rank – for example, if <math>\mathbf A \neq 0</math>, then
+:<math>
+  \begin{bmatrix}\mathbf A & \mathbf A\end{bmatrix}^+ =
+  \frac{1}{2}\begin{bmatrix}
+    \mathbf A^+ \\
+    \mathbf A^+
+  \end{bmatrix} \neq
+  \begin{bmatrix}
+    \left(\mathbf P_A^\perp\mathbf A\right)^+ \\
+    \left(\mathbf P_A^\perp\mathbf A\right)^+
+  \end{bmatrix} =
+  0
+</math>
+
+== Application to least squares problems ==
+
+Given the same matrices as above, we consider the following least squares problems, which
+appear as multiple objective optimizations or constrained problems in signal processing.
+Eventually, we can implement a parallel algorithm for least squares based on the following results.
+
+=== Column-wise partitioning in over-determined least squares ===
+
+Suppose a solution <math>
+  \mathbf x = \begin{bmatrix}
+    \mathbf x_1 \\
+    \mathbf x_2 \\
+  \end{bmatrix}
+</math> solves an over-determined system:
+:<math> 
+  \begin{bmatrix}
+    \mathbf A, & \mathbf B 
+  \end{bmatrix}
+  \begin{bmatrix}
+    \mathbf x_1 \\
+    \mathbf x_2 \\
+  \end{bmatrix} =
+  \mathbf d,\quad
+  \mathbf d \in \reals^{m \times 1}.
+</math>
+
+Using the block matrix pseudoinverse, we have
+:<math>\mathbf x = 
+  \begin{bmatrix}
+    \mathbf A, & \mathbf B
+  \end{bmatrix}^+\,\mathbf d =
+  \begin{bmatrix}
+    \left(\mathbf P_B^\perp \mathbf A\right)^+ \\
+    \left(\mathbf P_A^\perp \mathbf B\right)^+ 
+  \end{bmatrix}\mathbf d.
+</math>
+
+Therefore, we have a decomposed solution:
+:<math>
+  \mathbf x_1 = \left(\mathbf P_B^\perp \mathbf A\right)^+\,\mathbf d,\quad
+  \mathbf x_2 = \left(\mathbf P_A^\perp \mathbf B\right)^+\,\mathbf d.
+</math>
+
+=== Row-wise partitioning in under-determined least squares ===
+
+Suppose a solution <math>\mathbf x</math> solves an under-determined system:
+:<math>
+  \begin{bmatrix}
+    \mathbf A^\textsf{T} \\
+    \mathbf B^\textsf{T} 
+  \end{bmatrix}\mathbf x =
+  \begin{bmatrix}
+    \mathbf e \\
+    \mathbf f 
+  \end{bmatrix},\quad
+  \mathbf e \in \reals^{n \times 1},\quad
+  \mathbf f \in \reals^{p \times 1}.
+</math>
+
+The minimum-norm solution is given by
+:<math>\mathbf x =
+  \begin{bmatrix}
+    \mathbf A^\textsf{T} \\
+    \mathbf B^\textsf{T} 
+  \end{bmatrix}^+\,
+  \begin{bmatrix}
+    \mathbf e \\
+    \mathbf f 
+  \end{bmatrix}.
+</math>
+
+Using the block matrix pseudoinverse, we have
+:<math>
+  \mathbf x = \begin{bmatrix}
+    \left(\mathbf A^\textsf{T}\mathbf P_B^\perp\right)^+ &
+    \left(\mathbf B^\textsf{T}\mathbf P_A^\perp\right)^+
+  \end{bmatrix} \begin{bmatrix}
+    \mathbf e \\
+    \mathbf f 
+  \end{bmatrix} =
+  \left(\mathbf A^\textsf{T}\mathbf P_B^\perp\right)^+\,\mathbf e +
+    \left(\mathbf B^\textsf{T}\mathbf P_A^\perp\right)^+\,\mathbf f.
+</math>
+
+== See also ==
+* {{section link|Invertible matrix|Blockwise inversion}}
+
+==References ==
+{{Reflist}}
+
+== External links ==
+* [http://www.ee.ic.ac.uk/hp/staff/dmb/matrix/intro.html The Matrix Reference Manual] by [http://www.ee.ic.ac.uk/hp/staff/dmb/dmb.html Mike Brookes]
+* [https://web.archive.org/web/20060414125709/http://www.csit.fsu.edu/~burkardt/papers/linear_glossary.html Linear Algebra Glossary] by [http://www.csit.fsu.edu/~burkardt/ John Burkardt]
+* [http://www2.imm.dtu.dk/pubdb/views/edoc_download.php/3274/pdf/imm3274.pdf The Matrix Cookbook] by [http://www2.imm.dtu.dk/pubdb/views/publication_details.php?id=3274/ Kaare Brandt Petersen]
+* [http://see.stanford.edu/materials/lsoeldsee263/08-min-norm.pdf Lecture 8: Least-norm solutions of undetermined equations] by [https://stanford.edu/~boyd/ Stephen P. Boyd]
+
+{{Numerical linear algebra}}
+
+{{DEFAULTSORT:Block Matrix Pseudoinverse}}
+[[Category:Numerical linear algebra]]
+[[Category:Matrix theory]]

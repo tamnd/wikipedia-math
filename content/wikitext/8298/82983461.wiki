@@ -1,0 +1,228 @@
+<!-- wikipedia: en
+     page: 82983461
+     title: Algorithm IMED
+     revision: 1363687876
+     timestamp: 2026-07-11T18:37:38Z
+     history: https://en.wikipedia.org/w/index.php?curid=82983461&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1363687876 -->
+{{Short description|Algorithm for the multi-armed bandit problem}}
+[[File:RunIMED.gif|thumb|A run of IMED with 3 Beta arms. The arm 1 is the optimal arm]]
+
+In [[multi-armed bandit problem|multi-armed bandit problems]], '''IMED''' (for ''Indexed Minimum Empirical Divergence'') is an algorithm developed in 2015 by ''Junya Honda'' and ''Akimichi Takemura''. It is the first algorithm proved to be asymptotically optimal respect to the problem-dependant [[Lai–Robbins lower bound]]<ref name="Lai1985" /> for distributions in <math>(-\infty,1]</math>.<ref name="Honda2015"/>
+
+== Multi-armed bandit problem ==
+
+The [[Multi-armed bandit problem]] is a [[sequential game]] where one player has to choose at each turn between <math>K</math> actions (arms). Behind every arm <math>a</math> there is an unknown distribution <math>\nu_a</math> that lies in a set <math>\mathcal{D}</math> known by the player (for example, <math>\mathcal{D}</math> can be the set of [[Normal distribution|Gaussian distributions]] or [[Bernoulli distribution|Bernoulli distributions]]).<br />
+
+At each turn <math>t</math> the player chooses (pulls) an arm <math>a_t</math>, he then gets an observation <math>X_t</math> of the distribution <math>\nu_{a_t}</math>.
+
+=== Regret minimization ===
+
+The goal is to minimize the regret at time <math>T</math> that is defined as
+: <math>R_T := \sum_{a=1}^K \Delta_a \mathbb{E}[N_a(T)]</math>
+where
+* <math>\mu_a := \mathbb{E}[\nu_a]</math> is the mean of arm <math>a</math>
+* <math>\mu^* := \max_a \mu_a</math> is the highest mean
+* <math>\Delta_a := \mu^* - \mu_a</math>
+* <math>N_a(t)</math> is the number of pulls of arm <math>a</math> up to turn <math>t</math>
+
+The player has to find an algorithm that chooses at each turn <math>t</math> which arm to pull based on the previous actions and observations <math>(a_s,X_s)_{s < t}</math> to minimize the regret <math>R_T</math>.<br />
+
+This is a trade-off problem between exploration to find the best arm (the arm with the highest mean) and exploitation to play as much as possible the arm that we think is the best arm.<ref name="Lattimore"/>
+
+== Applications ==
+
+Multi-armed bandit algorithms are used in a variety of fields; for example, they have applications in clinical trials, recommender systems, telecommunications,<ref name="Bouneffouf2019"/> and agriculture.<ref name="Gautron2024"/>
+
+== Algorithm IMED ==
+
+The algorithm compute an index at each turn for each arm. Then it pull the arm with the smallest index.<ref name="Honda2015"/>
+
+The index is the sum of two terms. The first is the cost of to transport the empirical distribution to a distribution such that the arm is optimal. The second is the cost of behing pulled to much. 
+
+Formally, the index <math>I_a(t)</math> of an arm <math>a</math> at turn <math>t</math> is defined as follow:
+:<math>I_a(t) := N_a(t) K_{inf}(\hat \nu_a(t),\hat \mu^*(t)) + \ln (N_a(t))</math>
+
+where
+
+* <math>\mathcal{K}_{inf}(\nu,\mu,\mathcal{D}) := \inf\left\{\mathrm{KL}(\nu,\tilde\nu) \ | \ \tilde \nu \in \mathcal{P}([-\infty,1]), \ \mathbb{E}[\tilde \nu] > \mu \right\}</math>
+* <math>\mathrm{KL}</math> is the [[Kullback–Leibler divergence]]
+* <math>\mathcal{P}([-\infty,1])</math> is the set of distribution in <math>[-\infty,1]</math>
+* <math>\hat \nu_a(t)</math> is the [[Empirical measure|empirical distribution]] of arm <math>a</math> at turn <math>t</math>
+* <math>\hat \mu^*(t)</math> is the highest empirical mean of turn <math>t</math>
+
+''Remark : '' For arms <math>a</math> that verify <math>\hat \mu_a(t) = \hat \mu^*(t)</math> we have <math>K_{inf}(\hat \nu_a(t),\hat \mu^*(t)) = 0</math>. Then there index is equal to  <math>\ln (N_a(t))</math>
+
+=== Pseudocode ===
+
+ '''for each''' arm i '''do''':
+     n[i] ← 1; nu[i] ← None; mu[i] ← None
+ '''for''' t from 1 to K '''do''':
+     select arm t
+     observe reward r
+     n[t] ← n[t] + 1
+     nu[t] ← update empirical distribution
+     mu[t] ← update empirical mean
+ '''for''' t from K+1 to T '''do''':
+     mu* ← highest mu
+     '''for each''' arm i '''do''':
+         scoreK[i] ← n[i] K_inf(nu[i],mu*)
+         scoreN[i] ← ln(n[i])
+         index[i] ← scoreK[i] + scoreN[i]
+     select arm a with smallest index[a]
+     observe reward r
+     n[a] ← n[a] + 1
+     nu[a] ← update empirical distribution
+     mu[a] ← update empirical mean
+
+== Theoretical results ==
+
+In the multi-armed bandit problem we have the asymptotic [[Lai–Robbins lower bound]]<ref name="Lai1985"/> asymptotic lower bound on regret. The algorithm IMED is the first algorithm that matches this lower bound for distribution in <math>(-\infty,1]</math> in the first order. If the distribution are also bounded then it also match the second order. It is the first algorithm that match the second under of this lower bound.<ref name="Honda2015"/>
+
+=== [[Lai–Robbins lower bound]] ===
+
+In 1985 [[Tze Leung Lai|Lai]] and [[Herbert Robbins|Robbins]] proved an asymptotic, problem-dependent lower bound on regret.<ref name="Lai1985"/> In 2018, ''Aurelien Garivier'', ''Pierre Menard'' and ''Gilles Stoltz'' proved a refined lower bound that gives the second order <ref name="Garivier2019"/><br />
+
+It states that for every consistent algorithm on the set <math>\mathcal{P}([- \infty,1])</math> — that is, an algorithm for which, for every <math>(\nu_1,\dots,\nu_K)\in\mathcal{P}([- \infty,1])^K</math>, the regret <math>R_T</math> is subpolynomial (i.e. <math>R_T = o_{T\to+\infty}(T^\alpha)</math> for all <math>\alpha>0</math>) — we have:
+: <math>R_T \geq \left(\sum_{a : \mu_a < \mu^*} \frac{\Delta_a}{\mathcal{K}_{\inf}(\nu_a,\mu^*)} \right)\ln T - \Omega_{T\to+\infty}(\ln \ln T).</math>
+
+This bound is asymptotic (as <math>T \to +\infty</math>) and gives a first-order lower bound of order <math>\ln T</math> with the optimal constant in front of it and the second order in <math>-\Omega(\ln \ln T)</math>.
+
+=== Regret bound for IMED ===
+ 
+If the distribution of every arm <math>a</math> is <math>(-\infty,1]</math> ( i.e. <math>\nu_a \in \mathcal{P}([-\infty,1]))</math> then the regret of the algorithm IMED verify
+: <math>R_T \leq \left(\sum_{a : \mu_a < \mu^*} \frac{\Delta_a}{\mathcal{K}_{\inf}(\nu_a,\mu^*)} \right)\ln T + O(1)</math><ref name="Honda2015"/>
+
+If all the distribution <math>\nu_a</math> are bounded then it exists a constant <math>C > 0</math> such that for <math>T</math> large enough the regret of IMED is upper bounded by
+: <math>R_T \leq \left(\sum_{a : \mu_a < \mu^*} \frac{\Delta_a}{\mathcal{K}_{\inf}(\nu_a,\mu^*)} \right)\ln T - C \ln \ln T</math><ref name="Honda2015"/>
+
+== Computation time ==
+
+The algorithm only requiere to compute the <math>K_{inf}</math> for suboptimal arms who are pulled <math>O(\ln T)</math> times, which make it a lot faster than [[Kullback–Leibler Upper Confidence Bound|KL-UCB]]. A faster version of IMED was developed in 2023 to make it even faster, using a Taylor development of the <math>K_{inf}</math> in the first order.<ref name="Baudry2023"/>
+
+== See also ==
+
+* [[Multi-armed bandit]]
+* [[Kullback–Leibler Upper Confidence Bound]]
+* [[Confidence interval]]
+
+== References ==
+<references>
+
+<ref name="Baudry2023">{{cite journal
+ |last1=Baudry
+ |first1=Dorian
+ |last2=Pesquerel
+ |first2=Fabien
+ |last3=Degenne
+ |first3=Rémy
+ |last4=Maillard
+ |first4=Odalric-Ambrym
+ |title=Fast Asymptotically Optimal Algorithms for Non-Parametric Stochastic Bandits
+ |journal=Advances in Neural Information Processing Systems
+ |volume=36
+ |pages=11469–11514
+ |year=2023
+}}</ref>
+
+<ref name="Garivier2019">{{cite journal
+ |last1=Garivier
+ |first1=Aurélien
+ |last2=Ménard
+ |first2=Pierre
+ |last3=Stoltz
+ |first3=Gilles
+ |title=Explore first, exploit next: The true shape of regret in bandit problems
+ |journal=Mathematics of Operations Research
+ |volume=44
+ |number=2
+ |pages=377--399
+ |year=2019
+ |publisher=INFORMS
+}}</ref>
+
+<ref name="Gautron2024">{{cite journal
+ |last1=Gautron
+ |first1=Romain
+ |last2=Baudry
+ |first2=Dorian
+ |last3=Adam
+ |first3=Myriam
+ |last4=Falconnier
+ |first4=Gatien N
+ |last5=Hoogenboom
+ |first5=Gerrit
+ |last6=King
+ |first6=Brian
+ |last7=Corbeels
+ |first7=Marc
+ |title=A new adaptive identification strategy of best crop management with farmers
+ |journal=Field Crops Research
+ |volume=307
+ |pages=109249
+ |year=2024
+ |publisher=Elsevier
+}}</ref>
+
+<ref name="Bouneffouf2019">{{cite arXiv
+ |last1=Bouneffouf
+ |first1=Djallel
+ |last2=Rish
+ |first2=Irina
+ |title=A survey on practical applications of multi-armed and contextual bandits
+ |year=2019
+ |eprint=1904.10040
+ |class=cs.LG
+}}</ref>
+
+
+<ref name="Lattimore">{{cite book
+| last1 = Lattimore
+| first1 = Tor
+| last2 = Szepesvári
+| first2 = Csaba
+| title = ''Bandit Algorithms''
+| year = 2020
+| publisher = Cambridge University Press
+| location = Cambridge
+}}</ref>
+
+<ref name="Lai1985">{{cite journal
+ |last1=Lai
+ |first1=T.L.
+ |last2=Robbins
+ |first2=Herbert
+ |title=Asymptotically Efficient Adaptive Allocation Rules
+ |journal=Advances in Applied Mathematics
+ |volume=6
+ |number=1
+ |pages=4–22
+ |year=1985
+ |doi=10.1016/0196-8858(85)90002-8
+ |url=https://www.sciencedirect.com/science/article/pii/0196885885900028
+|url-access=subscription
+ }}</ref>
+
+<ref name="Honda2015">{{cite journal
+ |last1=Honda
+ |first1=Junya
+ |last2=Takemura
+ |first2=Akimichi
+ |title=Non-Asymptotic Analysis of a New Bandit Algorithm for Semi-Bounded Rewards
+ |journal=Journal of Machine Learning Research
+ |volume=16
+ |number=113
+ |pages=3721–3756
+ |year=2015
+ |url=http://jmlr.org/papers/v16/honda15a.html
+}}</ref>
+
+
+</references>
+
+[[Category:Algorithms]]
+[[Category:Decision theory]]
+[[Category:Sequential methods]]
+[[Category:Optimization algorithms and methods]]
+[[Category:Stochastic optimization]]

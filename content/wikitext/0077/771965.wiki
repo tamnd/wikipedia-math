@@ -1,0 +1,319 @@
+<!-- wikipedia: en
+     page: 771965
+     title: Strassen algorithm
+     revision: 1371474754
+     timestamp: 2026-08-26T17:33:06Z
+     history: https://en.wikipedia.org/w/index.php?curid=771965&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1371474754 -->
+{{Short description|Recursive algorithm for matrix multiplication}}
+{{distinguish|text=the [[Schönhage–Strassen algorithm]] for multiplication of polynomials}}
+
+In [[linear algebra]], the '''Strassen algorithm''', named after [[Volker Strassen]], is an [[Matrix multiplication algorithm|algorithm for matrix multiplication]]. It is faster than the standard matrix multiplication algorithm for large matrices, with a better [[asymptotic complexity]] (<math>O(n^{\log_2 7})</math> versus <math>O(n^3)</math>), although the naive algorithm is often better for smaller matrices. The Strassen algorithm is slower than [[Computational complexity of matrix multiplication|the fastest known algorithms]] for extremely large matrices, but such [[galactic algorithm]]s are not useful in practice, as they are much slower for matrices of practical size. For small matrices, highly optimized implementations of the conventional algorithm are generally faster because Strassen's additional additions and recursion overhead outweigh its reduction in multiplications. <ref>{{cite journal 
+
+| last1 = Blaser | first1 = Markus
+| title = On the complexity of the multiplication of matrices of small formats
+| journal = Journal of Complexity 
+
+| volume = 19 | issue = 1 | pages = 43-60
+| year = 2003 | doi = 10.1016/S0885-064X(02)00007-9
+}}</ref>
+
+
+Strassen's algorithm works for any [[ring (mathematics)|ring]] such as plus/multiply, but not all [[semirings]], particularly [[Combinatorial matrix theory|combinatorial matrix multiplication]] such as [[Min-plus matrix multiplication|min-plus]] or [[boolean algebra]], where the naive algorithm still works.<ref name="CLRS4">{{cite book |last1=Cormen |first1=Thomas H. |last2=Leiserson |first2=Charles E. |last3=Rivest |first3=Ronald L. |last4=Stein |first4=Clifford |title=Introduction to Algorithms |date=2022 |publisher=The MIT Press |edition=4th |isbn=978-0-262-04630-5 |url=https://mit.edu}}</ref>
+
+== History ==
+[[Volker Strassen]] first published this algorithm in 1969 and thereby proved that the <math>n^3</math> general matrix multiplication algorithm was not optimal.<ref>{{cite journal |last=Strassen |first=Volker |title=Gaussian Elimination is not Optimal |journal=Numer. Math. |volume=13 |issue= 4 |pages=354–356 |year=1969 |doi=10.1007/BF02165411 |s2cid=121656251 }}</ref> The Strassen algorithm's publication resulted in more research about matrix multiplication that led to both asymptotically lower bounds and improved computational upper bounds.
+
+== Algorithm ==
+[[Image:Strassen algorithm.svg|thumb|800px|centre|The left column visualizes the calculations necessary to determine the result of a 2x2 [[matrix multiplication]]. Naïve matrix multiplication requires one multiplication for each "1" of the left column. Each of the other columns (M1-M7) represents a single one of the 7 multiplications in the Strassen algorithm. The sum of the columns M1-M7 gives the same result as the full matrix multiplication on the left.<!-- Feel free to rewrite this description so it actually makes sense. -->]]
+
+Let <math>A</math>, <math>B</math> be two [[square matrix|square matrices]] over a [[ring (mathematics)|ring]] <math>\mathcal{R}</math>, for example matrices whose entries are integers or the real numbers. The goal of matrix multiplication is to calculate the matrix product <math>C = AB</math>. The following exposition of the algorithm assumes that all of these matrices have sizes that are powers of two (i.e., <math>A, \, B, \, C \in \operatorname{Matr}_{2^n \times 2^n} (\mathcal{R})</math>), but this is only conceptually necessary — if the matrices <math>A</math>, <math>B</math> are not of type <math>2^n \times 2^n</math>, the "missing" rows and columns can be filled with zeros to obtain matrices with sizes of powers of two — though real implementations of the algorithm do not do this in practice.
+
+The Strassen algorithm partitions <math>A</math>, <math>B</math> and <math>C</math> into equally sized [[block matrix|block matrices]]
+:<math> 
+A =
+\begin{bmatrix}
+A_{11} & A_{12} \\
+A_{21} & A_{22}
+\end{bmatrix}, \quad
+B =
+\begin{bmatrix}
+B_{11} & B_{12} \\
+B_{21} & B_{22}
+\end{bmatrix}, \quad
+C =
+\begin{bmatrix}
+C_{11} & C_{12} \\
+C_{21} & C_{22}
+\end{bmatrix}, \quad
+</math>
+
+with <math>A_{ij}, B_{ij}, C_{ij} \in \operatorname{Mat}_{2^{n-1} \times 2^{n-1}} (\mathcal{R})</math>. The naive algorithm would be:
+
+: <math>
+\begin{bmatrix}
+C_{11} & C_{12} \\
+C_{21} & C_{22}
+\end{bmatrix}
+=
+\begin{bmatrix}
+A_{11} {\color{red}\times} B_{11} + A_{12} {\color{red}\times} B_{21} \quad &
+A_{11} {\color{red}\times} B_{12} + A_{12} {\color{red}\times} B_{22} \\
+A_{21} {\color{red}\times} B_{11} + A_{22} {\color{red}\times} B_{21} \quad &
+A_{21} {\color{red}\times} B_{12} + A_{22} {\color{red}\times} B_{22}
+\end{bmatrix}.
+</math>
+
+This construction does not reduce the number of multiplications: 8 multiplications of matrix blocks are still needed to calculate the <math>C_{ij}</math> matrices, the same number of multiplications needed when using standard matrix multiplication.
+
+The Strassen algorithm defines instead new values:
+
+: <math>\begin{align}
+M_1 &= (A_{11} + A_{22}) {\color{red}\times} (B_{11} + B_{22}); \\
+M_2 &= (A_{21} + A_{22}) {\color{red}\times} B_{11}; \\
+M_3 &= A_{11} {\color{red}\times} (B_{12} - B_{22}); \\
+M_4 &= A_{22} {\color{red}\times} (B_{21} - B_{11}); \\
+M_5 &= (A_{11} + A_{12}) {\color{red}\times} B_{22}; \\
+M_6 &= (A_{21} - A_{11}) {\color{red}\times} (B_{11} + B_{12}); \\
+M_7 &= (A_{12} - A_{22}) {\color{red}\times} (B_{21} + B_{22}), \\
+\end{align}</math>
+
+using only 7 multiplications (one for each <math>M_k</math>) instead of 8. We may now express the <math>C_{ij}</math> in terms of <math>M_k</math>:
+
+: <math>
+\begin{bmatrix}
+C_{11} & C_{12} \\
+C_{21} & C_{22}
+\end{bmatrix}
+=
+\begin{bmatrix}
+M_1 + M_4 - M_5 + M_7 \quad &
+M_3 + M_5 \\
+M_2 + M_4 \quad &
+M_1 - M_2 + M_3 + M_6
+\end{bmatrix}.
+</math>
+
+We recursively iterate this division process until the [[submatrices]] degenerate into numbers (elements of the ring <math>\mathcal{R}</math>). If, as mentioned above, the original matrix had a size that was not a power of 2, then the resulting product will have zero rows and columns just like <math>A</math> and <math>B</math>, and these will then be stripped at this point to obtain the (smaller) matrix <math>C</math> we really wanted.
+
+Practical implementations of Strassen's algorithm switch to standard methods of matrix multiplication for small enough submatrices, for which those algorithms are more efficient. The particular crossover point for which Strassen's algorithm is more efficient depends on the specific implementation and hardware. Earlier authors had estimated that Strassen's algorithm is faster for matrices with widths from 32 to 128 for optimized implementations.<ref>{{Citation | last1=Skiena | first1=Steven S. | title=The Algorithm Design Manual | publisher=[[Springer-Verlag]] | location=Berlin, New York | isbn=978-0-387-94860-7 | year=1998 | chapter=§8.2.3 Matrix multiplication}}.</ref> However, it has been observed that this crossover point has been increasing in recent years, and a 2010 study found that even a single step of Strassen's algorithm is often not beneficial on current architectures, compared to a highly optimized traditional multiplication, until matrix sizes exceed 1000 or more, and even for matrix sizes of several thousand the benefit is typically marginal at best (around 10% or less).<ref name="dalberto"/>  A more recent study (2016) observed benefits for matrices as small as 512 and a benefit around 20%.<ref name="huang et al."/>
+
+== Improvements to Strassen algorithm ==
+{{Further information|Matrix multiplication algorithm#Sub-cubic algorithms|Computational complexity of matrix multiplication}}
+It is possible to reduce the number of matrix additions by instead using the following form discovered by Winograd in 1971:<ref>{{Cite journal |last=Winograd |first=S. |date=October 1971 |title=On multiplication of 2 × 2 matrices |url=https://linkinghub.elsevier.com/retrieve/pii/0024379571900097 |journal=Linear Algebra and Its Applications |language=en |volume=4 |issue=4 |pages=381–388 |doi=10.1016/0024-3795(71)90009-7|url-access=subscription }}</ref>
+
+<math>
+\begin{bmatrix}
+a & b \\
+c & d
+\end{bmatrix}
+\begin{bmatrix}
+A & C \\
+B & D
+\end{bmatrix}
+=
+\begin{bmatrix}
+t + b{\color{red}\times}B & w + v + (a + b - c - d){\color{red}\times}D \\
+w + u + d{\color{red}\times}(B + C - A - D) & w + u + v
+\end{bmatrix}
+</math>
+
+where <math>t = a{\color{red}\times}A, \; u = (c - a){\color{red}\times}(C - D), \; v = (c + d){\color{red}\times}(C - A), \; w = t + (c + d - a){\color{red}\times}(A + D - C)</math>.
+
+This reduces the number of matrix additions and subtractions from 18 to 15. The number of matrix multiplications is still 7, and the asymptotic complexity is the same.{{sfnp|Knuth|1997|p=500}}
+
+The algorithm was further optimised in 2017 using an alternative basis,<ref>{{Cite book |last1=Karstadt |first1=Elaye |last2=Schwartz |first2=Oded |chapter=Matrix Multiplication, a Little Faster |date=2017-07-24 |title=Proceedings of the 29th ACM Symposium on Parallelism in Algorithms and Architectures |chapter-url=https://dl.acm.org/doi/10.1145/3087556.3087579 |language=en |publisher=ACM |pages=101–110 |doi=10.1145/3087556.3087579 |isbn=978-1-4503-4593-4}}</ref> reducing the number of matrix additions per bilinear step to 12 while maintaining the number of matrix multiplications, and again in 2023:<ref>{{Cite journal |last1=Schwartz |first1=Oded |last2=Vaknin |first2=Noa |date=2023-12-31 |title=Pebbling Game and Alternative Basis for High Performance Matrix Multiplication |url=https://epubs.siam.org/doi/10.1137/22M1502719 |journal=SIAM Journal on Scientific Computing |language=en |volume=45 |issue=6 |pages=C277–C303 |doi=10.1137/22M1502719 |bibcode=2023SJSC...45C.277S |issn=1064-8275|url-access=subscription }}</ref>
+
+<math>
+\begin{align}
+A_{22} &= A_{12} - A_{21} + A_{22}; \\
+B_{22} &= B_{12} - B_{21} + B_{22},
+\end{align}
+</math>
+
+{{col-begin}}
+{{col-break}}
+<math>
+\begin{align}
+t_1 &= A_{21} + A_{22}; \\
+t_2 &= A_{22} - A_{12}; \\
+t_3 &= A_{22} - A_{11}; \\
+t_4 &= B_{22} - B_{11}; \\
+t_5 &= B_{21} + B_{22}; \\
+t_6 &= B_{22} - B_{12},
+\end{align}
+</math>
+{{col-break}}
+<math>
+\begin{align}
+M_1 &= A_{11} {\color{red}\times} B_{11}; \\
+M_2 &= A_{12} {\color{red}\times} B_{21}; \\
+M_3 &= A_{21} {\color{red}\times} t_4; \\
+M_4 &= A_{22} {\color{red}\times} B_{22}; \\
+M_5 &= t_1 {\color{red}\times} t_5; \\
+M_6 &= t_2 {\color{red}\times} t_6; \\
+M_7 &= t_3 {\color{red}\times} B_{12},
+\end{align}
+</math>
+{{col-break}}
+<math>
+\begin{align}
+C_{11} &= M_1 + M_2; \\
+C_{12} &= M_5 - M_7; \\
+C_{21} &= M_3 + M_6; \\
+C_{22} &= M_5 + M_6-M_2-M_4. \\
+\end{align}
+</math>
+{{col-end}}
+<math>
+\begin{align}
+C_{12} &= C_{12} - C_{22}; \\
+C_{21} &= C_{22} - C_{21},
+\end{align}
+</math>
+
+== Asymptotic complexity ==
+
+The outline of the algorithm above showed that one can get away with just 7, instead of the traditional 8, matrix-matrix multiplications for the sub-blocks of the matrix. On the other hand, one has to do additions and subtractions of blocks, though this is of no concern for the overall complexity: Adding matrices of size <math>N/2</math> requires only <math>(N/2)^2</math> operations whereas multiplication is substantially more expensive (traditionally <math>2 (N/2)^3</math> addition or multiplication operations).
+
+The question then is how many operations exactly one needs for Strassen's algorithms, and how this compares with the standard matrix multiplication that takes approximately <math>2 N^3</math> (where <math>N = 2^n</math>) arithmetic operations, i.e. an asymptotic complexity <math>\Theta (N^3)</math>.
+
+The number of additions and multiplications required in the Strassen algorithm can be calculated as follows: let <math>f(n)</math> be the number of operations for a <math>2^n \times 2^n</math> matrix. Then by recursive application of the Strassen algorithm, we see that <math>f(n) = 7 f(n-1) + l 4^n</math>, for some constant <math>l</math> that depends on the number of additions performed at each application of the algorithm. Hence <math>f(n) = (7 + o(1))^n</math>, i.e., the asymptotic complexity for multiplying matrices of size <math>N = 2^n</math> using the Strassen algorithm is  <math>O([7+o(1)]^n) = O(N^{\log_{2}7+o(1)}) \approx O(N^{2.8074})</math>. The reduction in the number of arithmetic operations however comes at the price of a somewhat reduced [[numerical stability]],<ref>{{cite journal|last=Webb|first=Miller|title=Computational complexity and numerical stability|journal=SIAM J. Comput.|year=1975|volume=4|issue=2|pages=97–107 |doi=10.1137/0204009 }}</ref> and the algorithm also requires significantly more memory compared to the naive algorithm. Both initial matrices must have their dimensions expanded to the next power of 2, which results in storing up to four times as many elements, and the seven auxiliary matrices each contain a quarter of the elements in the expanded ones.
+
+Strassen's algorithm needs to be compared to the "naive" way of doing the matrix multiplication that would require 8 instead of 7 multiplications of sub-blocks. This would then give rise to the complexity one expects from the standard approach: <math>O(8^n) = O(N^{\log_{2}8}) = O(N^3)</math>. The comparison of these two algorithms shows that ''asymptotically'', Strassen's algorithm is faster: There exists a size <math>N_\text{threshold}</math> so that matrices that are larger are more efficiently multiplied with Strassen's algorithm than the "traditional" way. However, the asymptotic statement does not imply that Strassen's algorithm is ''always'' faster even for small matrices, and in practice this is in fact not the case: For small matrices, the cost of the additional additions of matrix blocks outweighs the savings in the number of multiplications. There are also other factors not captured by the analysis above, such as the difference in cost on today's hardware between loading data from memory onto processors vs. the cost of actually doing operations on this data. As a consequence of these sorts of considerations, Strassen's algorithm is typically only used on "large" matrices. This kind of effect is even more pronounced with alternative algorithms such as the one by [[Coppersmith-Winograd algorithm|Coppersmith and Winograd]]: While ''asymptotically'' even faster, the cross-over point <math>N_\text{threshold}</math> is so large that the algorithm is not generally used on matrices one encounters in practice.
+
+=== Rank or bilinear complexity ===
+The bilinear complexity or '''rank''' of a [[bilinear map]] is an important concept in the asymptotic complexity of matrix multiplication.  The rank of a bilinear map <math>\phi:\mathbf A \times \mathbf B \rightarrow \mathbf C</math> over a field '''F''' is defined as (somewhat of an [[abuse of notation]])
+:<math>R(\phi/\mathbf F) = \min \left\{r\left|\exists f_i\in \mathbf A^*,g_i\in\mathbf B^*,w_i\in\mathbf C , \forall \mathbf a\in\mathbf A, \mathbf b\in\mathbf B, \phi(\mathbf a,\mathbf b) = \sum_{i=1}^r f_i(\mathbf a)g_i(\mathbf b)w_i \right.\right\}</math>
+In other words, the rank of a bilinear map is the length of its shortest bilinear computation.<ref>{{cite book |last1=Burgisser |last2=Clausen |last3=Shokrollahi |title=Algebraic Complexity Theory |publisher=Springer-Verlag |year=1997 |isbn=3-540-60582-7 }}</ref>  The existence of Strassen's algorithm shows that the rank of <math>2 \times 2</math> matrix multiplication is no more than seven.  To see this, let us express this algorithm (alongside the standard algorithm) as such a bilinear computation.  In the case of matrices, the [[dual space]]s '''A'''* and '''B'''* consist of maps into the field '''F''' induced by a scalar '''[[Dyadics#Product of dyadic and dyadic|double-dot product]]''', (i.e. in this case the sum of all the entries of a [[Hadamard product (matrices)|Hadamard product]].)
+{| class = "wikitable"
+| || colspan="3" | Standard algorithm || ||colspan="3" | Strassen algorithm
+|-
+|| <math>i</math> || <math>f_i (\mathbf{a})</math> || <math>g_i (\mathbf{b})</math> || <math>w_i</math> || || <math>f_i (\mathbf{a})</math> || <math>g_i (\mathbf{b})</math> || <math>w_i</math>
+|-
+|| 1
+||<math>\begin{bmatrix}1&0\\0&0\end{bmatrix}:\mathbf a</math>
+||<math>\begin{bmatrix}1&0\\0&0\end{bmatrix}:\mathbf b</math>
+||<math>\begin{bmatrix}1&0\\0&0\end{bmatrix}</math>
+||
+||<math>\begin{bmatrix}1&0\\0&1\end{bmatrix}:\mathbf a</math>
+||<math>\begin{bmatrix}1&0\\0&1\end{bmatrix}:\mathbf b</math>
+||<math>\begin{bmatrix}1&0\\0&1\end{bmatrix}</math>
+|-
+|| 2
+||<math>\begin{bmatrix}0&1\\0&0\end{bmatrix}:\mathbf a</math>
+||<math>\begin{bmatrix}0&0\\1&0\end{bmatrix}:\mathbf b</math>
+||<math>\begin{bmatrix}1&0\\0&0\end{bmatrix}</math>
+||
+||<math>\begin{bmatrix}0&0\\1&1\end{bmatrix}:\mathbf a</math>
+||<math>\begin{bmatrix}1&0\\0&0\end{bmatrix}:\mathbf b</math>
+||<math>\begin{bmatrix}0&0\\1&-1\end{bmatrix}</math>
+|-
+|| 3
+||<math>\begin{bmatrix}1&0\\0&0\end{bmatrix}:\mathbf a</math>
+||<math>\begin{bmatrix}0&1\\0&0\end{bmatrix}:\mathbf b</math>
+||<math>\begin{bmatrix}0&1\\0&0\end{bmatrix}</math>
+||
+||<math>\begin{bmatrix}1&0\\0&0\end{bmatrix}:\mathbf a</math>
+||<math>\begin{bmatrix}0&1\\0&-1\end{bmatrix}:\mathbf b</math>
+||<math>\begin{bmatrix}0&1\\0&1\end{bmatrix}</math>
+|-
+|| 4
+||<math>\begin{bmatrix}0&1\\0&0\end{bmatrix}:\mathbf a</math>
+||<math>\begin{bmatrix}0&0\\0&1\end{bmatrix}:\mathbf b</math>
+||<math>\begin{bmatrix}0&1\\0&0\end{bmatrix}</math>
+||
+||<math>\begin{bmatrix}0&0\\0&1\end{bmatrix}:\mathbf a</math>
+||<math>\begin{bmatrix}-1&0\\1&0\end{bmatrix}:\mathbf b</math>
+||<math>\begin{bmatrix}1&0\\1&0\end{bmatrix}</math>
+|-
+|| 5
+||<math>\begin{bmatrix}0&0\\1&0\end{bmatrix}:\mathbf a</math>
+||<math>\begin{bmatrix}1&0\\0&0\end{bmatrix}:\mathbf b</math>
+||<math>\begin{bmatrix}0&0\\1&0\end{bmatrix}</math>
+||
+||<math>\begin{bmatrix}1&1\\0&0\end{bmatrix}:\mathbf a</math>
+||<math>\begin{bmatrix}0&0\\0&1\end{bmatrix}:\mathbf b</math>
+||<math>\begin{bmatrix}-1&1\\0&0\end{bmatrix}</math>
+|-
+|| 6
+||<math>\begin{bmatrix}0&0\\0&1\end{bmatrix}:\mathbf a</math>
+||<math>\begin{bmatrix}0&0\\1&0\end{bmatrix}:\mathbf b</math>
+||<math>\begin{bmatrix}0&0\\1&0\end{bmatrix}</math>
+||
+||<math>\begin{bmatrix}-1&0\\1&0\end{bmatrix}:\mathbf a</math>
+||<math>\begin{bmatrix}1&1\\0&0\end{bmatrix}:\mathbf b</math>
+||<math>\begin{bmatrix}0&0\\0&1\end{bmatrix}</math>
+|-
+|| 7
+||<math>\begin{bmatrix}0&0\\1&0\end{bmatrix}:\mathbf a</math>
+||<math>\begin{bmatrix}0&1\\0&0\end{bmatrix}:\mathbf b</math>
+||<math>\begin{bmatrix}0&0\\0&1\end{bmatrix}</math>
+||
+||<math>\begin{bmatrix}0&1\\0&-1\end{bmatrix}:\mathbf a</math>
+||<math>\begin{bmatrix}0&0\\1&1\end{bmatrix}:\mathbf b</math>
+||<math>\begin{bmatrix}1&0\\0&0\end{bmatrix}</math>
+|-
+|| 8
+||<math>\begin{bmatrix}0&0\\0&1\end{bmatrix}:\mathbf a</math>
+||<math>\begin{bmatrix}0&0\\0&1\end{bmatrix}:\mathbf b</math>
+||<math>\begin{bmatrix}0&0\\0&1\end{bmatrix}</math>
+||
+|colspan="3"|
+|-
+||
+|colspan="3"|<math>\mathbf a\mathbf b = \sum_{i=1}^8 f_i(\mathbf a)g_i(\mathbf b)w_i</math>
+||
+|colspan="3"|<math>\mathbf a\mathbf b = \sum_{i=1}^7 f_i(\mathbf a)g_i(\mathbf b)w_i</math>
+|}
+It can be shown that the total number of elementary multiplications <math>L</math> required for matrix multiplication is tightly asymptotically bound to the rank <math>R</math>, i.e. <math>L = \Theta(R)</math>, or more specifically, since the constants are known, <math>R / 2 \le L \le R</math>. One useful property of the rank is that it is submultiplicative for [[tensor product]]s, and this enables one to show that <math>2^n \times 2^n \times 2^n</math> matrix multiplication can be accomplished with no more than <math>7^n</math> elementary multiplications for any <math>n</math>.  (This <math>n</math>-fold tensor product of the <math>2 \times 2 \times 2</math> matrix multiplication map with itself &mdash; an <math>n</math>-th tensor power&mdash;is realized by the recursive step in the algorithm shown.)
+
+===Cache behavior===
+Strassen's algorithm is [[Cache-oblivious algorithm|cache oblivious]]. Analysis of its [[CPU cache|cache]] behavior algorithm has shown it to incur
+
+:<math>\Theta \left(1 + \frac{n^2}{b} + \frac{n^{\log_2 7}}{b\sqrt{M}} \right)</math>
+
+cache misses during its execution, assuming an idealized cache of size <math>M</math> (i.e. with <math>M / b</math> lines of length <math>b</math>).<ref name="prokop">{{cite conference |first1=M. |last1=Frigo |first2=C. E. |last2=Leiserson |authorlink2=Charles Leiserson |first3=H. |last3=Prokop |authorlink3=Harald Prokop |first4=S. |last4=Ramachandran |title=Cache-oblivious algorithms |conference=Proc. IEEE Symp. on Foundations of Computer Science (FOCS) |pages=285–297 |year=1999 |url=http://supertech.csail.mit.edu/papers/FrigoLePr99.pdf}}</ref>{{rp|13}}
+
+== Implementation considerations ==
+{{more citations needed section|date=January 2015}}
+The description above states that the matrices are square, and the size is a [[power of two]], and that padding should be used if needed. This restriction allows the matrices to be split in half, recursively, until limit of [[scalar multiplication]] is reached. The restriction simplifies the explanation, and analysis of complexity, but is not actually necessary;<ref>{{cite journal |last=Higham |first=Nicholas J. |title=Exploiting fast matrix multiplication within the level 3 BLAS |journal=ACM Transactions on Mathematical Software |volume=16 |issue=4 |year=1990 |pages=352–368 |url=http://www.maths.manchester.ac.uk/~higham/papers/high90s.pdf |doi=10.1145/98267.98290|hdl=1813/6900 |s2cid=5715053 |hdl-access=free }}</ref>
+and in fact, padding the matrix as described will increase the computation time and can easily eliminate the fairly narrow time savings obtained by using the method in the first place.
+
+A good implementation will observe the following:
+
+* It is not necessary nor desirable to use the Strassen algorithm down to the limit of scalars. Compared to conventional matrix multiplication, the algorithm adds a considerable <math>O(n^{2})</math> workload in addition/subtractions; so below a certain size, it will be better to use conventional multiplication. Thus, for instance, a <math>1600 \times 1600</math> does not need to be padded to <math>2048 \times 2048</math>, since it could be subdivided down to <math>25 \times 25</math> matrices and conventional multiplication can then be used at that level.
+* The method can indeed be applied to square matrices of any dimension.<ref name="dalberto">{{cite conference |first1=Paolo |last1=D'Alberto |first2=Alexandru |last2=Nicolau |title=Using Recursion to Boost ATLAS's Performance |year=2005 |conference=Sixth Int'l Symp. on High Performance Computing |url=https://www.ics.uci.edu/~paolo/Reference/paoloA.ishp-vi.pdf}}</ref> If the dimension is even, they are split in half as described. If the dimension is odd, zero padding by one row and one column is applied first.  Such padding can be applied on-the-fly and lazily, and the extra rows and columns discarded as the result is formed. For instance, suppose the matrices are <math>199 \times 199</math>. They can be split so that the upper-left portion is <math>100 \times 100</math> and the lower-right is <math>99 \times 99</math>. Wherever the operations require it, dimensions of <math>99</math> are zero padded to <math>100</math> first. Note, for instance, that the product <math>M_2</math> is only used in the lower row of the output, so is only required to be <math>99</math> rows high; and thus the left factor <math>A_{21} + A_{22}</math> used to generate it need only be <math>99</math> rows high; accordingly, there is no need to pad that sum to <math>100</math> rows; it is only necessary to pad <math>A_{22}</math> to <math>100</math> columns to match <math>A_{21}</math>.
+
+Furthermore, there is no need for the matrices to be square. Non-square matrices can be split in half using the same methods, yielding smaller non-square matrices. If the matrices are sufficiently non-square it will be worthwhile reducing the initial operation to more square products, using simple methods which are essentially  <math>O(n^{2})</math>,  for instance:
+
+* A product of size <math>[2N \times N] \ast [N \times 10N]</math> can be done as 20 separate <math>[N \times N] \ast [N \times N]</math> operations, arranged to form the result;
+* A product of size <math>[N \times 10N] \ast [10N \times N]</math> can be done as 10 separate <math>[N \times N] \ast [N \times N]</math> operations, summed to form the result.
+
+These techniques will make the implementation more complicated, compared to simply padding to a power-of-two square; however, it is a reasonable assumption that anyone undertaking an implementation of Strassen, rather than conventional multiplication, will place a higher priority on computational efficiency than on simplicity of the implementation.
+
+In practice, Strassen's algorithm can be implemented to attain better performance than conventional multiplication even for matrices as small as <math>500 \times 500</math>, for matrices that are not at all square, and without requiring workspace beyond buffers that are already needed for a high-performance conventional multiplication.<ref name="huang et al.">{{cite conference |last1=Huang |first1=Jianyu |last2=Smith |first2=Tyler M. |last3=Henry |first3=Greg M. |last4=van de Geijn |first4=Robert A. |date=13 Nov 2016 |title=Strassen's Algorithm Reloaded |url=https://www.researchgate.net/publication/315365781 |conference=SC16: The International Conference for High Performance Computing, Networking, Storage and Analysis |publisher=IEEE Press |doi=10.1109/SC.2016.58 |isbn=9781467388153 |pages=690–701 |access-date=1 Nov 2022 |conference-url=https://ieeexplore.ieee.org/xpl/conhome/7875333/proceeding}}</ref>
+
+== See also ==
+* [[Computational complexity of mathematical operations]]
+* [[Gauss–Jordan elimination]]
+* [[Computational complexity of matrix multiplication]]
+* [[Z-order curve]]
+* [[Karatsuba algorithm]], for multiplying ''n''-digit integers in <math>O(n^{\log_2 3})</math> instead of in <math>O(n^2)</math> time
+** A similar [[Multiplication algorithm#Complex number multiplication|complex multiplication algorithm]] multiplies two complex numbers using 3 real multiplications instead of 4
+* [[Toom–Cook multiplication|Toom-Cook algorithm]], a faster generalization of the Karatsuba algorithm that permits recursive divide-and-conquer decomposition into more than 2 blocks at a time
+
+== References ==
+{{Reflist}}
+* [[Thomas H. Cormen]], [[Charles E. Leiserson]], [[Ronald L. Rivest]], and [[Clifford Stein]]. ''[[Introduction to Algorithms]]'', Second Edition. MIT Press and McGraw-Hill, 2001. {{isbn|0-262-03293-7}}. Chapter 28: Section 28.2: Strassen's algorithm for matrix multiplication, pp.&nbsp;735&ndash;741.
+*{{cite book |first=Donald |last=Knuth |author-link=Donald Knuth |title=[[The Art of Computer Programming]], Seminumerical Algorithms |volume=II |edition=3rd |publisher=Addison-Wesley |year=1997 |isbn=0-201-89684-2}}
+
+==External links==
+*{{MathWorld|urlname=StrassenFormulas|title=Strassen's Formulas}} (also includes formulas for fast [[matrix inversion]])
+*Tyler J. Earnest, ''[https://web.archive.org/web/20100612150812/http://www.mc2.umbc.edu/docs/earnest.pdf Strassen's Algorithm on the Cell Broadband Engine]''
+
+{{Numerical linear algebra}}
+
+[[Category:Matrix multiplication algorithms]]
+[[Category:Divide-and-conquer algorithms]]

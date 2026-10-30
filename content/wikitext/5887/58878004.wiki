@@ -1,0 +1,60 @@
+<!-- wikipedia: en
+     page: 58878004
+     title: Stochastic gradient Langevin dynamics
+     revision: 1349470453
+     timestamp: 2026-04-17T13:33:14Z
+     history: https://en.wikipedia.org/w/index.php?curid=58878004&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1349470453 -->
+{{Short description|Optimization and sampling technique}}
+{{Orphan|date=January 2019}}
+
+[[File:Non-Convex Objective Function.gif|thumb|SGLD can be applied to the optimization of non-convex objective functions, shown here to be a sum of Gaussians.]]
+'''Stochastic gradient Langevin dynamics''' ('''SGLD''') is an [[Mathematical optimization|optimization]] and sampling technique composed of characteristics from [[Stochastic gradient descent]], a [[Robbins–Monro algorithm|Robbins–Monro]] optimization algorithm, and [[Langevin dynamics]], a mathematical extension of [[molecular dynamics]] models. Like stochastic gradient descent, SGLD is an iterative optimization algorithm which uses minibatching to create a stochastic gradient estimator, as used in SGD to optimize a [[differentiable function|differentiable]] [[objective function]].<ref name=":0">{{Cite journal |url=https://icml.cc/2011/papers/398_icmlpaper.pdf |title=Bayesian Learning via Stochastic Gradient Langevin Dynamics |first1=Max |last1=Welling |first2=Yee Whye |last2=Teh |date=2011 |journal=Proceedings of the 28th International Conference on Machine Learning |pages=681–688 }}</ref> Unlike traditional SGD, SGLD can be used for Bayesian learning as a sampling method. SGLD may be viewed as Langevin dynamics applied to posterior distributions, but the key difference is that the likelihood gradient terms are minibatched, like in SGD. SGLD, like Langevin dynamics, produces samples from a posterior distribution of parameters based on available data. First described by Welling and Teh in 2011, the method has applications in many contexts which require optimization, and is most notably applied in machine learning problems.
+
+== Formal definition ==
+Given some parameter vector <math> \theta </math>, its prior distribution <math> p(\theta) </math>, and a set of data points <math> X = \{x_i\}_{i = 1}^N </math>, Langevin dynamics samples from the posterior distribution <math> p ( \theta \mid X ) \propto p (\theta) \prod_{i = 1}^N p(x_i \mid \theta) </math> by updating the chain:
+
+: <math>\Delta \theta_t = \frac{\varepsilon_t} 2 \left( \nabla \log p(\theta_t) + \sum_{i=1}^N \nabla \log p(x_{t_i} \mid \theta_t) \right) + \eta_t </math>
+
+Stochastic gradient Langevin dynamics uses a modified update procedure with minibatched likelihood terms:
+: <math>\Delta \theta_t = \frac{\varepsilon_t} 2 \left( \nabla \log p(\theta_t) + \frac{N}{n} \sum_{i=1}^n \nabla \log p(x_{t_i} \mid \theta_t) \right) + \eta_t </math>
+
+where <math>n < N</math> is a positive integer, <math> \eta_t \sim \mathcal{N}(0,\varepsilon_t) </math> is [[Gaussian noise]], <math> p(x \mid \theta) </math> is the likelihood of the data given the parameter vector <math> \theta </math>, and our step sizes <math> \varepsilon_t </math> satisfy the following conditions:
+
+: <math>\sum_{t = 1}^\infty \varepsilon_t = \infty \quad \sum_{t=1}^\infty \varepsilon_t^2 < \infty</math>
+
+For early iterations of the algorithm, each parameter update mimics Stochastic Gradient Descent; however, as the algorithm approaches a local minimum or maximum, the gradient shrinks to zero and the chain produces samples surrounding the [[Bayesian inference|maximum a posteriori mode]] allowing for posterior inference. This process generates approximate samples from the posterior as by balancing variance from the injected Gaussian noise and stochastic gradient computation.{{citation needed|date=December 2018}}
+
+== Application ==
+SGLD is applicable in any optimization context for which it is desirable to quickly obtain posterior samples instead of a maximum a posteriori mode. In doing so, the method maintains the computational efficiency of stochastic gradient descent when compared to traditional [[gradient descent]] while providing additional information regarding the landscape around the [[Critical point (mathematics)|critical point]] of the objective function. In practice, SGLD can be applied to the training of [[Bayesian inference|Bayesian]] [[Artificial neural network|Neural Networks]] in [[Deep learning|Deep Learning]], a task in which the method provides a distribution over model parameters. By introducing information about the variance of these parameters, SGLD characterizes the generalizability of these models at certain points in training.<ref>{{cite arXiv |last1=Chaudhari |first1=Pratik |last2=Choromanska |first2=Anna |last3=Soatto |first3=Stefano |author-link3=Stefano Soatto |last4=LeCun |first4=Yann |author-link4=Yann LeCun |last5=Baldassi |first5=Carlo |last6=Borgs |first6=Christian |author-link6=Christian Borgs |last7=Chayes |first7=Jennifer |author-link7=Jennifer Tour Chayes |last8=Sagun |first8=Levent |last9=Zecchina |first9=Riccardo |title=Entropy-sgd: Biasing gradient descent into wide valleys  |eprint=1611.01838 |year=2017|class=cs.LG }}</ref> Additionally, obtaining samples from a posterior distribution permits uncertainty quantification by means of confidence intervals, a feature which is not possible using traditional stochastic gradient descent.{{citation needed|date=December 2018}}
+
+== Variants and associated algorithms ==
+If gradient computations are exact, SGLD reduces down to the ''Langevin Monte Carlo'' algorithm,<ref>{{cite book |last=Kennedy |first=A. D. |year=1990 |chapter=The theory of hybrid stochastic algorithms |title=Probabilistic Methods in Quantum Field Theory and Quantum Gravity |pages=209–223 |publisher=Plenum Press |isbn=0-306-43602-7 }}</ref> first coined in the literature of [[lattice field theory]]. This algorithm is also a reduction of [[Hamiltonian Monte Carlo]], consisting of a single leapfrog step proposal rather than a series of steps.<ref>{{cite book |first=R. |last=Neal |title=Handbook of Markov Chain Monte Carlo |chapter=MCMC Using Hamiltonian Dynamics |publisher=CRC Press |year=2011 |isbn=978-1-4200-7941-8 }}</ref> Since SGLD can be formulated as a modification of both stochastic gradient descent and MCMC methods, the method lies at the intersection between optimization and sampling algorithms; the method maintains SGD's ability to quickly converge to regions of low cost while providing samples to facilitate posterior inference.{{citation needed|date=December 2018}}
+
+Considering relaxed constraints on the step sizes <math> \varepsilon_t </math> such that they do not approach zero asymptotically, SGLD fails to produce samples for which the [[Metropolis–Hastings algorithm|Metropolis Hastings]] rejection rate is zero, and thus a MH rejection step becomes necessary.<ref name=":0" /> The resulting algorithm, dubbed the Metropolis Adjusted Langevin algorithm,<ref name=":1" /> requires the step:
+
+: <math>\frac { p( \mathbf{\theta}^t \mid \mathbf{\theta}^{t+1}) p^* \left( \mathbf {\theta}^t \right) } { p \left( \mathbf{\theta}^{t+1} \mid \mathbf {\theta}^t \right) p^* (\mathbf{\theta}^{t+1})} < u, \  u \sim \mathcal{U} [0,1] </math>
+
+where <math>p(\theta^t \mid \theta^{t + 1})</math> is a normal distribution centered one gradient descent step from <math>\theta^{t}</math> and <math>p(\theta)</math> is our target distribution.{{citation needed|date=December 2018}}
+
+== Mixing rates and algorithmic convergence ==
+Recent contributions have proven upper bounds on mixing times for both the traditional Langevin algorithm and the Metropolis adjusted Langevin algorithm.<ref name=":1">{{cite journal |last1=Ma |first1=Y. A. |last2=Chen |first2=Y. |last3=Jin |first3=C. |last4=Flammarion |first4=N. |last5=Jordan |first5=M. I. |author-link5=Michael I. Jordan |year=2018 |title=Sampling can be faster than optimization |journal=Proceedings of the National Academy of Sciences |volume=116 |issue=42 |pages=20881–20885 |doi=10.1073/pnas.1820003116 |doi-access=free |pmid=31570618 |pmc=6800351 |arxiv=1811.08413 }}</ref> Released in Ma et al., 2018, these bounds define the rate at which the algorithms converge to the true posterior distribution, defined formally as:
+
+: <math>\tau(\varepsilon ; p^0) = \min \left\{ k \mid \left\| p^k - p^* \right\|_{\mathrm{V}} \leq \varepsilon \right\}</math>
+
+where <math>\varepsilon \in (0,1)</math> is an arbitrary error tolerance, <math>p^0</math> is some initial distribution, <math>p^*</math> is the posterior distribution, and <math>||*||_{TV}</math> is the [[total variation]] norm. Under some regularity conditions of an L-Lipschitz smooth objective function <math>U(x)</math> which is m-strongly [[Convex set|convex]] outside of a region of radius <math>R</math> with [[condition number]] <math>\kappa = \frac{L}{m}</math>, we have mixing rate bounds:
+
+: <math>\tau_{ULA}(\varepsilon,p^0) \leq \mathcal{O} \left( e^{32LR^2} \kappa^2 \frac d {\varepsilon^2} \ln \left( \frac d {\varepsilon^2} \right) \right)</math>
+
+: <math>\tau_{MALA} (\varepsilon,p^0) \leq \mathcal{O} \left( e^{16LR^2} \kappa^{3/2} d^{1/2} \left( d \ln \kappa + \ln \left( \frac 1 \varepsilon \right) \right)^{3/2} \right)</math>
+
+where <math>\tau_{ULA}</math> and <math>\tau_{MALA}</math> refer to the mixing rates of the Unadjusted Langevin Algorithm and the Metropolis Adjusted Langevin Algorithm respectively. These bounds are important because they show computational complexity is polynomial in dimension <math>d</math> conditional on <math>LR^2</math> being <math>\mathcal{O}(\log d)</math>.
+
+== References ==
+<references />
+
+[[Category:Computational statistics]]
+[[Category:Gradient methods]]
+[[Category:Optimization algorithms and methods]]
+[[Category:Stochastic optimization]]

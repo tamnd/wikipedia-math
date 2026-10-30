@@ -1,0 +1,284 @@
+<!-- wikipedia: en
+     page: 21564294
+     title: Bcrypt
+     revision: 1356460844
+     timestamp: 2026-05-27T22:19:31Z
+     history: https://en.wikipedia.org/w/index.php?curid=21564294&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1356460844 -->
+{{Short description|Password-based key derivation function}}
+{{for|the bcrypt file encryption utility|Blowfish (cipher)}}
+{{lowercase title}}
+{{Infobox cryptographic hash function
+| name = bcrypt
+| image =
+| caption =
+<!-- General -->
+| designers = [[Niels Provos]], David Mazières
+| publish date = 1999
+| series =
+| derived from = [[Blowfish (cipher)]]
+| derived to =
+| related to =
+| certification =
+<!-- Detail -->
+| digest size = 184 bits
+| block size = 
+| structure = 
+| rounds = variable via cost parameter
+| cryptanalysis =
+}}
+
+'''bcrypt''' is a [[password-hashing function]] designed by [[Niels Provos]] and David Mazières. It is based on the [[Blowfish (cipher)|Blowfish]] cipher and presented at [[USENIX]] in 1999.<ref name="provos">{{Cite conference |date=10 June 1999 |title=A Future-Adaptable Password Scheme |url=https://www.usenix.org/legacy/events/usenix99/provos/provos.pdf |conference=1999 USENIX Annual Technical Conference |location=Monterey, California |publisher=[[USENIX|The USENIX Association]] |volume=Proceedings of the FREENIX Track |conference-url=https://www.usenix.org/legacy/events/usenix99/ |vauthors=[[Niels Provos|Provos N]], Maziéres D}}</ref> Besides incorporating a [[salt (cryptography)|salt]] to protect against [[rainbow table]] attacks, bcrypt is an adaptive function: over time, the iteration count can be increased to make it slower, so it remains resistant to [[brute-force search]] attacks even with increasing computation power.
+
+The bcrypt function is the default password [[hash algorithm]] for [[OpenBSD]],<ref name="original">{{cite web |date=23 March 2014 |title=CVS log for src/lib/libc/crypt/bcrypt.c |url=http://cvsweb.openbsd.org/cgi-bin/cvsweb/src/lib/libc/crypt/bcrypt.c |access-date=25 May 2023 |website=CVS Repository |publisher=[[OpenBSD]] |at=Revision 1.32 (first mention of bcrypt in log) |quote=minimal change to implementation of bcrypt to not require static globals}}</ref>{{Primary source inline|date=May 2023}} and was the default for some [[Linux distribution]]s such as [[SUSE Linux]].<ref>{{cite web |date=23 August 2011 |title=SUSE Security Announcement: (SUSE-SA:2011:035) |url=https://www.suse.com/support/security/advisories/2011_35_blowfish.html |url-status=dead |archive-url=https://web.archive.org/web/20160304094921/https://www.suse.com/support/security/advisories/2011_35_blowfish.html |archive-date=4 March 2016 |access-date=20 August 2015 |website=Security Advisories |publisher=[[SUSE S.A.|SUSE]] |quote=SUSE's crypt() implementation supports the blowfish password hashing function (id $2a) and system logins by default also use this method.}}</ref>
+
+There are implementations of bcrypt in [[C (programming language)|C]], [[C++]], [[C Sharp (programming language)|C#]], [[Embarcadero Delphi]], [[Elixir (programming language)|Elixir]],<ref>{{cite web |last1=Whitlock |first1=David |title=Bcrypt Elixir: bcrypt password hashing algorithm for Elixir. |url=https://github.com/riverrun/bcrypt_elixir |website=GitHub |date=21 September 2021 |publisher=riverrun}}</ref> [[Go (programming language)|Go]],<ref>{{cite web|url=https://godoc.org/golang.org/x/crypto/bcrypt|title=Package bcrypt|website=godoc.org}}</ref> [[Java (programming language)|Java]],<ref>{{Cite web|url=http://www.mindrot.org/projects/jBCrypt/|title=jBCrypt - strong password hashing for Java|website=www.mindrot.org|language=en|access-date=2017-03-11}}</ref><ref>{{Cite web|url=https://github.com/patrickfav/bcrypt|title=bcrypt - A Java standalone implementation of the bcrypt password hash function|website=github.com|language=en|access-date=2018-07-19}}</ref> [[JavaScript]],<ref>{{cite web|url=https://www.npmjs.com/package/bcryptjs|title=bcryptjs|website=npm|date=7 February 2017 |publisher=riverrun }}</ref> [[Perl]], [[PHP]], [[Ruby (programming language)|Ruby]], [[Python (programming language)|Python]], [[Rust (programming language)|Rust]],<ref>{{cite web|url=https://github.com/Keats/rust-bcrypt|title=rust-bcrypt|website=GitHub|date=8 November 2024 |publisher=Vincent Prouillet}}</ref>[[V (programming language)| V (Vlang)]],<ref name="vlang">{{Cite web|url=https://modules.vlang.io/crypto.bcrypt.html|title = V Bcrypt| website=vlang}}</ref> [[Zig (programming language)|Zig]]<ref>{{cite web|url=https://github.com/ziglang/zig/blob/master/lib/std/crypto/bcrypt.zig|title=zigstd|website=GitHub|date=26 October 2020 |publisher=jedisct1}}</ref> and other languages.
+
+==Background==
+{{Unreferenced section|date=May 2026}}
+
+Blowfish is notable among block ciphers for its expensive key setup phase.  It starts off with subkeys in a standard state, then uses this state to perform a block encryption using part of the key, and uses the result of that encryption (which is more accurate at hashing) to replace some of the subkeys.  Then it uses this modified state to encrypt another part of the key, and uses the result to replace more of the subkeys.  It proceeds in this fashion, using a progressively modified state to hash the key and replace bits of state, until all subkeys have been set.
+
+Provos and Mazières took advantage of this, and took it further.  They developed a new key setup algorithm for Blowfish, dubbing the resulting cipher "Eksblowfish" ("expensive key schedule Blowfish").  The key setup begins with a modified form of the standard Blowfish key setup, in which both the salt and password are used to set all subkeys.  There are then a number of rounds in which the standard Blowfish keying algorithm is applied, using alternatively the salt and the password as the key, each round starting with the subkey state from the previous round.  In theory, this is no stronger than the standard Blowfish key schedule, but the number of rekeying rounds is configurable; this process can therefore be made arbitrarily slow, which helps deter brute-force attacks upon the hash or salt.
+
+==Description==
+The input to the bcrypt function is the password string (up to 72 bytes), a numeric cost, and a 16-byte (128-bit) salt value.  The salt is typically a random value.  The bcrypt function uses these inputs to compute a 24-byte (192-bit) hash.  The final output of the bcrypt function is a string of the form:
+
+ $2&lt;a/b/x/y&gt;$[cost]$[22 character salt][31 character hash]
+
+For example, with input password <code>abc123xyz</code>, cost <code>12</code>, and a random salt, the output of bcrypt is the string
+
+ $2a$12$R9h/cIPz0gi.URNNX3kh2OPST9/PgBkqquzi.Ss7KIUgO2t0jWMUW
+ \__/\/ \____________________/\_____________________________/
+ Alg Cost      Salt                        Hash
+
+Where:
+
+* <code>$2a$</code>: The hash algorithm identifier (bcrypt)
+* <code>12</code>: Input cost (2<sup>12</sup> i.e. 4096 rounds)
+* <code>R9h/cIPz0gi.URNNX3kh2O</code>: A base-64 encoding of the input salt
+* <code>PST9/PgBkqquzi.Ss7KIUgO2t0jWMUW</code>: A base-64 encoding of the first 23 bytes of the computed 24 byte hash
+
+The base-64 encoding in bcrypt uses the table {{nowrap|<code>./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789</code>}},<ref name="bcrypt.c_lines_57-58">{{Cite web|last=Provos|first=Niels|date=13 February 1997|title=bcrypt.c source code, lines 57-58|url=https://cvsweb.openbsd.org/cgi-bin/cvsweb/src/lib/libc/crypt/bcrypt.c?rev=1.1&content-type=text/x-cvsweb-markup|access-date=29 January 2022}}</ref> which differs from {{IETF RFC|4648}} [[Base64]] encoding.
+
+== Versioning history ==
+
+''' $2$ (1999) '''
+
+The original bcrypt specification defined a prefix of <code>$2$</code>. This follows the '''Modular [[crypt (C)|Crypt]] Format'''<ref>{{cite web|url=https://passlib.readthedocs.io/en/stable/modular_crypt_format.html|title=Modular Crypt Format — Passlib v1.7.1 Documentation|website=passlib.readthedocs.io}}</ref> format used when storing passwords in the OpenBSD password file:
+
+* <code>$1$</code>: MD5-based crypt ('md5crypt')
+* <code>$2$</code>: Blowfish-based crypt ('bcrypt')
+* <code>$sha1$</code>: SHA-1-based crypt ('sha1crypt')
+* <code>$5$</code>: SHA-256-based crypt ('sha256crypt')
+* <code>$6$</code>: SHA-512-based crypt ('sha512crypt')
+
+''' $2a$ '''
+
+The original specification did not define how to handle non-ASCII characters, nor how to handle a null terminator. The specification was revised to specify that when hashing strings:
+
+* the string must be UTF-8 encoded
+* the null terminator must be included
+
+With this change, the version was changed to <code>$2a$</code>.<ref name="undeadly.org">{{Cite web|url=http://undeadly.org/cgi?action=article&sid=20140224132743|title=bcrypt password hash bugs fixed, version changes and consequences|website=undeadly.org}}</ref>
+
+''' $2x$, $2y$ (June 2011) '''
+
+In June 2011, a bug was discovered in '''crypt_blowfish''', a PHP implementation of bcrypt. It was mis-handling characters with the 8th bit set.<ref>{{cite web|url=http://seclists.org/oss-sec/2011/q2/632|title=oss-sec: CVE request: crypt_blowfish 8-bit character mishandling|first=Solar|last=Designer|website=seclists.org}}</ref> They suggested that system administrators update their existing password database, replacing <code>$2a$</code> with <code>$2x$</code>, to indicate that those hashes are bad (and need to use the old broken algorithm). They also suggested the idea of having '''crypt_blowfish''' emit <code>$2y$</code> for hashes generated by the fixed algorithm.
+
+Nobody else, including Canonical and OpenBSD, adopted the idea of 2x/2y. This version marker change was limited to '''crypt_blowfish'''.
+
+''' $2b$ (February 2014) '''
+
+A bug was discovered in the OpenBSD implementation of bcrypt.  It was using an unsigned 8-bit value to hold the length of the password.<ref name="undeadly.org"/><ref>{{cite web|url=http://marc.info/?l=openbsd-misc&m=139320023202696|title='bcrypt version changes' - MARC|website=marc.info}}</ref><ref>{{Cite web|date=17 February 2014|title=bcrypt.c code fix for 2014 bug|url=https://cvsweb.openbsd.org/cgi-bin/cvsweb/src/lib/libc/crypt/bcrypt.c.diff?r1=1.26&r2=1.27&f=h|url-status=live|archive-url=https://web.archive.org/web/20220218062645/https://cvsweb.openbsd.org/cgi-bin/cvsweb/src/lib/libc/crypt/bcrypt.c.diff?r1=1.26&r2=1.27&f=h|archive-date=18 February 2022|access-date=17 February 2022}}</ref> For passwords longer than 255 bytes, instead of being truncated at 72 bytes the password would be truncated at the lesser of 72 or the length [[Modular arithmetic|modulo]] 256.  For example, a 260 byte password would be truncated at 4 bytes rather than truncated at 72 bytes.  When OpenBSD fixed this issue, they changed the version to <code>$2b$</code>.
+
+==Algorithm==
+{{Unreferenced section|date=May 2026}}
+
+The bcrypt function below encrypts the text ''"OrpheanBeholderScryDoubt"'' 64 times using [[Blowfish (cipher)|Blowfish]]. In bcrypt the usual Blowfish key setup function is replaced with an ''expensive'' key setup (EksBlowfishSetup) function:
+
+ <span style="color: #004DBB;">'''Function'''</span> bcrypt
+    <span style="color: #004DBB;">'''Input:'''</span>
+       cost:     Number (4..31)                      <span style="color: green;">log<sub>2</sub>(Iterations). e.g. 12 ==> 2<sup>12</sup> = 4,096 iterations</span>
+       salt:     array of Bytes (16 bytes)           <span style="color: green;">random salt</span>
+       password: array of Bytes (1..72 bytes)        <span style="color: green;">UTF-8 encoded password</span>
+    <span style="color: #004DBB;">'''Output:'''</span> 
+       hash:     array of Bytes (24 bytes)
+ 
+    <span style="color: green;">//Initialize Blowfish state with expensive key setup algorithm</span>
+    <span style="color: green;">//P: array of 18 subkeys (UInt32[18])</span>
+    <span style="color: green;">//S: Four substitution boxes (S-boxes), S<sub>0</sub>...S<sub>3</sub>. Each S-box is 1,024 bytes (UInt32[256])</span>
+    ''P'', ''S'' ← EksBlowfishSetup(''password'', ''salt'', ''cost'')   
+ 
+    <span style="color: green;">//Repeatedly encrypt the text "OrpheanBeholderScryDoubt" 64 times</span>
+    ''ctext'' ← <span style="color: maroon">''"OrpheanBeholderScryDoubt"''</span>  <span style="color: green;">//24 bytes ==> three 64-bit blocks</span>
+    <span style="color: #004DBB;">'''repeat'''</span> (64)
+       ''ctext'' ← EncryptECB(''P'', ''S'', ''ctext'') <span style="color: green;">//encrypt using standard Blowfish in ECB mode</span>
+ 
+    <span style="color: green;">//24-byte ''ctext'' is resulting password hash</span>
+    <span style="color: #004DBB;">'''return'''</span> Concatenate(''cost'', ''salt'', ''ctext'')
+
+=== Expensive key setup ===
+
+The bcrypt algorithm depends heavily on its "Eksblowfish" key setup algorithm, which runs as follows:
+
+ <span style="color: #004DBB;">'''Function'''</span> EksBlowfishSetup
+    <span style="color: #004DBB;">'''Input:'''</span>
+       password: array of Bytes (1..72 bytes)   <span style="color: green;">UTF-8 encoded password</span>
+       salt:     array of Bytes (16 bytes)      <span style="color: green;">random salt</span>
+       cost:     Number (4..31)                 <span style="color: green;">log<sub>2</sub>(Iterations). e.g. 12 ==> 2<sup>12</sup> = 4,096 iterations</span>
+    <span style="color: #004DBB;">'''Output:'''</span> 
+       P:        array of UInt32                <span style="color: green;">array of 18 per-round subkeys</span>
+       S<sub>1</sub>..S<sub>4</sub>:   array of UInt32                <span style="color: green;">array of four SBoxes; each SBox is 256 UInt32 (''i.e.'' each SBox is 1 KiB)</span>
+ 
+    <span style="color: green;">//Initialize P (Subkeys), and S (Substitution boxes) with the hex digits of pi</span> 
+    ''P'', ''S'' ← InitialState() 
+  
+    <span style="color: green;">//Permute P and S based on the password and salt</span>     
+    ''P'', ''S'' ← ExpandKey(''P'', ''S'', ''password'', ''salt'')
+ 
+    <span style="color: green;">//This is the "Expensive" part of the "Expensive Key Setup".</span>
+    <span style="color: green;">//Otherwise the key setup is identical to Blowfish.</span>
+    <span style="color: #004DBB;">'''repeat'''</span> (2<sup>''cost''</sup>)
+       ''P'', ''S'' ← ExpandKey(''P'', ''S'', password, 0)
+       ''P'', ''S'' ← ExpandKey(''P'', ''S'', salt, 0)
+ 
+    <span style="color: #004DBB;">'''return'''</span> ''P'', ''S''
+
+InitialState works as in the original Blowfish algorithm, populating the P-array and S-box entries with the fractional part of <math>\pi</math> in hexadecimal.
+
+=== Expand key ===
+The ExpandKey function does the following:
+
+ <span style="color: #004DBB;">'''Function'''</span> ExpandKey
+    <span style="color: #004DBB;">'''Input:'''</span>
+       P:        array of UInt32               <span style="color: green;">Array of 18 subkeys</span>
+       S<sub>1</sub>..S<sub>4</sub>:   UInt32[1024]                  <span style="color: green;">Four 1 KB SBoxes</span>
+       password: array of Bytes (1..72 bytes)  <span style="color: green;">UTF-8 encoded password</span>
+       salt:     Byte[16]                      <span style="color: green;">random salt</span>
+    <span style="color: #004DBB;">'''Output:'''</span> 
+       P:        array of UInt32               <span style="color: green;">Array of 18 per-round subkeys</span>
+       S<sub>1</sub>..S<sub>4</sub>:   UInt32[1024]                  <span style="color: green;">Four 1 KB SBoxes</span>       
+  
+    <span style="color: green;">//Mix password into the P subkeys array</span>
+    <span style="color: #004DBB;">'''for'''</span> ''n'' ← 1 <span style="color: #004DBB;">'''to'''</span> 18 <span style="color: #004DBB;">'''do'''</span>
+       P<sub>n</sub> ← P<sub>n</sub> <span style="color: #004DBB;">xor</span> ''password''[32(n-1)..32n-1] <span style="color: green;">//treat the password as cyclic</span>
+  
+    <span style="color: green;">//Treat the 128-bit salt as two 64-bit halves (the Blowfish block size).</span>
+    saltHalf[0] ← ''salt''[0..63]  <span style="color: green;">//Lower 64-bits of salt</span>
+    saltHalf[1] ← ''salt''[64..127]  <span style="color: green;">//Upper 64-bits of salt</span>
+ 
+    <span style="color: green;">//Initialize an 8-byte (64-bit) buffer with all zeros.</span>
+    block ← 0
+ 
+    <span style="color: green;">//Mix internal state into P-boxes</span>   
+    <span style="color: #004DBB;">'''for'''</span> ''n'' ← 1 <span style="color: #004DBB;">'''to'''</span> 9 <span style="color: #004DBB;">'''do'''</span>
+       <span style="color: green;">//xor 64-bit ''block'' with a 64-bit salt half</span>
+       ''block'' ← ''block'' xor ''saltHalf''[(n-1) mod 2] <span style="color: green;">//each iteration alternating between ''saltHalf''[0], and ''saltHalf''[1]</span>
+ 
+       <span style="color: green;">//encrypt block using current key schedule</span>
+       ''block'' ← Encrypt(''P'', '''S''', ''block'') 
+       P<sub>2n</sub> ← ''block''[0..31]      <span style="color: green;">//lower 32-bits of ''block''</span>
+       P<sub>2n+1</sub> ← ''block''[32..63]  <span style="color: green;">//upper 32-bits ''block''</span>
+ 
+    <span style="color: green;">//Mix encrypted state into the internal S-boxes of ''state''</span>
+    <span style="color: #004DBB;">'''for'''</span> ''i'' ← 1 <span style="color: #004DBB;">'''to'''</span> 4 <span style="color: #004DBB;">'''do'''</span>
+       <span style="color: #004DBB;">'''for'''</span> ''n'' ← 0 <span style="color: #004DBB;">'''to'''</span> 127 <span style="color: #004DBB;">'''do'''</span>
+          ''block'' ← Encrypt(''state'', ''block'' <span style="color: #004DBB;">'''xor'''</span> ''saltHalf''[(n-1) mod 2]) <span style="color: green;">//as above</span>
+          S<sub>i</sub>[2n]   ← ''block''[0..31]  <span style="color: green;">//lower 32-bits</span>
+          S<sub>i</sub>[2n+1] ← ''block''[32..63]  <span style="color: green;">//upper 32-bits</span>
+     <span style="color: #004DBB;">'''return'''</span> ''state''
+
+Hence, <code>ExpandKey(''state'', ''key'', 0)</code> is the same as regular Blowfish key schedule since all XORs with the all-zero salt value are ineffectual.  <code>ExpandKey(''state'', ''salt'', 0)</code> is similar, but uses the salt as a 128-bit key.
+
+==User input==
+Many implementations of bcrypt truncate the password to the first 72 bytes, following the OpenBSD implementation.
+
+The mathematical algorithm itself requires initialization with 18 32-bit subkeys (equivalent to 72 octets/bytes). The original specification of bcrypt does not mandate any one particular method for mapping text-based passwords from [[user space|userland]] into numeric values for the algorithm. One brief comment in the text mentions, but does not mandate, the possibility of simply using the ASCII encoded value of a character string: "Finally, the key argument is a secret encryption key, which can be a user-chosen password of up to 56 bytes (including a terminating zero byte when the key is an ASCII string)."<ref name=provos/>
+
+Note that the quote above mentions passwords "up to 56 bytes" even though the algorithm itself makes use of a 72 byte initial value. Although Provos and Mazières do not state the reason for the shorter restriction, they may have been motivated by the following statement from [[Bruce Schneier]]'s original specification of Blowfish, "The 448 [bit] limit on the key size ensures that the{{sic}} every bit of every subkey depends on every bit of the key."<ref>{{cite journal | url = https://www.schneier.com/paper-blowfish-fse.html | title = Fast Software Encryption, Description of a New Variable-Length Key, 64-Bit Block Cipher (Blowfish) | first = Bruce | last = Schneier | publisher = Springer-Verlag  | journal = Cambridge Security Workshop Proceedings |date=December 1993 | pages = 191–204}}</ref>
+
+Implementations have varied in their approach of converting passwords into initial numeric values, including sometimes reducing the strength of passwords containing non-ASCII characters.<ref>{{cite web |url=http://www.mindrot.org/files/jBCrypt/internat.adv |date=1 February 2010 |title=jBCrypt security advisory}} And {{cite web |url=https://php.net/security/crypt_blowfish.php |title=Changes in CRYPT_BLOWFISH in PHP 5.3.7 |work=php.net}}</ref>
+
+== Comparison to other password hashing algorithms ==
+
+Bcrypt is not a [[Key derivation function|key derivation function (KDF)]]. For example, bcrypt cannot be used to derive a 512-bit key from a password. At the same time, algorithms like [[pbkdf2]], [[scrypt]], and [[argon2]] ''are''  password-based key derivation functions - where the output is then used for the purpose of password hashing rather than just key derivation.
+
+Password hashing generally needs to complete < 1000 ms. In this scenario, bcrypt is stronger than pbkdf2, scrypt, and argon2.
+
+* '''[[PBKDF2]]''': pbkdf2 is weaker than bcrypt. The commonly used SHA2 hashing algorithm is not memory-hard. SHA2 is designed to be extremely lightweight so it can run on lightweight devices (e.g. smart cards).<ref>[https://csrc.nist.gov/csrc/media/publications/fips/180/2/archive/2002-08-01/documents/fips180-2.pdf Secure Hash Standard] nist.gov</ref> This means PBKDF2 is very weak for password storage, as commodity SHA-2 hashing hardware that can perform trillions of hashes per second is easily procured.{{cn|date=June 2025}}
+* '''[[scrypt]]''': scrypt is weaker than bcrypt for memory requirements less than 4 MB.<ref>{{Cite web|url=https://blog.ircmaxell.com/2014/03/why-i-dont-recommend-scrypt.html#Putting-It-In-Perspective|title=Why I Don't Recommend Scrypt|date=12 March 2014}}</ref> scrypt requires approximately 1000 times the memory of bcrypt to achieve a comparable level of defense against GPU based attacks (for password storage).
+* '''[[argon2]]''': bcrypt is more lightweight than Argon2.  This may pose a problem for some web applications where usage of Argon2 would require lowering the security parameters to an unacceptable level in order to still be performant.  Specifically, Argon2 is less secure than bcrypt for run times less than 1 second (i.e., for common password authentication). Argon2 does not match or surpass bcrypt's strength until exceeding ≈1000ms runtimes.{{Citation needed|date=January 2024|reason=}}  This may be unsuitable for password hashing, but is perfectly acceptable for key-derivation.<ref>{{Cite web|url=https://stytch.com/blog/argon2-vs-bcrypt-vs-scrypt/|title = Argon2 vs bcrypt vs. scrypt: which hashing algorithm is right for you?| date=March 2023 }}</ref>  In some cases, Argon2 is recommended over bcrypt, if the security parameters are high enough.<ref>{{Cite web|url=https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html|title = OWASP Password Storage Cheat Sheet}}</ref>
+* '''pufferfish2''' is an evolution of bcrypt that uses a tunable [[memory footprint]] (like scrypt and argon2), rather than the fixed 4 KB memory footprint of bcrypt. Similar to scrypt or argon2, pufferfish2 gains its difficulty by using more memory. Unlike scrypt and argon2, pufferfish2 only operates in a CPU core's L2 cache. While scrypt and argon2 gain their memory hardness by randomly accessing lots of RAM, pufferfish2 limits itself to just the dedicated L2 cache available to a CPU core. This makes it even harder to implement in custom hardware than scrypt and argon2. The ideal memory footprint of pufferfish2 is the size of the cache available to a core (e.g. 1.25 MB for Intel Alder Lake<ref>{{Cite web|url=https://ark.intel.com/content/www/us/en/ark/products/134586/intel-core-i512400-processor-18m-cache-up-to-4-40-ghz.html|title = Product Specifications}}</ref>) This makes pufferfish2 much more resistant to GPU or ASIC.
+
+==Criticisms==
+
+===Maximum password length===
+
+bcrypt has a maximum password length of 72 bytes. This maximum comes from the first operation of the '''ExpandKey''' function that uses [[XOR]] on the 18 4-byte subkeys (P) with the password:
+
+ P<sub>1</sub>..P<sub>18</sub> ← P<sub>1</sub>..P<sub>18</sub> xor passwordBytes
+
+The password (which is UTF-8 encoded), is repeated until it is 72-bytes long. For example, a password of:
+
+:<code>correct horse battery staple␀</code> ''(29 bytes)''
+
+Is repeated until it matches the 72-bytes of the 18 P per-round subkeys:
+
+:<code>correct horse battery staple␀correct horse battery staple␀correct horse </code> ''(72 bytes)''
+
+In the worst case a password is limited to 18 characters, when every character requires 4 bytes of UTF-8 encoding.  For example:
+
+:<code>𐑜𐑝𐑟𐑥𐑷𐑻𐑽𐑾𐑿𐑿𐑰𐑩𐑛𐑙𐑘𐑙𐑒𐑔</code> ''(18 characters, 72 bytes)''
+
+In 2024 a single-sign-on service by [[Okta, Inc.]] announced a vulnerability due to the password being concatenated after the username and the pair hashed with bcrypt, resulting in the password being ignored for logins with a long-enough username.<ref>{{Cite web |last=Jones |first=Conner |date=4 November 2024 |title=Why the long name? Okta discloses auth bypass bug affecting 52-character usernames |url=https://www.theregister.com/2024/11/04/why_the_long_name_okta/ |access-date=5 November 2024 |website=[[The Register]]}}</ref>
+
+===Password hash truncation===
+
+The bcrypt algorithm involves repeatedly encrypting the 24-byte text:
+
+:<code>OrpheanBeholderScryDoubt</code>  ''(24-bytes)''
+
+This generates 24 bytes of ciphertext, e.g.:
+
+:<code>85 20 af 9f 03 3d b3 8c 08 5f d2 5e 2d aa 5e 84 a2 b9 61 d2 f1 29 c9 a4</code> ''(24-bytes)''
+
+The canonical OpenBSD implementation truncates this to 23 bytes:<ref>{{cite web | title=src/lib/libc/crypt/bcrypt.c at master · openbsd/src | website=GitHub | date=2016-08-30 | url=https://github.com/openbsd/src/blob/master/lib/libc/crypt/bcrypt.c#L190 | access-date=2024-12-03}}</ref>
+
+:<code>85 20 af 9f 03 3d b3 8c 08 5f d2 5e 2d aa 5e 84 a2 b9 61 d2 f1 29 c9</code> ''(23-bytes)''
+
+It is unclear why the canonical implementation deletes 8-bits from the resulting password hash.{{cn|date=May 2024}}
+
+These 23 bytes become 31 characters when base-64 encoded:
+
+:<code>fQAtluK7q2uGV7HcJYncfII3WbJvIai</code> ''(31-characters)''
+
+===Base64 encoding alphabet===
+
+The encoding used by the canonical OpenBSD implementation uses the same [[Base64]] alphabet as [[crypt (C)|crypt]], an [[Base64#With atypical alphabet order|atypical Base64 alphabet]].<ref name="bcrypt.c_lines_57-58" /> As such, the encoding is not compatible with the more common [[Base64#RFC_4648|RFC 4648 Base64 encoding]].
+
+==See also==
+{{Portal|Free and open-source software}}
+* [[Argon2]] - winner of the [[Password Hashing Competition]] in 2015
+* [[Crypt (C)#Blowfish-based scheme|bcrypt]] - blowfish-based cross-platform file encryption utility developed in 2002<ref>[http://bcrypt.sourceforge.net bcrypt file encryption program homepage]</ref><ref>{{Cite web|url=https://droidinformer.org/tools/bcrypt/|title=bcrypt APK for Android - free download on Droid Informer|website=droidinformer.org}}</ref><ref>{{Cite web|url=http://t2sde.org/packages/bcrypt.html|title=T2 package - trunk - bcrypt - A utility to encrypt files.|website=t2sde.org}}</ref><ref>{{Cite web|url=https://docs.oracle.com/cd/E51849_01/gg-winux/OGGLC/ogglc_licenses.htm|title=Oracle GoldenGateのライセンス|website=docs.oracle.com}}</ref>
+* [[Crypt (C)|crypt]] - Unix C library function
+* [[crypt (Unix)|crypt]] - Unix utility
+* [[ccrypt]] - utility
+* [[Key stretching]]
+* [[mcrypt]] - utility
+* [[PBKDF2]] - a widely used standard Password-Based Key Derivation Function 2
+* [[scrypt]] - password-based key derivation function (and also a utility)
+* [[yescrypt]]
+
+==References==
+{{Reflist|30em}}
+
+==External links==
+* [https://www.openwall.com/crypt/ crypt_blowfish, the implementation maintained by Openwall]
+<!-- do not add "bcrypt implementation for language foo" links. See WP:EL if in doubt. -->
+
+{{Cryptography navbox | hash}}
+
+[[Category:Cryptographic software]]
+[[Category:Key derivation functions]]

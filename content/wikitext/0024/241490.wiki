@@ -1,0 +1,90 @@
+<!-- wikipedia: en
+     page: 241490
+     title: Prime-factor FFT algorithm
+     revision: 1320745095
+     timestamp: 2025-11-06T14:34:46Z
+     history: https://en.wikipedia.org/w/index.php?curid=241490&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1320745095 -->
+{{Use American English|date = March 2019}}
+{{Short description|Fast Fourier Transform algorithm}}
+The '''prime-factor algorithm (PFA)''', also called the '''Good–Thomas algorithm''' (1958/1963), is a [[fast Fourier transform]] (FFT) algorithm that re-expresses the [[discrete Fourier transform]] (DFT) of a size {{nowrap|1=''N'' = ''N''<sub>1</sub>''N''<sub>2</sub>}} as a two-dimensional {{nowrap|''N''<sub>1</sub> × ''N''<sub>2</sub>}} DFT, but ''only'' for the case where ''N''<sub>1</sub> and ''N''<sub>2</sub> are [[relatively prime]]. These smaller transforms of size ''N''<sub>1</sub> and ''N''<sub>2</sub> can then be evaluated by applying PFA [[recursion|recursively]] or by using some other FFT algorithm.
+
+PFA should not be confused with the ''mixed-radix'' generalization of the popular [[Cooley–Tukey FFT algorithm|Cooley–Tukey algorithm]], which also subdivides a DFT of size {{nowrap|1=''N'' = ''N''<sub>1</sub>''N''<sub>2</sub>}} into smaller transforms of size ''N''<sub>1</sub> and ''N''<sub>2</sub>. The latter algorithm can use ''any'' factors (not necessarily relatively prime), but it has the disadvantage that it also requires extra multiplications by roots of unity called [[twiddle factor]]s, in addition to the smaller transforms. On the other hand, PFA has the disadvantages that it only works for relatively prime factors (e.g. it is useless for [[power of two|power-of-two]] sizes) and that it requires more complicated re-indexing of the data based on the [[additive group]] [[Group isomorphism|isomorphisms]]. Note, however, that PFA can be combined with mixed-radix Cooley–Tukey, with the former factorizing ''N'' into relatively prime components and the latter handling repeated factors.
+
+PFA is also closely related to the nested [[Winograd FFT algorithm]], where the latter performs the decomposed ''N''<sub>1</sub> by ''N''<sub>2</sub> transform via more sophisticated two-dimensional convolution techniques. Some older papers therefore also call Winograd's algorithm a PFA FFT.
+
+(Although the PFA is distinct from the Cooley–Tukey algorithm, [[I. J. Good|Good]]'s 1958 work on the PFA was cited as inspiration by Cooley and Tukey in their 1965 paper, and there was initially some confusion about whether the two algorithms were different. In fact, it was the only prior FFT work cited by them, as they were not then aware of the earlier research by Gauss and others.)
+
+== Algorithm ==
+Let <math>a(x)</math> be a polynomial and <math>\omega_n</math> be a [[Principal root of unity|principal <math>n</math>-th root of unity]]. We define the DFT of <math>a(x)</math> as the <math>n</math>-tuple <math>(\hat{a}_j) = (a(\omega_n^j)) </math>.
+In other words,
+<math display="block">\hat{a}_j = \sum_{i=0}^{n-1} a_i \omega_n^{ij} \quad \text{ for all } j = 0, 1, \dots, n - 1.</math>
+
+For simplicity, we denote the transformation as <math>\text{DFT}_{\omega_n}</math>.
+
+The PFA relies on a coprime factorization of <math display="inline">n = \prod_{d = 0}^{D - 1} n_d</math> and turns <math>\text{DFT}_{\omega_n}</math> into <math display="inline">\bigotimes_d \text{DFT}_{\omega_{n_d}}</math> for some choices of <math>\omega_{n_d}</math>'s where <math display="inline">\bigotimes</math> is the [[tensor product]].
+
+=== Mapping based on CRT ===
+
+For a coprime factorization {{tmath|1= \textstyle n = \prod_{d = 0}^{D - 1} n_d }}, we have the [[Chinese remainder theorem|Chinese remainder map]] <math>m \mapsto (m \bmod n_d)</math> from <math>\mathbb{Z}_{n}</math> to <math display="inline">\prod_{d = 0}^{D - 1} \mathbb{Z}_{n_d} </math> with <math display="inline">(m_d) \mapsto \sum_{d = 0}^{D - 1} e_d m_d</math> as its inverse where {{tmath|1= e_d }}'s are the [[central idempotent|central orthogonal idempotent elements]] with <math display="inline">\sum_{d = 0}^{D - 1} e_d = 1 \pmod{n}</math>.
+Choosing <math>\omega_{n_d} = \omega_n^{e_d}</math> (therefore, {{tmath|1= \prod_{d = 0}^{D - 1} \omega_{n_d} = \omega_n^{\sum_{d = 0}^{D - 1} e_d} = \omega_n }}), we rewrite <math>\text{DFT}_{\omega_n}</math> as follows:
+
+<math display="block">\hat{a}_j = 
+\sum_{i = 0}^{n - 1} a_i \omega_n^{ij} = 
+\sum_{i = 0}^{n - 1} a_i \left( \prod_{d = 0}^{D - 1} \omega_{n_d} \right)^{ij} = 
+\sum_{i = 0}^{n - 1} a_i \prod_{d = 0}^{D - 1} \omega_{n_d}^{ (i \bmod n_d) (j \bmod n_d)} = 
+\sum_{i_0 = 0}^{n_0 - 1} \cdots \sum_{i_{D - 1} = 0}^{n_{D - 1} - 1} a_{\sum_{d = 0}^{D - 1} e_d i_d} \prod_{d = 0}^{D - 1} \omega_{n_d}^{i_d (j \bmod n_d)} .</math>
+
+Finally, define <math>a_{i_0, \dots, i_{D - 1}} = a_{\sum_{d = 0}^{D - 1} i_d e_d}</math> and {{tmath|1= \hat{a}_{j_0, \dots, j_{D - 1} } = \hat{a}_{\sum_{d = 0}^{D - 1} j_d e_d} }}, 
+we have
+
+<math display="block">\hat{a}_{j_0, \dots, j_{D - 1}} = \sum_{i_0 = 0}^{n_0 - 1} \cdots \sum_{i_{D - 1}=0}^{n_{D - 1} - 1} a_{i_0, \dots, i_{D - 1}} \prod_{d = 0}^{D - 1} \omega_{n_d}^{i_d j_d} .</math>
+
+Therefore, we have the multi-dimensional DFT, {{tmath|1= \textstyle \otimes_{d = 0}^{D - 1} \text{DFT}_{\omega_{n_d} } }}.
+
+=== As algebra isomorphisms ===
+PFA can be stated in a high-level way in terms of [[Algebra homomorphism|algebra isomorphisms]].
+We first recall that for a commutative ring <math>R</math> and a [[group isomorphism]] from <math>G</math> to {{tmath|1= \textstyle \prod_d G_d }}, we have the following algebra isomorphism
+
+<math display="block">R[G] \cong \bigotimes_d R[G_d] ,</math>
+
+where <math>\bigotimes</math> refers to the [[tensor product of algebras]].
+
+To see how PFA works, we choose <math>G = (\Z_n, +, 0)</math> and <math>G_d = (\Z_{n_d}, +, 0)</math> be [[additive group]]s.
+We also identify <math>R[G]</math> as <math display="inline">\frac{R[x]}{\langle x^n - 1 \rangle}</math> and <math>R[G_d]</math> as {{tmath|1= \textstyle \frac{R[x_d]}{\langle x_d^{n_d} - 1 \rangle} }}.
+Choosing <math>\eta = a \mapsto (a \bmod n_d)</math> as the group isomorphism {{tmath|1= \textstyle G \cong \prod_d G_d }}, we have the algebra isomorphism <math display="inline">\eta^* : R[G] \cong \bigotimes_d R[G_d]</math>, or alternatively,
+
+<math display="block"> \eta^* : \frac{R[x]}{\langle x^n - 1 \rangle} \cong \bigotimes_d \frac{R[x_d]}{\langle x_d^{n_d} - 1 \rangle} .</math>
+
+Now observe that <math>\text{DFT}_{\omega_n}</math> is actually an algebra isomorphism from <math display="inline">\frac{R[x]}{\langle x^n - 1 \rangle}</math> to <math display="inline">\prod_i \frac{R[x]}{\langle x - \omega_n^i \rangle}</math> and each <math>\text{DFT}_{\omega_{n_d}}</math> is an algebra isomorphism from <math display="inline">\frac{R[x]}{\langle {x_d}^{n_d} - 1 \rangle}</math> to <math display="inline">\prod_{i_d} \frac{R[x_d]}{\langle x_d - \omega_{n_d}^{i_d} \rangle}</math>,
+we have an algebra isomorphism <math>\eta'</math> from <math display="inline">\bigotimes_d \prod_{i_d} \frac{R[x_d]}{\langle x_d - \omega_{n_d}^{i_d} \rangle}</math> to <math display="inline">\prod_i \frac{R[x]}{\langle x - \omega_n^i \rangle}</math>.
+What PFA tells us is that <math display="inline">\text{DFT}_{\omega_n} = \eta' \circ \bigotimes_d \text{DFT}_{\omega_{n_d}} \circ \eta^*</math> where <math>\eta^*</math> and <math>\eta'</math> are re-indexing without actual arithmetic in <math>R</math>.
+
+=== Counting the number of multi-dimensional transformations ===
+Notice that the condition for transforming <math>\text{DFT}_{\omega_n}</math> into <math display="inline">\eta' \circ \bigotimes_d \text{DFT}_{\omega_{n_d}} \circ \eta^*</math> relies on "an" additive group isomorphism <math>\eta</math> from <math>(\mathbb{Z}_n, +, 0)</math> to {{tmath|1= \textstyle \prod_d (\Z_{n_d}, +, 0) }}.
+Any additive group isomorphism will work.
+To count the number of ways transforming <math>\text{DFT}_{\omega_n}</math> into {{tmath|1= \textstyle \eta' \circ \bigotimes_d \text{DFT}_{\omega_{n_d} } \circ \eta^* }},
+we only need to count the number of additive group isomorphisms from <math>(\mathbb{Z}_n, +, 0)</math> to <math display="inline">\prod_d (\mathbb{Z}_{n_d}, +, 0)</math>, or alternative, the number of additive group [[automorphism]]s on {{tmath|1= (\Z_n, +, 0) }}.
+Since <math>(\mathbb{Z}_n, +, 0)</math> is [[Cyclic group|cyclic]], any automorphism can be written as <math>1 \mapsto g</math> where <math>g</math> is a [[Cyclic group|generator]] of <math>(\mathbb{Z}_n, +, 0)</math>.
+By the definition of {{tmath|1= (\Z_n, +, 0) }}, <math>g</math>'s are exactly those coprime to <math>n</math>.
+Therefore, there are exactly <math>\varphi(n)</math> many such maps where <math>\varphi</math> is the [[Euler's totient function]].
+The smallest example is <math>n = 6</math> where <math>\varphi(n) = 2</math>, demonstrating the two maps in the literature: the "CRT mapping" and the "Ruritanian mapping".<ref>{{harvnb|Good|1971}}</ref>
+
+== See also ==
+* [[Bluestein's FFT algorithm]]
+* [[Rader's FFT algorithm]]
+
+== Notes ==
+{{reflist}}
+
+== References ==
+{{refbegin}}
+* {{cite journal |first=I. J. |last=Good |title=The interaction algorithm and practical Fourier analysis |journal=Journal of the Royal Statistical Society, Series B |volume=20 |issue=2 |pages=361–372 |year=1958 |doi=10.1111/j.2517-6161.1958.tb00300.x |jstor=2983896 }} Addendum, ''ibid.'' '''22''' (2), 373-375 (1960) {{JSTOR|2984108}}.
+* {{cite book |first=L. H. |last=Thomas |chapter=Using a computer to solve problems in physics |title=Applications of Digital Computers |publisher=Ginn |location=Boston |year=1963 }}
+* {{cite journal |first1=P. |last1=Duhamel |first2=M. |last2=Vetterli |title=Fast Fourier transforms: a tutorial review and a state of the art |journal=Signal Processing |volume=19 |issue=4 |pages=259–299 |year=1990 |doi=10.1016/0165-1684(90)90158-U |bibcode=1990SigPr..19..259D |url=http://infoscience.epfl.ch/record/59946 }}
+* {{cite journal |first1=S. C. |last1=Chan |first2=K. L. |last2=Ho |title=On indexing the prime-factor fast Fourier transform algorithm |journal= IEEE Transactions on Circuits and Systems|volume=38 |issue=8 |pages=951–953 |year=1991 |doi=10.1109/31.85638 }}
+* {{cite journal |first=I. J. |last=Good |title=The relationship between two fast Fourier transforms | journal = IEEE Transactions on Computers |volume=100 |issue=3 |pages=310–317 |year=1971 |doi=10.1109/T-C.1971.223236 |s2cid=585818 }}
+{{refend}}
+
+[[Category:Fast Fourier transforms]]

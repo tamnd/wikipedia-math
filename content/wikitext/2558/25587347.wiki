@@ -1,0 +1,251 @@
+<!-- wikipedia: en
+     page: 25587347
+     title: Fast syndrome-based hash
+     revision: 1294704855
+     timestamp: 2025-06-09T09:27:20Z
+     history: https://en.wikipedia.org/w/index.php?curid=25587347&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1294704855 -->
+{{Short description|Family of cryptographic hash functions}}
+{{Infobox cryptographic hash function
+| name           = Fast syndrome-based hash function (FSB)
+| image          = 
+| caption        = 
+<!-- General -->
+| designers      = [[Daniel Augot]], [[Matthieu Finiasz]], [[Nicolas Sendrier]]
+| publish date   = 2003
+| series         = 
+| derived from   = [[McEliece cryptosystem]] and [[Niederreiter cryptosystem]]
+| derived to     = Improved fast syndrome-based hash function
+| related to     = Syndrome-based hash function
+| certification  = 
+<!-- Detail -->
+| digest size    = Scalable
+| structure      = 
+| rounds         = 
+| cryptanalysis  = 
+}}
+
+In [[cryptography]], the '''fast syndrome-based hash functions (FSB)''' are a family of [[cryptographic hash functions]] introduced in 2003 by Daniel Augot, Matthieu Finiasz, and Nicolas Sendrier.<ref>{{Citation
+  | last1 = Augot | first1 = D.
+  | last2 = Finiasz | first2 = M.
+  | last3 = Sendrier     | first3 = N.
+  | title = A fast provably secure cryptographic hash function
+  | year = 2003
+  | url = https://www.researchgate.net/publication/220336328}}
+</ref>
+Unlike most other cryptographic hash functions in use today, FSB can to a certain extent be proven to be secure. More exactly, it can be proven that breaking FSB is at least as difficult as solving a certain [[NP-complete]] problem known as '''regular syndrome decoding''' so FSB is [[provably secure cryptographic hash function|provably secure]]. Though it is not known whether [[NP-complete]] problems are solvable in [[polynomial time]], it is often assumed that they are not.
+
+Several versions of FSB have been proposed, the latest of which was submitted to the [[NIST hash function competition|SHA-3 cryptography competition]] but was rejected in the first round. Though all versions of FSB claim provable security, some preliminary versions were eventually broken.<ref>{{Citation 
+|last1=Saarinen |first1=Markku-Juhani O. 
+|title=Progress in Cryptology – INDOCRYPT 2007 
+|chapter=Linearization Attacks Against Syndrome Based Hashes 
+|series=Lecture Notes in Computer Science 
+|date=2007 
+|volume=4859 
+|pages=1–9 
+|doi=10.1007/978-3-540-77026-8_1 
+|isbn=978-3-540-77025-1 
+|url=https://eprint.iacr.org/2007/295.pdf 
+|access-date=2022-11-12}}
+</ref> 
+The design of the latest version of FSB has however taken this attack into account and remains secure to all currently known attacks.
+
+As usual, provable security comes at a cost. FSB is slower than traditional hash functions and uses quite a lot of memory, which makes it impractical on memory constrained environments. Furthermore, the compression function used in FSB needs a large output size to guarantee security. This last problem has been solved in recent versions by simply compressing the output by another compression function called [[Whirlpool (cryptography)|Whirlpool]]. However, though the authors argue that adding this last compression does not reduce security, it makes a formal security proof impossible.<ref name="Finiasz-2007">{{Citation
+ |last1        = Finiasz
+ |first1       = M.
+ |last2        = Gaborit
+ |first2       = P.
+ |last3        = Sendrier
+ |first3       = N.
+ |title        = Improved Fast Syndrome Based Cryptographic Hash Functions
+ |year         = 2007
+ |series       = ECRYPT Hash Workshop 2007
+ |url          = http://events.iaik.tugraz.at/HashWorkshop07/papers/Finiasz_ImprovedFastSyndromeBasedCryptographicHashFunction.pdf
+ |access-date  = 2010-01-04
+ |archive-date = 2016-03-03
+ |archive-url  = https://web.archive.org/web/20160303171554/http://events.iaik.tugraz.at/HashWorkshop07/papers/Finiasz_ImprovedFastSyndromeBasedCryptographicHashFunction.pdf
+ |url-status   = dead
+}}</ref>
+
+== Description of the hash function ==
+We start with a compression function <math>\phi</math> with parameters <math>{n,r,w}</math> such that  <math>n > w</math> and <math>w \log(n/w) > r</math>. This function will only work on messages with length <math>s = w\log(n/w)</math>; <math>r</math> will be the size of the output. Furthermore, we want <math>n,r,w,s</math> and <math>\log(n/w)</math> to be natural numbers, where <math>\log</math> denotes the [[binary logarithm]]. The reason for <math>w \cdot \log(n/w) > r</math> is that we want <math>\phi</math> to be a compression function, so the input must be larger than the output. We will later use the [[Merkle–Damgård construction]] to extend the domain to inputs of arbitrary lengths.
+ 
+The basis of this function consists of a (randomly chosen) binary <math>r \times n</math> matrix <math>H</math> which acts on a message of <math>n</math> bits by [[matrix multiplication]]. Here we encode the <math>w\log(n/w)</math>-bit message as a vector in <math>(\mathbf{F}_2)^n</math>, the <math>n</math>-dimensional [[vector space]] over the [[field (mathematics)|field]] of two elements, so the output will be a message of <math>r</math> bits.
+
+For security purposes as well as to get a faster hash speed we want to use only “regular words of weight <math>w</math>” as input for our matrix.
+
+=== Definitions ===
+* A message is called a '''word of weight <math>w</math> and length <math>n</math>''' if it consists of <math>n</math> bits and exactly <math>w</math> of those bits are ones.
+* A word of weight <math>w</math> and length <math>n</math> is called '''regular''' if in every interval <math>[(i-1)(n/w), i(n/w))</math> it contains exactly one nonzero entry for all <math>0 < i < w+1 </math>. More intuitively, this means that if we chop up the message in ''w'' equal parts, then each part contains exactly one nonzero entry.
+
+===The compression function===
+There are exactly <math>(n/w)^w</math> different regular words of weight <math>w</math> and length <math>n</math>, so we need exactly <math>\log((n/w)^w)= w \log(n/w) = s</math> bits of data to encode these regular words. We fix a [[bijection]] from the set of bit strings of length <math>s</math> to the set of regular words of weight <math>w</math> and length <math>n</math> and then the FSB compression function is defined as follows :
+
+# input: a message of size <math>s</math>
+# convert to regular word of length <math>n</math> and weight <math>w</math>
+# multiply by the matrix <math>H</math>
+# output: hash of size <math>r</math>
+
+This version is usually called '''syndrome-based compression'''. It is very slow and in practice done in a different and faster way resulting in '''fast syndrome-based compression'''. We split <math>H</math> into sub-matrices <math>H_i</math> of size <math>r \times n/w</math> and we fix a bijection from the bit strings of length <math>w\log(n/w)</math> to the set of sequences of <math>w</math> numbers between 1 and <math>n/w</math>. This is equivalent to a bijection  to the set of regular words of length <math>n</math> and weight <math>w</math>, since we can see such a word as a sequence of numbers between 1 and <math>n/w</math>. The compression function looks as follows:
+
+# Input: message of size <math>s</math>
+# Convert <math>s</math> to a sequence of <math>w</math> numbers <math>s_1,\dots,s_w</math> between 1 and <math>n/w</math>
+# Add the corresponding columns of the matrices <math>H_i</math> to obtain a binary string a length <math>r</math>
+# Output: hash of size <math>r</math>
+
+We can now use the [[Merkle–Damgård construction]] to generalize the compression function to accept inputs of arbitrary lengths.
+
+===Example of the compression===
+'''Situation and initialization''': Hash a message <math>s = 010011</math> using <math>4 \times 12</math> matrix H <br />
+<math>
+H = \left(\begin{array}{llllcllllcllll}
+1&0&1&1 &~& 0&1&0&0 &~& 1&0&1&1 \\
+0&1&0&0 &~& 0&1&1&1 &~& 0&1&0&0 \\
+0&1&1&1 &~& 0&1&0&0 &~& 1&0&1&0 \\
+1&1&0&0 &~& 1&0&1&1 &~& 0&0&0&1 
+\end{array}\right)
+</math><br />
+that is separated into <math>w = 3</math> sub-blocks <math>H_1</math>, <math>H_2</math>, <math>H_3</math>.
+
+'''Algorithm''':
+# We split the input <math>s</math> into <math>w = 3</math> parts of length <math>\log_2(12/3) = 2</math> and we get <math>s_1 = 01</math>, <math>s_2 = 00</math>, <math>s_3 = 11</math>.
+# We convert each <math>s_i</math> into an [[integer]] and get <math>s_1 = 1</math>, <math>s_2 = 0</math>, <math>s_3 = 3</math>.
+# From the first sub-matrix <math>H_1</math>, we pick the column 2, from the second sub-matrix <math>H_2</math> the column 1 and from the third sub-matrix the column 4.
+# We add the chosen columns and obtain the result <math>r = 0111 \oplus 0001 \oplus 1001 = 1111</math>.
+
+== Security proof of FSB ==
+The [[Merkle–Damgård construction]] is proven to base its security only on the security of the used compression function. So we only need to show that the compression function <math>\phi</math> is secure.
+
+A cryptographic hash function needs to be secure in three different aspects:
+
+# Pre-image resistance: Given a Hash ''h'' it should be hard to find a message ''m'' such that Hash(''m'')=''h''
+# Second pre-image resistance:	Given a message ''m''<sub>1</sub> it should be hard to find a message ''m''<sub>2</sub> such that Hash(''m''<sub>1</sub>) = Hash(''m''<sub>2</sub>)
+# Collision resistance: It should be hard to find two different messages ''m''<sub>1</sub> and ''m''<sub>2</sub> such that Hash(''m''<sub>1</sub>)=Hash(''m''<sub>2</sub>)
+
+Note that if an adversary can find a second pre-image, then it can certainly find a collision. This means that if we can prove our system to be collision resistant, it will certainly be second-pre-image resistant.
+
+Usually in cryptography hard means something like “almost certainly beyond the reach of any adversary who must be prevented from breaking the system”. We will however need a more exact meaning of the word hard. We will take hard to mean “The runtime of any algorithm that finds a collision or pre-image will depend exponentially on size of the hash value”. This means that by relatively small additions to the hash size, we can quickly reach high security.
+
+===Pre-image resistance and regular syndrome decoding (RSD) ===
+As said before, the security of FSB depends on a problem called '''regular syndrome decoding (RSD)'''. Syndrome decoding is originally a problem from [[coding theory]] but its NP-completeness makes it a nice application for cryptography. Regular syndrome decoding is a special case of [[decoding methods|syndrome decoding]] and is defined as follows:
+
+Definition of RSD: given <math>w</math> matrices <math>H_i</math> of dimension <math>r \times (n/w)</math> and a bit string <math>S</math> of length <math>r</math> such that there exists a set of <math>w</math> columns, one in each <math>H_i</math>, summing to <math>S</math>. Find such a set of columns.
+
+This problem has been proven to be [[NP-complete]] by a reduction from [[3-dimensional matching]]. Again, though it is not known whether there exist [[polynomial time]] algorithms for solving NP-complete problems, none are known and finding one would be a huge discovery.
+ 
+It is easy to see that finding a pre-image of a given hash <math>S</math> is exactly equivalent to this problem, so the problem of finding pre-images in FSB must also be NP-complete.
+
+We still need to prove collision resistance. For this we need another NP-complete variation of RSD: '''2-regular null syndrome decoding'''.
+
+===Collision resistance and 2-regular null syndrome decoding (2-RNSD)===
+Definition of 2-RNSD: Given <math>w</math> matrices <math>H_i</math> of dimension <math>r \times (n/w)</math> and a bit string <math>S</math> of length <math>r</math> such that there exists a set of <math>w'</math> columns, two or zero in each <math>H_i</math>, summing to zero. <math>(0 < w' < 2w)</math>. Find such a set of columns.
+
+2-RNSD has also been proven to be [[NP-complete]] by a reduction from [[3-dimensional matching]].
+
+Just like RSD is in essence equivalent to finding a regular word <math>w</math> such that <math>Hw = S</math>, 2-RNSD is equivalent to finding a 2-regular word <math>w'</math> such that <math>Hw'=0</math>. A 2-regular word of length <math>n</math> and weight <math>w</math> is a bit string of length <math>n</math> such that in every interval <math>[(i-1)w , iw)</math> exactly two or zero entries are equal to 1. Note that a 2-regular word is just a sum of two regular words.
+
+Suppose that we have found a collision, so we have Hash(''m''<sub>1</sub>) = Hash(''m''<sub>2</sub>) with <math>m_1\neq m_2</math>. Then we can find two regular words <math>w_1</math> and <math>w_2</math> such that <math>Hw_1=Hw_2</math> . We then have <math>H(w_1+w_2)= Hw_1 + Hw_2 =2Hw_1=0</math>; <math>(w_1 + w_2)</math> is a sum of two different regular words and so must be a 2-regular word of which the hash is zero, so we have solved an instance of 2-RNSD. We conclude that finding collisions in FSB is at least as difficult as solving 2-RNSD and so must be NP-complete.
+
+The latest versions of FSB use the compression function [[Whirlpool (cryptography)|Whirlpool]] to further compress the hash output. Though this cannot be proven, the authors argue that this last compression does not reduce security. Note that even if one were able to find collisions in Whirlpool, one would still need to find the collisions pre-images in the original FSB compression function to find a collision in FSB.
+
+===Examples===
+Solving RSD, we are in the opposite situation as when hashing. Using the same values as in the previous example, we are given <math>H</math> separated into <math>w=3</math> sub-blocks and a string <math>r = 1111</math>. We are asked to find in each sub-block exactly one column such that they would all sum to <math>r</math>. The expected answer is thus <math>s_1 = 1</math>, <math>s_2 = 0</math>, <math>s_3 = 3</math>. This is known to be hard to compute for large matrices.
+
+In 2-RNSD we want to find in each sub-block not one column, but two or zero such that they would sum up to 0000 (and not to <math>r</math>). In the example, we might use column (counting from 0) 2 and 3 from <math>H_1</math>, no column from <math>H_2</math> column 0 and 2 from <math>H_3</math>. More solutions are possible, for example might use no columns from <math>H_3</math>.
+
+===Linear cryptanalysis===
+The [[Provably secure cryptographic hash function|provable security]] of FSB means that finding collisions is NP-complete. But the proof is a reduction to a problem with asymptotically hard [[worst-case complexity]]. This offers only limited security assurance as there still can be an algorithm that easily solves the problem for a subset of the problem space. For example, there exists a [[Linear cryptanalysis|linearization]] method that can be used to produce collisions of in a matter of seconds on a desktop PC for early variants of FSB with claimed 2^128 security. It is shown that the hash function offers minimal pre-image or collision resistance when the message space is chosen in a specific way.
+
+===Practical security results===
+The following table shows the complexity of the best known attacks against FSB.
+{| class="wikitable"
+!Output size (bits)
+!Complexity of collision search
+!Complexity of inversion
+|- align="center"
+| '''160''' || 2<sup>100.3</sup> || 2<sup>163.6</sup> 
+|- align="center"
+| '''224''' || 2<sup>135.3</sup> || 2<sup>229.0</sup>
+|- align="center"
+| '''256''' || 2<sup>190.0</sup> || 2<sup>261.0</sup>
+|- align="center"
+| '''384''' || 2<sup>215.5</sup> || 2<sup>391.5</sup>
+|- align="center"
+| '''512''' || 2<sup>285.6</sup> || 2<sup>527.4</sup>
+|}
+
+==Genesis==
+FSB is a speed-up version of syndrome-based hash function (SB). In the case of SB the compression function is very similar to the encoding function of [[Niederreiter cryptosystem|Niederreiter's version]] of [[McEliece cryptosystem]]. Instead of using the parity check matrix of a permuted [[Binary Goppa code|Goppa code]], SB uses a random matrix <math>H</math>. From the security point of view this can only strengthen the system.
+
+==Other properties==
+* Both the block size of the hash function and the output size are completely scalable.
+* The speed can be adjusted by adjusting the number of bitwise operations used by FSB per input bit.
+* The security can be adjusted by adjusting the output size.
+* Bad instances exist and one must take care when choosing the matrix <math>H</math>.
+* The matrix used in the compression function may grow large in certain situations. This might be a limitation when trying to use FSB on memory constrained devices. This problem was solved in the related hash function called Improved FSB, which is still [[Provably secure cryptographic hash function|provably secure]], but relies on slightly stronger assumptions.
+
+==Variants==
+In 2007, IFSB was published.<ref name="Finiasz-2007" /> In 2010, S-FSB was published, which is 30% faster than the original.
+<ref>
+{{Cite book 
+|last1=Meziani |first1=Mohammed 
+|last2=Dagdelen |first2=Özgür 
+|last3=Cayrel |first3=Pierre-Louis 
+|last4=El Yousfi Alaoui |first4=Sidi Mohamed 
+|title=Information Security and Assurance 
+|chapter=S-FSB: An Improved Variant of the FSB Hash Family 
+|series=Communications in Computer and Information Science 
+|date=2011 
+|volume=200 
+|pages=132–145 
+|doi=10.1007/978-3-642-23141-4_13 
+|isbn=978-3-642-23140-7 
+|chapter-url=https://www.informatik.tu-darmstadt.de/fileadmin/user_upload/Group_CASED/Publikationen/2010/S-FSB_An_Improved_Variant_of_the_FSB_Hash_Family.pdf 
+|access-date=2014-12-10 
+|archive-url=https://web.archive.org/web/20151222135653/https://www.informatik.tu-darmstadt.de/fileadmin/user_upload/Group_CASED/Publikationen/2010/S-FSB_An_Improved_Variant_of_the_FSB_Hash_Family.pdf 
+|archive-date=2015-12-22 }}</ref>
+
+In 2011, [[D. J. Bernstein]] and [[Tanja Lange]] published RFSB, which is 10x faster than the original FSB-256.
+<ref>{{Citation
+|last1=Bernstein |first1=Daniel J. 
+|last2=Lange |first2=Tanja 
+|last3=Peters |first3=Christiane 
+|last4=Schwabe |first4=Peter 
+|title=Progress in Cryptology – AFRICACRYPT 2011 
+|chapter=Really Fast Syndrome-Based Hashing 
+|series=Lecture Notes in Computer Science 
+|date=2011 
+|volume=6737 
+|pages=134–152 
+|doi=10.1007/978-3-642-21969-6_9 
+|isbn=978-3-642-21968-9 
+|url=http://cr.yp.to/codes/rfsb-20110214.pdf 
+|access-date=2022-11-12}}
+</ref> RFSB was shown to run very fast on the [[Spartan 6]] [[Field-programmable gate array|FPGA]], reaching throughputs of around 5&nbsp;Gbit/s.>
+<ref>{{Citation 
+|last1=von Maurich |first1=Ingo 
+|last2=Güneysu |first2=Tim 
+|title=Progress in Cryptology - INDOCRYPT 2012 
+|chapter=Embedded Syndrome-Based Hashing 
+|series=Lecture Notes in Computer Science 
+|date=2012 
+|volume=7668 
+|pages=339–357 
+|doi=10.1007/978-3-642-34931-7_20 
+|isbn=978-3-642-34930-0 
+|url=https://www.ei.rub.de/media/sh/veroeffentlichungen/2012/12/10/embedded_syndrome-based_hashing.pdf 
+|access-date=2014-12-10 
+|archive-date=2015-05-02 
+|archive-url=https://web.archive.org/web/20150502020624/https://www.ei.rub.de/media/sh/veroeffentlichungen/2012/12/10/embedded_syndrome-based_hashing.pdf 
+|url-status=dead}}</ref>
+
+== References ==
+{{Reflist}}
+
+== External links ==
+* [http://www-rocq.inria.fr/secret/CBCrypto/index.php?pg=fsb FSB website for SHA-3 competition]
+
+{{Cryptography navbox | hash}}
+
+[[Category:Cryptographic hash functions]]

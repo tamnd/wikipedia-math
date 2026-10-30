@@ -1,0 +1,72 @@
+<!-- wikipedia: en
+     page: 504484
+     title: Point in polygon
+     revision: 1368122570
+     timestamp: 2026-08-07T03:52:03Z
+     history: https://en.wikipedia.org/w/index.php?curid=504484&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1368122570 -->
+{{short description|Determining where a point is in relation to a coplanar polygon}}
+[[Image:Simple polygon.svg|right|thumb|An example of a simple polygon]]
+
+In [[computational geometry]], the '''point-in-polygon''' ('''PIP''') problem asks whether a given point in the plane lies inside, outside, or on the boundary of a [[polygon]]. It is a special case of [[point location]] problems and finds applications in areas that deal with processing geometrical data, such as [[computer graphics]], [[computer vision]], [[geographic information system]]s (GIS), [[motion planning]], and [[computer-aided design]] (CAD).
+
+An early description of the problem in computer graphics shows two common approaches ([[ray casting]] and angle summation) in use as early as 1974.<ref>[[Ivan Sutherland]] et al.,"A Characterization of Ten Hidden-Surface Algorithms"  1974, ''[[ACM Computing Surveys]]'' vol. 6 no. 1.</ref>
+
+An attempt of computer graphics veterans to trace the history of the problem and some tricks for its solution can be found in an issue of the ''Ray Tracing News''.<ref>{{citation| url=https://graphics.stanford.edu/pub/Graphics/RTNews/html/rtnv3n4.html#art22| title=Point in Polygon, One More Time...| author=Mark Vandewettering| author2=Eric Haines| author3=Edward John Kalenda| author4=Richard Parent| author5=Sam Uselton| author6="Zap" Andersson| author7=Bruce Holloway| display-authors=3| journal=Ray Tracing News| volume=3| number=4| date=October 1, 1990}}</ref>
+
+==Ray casting algorithm==
+{{See also|Jordan curve theorem}}
+
+[[Image:RecursiveEvenPolygon.svg|right|thumb|The number of intersections for a ray passing from the exterior of the polygon to any point: If odd, it shows that the point lies inside the polygon; if even, the point lies outside the polygon. This test also works in three dimensions.]]
+One simple way of finding whether the point is inside or outside a [[simple polygon]] is to test how many times a [[ray (mathematics)|ray]], starting from the point and going in any fixed direction, intersects the edges of the polygon. If the point is on the outside of the polygon the ray will intersect its edge an [[even number]] of times. If the point is on the inside of the polygon then it will intersect the edge an [[odd number]] of times. The status of a point on the edge of the polygon depends on the details of the ray intersection algorithm.
+
+This algorithm is sometimes also known as the '''crossing number algorithm''' or the [[even–odd rule]] '''algorithm''', and was known as early as 1962.<ref>Shimrat, M., "Algorithm 112: Position of point relative to polygon"  1962, ''[[Communications of the ACM]]'' Volume 5 Issue 8, Aug. 1962. https://dl.acm.org/doi/10.1145/368637.368653</ref> The algorithm is based on a simple observation that if a point moves along a ray from infinity to the probe point and if it crosses the boundary of a polygon, possibly several times, then it alternately goes from the outside to inside, then from the inside to the outside, etc. As a result, after every two "border crossings" the moving point goes outside. This observation may be mathematically proved using the [[Jordan curve theorem]].
+
+=== Limited precision ===
+If implemented on a computer with [[Floating-point arithmetic|finite-precision arithmetic]], the results may be incorrect if the point lies very close to that boundary, because of rounding errors. For some applications, like video games or other entertainment products, this is not a large concern since they often favor speed over precision. However, for a [[Formal verification|formally correct]] [[computer program]], one would have to introduce a [[Numerical analysis|numerical]] [[Tolerance (engineering)|tolerance]] ε and test in line whether ''P'' (the point) lies within ε of ''L'' (the Line), in which case the algorithm should stop and report "''P'' lies very close to the boundary."
+
+Most implementations of the ray casting algorithm consecutively check intersections of a ray with all sides of the polygon in turn. In this case the following problem must be addressed. If the ray passes exactly through a [[vertex (geometry)|vertex]] of a polygon, then it will intersect 2 segments at their endpoints. While it is OK for the case of the topmost vertex in the example or the vertex between crossing 4 and 5, the case of the rightmost vertex (in the example) requires that we count one intersection for the algorithm to work correctly. A similar problem arises with horizontal segments that happen to fall on the ray. The issue is solved as follows: If the intersection point is a vertex of a tested polygon side, then the intersection counts only if the other vertex of the side lies below the ray. This is effectively equivalent to considering vertices ''on'' the ray as lying slightly ''above'' the ray.
+
+Once again, the case of the ray passing through a vertex may pose numerical problems in [[Floating-point arithmetic|finite-precision arithmetic]]: for two sides adjacent to the same vertex the straightforward computation of the intersection with a ray may not give the vertex in both cases. If the polygon is specified by its vertices, then this problem is eliminated by checking the y-coordinates of the ray and the ends of the tested polygon side before actual computation of the intersection. In other cases, when polygon sides are computed from other types of data, other tricks must be applied for the [[numerical robustness]] of the algorithm.
+
+==Winding number algorithm==
+Another technique used to check if a point is inside a polygon is to compute the given point's [[winding number]] with respect to the polygon. If the winding number is non-zero, the point lies inside the polygon. This algorithm is sometimes also known as the ''[[nonzero-rule]] algorithm''.
+
+One way to compute the winding number is to sum up the [[Subtended angle|angles subtended]] by each side of the polygon.<ref name="Hormann">{{Cite journal | doi=10.1016/S0925-7721(01)00012-8 | title=The point in polygon problem for arbitrary polygons | journal=Computational Geometry | volume=20 | issue=3 | pages=131 | year=2001| last1=Hormann | first1=K. | last2=Agathos | first2=A. | doi-access=free }}</ref> However, this involves costly [[inverse trigonometric functions]], which generally makes this algorithm performance-inefficient (slower) compared to the ray casting algorithm. Luckily, these inverse trigonometric functions do not need to be computed. Since the result, the sum of all angles, can add up to 0 or <math>2\pi</math> (or multiples of <math>2\pi</math>) only, it is sufficient to track through which quadrants the polygon winds,<ref>{{citation | last=Weiler | first=Kevin | editor-last=Heckbert | editor-first=Paul S. | contribution=An Incremental Angle Point in Polygon Test | isbn=0-12-336155-9 | location=San Diego, CA, USA | pages=16–23 | publisher=Academic Press Professional, Inc. | title=Graphics Gems IV | year=1994 | url=https://archive.org/details/isbn_9780123361554/page/16 }}</ref> as it turns around the test point, which makes the winding number algorithm comparable in speed to counting the boundary crossings.
+
+[[File:Winding number algorithm example.svg|thumb|Visualization of Dan Sunday's [[winding number]] algorithm. A winding number of 0 means the point is outside the polygon; other values indicate the point is inside the polygon]]
+An improved algorithm to calculate the winding number was developed by Dan Sunday in 2001.<ref name="sunday">{{ cite web | last=Sunday | first=Dan | url=http://geomalgorithms.com/a03-_inclusion.html | title=Inclusion of a Point in a Polygon | year=2001 | url-status=usurped | archive-url=https://web.archive.org/web/20130126163405/http://geomalgorithms.com/a03-_inclusion.html | archive-date=26 January 2013}}</ref> It does not use angles in calculations, nor any trigonometry, and functions exactly the same as the ray casting algorithms described above. Sunday's algorithm works by considering an infinite horizontal ray cast from the point being checked. Whenever that ray crosses an edge of the polygon, Juan Pineda's edge crossing algorithm (1988)<ref>{{ cite conference | url=https://www.cs.drexel.edu/~david/Classes/Papers/comp175-06-pineda.pdf | title=A Parallel Algorithm for Polygon Rasterization | first=Juan | last=Pineda | journal=Computer Graphics | volume=22 | number=4 | date=August 1988 | conference=[[SIGGRAPH]]'88 | location=[[Atlanta]] | access-date=8 August 2021 }}</ref> is used to determine how the crossing will affect the winding number. As Sunday describes it, if the edge crosses the ray going "upwards", the winding number is incremented; if it crosses the ray "downwards", the number is decremented. Sunday's algorithm gives the correct answer for nonsimple polygons, whereas the boundary crossing algorithm fails in this case.<ref name="sunday"/>
+
+== Modified-polygon method ==
+The modified-polygon method, published in 2019, covers both convex and concave cases, and is based on the basic definition of the polygon size (line/area/volume) depending on the spatial dimensions of the shape. The result is a very fast and accurate method when compared to existing techniques.<ref>{{Cite journal |last=El-Salamony |first=Mostafa |date=2019 |title=Modified-Polygon Method for Point-in-Polygon Problem |url=https://www.researchgate.net/publication/335796456 |journal=8th European Conference for Aeronautics and Space Sciences (Eucass) |volume=1 |issue=1 |pages=1–9}}</ref>
+
+==<span class="anchor" id="Comparison"></span>Implementations==
+
+=== SVG ===
+Similar methods are used in [[Scalable Vector Graphics|SVG]] for defining a way of filling with color various shapes (such as path, polyline, polygon, text etc.).<ref>{{Cite web|title=Painting: Filling, Stroking, Colors and Paint Servers – SVG Tiny 1.2|url=https://www.w3.org/TR/2008/REC-SVGTiny12-20081222/painting.html#FillProperties|access-date=2021-07-24|website=www.w3.org}}</ref> The algorithm of filling is influenced by 'fill-rule' attribute. The value may be either {{Code|nonzero}} or {{Code|evenodd}}. For example, in a [[pentagram]], there is a central "hole" (visible background) with {{Code|evenodd}}, and none with {{Code|nonzero}} attribute.<ref>{{Cite web|title=Painting: Filling, Stroking, Colors and Paint Servers – SVG Tiny 1.2|url=https://www.w3.org/TR/2008/REC-SVGTiny12-20081222/painting.html#FillProperties|access-date=2021-07-24|website=www.w3.org}}</ref>
+
+For [[simple polygons]], the algorithms will give the same result. However, for [[complex polygons]], the algorithms may give different results for points in the regions where the polygon intersects itself, where the polygon does not have a clearly defined inside and outside. One solution using the even-odd rule is to transform (complex) polygons into simpler ones that are even-odd-equivalent before the intersection check.<ref>{{cite conference |author=Michael Galetzka, Patrick Glauner |year=2017 |title=A Simple and Correct Even-Odd Algorithm for the Point-in-Polygon Problem for Complex Polygons |conference=Proceedings of the 12th International Joint Conference on Computer Vision, Imaging and Computer Graphics Theory and Applications ([[VISIGRAPP]] 2017), Volume 1: GRAPP }}</ref> This, however, is computationally expensive. It is less expensive to use the fast non-zero winding number algorithm, which gives the correct result even when the polygon overlaps itself.
+
+==Point-in-polygon queries==
+The point in polygon problem may be considered in the general repeated [[geometric query]] setting: given a single polygon and a sequence of query points, quickly find the answers for each query point. Clearly, any of the general approaches for planar [[point location]] may be used. Simpler solutions are available for some special polygons.
+
+===Special cases===
+
+{{expand section|date=August 2013}}
+
+Simpler algorithms are possible for [[monotone polygon]]s, [[star-shaped polygon]]s, [[convex polygon]]s and [[triangle]]s.
+
+The triangle case can be solved easily by use of a [[barycentric coordinate system]], [[parametric equation]] or [[dot product]].<ref>[https://totologic.blogspot.com/2014/01/accurate-point-in-triangle-test.html Accurate point in triangle test] "''...the most famous methods to solve it''"</ref> The dot product method extends naturally to any convex polygon.
+
+==References==
+{{reflist}}
+
+==See also==
+* [[JTS Topology Suite|Java Topology Suite (JTS)]]
+* Discussion: https://www.ics.uci.edu/~eppstein/161/960307.html
+* Winding number versus crossing number methods: {{usurped|1=https://web.archive.org/web/20131210180851/http://geomalgorithms.com/a03-_inclusion.html}}, also available at [[Scribd]] https://www.scribd.com/document/735206906/Inclusion-of-a-Point-in-a-Polygon {{Subscription required}}
+
+[[Category:Geometric algorithms]]
+[[Category:Point (geometry)]]
+[[Category:Polygons]]

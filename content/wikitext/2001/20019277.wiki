@@ -1,0 +1,162 @@
+<!-- wikipedia: en
+     page: 20019277
+     title: Threefish
+     revision: 1263534488
+     timestamp: 2024-12-17T05:34:53Z
+     history: https://en.wikipedia.org/w/index.php?curid=20019277&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1263534488 -->
+{{Short description|Block cipher}}
+{{Infobox block cipher
+| name          = Threefish
+| image          = [[File:Skein permutation.png|250px]]
+| designers     = [[Bruce Schneier]], [[Niels Ferguson]], [[Stefan Lucks]], Doug Whiting, [[Mihir Bellare]], Tadayoshi Kohno, [[Jon Callas]], Jesse Walker
+| publish date  = 2008
+| related to    = [[Blowfish (cipher)|Blowfish]], [[Twofish]]
+| key size      = 256, 512 or 1024 bits<br>(key size is equal to block size)
+| block size    = 256, 512 or 1024 bits
+| rounds        = 72 (80 for 1024-bit block size)
+| speed         = 6.1 [[cycles per byte|cpb]] on [[Core 2]].<ref name=skein />
+| cryptanalysis  = In October 2010, an attack that combines [[rotational cryptanalysis]] with the [[rebound attack]] was published. The attack mounts a [[known-key distinguisher]] against 53 of 72 rounds in Threefish-256, and 57 of 72 rounds in Threefish-512. It also affects the [[Skein (hash function)|Skein]] hash function.<ref name=rotational-rebound/>
+}}
+'''Threefish''' is a [[Symmetric-key algorithm|symmetric-key]] [[tweakable block cipher]] designed as part of the [[Skein hash function]], an entry in the [[NIST hash function competition]]. Threefish uses no [[S-box]]es or other table lookups in order to avoid cache [[timing attack]]s;<ref name=skein>{{citation
+ | last1 = Ferguson | first1 = Niels
+ | last2 = Lucks | first2 = Stefan
+ | last3 = Schneier | first3 = Bruce
+ | last4 = Whiting | first4 = Doug
+ | last5 = Bellare | first5 = Mihir
+ | last6 = Kohno | first6 = Tadayoshi
+ | last7 = Callas | first7 = Jon
+ | last8 = Walker | first8 = Jesse
+ | date = October 1, 2010
+ | title = The Skein Hash Function Family
+ | url = https://www.skein-hash.info/sites/default/files/skein1.3.pdf
+ | archive-date = 2014-08-24
+ | archive-url = https://web.archive.org/web/20140824053109/http://www.skein-hash.info/sites/default/files/skein1.3.pdf
+ | url-status=dead }} The paper in which Threefish was introduced.</ref> its nonlinearity comes from alternating additions with [[exclusive OR]]s.  In that respect, it is similar to [[Salsa20]], [[Tiny Encryption Algorithm|TEA]], and the SHA-3 candidates [[CubeHash]] and [[BLAKE (hash function)|BLAKE]].
+
+Threefish and the Skein hash function were designed by [[Bruce Schneier]], [[Niels Ferguson]], [[Stefan Lucks]], Doug Whiting, [[Mihir Bellare]], Tadayoshi Kohno, [[Jon Callas]], and Jesse Walker. "Threefish is unpatented, and the source code is uncopyrighted and license-free; it is free for all uses."<ref name="schneier-threefish">{{cite web |url=https://www.schneier.com/academic/skein/threefish |title=Threefish - Schneier on Security |last=Schneier |first=Bruce |publisher= |date=January 17, 2023 |website=Schneier on Security |access-date=December 12, 2024}}</ref>
+
+== Description of the cipher==
+
+Threefish works on words of 64 [[bit]]s (unsigned [[Little endian]] [[integer]]s). <math>w \in \{4,8,16\}</math> is the number of plaintext words and also of key words. The tweak consists of two words. All additions and subtractions are defined modulo <math>2^{64}</math>.
+
+=== Key schedule ===
+
+Threefish encrypts in <math>r</math> rounds and uses <math>\frac{r}{4} + 1</math> different round keys. After every four rounds, and before the first, <math>w</math> round key words are added to the <math>w</math> data words. To calculate the round keys an additional key word <math>k_w</math> is appended to the original key words <math>k_0, k_1, \dots, k_{w - 1}</math>. Also, an additional tweak word <math>t_2</math> is appended to the tweak words <math>t_0, t_1</math>.
+
+:<math>k_w = C \oplus k_0 \oplus k_1 \oplus \dots \oplus k_{w - 1}; \quad C = \text{0x1BD11BDAA9FC1A22}</math>
+:<math>t_2 = t_0 \oplus t_1</math>
+
+The purpose of the seemingly arbitrary constant <math>C</math> is to frustrate some attacks that take advantage of the relationship between <math>k_w</math> and the other keywords.
+
+The round key words <math>k_{s, i}</math> are now defined like this:
+
+<math>
+k_{s, i} =
+\begin{cases}
+k_{(s+i) \bmod (w + 1)} & i = 0, \dots, w - 4 \\
+k_{(s+i) \bmod (w + 1)} + t_{s \bmod 3} & i = w - 3 \\
+k_{(s+i) \bmod (w + 1)} + t_{(s + 1) \bmod 3} & i = w - 2 \\
+k_{(s+i) \bmod (w + 1)} + s & i = w - 1
+\end{cases}
+</math>
+
+Here <math>s = 0, 1, \dots , r/4</math>, where <math>4s</math> is the number of the round in which the round key word <math>k_{s,i}</math> is used.
+
+=== Mix function ===
+
+[[File:Skein Mix Function.png|thumb|180px|Threefish Mix Function]]
+The mix function takes a [[tuple]] of words <math>(x_0, x_1)</math> and returns another tuple of words <math>(y_0, y_1)</math>. The function is defined like this:
+
+<math>
+y_0 = (x_0 + x_1) \bmod 2^{64}
+</math>
+
+<math>
+y_1 = (x_1 \lll R_{(d \bmod 8), j}) \oplus y_0
+</math>
+
+<math>R_{d, j}</math> is a fixed set of rotation constants chosen to achieve quick [[Confusion and diffusion|diffusion]].
+
+=== Permute ===
+The permutation step swaps the positions of the words according to a constant pattern.
+Bit-level permutation is not achieved in this step, but this is not necessary since the MIX functions
+provides bit-level permutations in the form of bitwise rotations.{{Citation needed|date=November 2015}} The Permute step and rotation constants
+in the MIX functions are chosen in such a way that the overall effect is complete diffusion of all the bits
+in a data block.{{Citation needed|date=November 2015}}
+
+Because this permutation is fixed and independent of the key, the time needed to compute it does not provide 
+information about the key or plaintext. This is important because on most modern microprocessors performance 
+optimisations can make the time taken to compute an array operation dependent on where the data is stored in memory.
+In ciphers where array lookup depends on either the key or plaintext (as is the case for the substitution step in AES),
+it can make the cipher vulnerable to [[timing attack]]s by examining the time required
+for encryption. The permutation is therefore deliberately designed to ensure that it should execute in the same fashion
+independent of the key being used or the data encrypted.{{Citation needed|date=November 2015}}
+
+=== A full Threefish round ===
+
+* if <math>d\;\bmod\;4 = 0</math> the round key <math>k_{d/4,i}</math> is added to word <math>i</math>
+* the mix function is applied to pairs of words, the rotation widths <math>R_{d \bmod 8,j}</math> depend on round number <math>d</math> and word pair <math>j\in\{0,\cdots,w/2-1\}</math>
+* the words are permutated using a permutation independent from the round number
+
+Threefish256 and Threefish512 apply this round <math>r=72</math> times (<math>d=0,1, \dots,71</math>). Threefish1024 applies it 80 times (<math>d=0,1, \dots,79</math>).
+
+=== Final operations ===
+After all rounds are applied, the last round key words <math>k_{r/4,i}</math> are added to the words and the words are converted back to a string of bytes.
+
+==Security==
+In October 2010, an attack that combines [[rotational cryptanalysis]] with the [[rebound attack]] was published. The attack mounts a [[known-key distinguisher]] against 53 of 72 rounds in Threefish-256, and 57 of 72 rounds in Threefish-512. It also affects the [[Skein (hash function)|Skein]] hash function.<ref name=rotational-rebound>{{cite journal
+ | last1 = Khovratovich | first1 = Dmitry
+ | last2 = Nikolic | first2 = Ivica
+ | last3 = Rechberger | first3 = Christian
+ | doi = 10.1007/S00145-013-9150-0
+ | issue = 3
+ | journal = Journal of Cryptology
+ | pages = 452–479
+ | title = Rotational Rebound Attacks on Reduced Skein
+ | url = https://eprint.iacr.org/2010/538
+ | volume = 27
+ | year = 2014}}</ref> This is a follow-up to the earlier attack published in February, which breaks 39 and 42 rounds respectively.<ref>{{cite conference
+ | last1 = Khovratovich | first1 = Dmitry
+ | last2 = Nikolic | first2 = Ivica
+ | editor1-last = Hong | editor1-first = Seokhie
+ | editor2-last = Iwata | editor2-first = Tetsu
+ | contribution = Rotational Cryptanalysis of ARX
+ | contribution-url = https://scholar.archive.org/work/mq7kxdfdmvh53numspafm2of6a
+ | doi = 10.1007/978-3-642-13858-4_19
+ | pages = 333–346
+ | publisher = Springer
+ | series = Lecture Notes in Computer Science
+ | title = Fast Software Encryption, 17th International Workshop, FSE 2010, Seoul, Korea, February 7–10, 2010, Revised Selected Papers
+ | volume = 6147
+ | year = 2010}}</ref> In response to this attack, the Skein team tweaked the rotation constants used in Threefish and thereby the [[key schedule]] constants for round 3 of the NIST hash function competition.<ref name=skein />
+
+In 2009, a related key [[boomerang attack]] against a reduced round Threefish version was published. For the 32-round version, the time complexity is <math>2^{226}</math> and the memory complexity is <math>2^{12}</math>; for the 33-round version, the time complexity is <math>2^{352.17}</math> with a negligible memory usage. The attacks also work against the tweaked version of Threefish: for the 32-round version, the time complexity is <math>2^{222}</math> and the memory complexity is <math>2^{12}</math>; for the 33-round version, the time complexity is <math>2^{355.5}</math> with a negligible memory usage.<ref>{{cite conference
+ | last1 = Chen | first1 = Jiazhe
+ | last2 = Jia | first2 = Keting
+ | editor1-last = Kwak | editor1-first = Jin
+ | editor2-last = Deng | editor2-first = Robert H.
+ | editor3-last = Won | editor3-first = Yoojae
+ | editor4-last = Wang | editor4-first = Guilin
+ | contribution = Improved Related-Key Boomerang Attacks on Round-Reduced Threefish-512
+ | contribution-url = https://eprint.iacr.org/2009/526
+ | doi = 10.1007/978-3-642-12827-1_1
+ | pages = 1–18
+ | publisher = Springer
+ | series = Lecture Notes in Computer Science
+ | title = Information Security, Practice and Experience, 6th International Conference, ISPEC 2010, Seoul, Korea, May 12–13, 2010. Proceedings
+ | volume = 6047
+ | year = 2010}}</ref>
+
+==See also==
+* [[Twofish]]
+* [[Blowfish (cipher)]]
+
+==References==
+{{reflist}}
+
+{{Cryptography navbox | block}}
+
+[[Category:Block ciphers]]
+[[Category:Free ciphers]]

@@ -1,0 +1,270 @@
+<!-- wikipedia: en
+     page: 674484
+     title: Bilinear interpolation
+     revision: 1374104019
+     timestamp: 2026-09-09T21:38:20Z
+     history: https://en.wikipedia.org/w/index.php?curid=674484&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374104019 -->
+{{short description|Method of interpolating functions on a 2D grid}}
+[[Image:Bilininterp.png|right|thumb|Example of bilinear interpolation on the unit square with the ''z'' values 0, 1, 1 and 0.5 as indicated. Interpolated values in between represented by color.]]
+In [[mathematics]], '''bilinear interpolation''' is a method for [[interpolation|interpolating]] functions of two variables (e.g., ''x'' and ''y'') using repeated [[linear interpolation]]. It is usually applied to functions sampled on a 2D [[rectilinear grid]], though it can be generalized to functions defined on the vertices of (a [[Polygon mesh|mesh]] of) arbitrary [[Convex polygon|convex]] [[quadrilateral]]s.
+
+Bilinear interpolation is performed using linear interpolation first in one direction, and then again in another direction. Although each step is linear in the sampled values and in the position, the interpolation as a whole is not linear but rather [[Quadratic function|quadratic]] in the sample location.
+
+Bilinear interpolation is one of the basic [[resampling (bitmap)|resampling]] techniques in [[computer vision]] and [[image processing]], where it is also called '''bilinear filtering''' or '''bilinear texture mapping'''.
+
+==Computation==
+[[Image:BilinearInterpolationV2.svg|right|thumb|The four red dots show the data points and the green dot is the point at which we want to interpolate.]]
+
+Suppose that we want to find the value of the unknown function ''f'' at the point (''x'', ''y''). It is assumed that we know the value of ''f'' at the four points ''Q''<sub>11</sub> = (''x''<sub>1</sub>,&nbsp;''y''<sub>1</sub>), ''Q''<sub>12</sub> = (''x''<sub>1</sub>,&nbsp;''y''<sub>2</sub>), ''Q''<sub>21</sub> = (''x''<sub>2</sub>,&nbsp;''y''<sub>1</sub>), and ''Q''<sub>22</sub> = (''x''<sub>2</sub>,&nbsp;''y''<sub>2</sub>).
+
+===Repeated linear interpolation ===
+We first do linear interpolation in the ''x''-direction. This yields
+:<math>\begin{align}
+  f(x, y_1) = \frac{x_2-x}{x_2-x_1} f(Q_{11}) + \frac{x-x_1}{x_2-x_1} f(Q_{21}), \\
+  f(x, y_2) = \frac{x_2-x}{x_2-x_1} f(Q_{12}) + \frac{x-x_1}{x_2-x_1} f(Q_{22}).
+\end{align}</math>
+
+We proceed by interpolating in the ''y''-direction to obtain the desired estimate:
+:<math>\begin{align}
+  f(x,y) &= \frac{y_2-y}{y_2-y_1} f(x, y_1) + \frac{y-y_1}{y_2-y_1} f(x, y_2) \\
+         &= \frac{y_2-y}{y_2-y_1} \left( \frac{x_2-x}{x_2-x_1} f(Q_{11}) + \frac{x-x_1}{x_2-x_1} f(Q_{21}) \right) +
+            \frac{y-y_1}{y_2-y_1} \left( \frac{x_2-x}{x_2-x_1} f(Q_{12}) + \frac{x-x_1}{x_2-x_1} f(Q_{22}) \right) \\
+         &\begin{aligned}[b]
+= \frac{1}{(x_2-x_1)(y_2-y_1)} ( &f(Q_{11})(x_2-x)(y_2-y) + f(Q_{12})(x_2-x)(y-y_1)\\
+& + f(Q_{21})(x-x_1)(y_2-y) + f(Q_{22})(x-x_1)(y-y_1))
+\end{aligned} \\
+         &= \frac{1}{(x_2-x_1)(y_2-y_1)} \begin{bmatrix} x_2-x & x-x_1 \end{bmatrix} \begin{bmatrix} f(Q_{11}) & f(Q_{12}) \\ f(Q_{21}) & f(Q_{22}) \end{bmatrix} \begin{bmatrix}
+y_2-y \\ y-y_1 \end{bmatrix}.
+\end{align}</math>
+
+Note that we will arrive at the same result if the interpolation is done first along the ''y'' direction and then along the ''x'' direction.<ref>{{cite book |last1=Press |first1=William H. |last2=Teukolsky |first2=Saul A. |last3=Vetterling |first3=William T. |last4=Flannery |first4=Brian P. |title=Numerical recipes in C: the art of scientific computing |date=1992 |publisher=Cambridge University Press |location=New York, NY, USA |isbn=0-521-43108-5 |pages=[https://archive.org/details/numericalrecipes0865unse/page/123 123-128] |edition=2nd |url=https://archive.org/details/numericalrecipes0865unse/page/123 }}</ref>
+
+===Polynomial fit===
+An alternative way is to write the solution to the interpolation problem as a [[multilinear polynomial]]
+
+:<math>f(x, y) \approx a_{00} + a_{10}x + a_{01}y + a_{11}xy,</math>
+where the coefficients are found by solving the [[linear system]]
+
+:<math>\begin{align}
+\begin{bmatrix}
+1 & x_1 & y_1 & x_1 y_1 \\
+1 & x_1 & y_2 & x_1 y_2 \\
+1 & x_2 & y_1 & x_2 y_1 \\
+1 & x_2 & y_2 & x_2 y_2 
+\end{bmatrix}\begin{bmatrix}
+a_{00}\\a_{10}\\a_{01}\\a_{11}
+\end{bmatrix} = \begin{bmatrix}
+f(Q_{11})\\f(Q_{12})\\f(Q_{21})\\f(Q_{22})
+\end{bmatrix},
+\end{align}</math>
+
+yielding the result
+:<math>\begin{align}
+\begin{bmatrix}
+a_{00}\\a_{10}\\a_{01}\\a_{11}
+\end{bmatrix} = \frac{1}{(x_2-x_1)(y_2-y_1)}\begin{bmatrix}
+x_2y_2 & -x_2y_1 & -x_1y_2 & x_1y_1 \\
+-y_2 & y_1 & y_2 & -y_1 \\
+-x_2 & x_2 & x_1 & -x_1 \\
+1 & -1 & -1 & 1 
+\end{bmatrix}\begin{bmatrix}
+f(Q_{11})\\f(Q_{12})\\f(Q_{21})\\f(Q_{22})
+\end{bmatrix}.
+\end{align}</math>
+
+=== Weighted mean ===
+[[File:Bilinear interpolation visualisation.svg|thumb|upright|A geometric visualisation of bilinear interpolation. The product of the value at the desired point (black) and the entire area is equal to the sum of the products of the value at each corner and the partial area diagonally opposite the corner (corresponding colours).]]
+The solution can also be written as a [[Weighted Mean|weighted mean]] of the ''f''(''Q''):
+:<math>f(x, y) \approx w_{11} f(Q_{11}) + w_{12} f(Q_{12}) + w_{21} f(Q_{21}) + w_{22} f(Q_{22}),</math>
+
+where the weights sum to 1 and satisfy the transposed linear system
+:<math>
+  \begin{bmatrix}
+    1       & 1         & 1         & 1         \\
+    x_1     & x_1       & x_2       & x_2       \\
+    y_1     & y_2       & y_1       & y_2       \\
+    x_1y_1  & x_1y_2    & x_2y_1    & x_2y_2
+\end{bmatrix}
+\begin{bmatrix}
+    w_{11} \\ w_{12} \\ w_{21} \\ w_{22}
+\end{bmatrix} =
+\begin{bmatrix}
+    1 \\ x \\ y \\ xy
+\end{bmatrix},
+</math>
+
+yielding the result
+:<math>\begin{align}
+\begin{bmatrix}
+w_{11}\\w_{21}\\w_{12}\\w_{22}
+\end{bmatrix} = \frac{1}{(x_2-x_1)(y_2-y_1)}\begin{bmatrix}
+x_2y_2 & -y_2 & -x_2 & 1 \\
+-x_2y_1 & y_1 & x_2 & -1 \\
+-x_1y_2 & y_2 & x_1 & -1 \\
+x_1y_1 & -y_1 & -x_1 & 1 
+\end{bmatrix}\begin{bmatrix}
+1\\x\\y\\xy
+\end{bmatrix},
+\end{align}</math>
+which simplifies to
+:<math>\begin{align}
+  w_{11} &= \frac{(x_2 - x  )(y_2 - y  )}{(x_2 - x_1)(y_2 - y_1)}, \\
+  w_{12} &= \frac{(x_2 - x  )(y   - y_1)}{(x_2 - x_1)(y_2 - y_1)}, \\
+  w_{21} &= \frac{(x   - x_1)(y_2 - y  )}{(x_2 - x_1)(y_2 - y_1)}, \\
+  w_{22} &= \frac{(x   - x_1)(y   - y_1)}{(x_2 - x_1)(y_2 - y_1)},
+\end{align}</math>
+in agreement with the result obtained by repeated linear interpolation. The set of weights can also be interpreted as a set of [[generalized barycentric coordinates]] for a rectangle.
+
+=== Alternative matrix form ===
+Combining the above, we have
+:<math>\begin{align}
+f(x,y) \approx \frac{1}{(x_2-x_1)(y_2-y_1)}
+\begin{bmatrix}f(Q_{11}) & f(Q_{12}) & f(Q_{21}) & f(Q_{22})\end{bmatrix}\begin{bmatrix}
+x_2y_2 & -y_2 & -x_2 & 1 \\
+-x_2y_1 & y_1 & x_2 & -1 \\
+-x_1y_2 & y_2 & x_1 & -1 \\
+x_1y_1 & -y_1 & -x_1 & 1 
+\end{bmatrix}\begin{bmatrix}
+1\\x\\y\\xy
+\end{bmatrix}.
+\end{align}</math>
+
+=== On the unit square ===
+If we choose a [[coordinate system]] in which the four points where ''f'' is known are (0,&nbsp;0), (0,&nbsp;1), (1,&nbsp;0), and (1,&nbsp;1), then the interpolation formula simplifies to 
+:<math>f(x, y) \approx f(0, 0) (1 - x)(1 - y) + f(0, 1) (1 - x)y + f(1, 0) x(1 - y) + f(1, 1) xy, </math>
+
+or equivalently, in matrix operations:
+:<math>f(x, y) \approx \begin{bmatrix} 1 - x & x \end{bmatrix} \begin{bmatrix} f(0, 0) & f(0, 1) \\ f(1, 0) & f(1, 1) \end{bmatrix} \begin{bmatrix} 1 - y \\ y \end{bmatrix}.</math>
+
+Here we also recognize the weights:
+:<math>\begin{align}
+  w_{11} &= (1 - x)(1 - y), \\
+  w_{12} &= (1 - x)y, \\
+  w_{21} &= x(1 - y), \\
+  w_{22} &= xy.
+\end{align}</math>
+Alternatively, the interpolant on the [[unit square]] can be written as
+:<math>f(x, y) = a_{00} + a_{10}x + a_{01}y + a_{11}xy,</math>
+
+where 
+:<math>\begin{align}
+  a_{00} &= f(0, 0), \\
+  a_{10} &= f(1, 0) - f(0, 0), \\
+  a_{01} &= f(0, 1) - f(0, 0), \\
+  a_{11} &= f(1, 1) - f(1, 0) - f(0, 1) + f(0, 0).
+\end{align}</math>
+
+In both cases, the number of constants (four) correspond to the number of data points where ''f'' is given.
+
+== Properties ==
+{{comparison_of_1D_and_2D_interpolation.svg}}
+As the name suggests, the bilinear interpolant is ''not'' linear; but it is linear (i.e. affine) along lines [[Parallel (geometry)|parallel]] to either the ''x'' or the ''y'' direction, equivalently if ''x'' or ''y'' is held constant. Along any other straight line, the interpolant is [[Quadratic function|quadratic]]. Even though the interpolation is ''not'' linear in the position (''x'' and ''y''), at a fixed point it ''is'' linear in the interpolation values, as can be seen in the (matrix) equations above.
+
+The result of bilinear interpolation is independent of which axis is interpolated first and which second. If we had first performed the linear interpolation in the ''y'' direction and then in the ''x'' direction, the resulting approximation would be the same.
+
+The interpolant is a [[multilinear polynomial|bilinear polynomial]], which is also a [[harmonic function]] satisfying [[Laplace's equation]]. Its [[Graph of a function|graph]] is a bilinear [[Bézier surface]] patch.
+
+== Inverse and generalization ==
+In general, the interpolant will assume any value (in the [[convex hull]] of the vertex values) at an infinite number of points (forming branches of [[hyperbola]]s<ref>{{Cite journal|last=Monasse|first=Pascal|date=2019-08-10|title=Extraction of the Level Lines of a Bilinear Image|url=https://www.ipol.im/pub/art/2019/269/|journal=Image Processing on Line|language=en|volume=9|pages=205–219|doi=10.5201/ipol.2019.269|issn=2105-1232|doi-access=free}}</ref>), so the interpolation is not invertible.
+
+However, when bilinear interpolation is applied to two functions simultaneously, such as when interpolating a [[vector field]], then the interpolation is invertible (under certain conditions). In particular, this inverse can be used to find the "unit square coordinates" of a point inside any [[Convex polygon|convex]] [[quadrilateral]] (by considering the coordinates of the quadrilateral as a vector field which is bilinearly interpolated on the unit square). Using this procedure bilinear interpolation can be extended to any convex quadrilateral, though the computation is significantly more complicated if it is not a parallelogram.<ref>{{Cite web|last=Quilez|first=Inigo|date=2010|title=Inverse bilinear interpolation|url=https://iquilezles.org/articles/ibilinear|url-status=live|access-date=2024-02-17|website=iquilezles.org|archive-url=https://web.archive.org/web/20100813104121/http://iquilezles.org/www/articles/ibilinear/ibilinear.htm|archive-date=2010-08-13}}</ref> The resulting map between quadrilaterals is known as a ''bilinear transformation'', ''bilinear warp'' or ''bilinear distortion''.
+
+Alternatively, a [[projective map]]ping between a quadrilateral and the unit square may be used, but the resulting interpolant will not be bilinear.
+
+In the special case when the quadrilateral is a [[parallelogram]], a linear mapping to the unit square exists and the generalization follows easily.
+
+The obvious extension of bilinear interpolation to three dimensions is called [[trilinear interpolation]].
+
+{{Collapse top|Inverse computation}}
+
+Let <math display="inline">F</math> be a vector field that is bilinearly interpolated on the unit square parameterized by <math display="inline">\mu, \lambda \in [0,1]</math>. Inverting the interpolation requires solving a system of two bilinear polynomial equations:<math display="block">A + B\lambda + C\mu + D\lambda\mu = 0</math>where <math display="block">\begin{align}
+A &= F_{00} - F \\
+B &= F_{10} - F_{00} \\ 
+C &= F_{01} - F_{00} \\
+D &= F_{11} - F_{01} - F_{10} + F_{00}
+\end{align}</math>Taking a 2-d cross product (see [[Grassmann product]]) of the system with a carefully chosen vectors allows us to eliminate terms:<math display="block">\begin{align}
+(A + B\lambda + C\mu) &\times D &= 0 \\
+(A + B\lambda) &\times (C + D\lambda) &= 0 \\
+(A + C\mu) &\times (B + D\mu) &= 0 \\
+\end{align}</math>
+where the cross product is defined as
+<math display="block">(x_1, y_1) \times (x_2, y_2) = x_1 y_2 - x_2 y_1.</math>
+The above equations expand to<math display="block">\begin{align}
+c + e\lambda + f\mu &= 0 \\
+b + (c + d)\lambda + e\lambda^2&= 0 \\
+a + (c - d)\mu + f\mu^2&= 0 \\
+\end{align}</math>where<math display="block">\begin{align}
+a &= A \times B \\
+b &= A \times C \qquad d = B \times C \\
+c &= A \times D \qquad e = B \times D \qquad f = C \times D
+\end{align}</math>The quadratic equations can be solved using the [[quadratic formula]]. We have the equivalent determinants <math display="block">\mathbb{D} = (c + d)^2 -4eb = (c - d)^2 - 4fa</math>and the solutions<math display="block">\lambda = \frac{-c -d \pm\sqrt{\mathbb{D}}}{2e} \qquad \mu = \frac{-c +d \mp\sqrt{\mathbb{D}}}{2f}</math>(opposite signs are enforced by the linear relation). The cases when <math>e=0</math> or <math>f=0</math> must be handled separately. Given the right conditions, one of the two solutions should be in the unit square.
+
+{{Collapse bottom}}
+
+== Application in image processing ==
+In [[computer vision]] and [[image processing]], bilinear interpolation is used to [[resampling (bitmap)|resample]] images and textures. An algorithm is used to map a screen [[pixel]] location to a corresponding point on the [[texture mapping|texture map]]. A weighted average of the attributes (color, transparency, etc.) of the four surrounding [[Texel (graphics)|texels]] is computed and applied to the screen pixel. This process is repeated for each pixel forming the object being textured.<ref>[https://www.pcmag.com/encyclopedia_term/0,2542,t=bilinear+interpolation&i=38607,00.asp Bilinear interpolation definition (popular article on www.pcmag.com].</ref>
+
+When an image needs to be scaled up, each pixel of the original image needs to be moved in a certain direction based on the scale constant. However, when scaling up an image by a non-integral scale factor, there are pixels (i.e., ''holes'') that are not assigned appropriate pixel values. In this case, those ''holes'' should be assigned appropriate [[RGB]] or [[grayscale]] values so that the output image does not have non-valued pixels.
+
+Bilinear interpolation can be used where perfect image transformation with pixel matching is impossible, so that one can calculate and assign appropriate intensity values to pixels. Unlike other interpolation techniques such as [[nearest-neighbor interpolation]] and [[bicubic interpolation]], bilinear interpolation uses values of only the 4 nearest pixels, located in diagonal directions from a given pixel, in order to find the appropriate color intensity values of that pixel.
+
+Bilinear interpolation considers the closest 2 × 2 neighborhood of known pixel values surrounding the unknown pixel's computed location. It then takes a weighted average of these 4 pixels to arrive at its final, interpolated value.<ref>{{Cite journal|last=Khosravi|first=M. R.|date=2021-03-19|title=BL-ALM: A Blind Scalable Edge-Guided Reconstruction Filter for Smart Environmental Monitoring Through Green IoMT-UAV Networks|journal=IEEE Transactions on Green Communications and Networking|language=en|volume=5|issue=2 |pages=727–736|doi=10.1109/TGCN.2021.3067555|bibcode=2021ITGCN...5..727K |s2cid=233669511 }}</ref><ref>[http://www.cambridgeincolour.com/tutorials/image-interpolation.htm "Web tutorial: Digital Image Interpolation"].</ref>
+
+[[File:Bilin3.png|thumb|right|alt=Bilinear interpolation|Example of bilinear interpolation in grayscale values]]
+
+=== Example ===
+As seen in the example on the right, the intensity value at the pixel computed to be at row 20.2, column 14.5 can be calculated by first linearly interpolating between the values at column 14 and 15 on each rows 20 and 21, giving
+:<math>\begin{align}
+  I_{20, 14.5} &= \frac{15 - 14.5}{15 - 14} \cdot 91 + \frac{14.5 - 14}{15 - 14} \cdot 210 = 150.5, \\
+  I_{21, 14.5} &= \frac{15 - 14.5}{15 - 14} \cdot 162 + \frac{14.5 - 14}{15 - 14} \cdot 95  = 128.5,
+\end{align}</math>
+
+and then interpolating linearly between these values, giving
+:<math>I_{20.2, 14.5} = \frac{21 - 20.2}{21 - 20} \cdot 150.5 + \frac{20.2 - 20}{21 - 20} \cdot 128.5 = 146.1.</math>
+
+This algorithm reduces some of the visual distortion caused by resizing an image to a non-integral zoom factor, as opposed to nearest-neighbor interpolation, which will make some pixels appear larger than others in the resized image.
+
+== A simplification of terms ==
+
+This example is of tabularised pressure (columns) vs temperature (rows) data as a lookup against some variable:
+
+:<math>\begin{array}{|c|ccc|}
+\bcancel{{}_T \quad {}^P}
+     &    P_1 & P_x    & P_2
+\\
+\hline
+ T_1 & V_{11} & V_{1x} & V_{12} 
+\\
+ T_x &        & V_{xx} &
+\\
+ T_2 & V_{21} & V_{2x} & V_{22} 
+\end{array}</math>
+
+The following standard calculation by parts has 27 operations:
+:<math>\begin{align}
+I_{T_1, P_1-P_2} &= \frac{P_2 - P_x}{P_2 - P_1} \cdot V_{11} + \frac{P_x - P_1}{P_2 - P_1} \cdot V_{12} = V_{1x},\\
+I_{T_2, P_1-P_2} &= \frac{P_2 - P_x}{P_2 - P_1} \cdot V_{21} + \frac{P_x - P_1}{P_2 - P_1} \cdot V_{22} = V_{2x},\\
+I_{P_x, T_1-T_2} &= \frac{T_2 - T_x}{T_2 - T_1} \cdot V_{1x} + \frac{T_x - T_1}{T_2 - T_1} \cdot V_{2x} = V_{xx}.
+\end{align}</math>
+The above has several repeated operations, e.g., <math>(P_2 - P_1)</math>, <math>(P_x - P_1)</math>, <math>(P_x - P_1)</math>, <math>(T_2 - T_1)</math>, as well as some ratios. These repetitions can be assigned temporary variables whilst computing a single interpolation, which will reduce the number of operations to 19.
+
+This can all be simplified from the initial 19 individual operations to 17 individual operations as such:
+:<math>V_{xx} = \frac{[(P_2 - P_x) \cdot V_{11} + (P_x - P_1) \cdot V_{12}] \cdot (T_2 - T_x) + [(P_2 - P_x) \cdot V_{21} + (P_x - P_1) \cdot V_{22}] \cdot (T_x - T_1)}{(P_2 - P_1) \cdot (T_2 - T_1)}.</math>
+
+Simplification of terms is good practice for application of mathematical methodology to engineering applications and can reduce computational and energy requirements for a process.{{cn|date=December 2024}}
+
+== See also ==
+* [[Bicubic interpolation]]
+* [[Trilinear interpolation]]
+* [[Spline interpolation]]
+* [[Lanczos resampling]]
+* [[Stairstep interpolation]]
+* [[Barycentric coordinate system (mathematics)|Barycentric coordinates]] - for interpolating within a triangle or tetrahedron
+
+==References==
+<references/>
+
+[[Category:Multivariate interpolation]]
+[[Category:Euclidean plane geometry]]

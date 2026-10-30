@@ -1,0 +1,517 @@
+<!-- wikipedia: en
+     page: 49136553
+     title: Vector generalized linear model
+     revision: 1375088872
+     timestamp: 2026-09-15T20:23:16Z
+     history: https://en.wikipedia.org/w/index.php?curid=49136553&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375088872 -->
+{{Short description|Concept in statistics}}
+{{distinguish|general linear model|generalized linear model|generalized least squares}}
+{{single source|date=June 2020}}
+{{Regression bar}}   
+In [[statistics]], the class of '''vector generalized linear models''' ('''VGLMs''') was proposed to 
+enlarge the scope of models catered for by [[generalized linear models]] ('''GLMs''').
+In particular, VGLMs allow for response variables outside the classical [[exponential family]]
+and for more than one parameter. Each parameter (not necessarily a mean) can be transformed by a ''link function''.
+The VGLM framework is also large enough to naturally accommodate multiple responses; these are
+several independent responses each coming from a particular statistical distribution with
+possibly different parameter values.
+
+Vector generalized linear models are described in detail in Yee (2015).<ref name="Yee2015">
+{{cite book|last = Yee |first= T. W. |
+title = Vector Generalized Linear and Additive Models: With an Implementation in R|
+publisher = New York, USA: Springer|
+year = 2015|
+isbn=978-1-4939-2817-0}}</ref>
+The central algorithm adopted is the [[iteratively reweighted least squares]] [[iterative method|method]],
+for [[maximum likelihood]] estimation of usually all the model parameters. In particular, 
+Fisher scoring is implemented by such, which, for most models,
+uses the first and expected second derivatives of the log-likelihood function.
+
+==Motivation==
+
+GLMs essentially cover one-parameter models from the classical [[exponential family]],
+and include 3 of the most important statistical regression models:
+the linear model, Poisson regression for counts, and logistic regression
+for binary responses.
+However, the exponential family is far too limiting for regular data analysis.
+For example, for counts, zero-inflation, zero-truncation and overdispersion are regularly
+encountered, and the makeshift adaptations made to the binomial and
+Poisson models in the form of quasi-binomial and
+quasi-Poisson can be argued as being ad hoc and unsatisfactory.
+But the VGLM framework readily handles models such as
+[[zero-inflated model|zero-inflated Poisson]] regression,
+zero-altered Poisson (hurdle) regression,
+positive-Poisson regression, and
+[[negative binomial]] regression.
+As another example, for the linear model,
+the variance of a normal distribution is relegated 
+as a scale parameter and it is treated
+often as a nuisance parameter (if it is considered as a parameter at all).
+But the VGLM framework allows the variance to be modelled using covariates.
+
+As a whole, one can loosely think of VGLMs as GLMs that handle many models 
+outside the classical exponential family and are not restricted to estimating 
+a single mean.
+During estimation,
+rather than using [[weighted least squares]] 
+during IRLS, one uses [[generalized least squares]] to handle the 
+correlation between the ''M'' linear predictors.
+
+==Data and notation==
+
+We suppose that the response or outcome or the [[dependent variable]](s), <math>\boldsymbol{y}=(y_1,\ldots,y_{Q_1})^T</math>, are assumed to be generated from a particular [[probability distribution|distribution]]. Most distributions are univariate, so that <math>Q_1=1</math>, and an example of <math>Q_1=2</math> is the bivariate normal distribution.
+
+Sometimes we write our data as <math>(\boldsymbol{x}_{i},w_i,\boldsymbol{y}_{i})</math>
+for <math>i=1,\ldots,n</math>. Each of the ''n'' observations are considered to be
+independent.
+Then <math>\boldsymbol{y}_i = (y_{i1},\ldots,y_{iQ_1})^T</math>.
+The <math>w_{i}</math> are known positive prior weights, and often <math>w_{i}=1</math>.
+
+The explanatory or independent variables are written <math>\boldsymbol{x}=(x_1,\ldots,x_p)^T</math>, 
+or when ''i'' is needed, as <math>\boldsymbol{x}_i = (x_{i1},\ldots,x_{ip})^T</math>.
+Usually there is an ''intercept'', in which case
+<math>x_1 = 1</math> or <math>x_{i1} = 1</math>.
+
+Actually, the VGLM framework allows for ''S'' responses, each of dimension <math>Q_1</math>.
+In the above ''S''&nbsp;=&nbsp;1.  Hence the dimension of <math>\boldsymbol{y}_{i}</math> is more generally <math>Q = S \times Q_1</math>. One handles ''S'' responses by code such
+as <code>vglm(cbind(y1, y2, y3) ~ x2 + x3, ..., data = mydata)</code> for ''S''&nbsp;=&nbsp;3.
+To simplify things, most of this article has ''S''&nbsp;=&nbsp;1.
+
+== Model components ==
+
+The VGLM usually consists of four elements:
+: 1. A probability density function or probability mass function from some statistical distribution which has a log-likelihood <math>\ell</math>, first derivatives <math>\partial \ell / \partial \theta_j</math> and [[Fisher information|expected information matrix]] that can be computed. The model is required to satisfy the usual [[Maximum likelihood|MLE regularity conditions]].
+: 2. Linear predictors <math>\eta_j</math> described below to model each parameter <math>\theta_j</math>, <math>j=1,\ldots,M.</math>
+: 3. Link functions <math>g_j</math> such that <math>\theta_j = g_j^{-1}(\eta_j).</math>
+: 4. ''Constraint matrices'' <math>\boldsymbol{H}_k</math> for <math>k=1,\ldots,p,</math> each of full column-rank and known.
+
+=== Linear predictors ===
+
+Each ''linear predictor'' is a quantity which incorporates
+information about the independent variables into the model.  
+The symbol <math>\eta_j</math> ([[Greek alphabet|Greek]] "[[Eta (letter)|eta]]") 
+denotes a linear predictor and a subscript ''j'' is used to denote the ''j''th one.  
+It relates the ''j''th parameter to the explanatory variables, and
+<math>\eta_j</math> is expressed as linear combinations (thus, "linear") 
+of unknown parameters <math>\boldsymbol{\beta}_j,</math>
+i.e.,  of regression coefficients <math>\beta_{(j)k}</math>.
+
+The ''j''th parameter, <math>\theta_j</math>, of the distribution depends on the 
+independent variables, <math>\boldsymbol{x},</math> through
+
+: <math>
+g_j( \theta_j) = \eta_j = \boldsymbol{\beta}_j^T \boldsymbol{x}.
+</math>
+
+Let <math>\boldsymbol{\eta} = (\eta_1, \ldots, \eta_M)^T</math> be the vector of
+all the linear predictors. (For convenience we always let  <math>\boldsymbol{\eta}</math>
+be of dimension ''M'').
+Thus ''all'' the covariates comprising <math>\boldsymbol{x}</math> potentially affect ''all'' the parameters through the linear predictors <math>\eta_j</math>. Later, we will allow  the linear predictors to be generalized to additive predictors, which is the sum of smooth functions of each <math>x_k</math> and each function is estimated from the data.
+
+=== Link functions ===
+
+Each link function provides the relationship between a linear predictor and a 
+parameter of the distribution.  
+There are many commonly used link functions, and their choice can be somewhat arbitrary. It makes sense to try to match the [[Domain of a function|domain]] of the link function to 
+the [[range (statistics)|range]] of the distribution's parameter value.
+Notice above that the <math>g_j</math> allows a different link function for each parameter.
+They have similar properties as with [[generalized linear model]]s, for example,
+common link functions include the ''[[logit]]'' link for parameters in <math>(0, 1)</math>,
+and the [[logarithm|log]] link for positive parameters. The <code>VGAM</code> package has function <code>identitylink()</code> for parameters that can assume both positive and negative values.
+
+=== Constraint matrices ===
+
+More generally, the VGLM framework allows for any linear constraints between the regression coefficients <math>\beta_{(j)k}</math> of each linear predictors.  For example, we may want to set some to be equal to 0, or constraint some of them to be equal. We have
+
+: <math>\boldsymbol{\eta} = 
+\sum_{k=1}^p \, \boldsymbol{\beta}^{}_{(k)} \, x_{k} =
+\sum_{k=1}^p \, \boldsymbol{H}_k \; \boldsymbol{\beta}^{*}_{(k)} \, x_{k} 
+</math>
+
+where the <math>\boldsymbol{H}_k</math> are the ''constraint matrices''.
+Each constraint matrix is known and prespecified, and  has ''M'' rows, and between 1 and ''M'' columns. The elements of constraint matrices are finite-valued, and often they are just 0 or 1.
+For example, the value 0 effectively omits that element  while a 1 includes it.
+It is common for some models to have a ''parallelism'' assumption, which means that
+<math>\boldsymbol{H}_k = \boldsymbol{1}_M</math> for <math>k=2,\ldots,p</math>, and
+for some models, for <math>k=1</math> too.
+The special case when <math>\boldsymbol{H}_k = \boldsymbol{I}_M</math> for 
+all <math>k=1,\ldots,p</math> is known as ''trivial constraints''; all the
+regression coefficients are estimated and are unrelated.
+And <math>\theta_j</math> is known as an ''intercept-only'' parameter
+if the ''j''th row of all the <math>\boldsymbol{H}_k = </math> are equal to <math>\boldsymbol{0}^T</math> for <math>k=2,\ldots,p</math>, i.e., <math>\eta_j = \beta_{(j)1}^{*}</math> equals an intercept only. Intercept-only parameters are thus modelled as simply as possible, as a scalar.
+
+The unknown parameters, <math>\boldsymbol{\beta}^{*} =  (\boldsymbol{\beta}_{(1)}^{*T},\ldots,\boldsymbol{\beta}_{(p)}^{*T})^T</math>, 
+are typically estimated by the method of [[maximum likelihood]].
+All the regression coefficients may be put into a matrix as follows:
+
+: <math>
+\boldsymbol{\eta}_i = 
+\boldsymbol{B}^T \boldsymbol{x}_i = 
+\begin{pmatrix}
+\boldsymbol{\beta}^{T}_{1} \, \boldsymbol{x}_i \\
+\vdots  \\
+\boldsymbol{\beta}^{T}_{M} \, \boldsymbol{x}_i \\ 
+\end{pmatrix}  = 
+\left( \boldsymbol{\beta}^{}_{(1)}, \ldots, \boldsymbol{\beta}^{}_{(p)} \right)  \; \boldsymbol{x}_i.
+</math>
+
+=== The xij facility ===
+
+With even more generally, one can allow the value of a variable <math>x_k</math>
+to have a different value for each <math>\eta_j</math>.
+For example, if each linear predictor is for a different time point then
+one might have a time-varying covariate.
+For example,
+in [[discrete choice model]]s, one has 
+''conditional'' logit models,
+''nested'' logit models,
+''generalized'' logit models,
+and the like, to distinguish between certain variants and
+fit a multinomial logit model to, e.g., transport choices.
+A variable such as cost differs depending on the choice, for example,
+taxi is more expensive than bus, which is more expensive than walking.
+The <code>xij</code> facility of <code>VGAM</code> allows one to
+generalize <math>\eta_j(\boldsymbol{x}_i)</math>
+to <math>\eta_j(\boldsymbol{x}_{ij})</math>.
+
+The most general formula is
+
+: <math>\boldsymbol{\eta}_i = 
+\boldsymbol{o}_i +
+\sum_{k=1}^{p} \, diag(x_{ik1},\ldots,x_{ikM}) \,
+\mathbf{H}_k \, \boldsymbol{\beta}_{(k)}^{*}.
+</math>
+
+Here the <math>\boldsymbol{o}_i</math> is an optional ''offset''; which translates
+to be a <math>n \times M</math> matrix in practice. 
+The <code>VGAM</code> package has an <code>xij</code> argument that allows
+the successive elements of the diagonal matrix to be inputted.
+
+==Software==
+
+Yee (2015)<ref name="Yee2015"/> describes an [[R (programming language)|R]] package 
+implementation in the 
+called VGAM.<ref name=VGAM>{{cite web |url=http://cran.R-project.org/package=VGAM|
+title=Vector Generalized Linear Models |
+date=2016-01-18}}</ref>
+Currently this software fits approximately 150 models/distributions.
+The central modelling functions are <code>vglm()</code> and <code>vgam()</code>.
+The <code>family</code> argument is assigned a ''VGAM family function'',
+e.g., <code>family = negbinomial</code> for [[negative binomial]] regression,
+<code>family = poissonff</code> for [[Poisson distribution|Poisson]] regression,
+<code>family = propodds</code> for the ''proportional odd model'' or
+''cumulative logit model'' for ordinal categorical regression.
+
+== Fitting ==
+
+=== Maximum likelihood ===
+
+We are  maximizing a log-likelihood
+
+:<math> 
+\ell = 
+\sum_{i=1}^{n}  \, w_i \, \ell_i, 
+</math>
+
+where the <math>w_i</math> are positive and known ''prior weights''.
+The [[maximum likelihood]] estimates can be found 
+using an [[iteratively reweighted least squares]] algorithm using 
+[[Scoring algorithm|Fisher's scoring]] method, with updates of the form:
+
+:<math> 
+\boldsymbol\beta^{(a+1)} = 
+\boldsymbol\beta^{(a)} + 
+\boldsymbol{\mathcal{I}}^{-1}(\boldsymbol\beta^{(a)}) \, \,
+\mathbf{u}(\boldsymbol\beta^{(a)}), 
+</math>
+
+where <math>\boldsymbol{\mathcal{I}}(\boldsymbol\beta^{(a)})</math> is
+the [[Fisher information]] matrix at iteration ''a''.
+It is also called the ''expected information matrix'', or ''EIM''.
+
+=== VLM ===
+For the computation, the (small) ''model matrix'' constructed
+from the RHS of the formula in <code>vglm()</code>
+and the constraint matrices are combined to form a ''big'' model matrix.
+The IRLS is applied to this big '''X'''. This matrix is known as the VLM
+matrix, since the ''vector linear model'' is the underlying least squares
+problem being solved. A VLM is a weighted multivariate regression where the
+variance-covariance matrix for each row of the response matrix is not
+necessarily the same, and is known.
+(In classical multivariate regression, all the errors have the
+same variance-covariance matrix, and it is unknown).
+In particular, the VLM  minimizes the weighted sum of squares
+
+:<math>
+\mathrm{ResSS} =
+\sum_{i=1}^{n} \;
+w_i  
+\left\{ \mathbf{z}^{(a-1)}_{i} - \boldsymbol{\eta}^{(a-1)}_{i} \right\}^T
+\mathbf{W}_{i}^{(a-1)}
+\left\{ \mathbf{z}^{(a-1)}_{i} - \boldsymbol{\eta}^{(a-1)}_{i} \right\}
+</math>
+
+This quantity is minimized at each IRLS iteration.
+The ''working responses'' (also known as ''pseudo-response'' and ''adjusted dependent vectors'') are
+
+:<math>
+\mathbf{z}_i = \boldsymbol{\eta}_i + \mathbf{W}_i^{-1} \mathbf{u}_i,
+</math>
+
+where the <math>\mathbf{W}_i</math> are known as ''working weights'' or ''working weight matrices''. They are symmetric and positive-definite. Using the EIM helps ensure that they are all positive-definite (and not just the sum of them) over much of the parameter space. In contrast, using Newton–Raphson would mean the observed information matrices would be used, and these tend to be positive-definite in a smaller subset of the parameter space.
+
+Computationally, the [[Cholesky decomposition]] is used to invert the working weight matrices and to convert the overall [[generalized least squares]] problem into an [[ordinary least squares]] problem.
+
+== Examples ==
+
+=== Generalized linear models ===
+
+Of course, all [[generalized linear models]] are a special cases of VGLMs.
+But we often estimate all parameters by full [[maximum likelihood]]  estimation rather
+than using the method of moments for the scale parameter.
+
+=== Ordered categorical response ===
+If the response variable is an [[Level of measurement#Ordinal measurement|ordinal measurement]] with ''M''&nbsp;+&nbsp;1 ''levels'', then one may fit a model function of the form:
+
+:<math> g(\theta_j) = \eta_j</math> &nbsp; where <math> \theta_j = \mathrm{Pr}(Y \leq j),</math>
+
+for <math>j=1,\ldots,M.</math>
+Different links ''g'' lead to [[Ordered logit|proportional odds model]]s or [[ordered probit]] models,
+e.g., the <code>VGAM</code> family function <code>cumulative(link = probit)</code> assigns a probit link to the cumulative
+probabilities, therefore this model is also called the ''cumulative probit model''.
+In general they are called ''cumulative link models''.
+
+For categorical and multinomial distributions, the fitted values are an (''M''&nbsp;+&nbsp;1)-vector of probabilities, with the property that all probabilities add up to 1.  Each probability indicates the likelihood of occurrence of one of the ''M''&nbsp;+&nbsp;1 possible values.
+
+=== Unordered categorical response ===
+
+If the response variable is a [[Level of measurement#Nominal level|nominal measurement]], 
+or the data do not satisfy the assumptions of an ordered model, then one may fit a model of the following form:
+
+:<math> 
+\log \left[ \frac{Pr(Y = j)}{\mathrm{Pr}(Y = M+1)} \right] = \eta_j,
+</math>
+
+for <math>j=1,\ldots,M.</math> The above link is sometimes called the ''multilogit'' link,
+and the model is called the [[multinomial logit]] model.
+It is common to choose the first or the last level of the response as the
+''reference'' or ''baseline'' group; the above uses the last level.
+The <code>VGAM</code> family function <code>multinomial()</code> fits the above model,
+and it has an argument called <code>refLevel</code> that can be assigned
+the level used for as the reference group.
+
+===Count data===
+
+Classical GLM theory performs [[Poisson regression]] for [[count data]].  
+The link is typically the logarithm, which is known as the ''canonical link''.
+The variance function is proportional to the mean:
+
+:<math>\operatorname{Var}(Y_{i}) = \tau\mu_{i},\, </math>
+
+where the dispersion parameter <math>\tau</math> is typically fixed at exactly one.  When it is not, the resulting [[quasi-likelihood]] model is often described as  Poisson with [[overdispersion]], or ''quasi-Poisson''; then <math>\tau</math> is commonly estimated by the method-of-moments and as such,
+confidence intervals for <math>\tau</math> are difficult to obtain.
+
+In contrast, VGLMs offer a much richer set of models to handle overdispersion with respect to the Poisson, e.g., the [[negative binomial]] distribution and several variants thereof. Another count regression model is the ''generalized Poisson distribution''. Other possible models are the ''zeta distribution'' and the ''Zipf distribution''.
+
+==Extensions==
+
+===Reduced-rank vector generalized linear models===
+
+RR-VGLMs are VGLMs where a subset of 
+the '''B''' matrix is of a [[Low-rank approximation|lower rank]].
+Without loss of generality, suppose that <math>\boldsymbol{x}=(\boldsymbol{x}_1^T, \boldsymbol{x}_2^T)^T</math> is a partition of the covariate vector. Then the part of the '''B''' matrix corresponding to <math>\boldsymbol{x}_2</math> is of the form <math>\boldsymbol{A} \boldsymbol{C}^T</math> where <math>\boldsymbol{A}</math> and
+<math>\boldsymbol{C} </math> are thin matrices (i.e., with ''R'' columns), e.g., vectors if the rank ''R''&nbsp;=&nbsp;1. RR-VGLMs potentially offer several advantages when applied to certain
+models and data sets. Firstly, if ''M'' and ''p'' are large then the number of regression coefficients
+that are estimated by VGLMs is large  (<math>M \times p</math>).  Then RR-VGLMs can reduce the number of estimated regression coefficients enormously if ''R'' is low, e.g., ''R''&nbsp;=&nbsp;1
+or ''R''&nbsp;=&nbsp;2. An example of a model where this is particularly useful is the RR-[[Multinomial logistic regression|multinomial logit model]], also known as the ''stereotype model''.
+Secondly, <math>\boldsymbol{\nu} = \boldsymbol{C}^T \boldsymbol{x}_2 = (\nu_1,\ldots,\nu_R)^T</math> 
+is an ''R''-vector of [[latent variable]]s, and often these can be usefully interpreted.
+If ''R''&nbsp;=&nbsp;1 then we can write <math>\nu = \boldsymbol{c}^T \boldsymbol{x}_2</math>
+so that the  latent variable comprises loadings on the explanatory variables.
+It  may be seen that RR-VGLMs take optimal linear combinations of the <math>\boldsymbol{x}_2</math>
+and then a VGLM is fitted to the explanatory variables <math>(\boldsymbol{x}_1, \boldsymbol{\nu})</math>. Thirdly, a [[biplot]] can be produced if ''R''&nbsp;=&nbsp;2 , and this allows the model to be visualized.
+
+It can be shown that RR-VGLMs are simply VGLMs where the constraint matrices for
+the variables in <math>\boldsymbol{x}_2</math> are unknown and to be estimated.
+It then transpires that <math>\boldsymbol{H}_k = \boldsymbol{A}</math> for
+such variables.
+RR-VGLMs can be estimated by an ''alternating'' algorithm which fixes <math>\boldsymbol{A}</math> 
+and estimates <math>\boldsymbol{C},</math> and then  fixes <math>\boldsymbol{C}</math> and estimates <math>\boldsymbol{A}</math>, etc.
+
+In practice, some uniqueness constraints are needed for <math>\boldsymbol{A}</math>
+and/or <math>\boldsymbol{C}</math>. In <code>VGAM</code>, the <code>rrvglm()</code> function uses ''corner constraints'' by default, which means that the top ''R'' rows of <math>\boldsymbol{A}</math> is set to <math>\boldsymbol{I}_R</math>. RR-VGLMs were proposed in 2003.<ref name=yeehast2003>{{cite journal |last1= Yee|first1=T. W. |last2= Hastie|first2=T. J.|
+year=2003 | title=Reduced-rank vector generalized linear models |
+journal=Statistical Modelling |volume=3 |issue=1 |pages=15–41 |doi=10.1191/1471082x03st045oa|s2cid=122810408 }}</ref>
+
+==== Two to one ====
+
+A special case of RR-VGLMs is when ''R''&nbsp;=&nbsp;1 and ''M''&nbsp;=&nbsp;2.  This is ''dimension reduction'' from 2 parameters to 1 parameter. Then it can be shown that
+
+: <math>
+\theta_2  = g_2^{-1} 
+\left( t_1 + a_{21} \cdot g_1(\theta_1) \right),
+</math>
+
+where elements <math>t_1</math> and <math>a_{21}</math> are estimated. Equivalently,
+
+: <math>
+\eta_2  = t_1 + a_{21} \cdot \eta_1.
+</math>
+
+This formula provides a coupling of <math>\eta_1</math> and <math>\eta_2</math>. It induces a relationship between two parameters of a model that can be useful, e.g., for modelling a mean-variance relationship. Sometimes there is some choice of link functions, therefore  it offers a little flexibility when coupling the two parameters, e.g., a logit, probit, cauchit or cloglog link for parameters in the unit interval. The above formula is particularly useful for the [[negative binomial distribution]], so that the RR-NB has variance function
+
+: <math>
+\operatorname{Var}(Y\mid\boldsymbol{x}) = \mu(\boldsymbol{x}) + \delta_1 \, \mu(\boldsymbol{x})^{\delta_2}.
+</math>
+
+This has been called the ''NB-P'' variant by some authors. The <math>\delta_1</math> and <math>\delta_2</math> are estimated, and it is also possible to obtain approximate confidence intervals for them too.
+
+Incidentally, several other useful NB variants can also be fitted, with the help of selecting the right combination of constraint matrices. For example, ''NB''&nbsp;&minus;&nbsp;1, ''NB''&nbsp;&minus;&nbsp;2 (<code>negbinomial()</code> default), ''NB''&nbsp;&minus;&nbsp;''H''; see Yee (2014)<ref name="rrvglm2">{{cite journal |last= Yee|first=T. W. |year=1996 |
+title=Reduced-rank vector generalized linear models with two linear predictors |
+journal=Computational Statistics & Data Analysis |
+volume=71 | pages=889–902|doi=10.1016/j.csda.2013.01.012 }}</ref> and Table 11.3 of Yee (2015).<ref name="Yee2015"/>
+
+==== RCIMs ====
+
+The subclass of ''row-column interaction models''
+(RCIMs) has also been proposed; these are a special type of RR-VGLM. 
+RCIMs apply only to a matrix '''Y''' response and there are
+no explicit explanatory variables <math>\boldsymbol{x}</math>.
+Instead, indicator variables for each row and column are explicitly set up, and an order-''R''
+interaction of the form  <math>\boldsymbol{A} \boldsymbol{C}^T</math> is allowed.
+Special cases of this type of model include the ''Goodman RC association model''
+and the quasi-variances methodology as implemented by the <code>qvcalc</code> R package.
+
+RCIMs can be defined as a RR-VGLM applied to '''Y''' with
+
+:<math>
+  g_1(\theta_1)   \equiv
+\eta_{1ij}  = \beta_0 + \alpha_i + \gamma_j +  \sum_{r=1}^R  c_{ir} \, a_{jr} .
+</math>
+
+For the Goodman RC association model, we have <math>\eta_{1ij}=\log \mu_{ij},</math> so that
+if ''R''&nbsp;=&nbsp;0 then it is a Poisson regression fitted to a matrix of counts with row effects and column effects; this has a similar idea to a no-interaction two-way ANOVA model.
+
+Another example of a RCIM is if <math>g_1 </math> is the identity link and the parameter is the median and the model corresponds to an asymmetric Laplace distribution; then a no-interaction RCIM is similar to a technique called ''median polish''.
+
+In <code>VGAM</code>, <code>rcim()</code> and <code>grc()</code> functions fit the above models.
+And also Yee and Hadi (2014)<ref>
+{{cite journal |last1= Yee|first1=T. W. |last2= Hadi|first2=A. F. |year=2014 |title=Row-column interaction models, with an R implementation |journal=Computational Statistics |volume=29 |issue=6 |pages=1427–1445 |doi=10.1007/s00180-014-0499-9|s2cid=253724333 }}</ref>
+show that RCIMs can be used to fit unconstrained quadratic ordination
+models to species data; this is an example of indirect [[gradient analysis]] in
+[[ordination (Statistics)|ordination]] (a topic in statistical ecology).
+
+===Vector generalized additive models===
+
+''Vector generalized additive models'' (VGAMs) are a major 
+extension to VGLMs in which the linear predictor <math>\eta_j</math> is not restricted to be 
+linear in the covariates <math>x_k</math> but is the 
+sum of [[smoothing|smoothing functions]] applied to the <math>x_k</math>:
+
+:<math>\boldsymbol{\eta}(\boldsymbol{x}) = 
+\boldsymbol{H}_1  \, \boldsymbol{\beta}_{(1)}^{*} + 
+\boldsymbol{H}_2  \, \boldsymbol{f}_{(2)}^{*}(x_2) + 
+\boldsymbol{H}_3  \, \boldsymbol{f}_{(3)}^{*}(x_3) + \cdots \,\!</math>
+
+where <math>\boldsymbol{f}_{(k)}^{*}(x_k) = (f_{(1)k}^{*}(x_k),f_{(2)k}^{*}(x_k),\ldots)^T.</math>
+These are ''M'' ''additive predictors''.
+Each smooth function <math>f_{(j)k}^{*}</math> is estimated from the data.
+Thus VGLMs are ''model-driven'' while VGAMs are ''data-driven''.
+Currently, only smoothing splines are implemented in the <code>VGAM</code> package.
+For ''M''&nbsp;>&nbsp;1  they are actually ''vector splines'', which estimate the component functions
+in <math>f_{(j)k}^{*}(x_k)</math> simultaneously.
+Of course, one could use regression splines with VGLMs.
+The motivation behind VGAMs is  similar to
+that of
+Hastie and Tibshirani (1990)<ref name="HastTibs1990">
+{{cite book|last1 = Hastie |first1= T. J. |last2=Tibshirani | first2=R. J.|
+title = Generalized Additive Models|
+publisher = London:Chapman and Hall|
+year = 1990}}</ref>
+and
+Wood (2017).<ref name="Wood2017">
+{{cite book|last = Wood |first= S. N. |
+title = Generalized Additive Models: An Introduction with R|
+publisher = London: Chapman and Hall|
+year = 2017|
+edition = second|
+isbn=978-1-4987-2833-1}}</ref>
+VGAMs were proposed in 1996
+.<ref>
+{{cite journal |last1= Yee|first1=T. W. |last2= Wild|first2=C. J. |year=1996 |title=Vector generalized additive models |journal=Journal of the Royal Statistical Society, Series B |volume=58 |issue=3 |pages=481–493|doi=10.1111/j.2517-6161.1996.tb02095.x }}</ref>
+
+Currently, work is being done to estimate VGAMs using ''P-splines'' 
+of Eilers and Marx (1996)
+.<ref>
+{{cite journal |last1= Eilers|first1=P. H. C. |last2= Marx|first2=B. D. |year=1996 |
+title=Flexible smoothing with B-splines and penalties |
+journal=Statistical Science |volume=11 |issue=2 |pages=89–121 |doi=10.1214/ss/1038425655}}</ref>
+This allows for several advantages over using [[smoothing spline]]s and vector [[backfitting algorithm|backfitting]], such as the
+ability to perform automatic smoothing parameter selection easier.
+
+===Quadratic reduced-rank vector generalized linear models===
+
+These add on a quadratic in the latent variable to the RR-VGLM class.
+The result is a bell-shaped curve can be fitted to each response, as
+a function of the latent variable.
+For ''R''&nbsp;=&nbsp;2, one has bell-shaped surfaces as a function of the 2
+latent variables---somewhat similar to a 
+[[multivariate normal distribution|bivariate normal distribution]].
+Particular applications of QRR-VGLMs can be found in [[ecology]], 
+in a field of [[multivariate analysis]] called [[ordination (statistics)|ordination]].
+
+As a specific rank-1 example of a QRR-VGLM,
+consider Poisson data with ''S'' species.
+The model for Species ''s'' is the Poisson regression
+
+:<math>
+\log\,\mu_s(\nu) =
+\eta_s(\nu) =
+\beta_{(s)1} + \beta_{(s)2} \, \nu + \beta_{(s)3} \, \nu^2 =
+\alpha_s - \frac{1}{2} \left( \frac{\nu -u_s}{t_s} \right)^2,
+</math>
+
+for <math>s=1,\ldots,S</math>. The right-most parameterization which uses the symbols <math>\alpha_s,</math> <math>u_s,</math> <math>t_s,</math> has particular ecological meaning, because they relate to the species ''abundance'', ''optimum'' and ''tolerance'' respectively. For example, the tolerance is a measure of niche width, and a large value means that that species can live in a wide range of environments. In the above equation, one would need <math>\beta_{(s)3}<0 </math> in order
+to obtain a bell-shaped curve.
+
+QRR-VGLMs fit Gaussian ordination models by maximum likelihood estimation, and
+they are an example of [[gradient analysis|direct gradient analysis]].
+The <code>cqo()</code> function in the <code>VGAM</code> package currently
+calls <code>optim()</code> to search for the optimal 
+<math>\boldsymbol{C}</math>, and given that, it is easy to calculate
+the site scores and fit a suitable [[generalized linear model]] to that.
+The  function is named after the acronym CQO, which stands for
+''constrained quadratic ordination'': the ''constrained'' is for direct
+gradient analysis (there are environmental variables, and a linear combination
+of these is taken as the latent variable) and the ''quadratic'' is for the
+quadratic form in the latent variables <math>\boldsymbol{\nu}</math>
+on the <math>\boldsymbol{\eta}</math> scale.
+Unfortunately QRR-VGLMs are sensitive to outliers in both the response
+and explanatory variables, as well as being computationally expensive, and
+may give a local solution rather than a global solution.
+QRR-VGLMs were proposed in 2004.<ref>
+{{cite journal |last= Yee|first=T. W. |year=2004 |
+title=A new technique for maximum-likelihood canonical Gaussian ordination |
+journal=Ecological Monographs |volume=74 |issue=4 |pages=685–701 |doi=10.1890/03-0078}}</ref>
+
+==See also==
+* [[generalized linear models]]
+* [[R (software)]]
+* [[Regression analysis]]
+* [[Statistical model]]
+* [[Natural exponential family]]
+
+== References ==
+{{reflist}}
+
+==Further reading==
+
+* {{cite book  | author=Hilbe, Joseph | title = Negative Binomial Regression | publisher = Cambridge: Cambridge University Press | year = 2011 |edition=2nd |isbn=978-0-521-19815-8}}
+
+{{statistics|correlation}}
+
+[[Category:Actuarial science]]
+[[Category:Generalized linear models|*]]
+[[Category:Regression models]]

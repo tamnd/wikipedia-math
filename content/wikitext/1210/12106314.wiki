@@ -1,0 +1,239 @@
+<!-- wikipedia: en
+     page: 12106314
+     title: Jenkins–Traub algorithm
+     revision: 1375333817
+     timestamp: 2026-09-17T04:37:23Z
+     history: https://en.wikipedia.org/w/index.php?curid=12106314&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375333817 -->
+{{Short description|Root-finding algorithm for polynomials}}
+The '''Jenkins–Traub algorithm for polynomial zeros''' is a fast globally convergent iterative [[Root-finding algorithms#Roots of polynomials|polynomial root-finding]] method published in 1970 by [[Michael A. Jenkins]] and [[Joseph F. Traub]]. They gave two variants, one for general polynomials with complex coefficients, commonly known as the "CPOLY" algorithm, and a more complicated variant for the special case of polynomials with real coefficients, commonly known as the "RPOLY" algorithm. The latter is "practically a standard in black-box polynomial root-finders".<ref>Press, W. H., Teukolsky, S. A., Vetterling, W. T. and Flannery, B. P. (2007), Numerical Recipes: The Art of Scientific Computing, 3rd ed., Cambridge University Press, page 470.</ref>
+
+This article describes the complex variant. Given a polynomial ''P'',
+<math display="block">P(z) = \sum_{i=0}^na_iz^{n-i}, \quad a_0=1,\quad a_n\ne 0</math>
+with complex coefficients it computes approximations to the ''n'' zeros <math>\alpha_1,\alpha_2,\dots,\alpha_n</math> of ''P''(''z''), one at a time in roughly increasing order of magnitude. After each root is computed, its linear factor is removed from the polynomial. Using this ''deflation'' guarantees that each root is computed only once and that all roots are found.
+
+The real variant follows the same pattern, but computes two roots at a time, either two real roots or a pair of conjugate complex roots. By avoiding complex arithmetic, the real variant can be faster (by a factor of 4) than the complex variant. The Jenkins–Traub algorithm has stimulated considerable research on theory and software for methods of this type.
+
+==Overview==
+The Jenkins–Traub algorithm calculates all of the roots of a [[polynomial]] with complex coefficients.  The algorithm starts by checking the polynomial for the occurrence of very large or very small roots. If necessary, the coefficients are rescaled by a rescaling of the variable. In the algorithm, proper roots are found one by one and generally in increasing size. After each root is found, the polynomial is deflated by dividing off the corresponding linear factor. Indeed, the factorization of the polynomial into the linear factor and the remaining deflated polynomial is already a result of the root-finding procedure. The root-finding procedure has three stages that correspond to different variants of the [[inverse power iteration]]. See Jenkins and [[Joseph F Traub|Traub]].<ref>Jenkins, M. A. and Traub, J. F. (1970), {{Deprecated archive|url=https://archive.today/20130203054938/http://www.springerlink.com/content/q6w17w30035r2152/?p=ae17d723839045be82d270b45363625f&pi=1|title=A Three-Stage Variables-Shift Iteration for Polynomial Zeros and Its Relation to Generalized Rayleigh Iteration}}, Numer. Math. 14, 252–263.</ref>
+A description can also be found in Ralston and [[Philip Rabinowitz (mathematician)|
+Rabinowitz]]<ref>Ralston, A. and Rabinowitz, P. (1978), A First Course in Numerical Analysis, 2nd ed., McGraw-Hill, New York.</ref> p.&nbsp;383.
+The algorithm is similar in spirit to the two-stage algorithm studied by Traub.<ref>Traub, J. F. (1966), [https://www.jstor.org/stable/2004275 A Class of Globally Convergent Iteration Functions for the Solution of Polynomial Equations], Math. Comp., 20(93), 113–138.</ref>
+
+=== Root-finding procedure ===
+
+Starting with the current polynomial ''P''(''X'') of degree ''n'', the aim is to compute the smallest root <math>\alpha</math> of ''P(x)''. The polynomial can then be split into a linear factor and the remaining polynomial factor <math display="block>P(X)=(X-\alpha)\bar H(X)</math> Other root-finding methods strive primarily to improve the root and thus the first factor. The main idea of the Jenkins-Traub method is to incrementally improve the second factor.
+
+To that end, a sequence of so-called ''H'' polynomials is constructed. These polynomials are all of degree ''n''&nbsp;&minus;&nbsp;1 and are supposed to converge to the factor <math>\bar H(X)</math> of ''P''(''X'') containing (the linear factors of) all the remaining roots. The sequence of ''H'' polynomials occurs in two variants, an unnormalized variant that allows easy theoretical insights and a normalized variant of <math>\bar H</math> polynomials that keeps the coefficients in a numerically sensible range.
+The construction of the ''H'' polynomials <math>\left(H^{(\lambda)}(z)\right)_{\lambda=0,1,2,\dots}</math> is guided by a sequence of [[complex number]]s <math>(s_\lambda)_{\lambda=0,1,2,\dots}</math> called shifts. These shifts themselves depend, at least in the third stage, on the previous ''H'' polynomials. The ''H'' polynomials are defined as the solution to the implicit recursion
+<math display="block">
+  H^{(0)}(z)=P^\prime(z)
+</math> and <math display="block">
+  (X-s_\lambda)\cdot H^{(\lambda+1)}(X)\equiv H^{(\lambda)}(X)\pmod{P(X)}\ .
+</math>
+A direct solution to this implicit equation is
+<math display="block">
+  H^{(\lambda+1)}(X)
+    =\frac1{X-s_\lambda}\cdot
+     \left(
+        H^{(\lambda)}(X)-\frac{H^{(\lambda)}(s_\lambda)}{P(s_\lambda)}P(X)   
+     \right)\,,
+</math>
+where the polynomial division is exact.
+
+Algorithmically, one would use long division by the linear factor as in the [[Horner scheme]] or [[Ruffini rule]] to evaluate the polynomials at <math>s_\lambda</math> and obtain the quotients at the same time. With the resulting quotients ''p''(''X'') and ''h''(''X'') as intermediate results the next ''H'' polynomial is obtained as
+<math display="block">
+\left.\begin{align}
+P(X)&=p(X)\cdot(X-s_\lambda)+P(s_\lambda)\\
+H^{(\lambda)}(X)&=h(X)\cdot(X-s_\lambda)+H^{(\lambda)}(s_\lambda)\\
+\end{align}\right\}
+\implies H^{(\lambda+1)}(z)=h(z)-\frac{H^{(\lambda)}(s_\lambda)}{P(s_\lambda)}p(z). 
+</math>
+Since the highest degree coefficient is obtained from ''P(X)'', the leading coefficient of <math>H^{(\lambda+1)}(X)</math> is <math>-\tfrac{H^{(\lambda)}(s_\lambda)}{P(s_\lambda)}</math>. If this is divided out the normalized ''H'' polynomial is
+<math display="block">\begin{align}
+  \bar H^{(\lambda+1)}(X)
+    &=\frac1{X-s_\lambda}\cdot
+     \left(
+        P(X)-\frac{P(s_\lambda)}{H^{(\lambda)}(s_\lambda)}H^{(\lambda)}(X)   
+     \right)\\[1em]
+    &=\frac1{X-s_\lambda}\cdot
+     \left(
+        P(X)-\frac{P(s_\lambda)}{\bar H^{(\lambda)}(s_\lambda)}\bar H^{(\lambda)}(X)   
+     \right)\,.\end{align}
+</math>
+
+==== Stage one: no-shift process ====
+
+For <math>\lambda = 0,1,\dots, M-1</math> set <math>s_\lambda=0</math>. Usually ''M=5'' is chosen for polynomials of moderate degrees up to ''n''&nbsp;=&nbsp;50. This stage is not necessary from theoretical considerations alone, but is useful in practice. It emphasizes  in the ''H'' polynomials the cofactor(s) (of the linear factor) of the smallest root(s).
+
+==== Stage two: fixed-shift process ====
+
+The shift for this stage is determined as some point close to the smallest root of the polynomial. It is quasi-randomly located on the circle with the inner root radius, which in turn is estimated as the positive solution of the equation
+<math display="block">
+R^n+|a_{n-1}|\,R^{n-1}+\dots+|a_{1}|\,R=|a_0|\,.
+</math>
+Since the left side is a [[convex function]] and increases monotonically from zero to infinity, this equation is easy to solve, for instance by [[Newton's method]].
+
+Now choose <math>s=R\cdot \exp(i\,\phi_\text{random})</math> on the circle of this radius. The sequence of polynomials <math>H^{(\lambda+1)}(z)</math>, <math>\lambda=M,M+1,\dots,L-1</math>, is generated with the fixed shift value <math>s_\lambda = s</math>. This creates an asymmetry relative to the previous stage which increases the chance that the ''H'' polynomial moves towards the cofactor of a single root.
+During this iteration, the current approximation for the root 
+
+<math display="block">t_\lambda=s-\frac{P(s)}{\bar H^{(\lambda)}(s)}</math>
+is traced. The second stage is terminated as successful if the conditions 
+<math display="block">
+  |t_{\lambda+1}-t_\lambda|<\tfrac12\,|t_\lambda|
+</math> and <math display="block">
+  |t_\lambda-t_{\lambda-1}|<\tfrac12\,|t_{\lambda-1}|
+</math>
+are simultaneously met. This limits the relative step size of the iteration, ensuring that the approximation sequence stays in the range of the smaller roots. If there was no success after some number of iterations, a different random point on the circle is tried. Typically one uses a number of 9  iterations for polynomials of moderate degree, with a doubling strategy for the case of multiple failures.
+
+==== Stage three: variable-shift process ====
+The <math>H^{(\lambda+1)}(X)</math> polynomials are now generated using the variable shifts <math>s_{\lambda},\quad\lambda=L,L+1,\dots</math> which are generated by 
+<math display="block">s_L = t_L = s- \frac{P(s)}{\bar H^{(L)}(s)}</math>
+being the last root estimate of the second stage and
+<math display="block">s_{\lambda+1}=s_\lambda- \frac{P(s_\lambda)}{\bar H^{(\lambda+1)}(s_\lambda)}, \quad \lambda=L,L+1,\dots,</math>
+where <math>\bar H^{(\lambda+1)}(z)</math> is the normalized ''H'' polynomial, that is <math>H^{(\lambda)}(z)</math> divided by its leading coefficient.
+
+If the step size in stage three does not fall fast enough to zero, then stage two is restarted using a different random point. If this does not succeed after a small number of restarts, the number of steps in stage two is doubled.
+
+==== Convergence ====
+It can be shown that, provided ''L'' is chosen sufficiently large, ''s''<sub>λ</sub> always converges to a root of ''P''.
+
+The algorithm converges for any distribution of roots, but may fail to find all roots of the polynomial. Furthermore, the convergence is slightly faster than the [[Rate of convergence|quadratic convergence]] of the Newton–Raphson method, however, it uses one-and-half as many operations per step, two polynomial evaluations for Newton vs. three polynomial evaluations in the third stage.
+
+==What gives the algorithm its power?==
+Compare with the [[Newton–Raphson iteration]]
+<math display="block">z_{i+1}=z_i - \frac{P(z_i)}{P^{\prime}(z_i)}.</math>
+
+The iteration uses the given ''P'' and <math>\scriptstyle P^{\prime}</math>. In contrast the third-stage of Jenkins–Traub
+<math display="block">
+s_{\lambda+1}
+  =s_\lambda- \frac{P(s_\lambda)}{\bar H^{\lambda+1}(s_\lambda)}
+  =s_\lambda-\frac{W^\lambda(s_\lambda)}{(W^\lambda)'(s_\lambda)}
+</math>
+
+is precisely a Newton–Raphson iteration performed on certain [[rational functions]]. More precisely, Newton–Raphson is being performed on a sequence of rational functions
+<math display="block">W^\lambda(z)=\frac{P(z)}{H^\lambda(z)}.</math>
+
+For <math>\lambda</math> sufficiently large,
+<math display="block">\frac{P(z)}{\bar H^{\lambda}(z)}=W^\lambda(z)\,LC(H^{\lambda})</math>
+is as close as desired to a first degree polynomial
+<math display="block">z-\alpha_1, \,</math>
+where <math>\alpha_1</math> is one of the zeros of <math>P</math>. Even though Stage 3 is precisely a Newton–Raphson iteration, differentiation is not performed.
+
+=== Analysis of the ''H'' polynomials ===
+Let <math>\alpha_1,\dots,\alpha_n</math> be the roots of ''P''(''X''). The so-called Lagrange factors of ''P(X)'' are the cofactors of these roots,
+<math display="block">P_m(X)=\frac{P(X)-P(\alpha_m)}{X-\alpha_m}.</math>
+If all roots are different, then the Lagrange factors form a basis of the space of polynomials of degree at most ''n''&nbsp;&minus;&nbsp;1. By analysis of the recursion procedure one finds that the ''H'' polynomials have the coordinate representation
+<math display="block">
+H^{(\lambda)}(X)
+  =\sum_{m=1}^n
+    \left[
+      \prod_{\kappa=0}^{\lambda-1}(\alpha_m-s_\kappa)
+    \right]^{-1}\,P_m(X)\ .
+</math>
+Each Lagrange factor has leading coefficient 1, so that the leading coefficient of the H polynomials is the sum of the coefficients. The normalized H polynomials are thus
+<math display="block">
+\bar H^{(\lambda)}(X)
+  =\frac{\sum_{m=1}^n
+    \left[
+      \prod_{\kappa=0}^{\lambda-1}(\alpha_m-s_\kappa)
+    \right]^{-1}\,P_m(X)
+    }{
+    \sum_{m=1}^n
+    \left[
+      \prod_{\kappa=0}^{\lambda-1}(\alpha_m-s_\kappa)
+    \right]^{-1}
+  }
+= \frac{P_1(X)+\sum_{m=2}^n
+    \left[
+      \prod_{\kappa=0}^{\lambda-1}\frac{\alpha_1-s_\kappa}{\alpha_m-s_\kappa}
+    \right]\,P_m(X)
+    }{
+    1+\sum_{m=1}^n
+    \left[
+      \prod_{\kappa=0}^{\lambda-1}\frac{\alpha_1-s_\kappa}{\alpha_m-s_\kappa}
+    \right]
+  }\ .
+</math>
+
+=== Convergence orders ===
+If the condition <math>|\alpha_1-s_\kappa|<\min{}_{m=2,3,\dots,n}|\alpha_m-s_\kappa|</math> holds for almost all iterates, the normalized H polynomials will converge at least geometrically towards <math>P_1(X)</math>.
+
+Under the condition that 
+<math display="block">|\alpha_1|<|\alpha_2|=\min{}_{m=2,3,\dots,n}|\alpha_m|</math>
+one gets the asymptotic estimates for 
+*stage 1: <math display="block">
+  H^{(\lambda)}(X)
+  =P_1(X)+O\left(\left|\frac{\alpha_1}{\alpha_2}\right|^\lambda\right).
+</math>
+*for stage 2, if ''s'' is close enough to <math>\alpha_1</math>: <math display="block">
+  H^{(\lambda)}(X)
+  = P_1(X)
+    +O\left(
+      \left|\frac{\alpha_1}{\alpha_2}\right|^M
+        \cdot
+      \left|\frac{\alpha_1-s}{\alpha_2-s}\right|^{\lambda-M}\right)
+</math> and <math display="block">
+  s-\frac{P(s)}{\bar H^{(\lambda)}(s)}
+  = \alpha_1+O\left(\ldots\cdot|\alpha_1-s|\right).</math>
+*and for stage 3: <math display="block">
+  H^{(\lambda)}(X)
+  =P_1(X)
+    +O\left(\prod_{\kappa=0}^{\lambda-1}
+      \left|\frac{\alpha_1-s_\kappa}{\alpha_2-s_\kappa}\right|
+     \right)
+</math> and <math display="block">
+  s_{\lambda+1}=
+  s_\lambda-\frac{P(s)}{\bar H^{(\lambda+1)}(s_\lambda)}
+    =\alpha_1+O\left(\prod_{\kappa=0}^{\lambda-1}
+      \left|\frac{\alpha_1-s_\kappa}{\alpha_2-s_\kappa}\right|
+        \cdot
+      \frac{|\alpha_1-s_\lambda|^2}{|\alpha_2-s_\lambda|}
+    \right)
+</math> giving rise to a higher than quadratic convergence order of <math>\phi^2=1+\phi\approx 2.618</math>, where <math>\phi=\tfrac12(1+\sqrt5)</math> is the [[golden ratio]].
+
+=== Interpretation as inverse power iteration ===
+All stages of the Jenkins–Traub complex algorithm may be represented as the linear algebra problem of determining the eigenvalues of a special matrix. This matrix is the coordinate representation of a linear map in the ''n''-dimensional space of polynomials of degree ''n''&nbsp;&minus;&nbsp;1 or less. The principal idea of this map is to interpret the factorization
+<math display="block">P(X)=(X-\alpha_1)\cdot P_1(X)</math>
+with a root <math>\alpha_1\in\C</math> and <math>P_1(X) = P(X) / (X-\alpha_1)</math> the remaining factor of degree ''n''&nbsp;&minus;&nbsp;1 as the eigenvector equation for the multiplication with the variable ''X'', followed by remainder computation with divisor ''P''(''X''), 
+<math display="block">M_X(H) = (X\cdot H(X)) \bmod P(X)\,.</math>
+This maps polynomials of degree at most ''n''&nbsp;&minus;&nbsp;1 to polynomials of degree at most ''n''&nbsp;&minus;&nbsp;1. The eigenvalues of this map are the roots of ''P''(''X''), since the eigenvector equation reads
+<math display="block">0 = (M_X-\alpha\cdot id)(H)=((X-\alpha)\cdot H) \bmod P\,,</math>
+which implies that <math>(X-\alpha)\cdot H=C\cdot P(X)</math>, that is, <math>(X-\alpha)</math> is a linear factor of ''P''(''X''). In the [[monomial basis]] the linear map <math>M_X</math> is represented by a [[companion matrix]] of the polynomial ''P'', as
+<math display="block"> M_X(H) = \sum_{m=0}^{n-1}H_mX^{m+1}-H_{n-1}\left(X^n+\sum_{m=0}^{n-1}a_mX^m\right) = \sum_{m=1}^{n-1}(H_{m-1}-a_{m}H_{n-1})X^m-a_0H_{n-1}\,,</math>
+the resulting [[transformation matrix]] is
+<math display="block">A=\begin{pmatrix}
+0 & 0 & \dots & 0 & -a_0 \\
+1 & 0 & \dots & 0 & -a_1 \\
+0 & 1 & \dots & 0 & -a_2 \\
+\vdots & \vdots & \ddots & \vdots & \vdots \\
+0 & 0 & \dots & 1 & -a_{n-1}
+\end{pmatrix}\,.</math>
+To this matrix the [[inverse power iteration]] is applied in the three variants of no shift, constant shift and generalized Rayleigh shift in the three stages of the algorithm. It is more efficient to perform the linear algebra operations in polynomial arithmetic and not by matrix operations, however, the properties of the inverse power iteration remain the same.
+
+==Real coefficients==
+The Jenkins–Traub algorithm described earlier works for polynomials with complex coefficients. The same authors also created a three-stage algorithm for polynomials with real coefficients. See Jenkins and Traub [https://www.jstor.org/stable/2949376 A Three-Stage Algorithm for Real Polynomials Using Quadratic Iteration].<ref>Jenkins, M. A. and Traub, J. F. (1970), [https://www.jstor.org/stable/2949376 A Three-Stage Algorithm for Real Polynomials Using Quadratic Iteration], SIAM J. Numer. Anal., 7(4), 545–566.</ref> The algorithm finds either a linear or quadratic factor working completely in real arithmetic. If the complex and real algorithms are applied to the same real polynomial, the real algorithm is about four times as fast. The real algorithm always converges and the rate of convergence is greater than second order.
+
+==A connection with the shifted QR algorithm==
+There is a surprising connection with the shifted [[QR algorithm]] for computing matrix eigenvalues. See Dekker and Traub [http://linkinghub.elsevier.com/retrieve/pii/0024379571900358 The shifted QR algorithm for Hermitian matrices].<ref>Dekker, T. J. and Traub, J. F. (1971), [http://linkinghub.elsevier.com/retrieve/pii/0024379571900358 The shifted QR algorithm for Hermitian matrices], Lin. Algebra Appl., 4(2), 137–154.</ref> Again the shifts may be viewed as Newton-Raphson iteration on a sequence of rational functions converging to a first degree polynomial.
+
+==Software and testing==
+The software for the Jenkins–Traub algorithm was published as Jenkins and Traub [http://portal.acm.org/citation.cfm?id=361262&coll=portal&dl=ACM Algorithm 419: Zeros of a Complex Polynomial].<ref>Jenkins, M. A. and Traub, J. F. (1972), [http://portal.acm.org/citation.cfm?id=361262&coll=portal&dl=ACM Algorithm 419: Zeros of a Complex Polynomial], Comm. ACM, 15, 97–99.</ref> The software for the real algorithm was published as Jenkins [http://portal.acm.org/citation.cfm?id=355643&coll=ACM&dl=ACM Algorithm 493: Zeros of a Real Polynomial].<ref>Jenkins, M. A. (1975), [http://portal.acm.org/citation.cfm?id=355643&coll=ACM&dl=ACM Algorithm 493: Zeros of a Real Polynomial], ACM TOMS, 1, 178–189.</ref>
+
+The methods have been extensively tested by many people.{{Who|date=December 2021}} As predicted they enjoy faster than quadratic convergence for all distributions of zeros.
+
+However, there are polynomials which can cause loss of precision<ref>{{Cite web|date=8 August 2005|title=William Kahan Oral history interview by Thomas Haigh|url=http://history.siam.org/oralhistories/kahan.htm|access-date=2021-12-03|website=The History of Numerical Analysis and Scientific Computing|publication-place=Philadelphia, PA}}</ref> as illustrated by the following example. The polynomial has all its zeros lying on two half-circles of different radii. [[James H. Wilkinson|Wilkinson]] recommends that it is desirable for stable deflation that smaller zeros be computed first. The second-stage shifts are chosen so that the zeros on the smaller half circle are found first. After deflation the polynomial with the zeros on the half circle is known to be ill-conditioned if the degree is large; see Wilkinson,<ref>Wilkinson, J. H. (1963), Rounding Errors in Algebraic Processes, Prentice Hall, Englewood Cliffs, N.J.</ref> p.&nbsp;64. The original polynomial was of degree 60 and suffered severe deflation instability.
+
+==References==
+{{reflist}}
+
+==External links==
+*[http://www.hvks.com/Numerical/winsolve.html A free downloadable Windows application using the Jenkins–Traub Method for polynomials with real and complex coefficients]
+*[https://github.com/sweeneychris/RpolyPlusPlus RPoly++] An SSE-Optimized C++ implementation of the RPOLY algorithm.
+
+{{Root-finding algorithms}}
+
+{{DEFAULTSORT:Jenkins-Traub Algorithm}}
+[[Category:Numerical analysis]]
+[[Category:Polynomial factorization algorithms]]

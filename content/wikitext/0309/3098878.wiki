@@ -1,0 +1,114 @@
+<!-- wikipedia: en
+     page: 3098878
+     title: Blum–Goldwasser cryptosystem
+     revision: 1163480618
+     timestamp: 2023-07-05T04:08:41Z
+     history: https://en.wikipedia.org/w/index.php?curid=3098878&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1163480618 -->
+{{Short description|Asymmetric key encryption algorithm}}
+The '''Blum–Goldwasser (BG) cryptosystem''' is an [[asymmetric key encryption algorithm]] proposed by [[Manuel Blum]] and [[Shafi Goldwasser]] in 1984.  Blum–Goldwasser is a [[probabilistic encryption|probabilistic]], [[semantic security|semantically secure]] cryptosystem with a constant-size [[ciphertext expansion]].  The encryption algorithm implements an XOR-based [[stream cipher]] using the [[Blum-Blum-Shub]] (BBS) pseudo-random number generator to generate the [[keystream]].  Decryption is accomplished by manipulating the final state of the BBS generator using the [[private key]], in order to find the initial seed and reconstruct the keystream.
+
+The BG cryptosystem is [[semantic security|semantically secure]] based on the assumed intractability of [[integer factorization]]; specifically, factoring a composite value <math>N = pq</math> where <math>p, q</math> are large [[prime number|primes]]. BG has multiple advantages over earlier probabilistic encryption schemes such as the [[Goldwasser–Micali cryptosystem]].  First, its semantic security reduces solely to integer factorization, without requiring any additional assumptions (e.g., hardness of the [[quadratic residuosity problem]] or the [[RSA problem]]).  Secondly, BG is efficient in terms of storage, inducing a constant-size [[ciphertext expansion]] regardless of message length. BG is also relatively efficient in terms of computation, and fares well even in comparison with cryptosystems such as RSA (depending on message length and exponent choices).  However, BG is highly vulnerable to adaptive chosen ciphertext attacks (see below).
+
+Because encryption is performed using a probabilistic algorithm, a given plaintext may produce very different ciphertexts each time it is encrypted.  This has significant advantages, as it prevents an adversary from recognizing intercepted messages by comparing them to a dictionary of known ciphertexts.
+
+==Operation==
+
+The Blum–Goldwasser cryptosystem consists of three algorithms: a probabilistic key generation algorithm which produces a public and a private key, a [[probabilistic encryption]] algorithm, and a deterministic decryption algorithm.
+
+===Key generation===
+The public and private keys are generated as follows:
+# Choose two large distinct prime numbers <math>p</math> and <math>q</math> such that <math>p \equiv 3 \bmod{4}</math> and <math>q \equiv 3 \bmod{4}</math>. 
+# Compute <math>n = pq</math>.<ref name="rfc4086">{{IETF RFC|4086}} section "6.2.2.  The Blum Blum Shub Sequence Generator"</ref>
+Then <math>n</math> is the public key and the pair <math>(p,q)</math> is the private key.
+
+===Encryption===
+A message <math>M</math> is encrypted with the public key <math>n</math> as follows:
+# Compute the block size in bits, <math>h = \lfloor log_2(log_2(n)) \rfloor</math>.
+# Convert <math>M</math> to a sequence of <math>t</math> blocks <math>m_1, m_2, \dots, m_t</math>, where each block is <math>h</math> bits in length.
+# Select a random integer <math>r < n</math>.
+# Compute <math>x_0 = r^2 \bmod{n}</math>.
+# For <math>i</math> from 1 to <math>t</math>
+## Compute <math>x_i = x_{i-1}^2 \bmod{n}</math>.
+## Compute <math>p_i =</math> the least significant <math>h</math> bits of <math>x_i</math>.
+## Compute <math>c_i = m_i \oplus p_i</math>.
+# Finally, compute <math>x_{t+1} = x_t^2 \bmod{n}</math>.
+The encryption of the message <math>M</math> is then all the <math>c_i</math> values plus the final <math>x_{t+1}</math> value: <math>(c_1, c_2, \dots, c_t, x_{t+1})</math>.
+
+===Decryption===
+An encrypted message <math>(c_1, c_2, \dots, c_t, x)</math> can be decrypted with the private key <math>(p,q)</math> as follows:
+# Compute <math>d_p = ((p+1)/4)^{t+1} \bmod{(p-1)}</math>.
+# Compute <math>d_q = ((q+1)/4)^{t+1} \bmod{(q-1)}</math>.
+# Compute <math>u_p = x^{d_p} \bmod{p}</math>.
+# Compute <math>u_q = x^{d_q} \bmod{q}</math>.
+# Using the [[Extended Euclidean Algorithm]], compute <math>r_p</math> and <math>r_q</math> such that <math>r_p p + r_q q = 1</math>.
+# Compute <math>x_0 = u_q r_p p + u_p r_q q \bmod{n}</math>. This will be the same value which was used in encryption (see proof below). <math>x_0</math> can then used to compute the same sequence of <math>x_i</math> values as were used in encryption to decrypt the message, as follows.
+# For <math>i</math> from 1 to <math>t</math>
+## Compute <math>x_i = x_{i-1}^2 \bmod{n}</math>.
+## Compute <math>p_i =</math> the least significant <math>h</math> bits of <math>x_i</math>.
+## Compute <math>m_i = c_i \oplus p_i</math>.
+# Finally, reassemble the values <math>(m_1, m_2, \dots, m_t)</math> into the message <math>M</math>.
+
+==Example==
+Let <math>p = 19</math> and <math>q = 7</math>. Then <math>n = 133</math> and <math>h = \lfloor log_2(log_2(133)) \rfloor = 3</math>. 
+To encrypt the six-bit message <math>101001_2</math>, we break it into two 3-bit blocks <math>m_1 = 101_2, m_2 = 001_2</math>, so <math>t = 2</math>. We select a random <math>r = 36</math> and compute <math>x_0 = 36^2 \bmod 133 = 99</math>. Now we compute the <math>c_i</math> values as follows:
+: <math>\begin{align}
+x_1 &= 99^{2} \bmod 133 = 92 = 1011100_2 ; \quad p_1 = 100_2 ; \quad c_1 = 101_2 \oplus 100_2 = 001_2 \\
+x_2 &= 92^{2} \bmod 133 = 85 = 1010101_2 ; \quad p_2 = 101_2 ; \quad c_2 = 001_2 \oplus 101_2 = 100_2 \\
+x_3 &= 85^{2} \bmod 133 = 43
+\end{align}</math>
+
+So the encryption is <math>(c_1 = 001_2, c_2 = 100_2, x_3 = 43)</math>.
+
+To decrypt, we compute
+: <math>\begin{align}
+ d_p &= 5^3 \bmod 18 = 17 \\
+ d_q &= 2^3 \bmod 6 = 2 \\
+ u_p &= 43^{17} \bmod 19 = 4 \\
+ u_q &= 43^{2} \bmod 7 = 1 \\
+ (r_p, r_q) &= (3, -8) \text{ since } 3 \cdot 19 + (-8) \cdot 7 = 1 \\
+ x_0 &= 1 \cdot 3 \cdot 19 + 4 \cdot (-8) \cdot 7 \bmod 133 = 99 \\
+\end{align}</math>
+
+It can be seen that <math>x_0</math> has the same value as in the encryption algorithm. Decryption therefore proceeds the same as encryption:
+: <math>\begin{align}
+x_1 &= 99^{2} \bmod 133 = 92 = 1011100_2 ; \quad p_1 = 100_2 ; \quad m_1 = 001_2 \oplus 100_2 = 101_2 \\
+x_2 &= 92^{2} \bmod 133 = 85 = 1010101_2 ; \quad p_2 = 101_2 ; \quad m_2 = 100_2 \oplus 101_2 = 001_2
+\end{align}</math>
+
+==Proof of correctness==
+We must show that the value <math>x_0</math> computed in step 6 of the decryption algorithm is equal to the value computed in step 4 of the encryption algorithm.
+
+In the encryption algorithm, by construction <math>x_0</math> is a quadratic residue modulo <math>n</math>. It is therefore also a quadratic residue modulo <math>p</math>, as are all the other <math>x_i</math> values obtained from it by squaring. Therefore, by [[Euler's criterion]], <math>x_i^{(p-1)/2} \equiv 1 \mod{p}</math>. Then
+:<math>x_{t+1}^{(p+1)/4} \equiv (x_t^2)^{(p+1)/4)} \equiv x_t^{(p+1)/2} \equiv x_t(x_t^{(p-1)/2}) \equiv x_t \mod{p}</math>
+Similarly, 
+: <math>x_t^{(p+1)/4} \equiv x_{t-1} \mod{p}</math> 
+Raising the first equation to the power <math>(p+1)/4</math> we get
+: <math>x_{t+1}^{((p+1)/4)^2} \equiv x_t^{(p+1)/4} \equiv x_{t-1} \mod{p}</math>
+Repeating this <math>t</math> times, we have
+: <math>x_{t+1}^{(p+1)/4)^{t+1}} \equiv x_0 \mod{p}</math>
+: <math>x_{t+1}^{d_p} \equiv u_p \equiv x_0 \mod{p}</math>
+And by a similar argument we can show that <math>x_{t+1}^{d_q} \equiv u_q \equiv x_0 \mod{q}</math>.
+
+Finally, since <math>r_p p + r_q q = 1</math>, we can multiply by <math>x_0</math> and get
+:<math>x_0 r_p p + x_0 r_q q = x_0</math>
+from which <math>u_q r_p p + u_p r_q q \equiv x_0</math>, modulo both <math>p</math> and <math>q</math>, and therefore <math>u_q r_p p + u_p r_q q \equiv x_0 \mod{n}</math>.
+
+== Security and efficiency ==
+
+The Blum–Goldwasser scheme is [[semantically-secure]] based on the hardness of predicting the keystream bits given only the final BBS state <math>y</math> and the public key <math>N</math>.  However, ciphertexts of the form <math>{\vec c}, y</math> are vulnerable to an [[adaptive chosen ciphertext attack]] in which the adversary requests the decryption <math>m^{\prime}</math> of a chosen ciphertext <math>{\vec a}, y</math>.  The decryption <math>m</math> of the original ciphertext can be computed as <math>{\vec a} \oplus m^{\prime} \oplus {\vec c}</math>.
+
+Depending on plaintext size, BG may be more or less computationally expensive than RSA.  Because most RSA deployments use a fixed encryption exponent optimized to minimize encryption time, RSA encryption will typically outperform BG for all but the shortest messages.  However, as the RSA decryption exponent is randomly distributed, modular exponentiation may require a comparable number of squarings/multiplications to BG decryption for a ciphertext of the same length.  BG has the advantage of scaling more efficiently to longer ciphertexts, where RSA requires multiple separate encryptions.  In these cases, BG may be significantly more efficient.
+
+== References ==
+{{reflist}}
+#M. Blum, S. Goldwasser, "An Efficient Probabilistic Public Key Encryption Scheme which Hides All Partial Information", Proceedings of ''Advances in Cryptology – CRYPTO '84'', pp.&nbsp;289–299, Springer Verlag, 1985.
+#Menezes, Alfred; van Oorschot, Paul C.; and Vanstone, Scott A. ''Handbook of Applied Cryptography''. CRC Press, October 1996. {{ISBN|0-8493-8523-7}}
+
+==External links==
+* [http://www.cacr.math.uwaterloo.ca/hac/ Menezes, Oorschot, Vanstone, Scott: ''Handbook of Applied Cryptography'' (free PDF downloads), see Chapter 8]
+{{Cryptography navbox | public-key}}
+
+{{DEFAULTSORT:Blum-Goldwasser cryptosystem}}
+[[Category:Public-key encryption schemes]]

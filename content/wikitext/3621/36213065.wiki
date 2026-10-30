@@ -1,0 +1,173 @@
+<!-- wikipedia: en
+     page: 36213065
+     title: Regression-kriging
+     revision: 1370121354
+     timestamp: 2026-08-19T06:26:32Z
+     history: https://en.wikipedia.org/w/index.php?curid=36213065&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1370121354 -->
+{{Short description|Spatial prediction technique}}
+In [[applied statistics]] and [[geostatistics]], '''regression-kriging''' ('''RK''') is a spatial prediction technique that combines a [[regression analysis|regression]] of the dependent variable on auxiliary variables (such as parameters derived from digital elevation modelling, [[remote sensing]]/imagery, and thematic maps) with [[interpolation]] ([[kriging]]) of the regression residuals. It is mathematically equivalent to the interpolation method variously called ''universal kriging'' and ''kriging with external drift'', where auxiliary predictors are used directly to solve the kriging weights.<ref name="Pebesma2006IJGIS">{{cite journal|last=Pebesma|first=Edzer J|title=The Role of External Variables and GIS Databases in Geostatistical Analysis|journal=Transactions in GIS|date=1 July 2006|volume=10|issue=4|pages=615–632|doi=10.1111/j.1467-9671.2006.01015.x|bibcode=2006TrGIS..10..615P |s2cid=22146107 |url=http://ifgi.uni-muenster.de/~epebe_01/tgis_pebesma.pdf}}</ref>
+
+== BLUP for spatial data ==
+
+[[File:The universal model of spatial variation.jpg|thumb|400px|The universal model of spatial variation scheme.]]
+
+Regression-kriging is an implementation of the [[best linear unbiased prediction|best linear unbiased predictor (BLUP)]] for spatial data, i.e. the best linear interpolator assuming the [[universal model of spatial variation]]. Matheron (1969) proposed that a value of a target variable at some location can be modeled as a sum of the deterministic and stochastic components:<ref>{{cite book|last=Matheron|first=Georges|title=Le krigeage universel|year=1969|publisher=École nationale supérieure des mines de Paris|chapter=Part 1 of Cahiers du Centre de morphologie mathématique de Fontainebleau}}</ref>
+
+:<math>
+Z(\mathbf{s}) = m(\mathbf{s}) + \varepsilon '(\mathbf{s}) + \varepsilon ''
+</math>
+
+which he termed ''universal model of spatial variation''. Both [[deterministic system|deterministic]] and [[stochastic process|stochastic components]] of spatial variation can be modeled separately. By combining the two approaches, we obtain:
+
+:<math>
+\hat z(\mathbf{s}_0 ) = \hat m(\mathbf{s}_0 ) + \hat e(\mathbf{s}_0 )= \sum\limits_{k = 0}^p {\hat \beta _k \cdot q_k (\mathbf{s}_0 )} + \sum\limits_{i = 1}^n \lambda_i \cdot e(\mathbf{s}_i )
+</math>
+
+where <math>\hat m(\mathbf{s}_0)</math> is the fitted deterministic part, <math>\hat e(\mathbf{s}_0)</math> is the interpolated residual, <math>\hat \beta _k</math> are estimated deterministic model coefficients (<math>\hat \beta _0</math> is the estimated intercept), <math>\lambda_i</math> are kriging weights determined by the spatial dependence structure of the residual and where <math>e(\mathbf{s}_i)</math> is the residual at location <math>{\mathbf{s}}_i</math>. The regression coefficients <math>\hat \beta _k</math> can be estimated from the sample by some fitting method, e.g. [[ordinary least squares]] (OLS) or, optimally, using [[generalized least squares]] (GLS):<ref name=Cressie2012Wiley>{{cite book|last=Cressie|first=Noel|title=Statistics for spatio-temporal data|year=2012|publisher=Wiley|location=Hoboken, N.J.|isbn=978-0-471-69274-4}}</ref>
+
+:<math>
+\mathbf{\hat \beta }_\mathtt{GLS} = \left( \mathbf{q}^\mathbf{T} \cdot
+\mathbf{C}^{ - \mathbf{1}} \cdot \mathbf{q} \right)^{ - \mathbf{1}} \cdot
+\mathbf{q}^\mathbf{T} \cdot \mathbf{C}^{ - \mathbf{1}} \cdot \mathbf{z}
+</math>
+
+where <math>\mathbf{\hat \beta}_\mathtt{GLS}</math> is the vector of estimated regression coefficients, <math>\mathbf{C}</math> is the covariance matrix of the residuals, <math>{\mathbf{q}}</math> is a matrix of predictors at the sampling locations and <math>\mathbf{z}</math> is the vector of measured values of the target variable. The GLS estimation of regression coefficients is, in fact, a special case of the geographically weighted regression. In the case, the weights are determined objectively to account for the spatial auto-correlation between the residuals.
+
+Once the deterministic part of variation has been estimated (regression-part), the residual can be interpolated with kriging and added to the estimated trend. The estimation of the residuals is an iterative process: first the deterministic part of variation is estimated using OLS, then the [[covariance function]] of the residuals is used to obtain the GLS coefficients. Next, these are used to re-compute the residuals, from which an updated covariance function is computed, and so on. Although this is by many geostatisticians recommended as the proper procedure, Kitanidis (1994) showed that use of the covariance function derived from the OLS residuals (i.e. a single iteration) is often satisfactory, because it is not different enough from the function derived after several iterations; i.e. it does not affect much the final predictions. Minasny and McBratney (2007) report similar results—it seems that using more higher quality data is more important than to use more sophisticated statistical methods.<ref name="MinasnyMcBratney2007Geoderma">{{cite journal|last=Minasny|first=Budiman|author2-link=Alex McBratney|author2=McBratney, Alex B. |title=Spatial prediction of soil properties using EBLUP with the Matérn covariance function|journal=Geoderma|date=31 July 2007|volume=140|issue=4|pages=324–336|doi=10.1016/j.geoderma.2007.04.028|bibcode=2007Geode.140..324M }}</ref>
+
+In matrix notation, regression-kriging is commonly written as:<ref name="Christensen2001Springer">{{cite book|last=Christensen|first=Ronald|title=Advanced linear modeling: multivariate, time series, and spatial data; nonparametric regression and response surface maximization|year=2001|publisher=Springer|location=New York, NY [u.a.]|isbn=978-0-387-95296-3|edition=2.}}</ref>
+
+:<math>
+\hat z_\mathtt{RK}(\mathbf{s}_0 ) = \mathbf{q}_\mathbf{0}^\mathbf{T} \cdot \mathbf{\hat \beta}_\mathtt{GLS} + \mathbf{\lambda }_\mathbf{0}^\mathbf{T} \cdot (\mathbf{z}
+- \mathbf{q} \cdot \mathbf{\hat \beta }_\mathtt{GLS} )
+</math>
+
+where <math>\hat z({\mathbf{s}}_0 )</math> is the predicted value at location <math>{\mathbf{s}}_0</math>, <math>{\mathbf{q}}_{\mathbf{0}}</math> is the vector of <math>p+1</math> predictors and <math>\mathbf{\lambda}_{\mathbf{0}}</math> is the vector of <math>n</math> kriging weights used to interpolate the residuals. The RK model is considered to be the ''Best Linear Predictor of spatial data''.<ref name="Christensen2001Springer" /><ref name=Goldberger1962>{{cite journal|last=Goldberger|first=A.S.|title=Best Linear Unbiased Prediction in the Generalized Linear Regression Model|journal=Journal of the American Statistical Association|year=1962|volume=57|issue=298|pages=369–375|jstor=2281645|doi=10.1080/01621459.1962.10480665}}</ref> It has a prediction variance that reflects the position of new locations (extrapolation) in both geographical and feature space:
+
+:<math>
+\hat \sigma_\mathtt{RK}^2 (\mathbf{s}_0)
+= (C_0  + C_1 ) - \mathbf{c}_\mathbf{0}^\mathbf{T} \cdot \mathbf{C}^{ - \mathbf{1}}
+\cdot \mathbf{c}_\mathbf{0} + \left( \mathbf{q}_\mathbf{0}
+- \mathbf{q}^\mathbf{T} \cdot \mathbf{C}^{ - \mathbf{1}} \cdot
+\mathbf{c}_\mathbf{0} \right)^\mathbf{T} \cdot \left( \mathbf{q}^\mathbf{T}
+\cdot \mathbf{C}^{ - \mathbf{1}} \cdot \mathbf{q} \right)^\mathbf{ - 1} \cdot \left(\mathbf{q}_\mathbf{0} - \mathbf{q}^\mathbf{T} \cdot
+\mathbf{C}^{ - \mathbf{1}} \cdot \mathbf{c}_\mathbf{0} \right)
+</math>
+
+where <math>C_0 + C_1</math> is the sill variation and <math>{\mathbf{c}}_0</math> is the vector of covariances of residuals at the unvisited location.
+
+[[File:Decision tree for selecting a suitable spatial prediction model.jpg|thumb|400px|Decision tree for selecting a suitable spatial prediction model.]]
+
+Many (geo)statisticians believe that there is only one Best Linear Unbiased Prediction model for spatial data (e.g. regression-kriging), all other techniques such as ordinary kriging, environmental correlation, averaging of values per polygons or inverse distance interpolation can be seen as its special cases. If the residuals show no spatial auto-correlation (pure nugget effect), the regression-kriging converges to pure multiple linear regression, because the covariance matrix (<math>\mathbf{C}</math>) becomes an [[identity matrix]]. Likewise, if the target variable shows no correlation with the auxiliary predictors, the regression-kriging model reduces to ordinary kriging model because the deterministic part equals the (global) mean value. Hence, pure kriging and pure regression should be considered as only special cases of regression-kriging (see figure).
+
+== RK and UK/KED ==
+
+The geostatistical literature uses many different terms for what are essentially the same or at least very similar techniques. This confuses the users and distracts them from using the right technique for their mapping projects. In fact, both universal kriging, kriging with external drift, and regression-kriging are basically the same technique.
+
+Matheron (1969) originally termed the technique ''Le krigeage universel'', however, the technique was intended as a generalized case of kriging where the trend is modelled as a function of coordinates. Thus, many authors reserve the term ''universal kriging'' (UK) for the case when only the coordinates are used as predictors. If the deterministic part of variation (''drift'') is defined externally as a linear function of some auxiliary variables, rather than the coordinates, the term ''kriging with external drift'' (KED) is preferred (according to Hengl 2007, "About regression-kriging: From equations to case studies"). In the case of UK or KED, the predictions are made as with kriging, with the difference that the covariance matrix of residuals is extended with the auxiliary predictors. However, the drift and residuals can also be estimated separately and then summed. This procedure was suggested by Ahmed et al. (1987) and Odeh et al. (1995) later named it ''regression-kriging'', while Goovaerts (1997) uses the term ''kriging with a trend model'' to refer to a family of interpolators, and refers to RK as ''simple kriging with varying local means''. Minasny and McBratney (2007) simply call this technique Empirical Best Linear Unbiased Predictor i.e. ''E-BLUP''.<ref>{{cite journal|last=Ahmed|first=Shakeel|author2=De Marsily, Ghislain|title=Comparison of geostatistical methods for estimating transmissivity using data on transmissivity and specific capacity|journal=Water Resources Research|date=1 January 1987|volume=23|issue=9|page=1717|doi=10.1029/WR023i009p01717|bibcode=1987WRR....23.1717A }}</ref><ref name=Odeh1995>{{cite journal|last=Odeh|first=I.O.A.|author2=McBratney, A.B. |author3=Chittleborough, D.J. |title=Further results on prediction of soil properties from terrain attributes: heterotopic cokriging and regression-kriging|journal=Geoderma|date=31 July 1995|volume=67|issue=3–4|pages=215–226|doi=10.1016/0016-7061(95)00007-B|bibcode=1995Geode..67..215O }}</ref><ref name=Hengl2004Geoderma>{{cite journal|last=Hengl|first=Tomislav|author2=Heuvelink, Gerard B.M. |author3=Stein, Alfred |title=A generic framework for spatial prediction of soil variables based on regression-kriging|journal=Geoderma|date=30 April 2004|volume=120|issue=1–2|pages=75–93|doi=10.1016/j.geoderma.2003.08.018|bibcode=2004Geode.120...75H |url=http://www.itc.nl/library/Papers_2004/peer_jrnl/stein_gen.pdf}}</ref><ref name="MinasnyMcBratney2007Geoderma" />
+
+In the case of KED, predictions at new locations are made by:
+
+:<math>
+\hat{z}_\mathtt{KED} (\mathbf{s}_0 ) = \sum\limits_{i = 1}^n
+w_i^\mathtt{KED} (\mathbf{s}_0 ) \cdot z(\mathbf{s}_i )
+</math>
+
+for
+
+:<math>
+\sum\limits_{i = 1}^n w_i^\mathtt{KED} (\mathbf{s}_0 ) \cdot q_k (\mathbf{s}_i ) = q_k (\mathbf{s}_0 )
+</math>
+
+for <math>k = 1,\ldots,p</math> or in matrix notation:
+
+:<math>
+\hat z_\mathtt{KED} (\mathbf{s}_0 ) = \mathbf{\delta}_\mathbf{0}^\mathbf{T} \cdot \mathbf{z}
+</math>
+
+where <math>z</math> is the target variable, <math>q_k</math>'s are the predictor variables i.e. values at a new location <math>({\mathbf{s}}_0)</math>, <math>{\mathbf{\delta }}_{\mathbf{0}}</math> is the vector of KED weights (<math>w_i^{\mathtt{KED}}</math>), <math>p</math> is the number of predictors and <math>\mathbf{z}</math> is the vector of <math>n</math> observations at primary locations. The KED weights are solved using the extended matrices:
+
+:<math>
+\mathbf{\lambda }_\mathbf{0}^\mathtt{KED} = \left\{ w_1^\mathtt{KED} (\mathbf{s}_0 ), \ldots ,w_n^\mathtt{KED} (\mathbf{s}_0 ),\varphi_0 (\mathbf{s}_0 ), \ldots ,\varphi _p (\mathbf{s}_0 ) \right\}^\mathbf{T} = \mathbf{C}^{\mathtt{KED} -1} \cdot \mathbf{c}_\mathbf{0}^\mathtt{KED}
+</math>
+
+where <math>{\mathbf{\lambda }}_{\mathbf{0}}^{\mathtt{KED}}</math> is the vector of solved weights, <math>\varphi _p</math> are the Lagrange multipliers, <math>{\mathbf{C}}^{\mathtt{KED}}</math> is the extended covariance matrix of residuals and <math>{\mathbf{c}}_{\mathbf{0}}^{\mathtt{KED}}</math> is the extended vector of covariances at new location.
+
+In the case of KED, the extended covariance matrix of residuals looks like this (Webster and Oliver, 2007; p.&nbsp;183):<ref name=WebsterOliver2007>{{cite book|last=Webster|first=Richard|title=Geostatistics for environmental scientists|year=2007|publisher=Wiley|location=Chichester|isbn=978-0-470-02858-2|edition=2nd|author2=Oliver, Margaret A. }}</ref>
+
+:<math>
+\mathbf{C}^\mathtt{KED} = \left[
+\begin{array}{ccccccc}
+C(\mathbf{s}_1 , \mathbf{s}_1) & \cdots & C(\mathbf{s}_1, \mathbf{s}_n ) & 1 & q_1 (\mathbf{s}_1 ) & \cdots & q_p (\mathbf{s}_1 ) \\
+\vdots  &  &  \vdots & \vdots & \vdots &  & \vdots \\
+C(\mathbf{s}_n, \mathbf{s}_1 ) & \cdots  & C(\mathbf{s}_n ,\mathbf{s}_n ) & 1 & q_1 (\mathbf{s}_n ) &  \cdots  & q_p (\mathbf{s}_n ) \\
+1 &  \cdots  & 1 & 0 & 0 & \cdots & 0 \\
+q_1 (\mathbf{s}_1 ) & \cdots  & q_1 (\mathbf{s}_n ) & 0 & 0 & \cdots & 0 \\
+\vdots  &  &  \vdots & \vdots & \vdots &  & \vdots \\
+q_p (\mathbf{s}_1 ) & \cdots  & q_p (\mathbf{s}_n ) & 0 & 0 & \cdots  & 0 
+\end{array}
+\right]
+</math>
+
+and <math>\mathbf{c}_{\mathbf{0}}^{\mathtt{KED}}</math> like this:
+
+:<math>
+\mathbf{c}_\mathbf{0}^\mathtt{KED} = \left\{ C(\mathbf{s}_0, \mathbf{s}_1
+), \ldots , C(\mathbf{s}_0, \mathbf{s}_n ), q_0 (\mathbf{s}_0 ), q_1 (\mathbf{s}_0 ), \ldots ,q_p (\mathbf{s}_0 )
+\right\}^\mathbf{T};  q_0 (\mathbf{s}_0 ) = 1
+</math>
+
+Hence, KED looks exactly as ordinary kriging, except the covariance matrix/vector are extended with values of auxiliary predictors.
+
+Although the KED seems, at first glance, to be computationally more straightforward than RK, the parameters of the [[variogram]] for KED must also be estimated from regression residuals, thus requiring a separate regression modelling step. This regression should be GLS because of the likely spatial correlation between residuals. Note that many analyst use instead the OLS residuals, which may not be too different from the GLS residuals. However, they are not optimal if there is any spatial correlation, and indeed they may be quite different for clustered sample points or if the number of samples is relatively small (<math>\ll 200</math>).
+
+A limitation of KED is the instability of the extended matrix in the case that the covariate does not vary smoothly in space. RK has the advantage that it explicitly separates trend estimation from spatial prediction of residuals, allowing the use of arbitrarily-complex forms of regression, rather than the simple linear techniques that can be used with KED. In addition, it allows the separate interpretation of the two interpolated components. The emphasis on regression is important also because fitting of the deterministic part of variation (regression) is often more beneficial for the quality of final maps than fitting of the stochastic part (residuals).
+
+== Software to run regression-kriging ==
+
+[[File:A generic framework for spatial prediction of soil variables.png|thumb|400px|Example of a generic framework for spatial prediction of soil variables based on regression-kriging.<ref name="Hengl2004Geoderma" />]]
+
+Regression-kriging can be automated e.g. in [http://r-project.org R statistical computing] environment, by using gstat and/or geoR package. Typical inputs/outputs include:
+
+INPUTS:
+* Interpolation set (point map) — <math>z(\mathbf{s}_i)</math> <math>i=1,\ldots ,n</math> at primary locations;
+* Minimum and maximum expected values and measurement precision (<math>\Delta z</math>);
+* Continuous predictors (raster map) — <math>q(\mathbf{s})</math>; at new unvisited locations
+* Discrete predictors (polygon map);
+* Validation set (point map) — <math>z*(\mathbf{s}_j)</math> <math>j=1,\ldots ,l</math> (optional);
+* Lag spacing and limiting distance (required to fit the variogram);
+
+OUTPUTS:  	
+* Map of predictions and relative prediction error;
+* Best subset of predictors and correlation significance (adjusted R-square);
+* Variogram model parameters (e.g. <math>C_0</math>, <math>C_1</math>, <math>R</math>)
+* GLS drift model coefficients;
+* Accuracy of prediction at validation points: mean prediction error (MPE) and [[root mean square]] prediction error (RMSPE);
+
+== Application of regression-kriging ==
+
+Regression-kriging is used in various applied fields, from meteorology, climatology, soil mapping, geological mapping, species distribution modeling and similar. The only requirement for using regression-kriging versus e.g. ordinary kriging is that one or more covariate layers exist, and which are significantly correlated with the feature of interest. Some general applications of regression-kriging are:
+
+* Geostatistical mapping: Regression-kriging allows for use of hybrid geostatistical techniques to model e.g. spatial distribution of soil properties.
+* [[Downscaling]] of maps: Regression-kriging can be used a framework to downscale various existing gridded maps. In this case the covariate layers need to be available at better resolution (which corresponds to the sampling intensity) than the original point data.<ref name="Hengl2008CG">{{cite journal|last=Hengl|first=Tomislav|author2=Bajat, Branislav |author3=Blagojević, Dragan |author4= Reuter, Hannes I. |title=Geostatistical modeling of topography using auxiliary maps|journal=Computers & Geosciences|date=1 December 2008|volume=34|issue=12|pages=1886–1899|doi=10.1016/j.cageo.2008.01.005|bibcode=2008CG.....34.1886H |url=http://grafar.grf.bg.ac.rs//bitstream/id/3681/199.pdf}}</ref> 
+* [[Error propagation]]: Simulated maps generated by using a regression-kriging model can be used for scenario testing and for estimating propagated uncertainty.
+
+[[File:Simulations of zinc using regression-kriging model.png|thumb|none|Simulations of zinc concentrations derived using a regression-Kriging model. This model uses one continuous (distance to the river) and one categorical (flooding frequency) covariate. Code used to produce these maps is available [https://r-spatial.sourceforge.net/gallery/#fig07.R here].]]
+
+Regression-kriging-based algorithms play more and more important role in geostatistics because the number of possible covariates is increasing every day.<ref name="Pebesma2006IJGIS" /> For example, [[Digital Elevation Model|DEM]]s are now available from a number of sources. Detailed and accurate images of topography can now be ordered from remote sensing systems such as [[SPOT (satellite)|SPOT]] and [[Advanced Spaceborne Thermal Emission and Reflection Radiometer|ASTER]]; SPOT5 offers the High Resolution Stereoscopic (HRS) scanner, which can be used to produce DEMs at resolutions of up to 5 m.<ref>{{cite journal|last=Toutin|first=Thierry|title=Generation of DSMs from SPOT-5 in-track HRS and across-track HRG stereo data using spatiotriangulation and autocalibration|journal=ISPRS Journal of Photogrammetry and Remote Sensing|date=30 April 2006|volume=60|issue=3|pages=170–181|doi=10.1016/j.isprsjprs.2006.02.003|bibcode=2006JPRS...60..170T }}</ref> Finer differences in elevation can also be obtained with airborne laser-scanners. The cost of data is either free or dropping in price as technology advances. NASA recorded most of the world's topography in the [[Shuttle Radar Topographic Mission]] in 2000.<ref>{{cite journal|last=Rabus|first=Bernhard|author2=Eineder, Michael |author3=Roth, Achim |author4= Bamler, Richard |title=The shuttle radar topography mission—a new class of digital elevation models acquired by spaceborne radar|journal=ISPRS Journal of Photogrammetry and Remote Sensing|date=31 January 2003|volume=57|issue=4|pages=241–262|doi=10.1016/S0924-2716(02)00124-7|bibcode=2003JPRS...57..241R }}</ref> From summer of 2004, these data has been available (e.g. via [https://lpdaac.usgs.gov/get_data/data_pool USGS ftp]) for almost whole globe at resolution of about 90 m (for the North American continent at resolution of about 30 m). Likewise, [[MODIS]] multispectral images are freely available for download at resolutions of 250 m. A large free repository of Landsat images is also available for download via the [http://glcf.umiacs.umd.edu/ Global Land Cover Facility] {{Webarchive|url=https://web.archive.org/web/20120622210632/http://glcf.umiacs.umd.edu/ |date=2012-06-22 }} (GLCF).
+
+==References==
+<references />
+
+== Further reading ==
+* Chapter 2, ''Regression-kriging'', in Tomislav Hengl (2009), ''A Practical Guide to Geostatistical Mapping'', 291 p., {{ISBN|978-90-9024981-0}}. [http://spatial-analyst.net/book/system/files/Hengl_2009_GEOSTATe2c1w.pdf]
+* {{cite journal |author=Hengl T. |author2=Heuvelink G. B. M. |author3=Rossiter D. G. |year=2007 |title=About regression-kriging: from equations to case studies |journal=Computers & Geosciences |volume=33 |number=10 |pages=1301–1315 |doi=10.1016/j.cageo.2007.05.001|bibcode=2007CG.....33.1301H }}
+
+== External links ==
+* [http://gstat.org Gstat] package (implements KED)
+* [http://leg.ufpr.br/geoR/ GeoR] package (implements KED)
+
+[[Category:Interpolation]]
+[[Category:Geostatistics]]

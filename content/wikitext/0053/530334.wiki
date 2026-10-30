@@ -1,0 +1,109 @@
+<!-- wikipedia: en
+     page: 530334
+     title: XTEA
+     revision: 1341321528
+     timestamp: 2026-03-02T15:27:56Z
+     history: https://en.wikipedia.org/w/index.php?curid=530334&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1341321528 -->
+{{Short description|Block cipher}}
+{{use mdy dates|date=February 2023}}
+{{More footnotes|date=September 2015}}
+{{Infobox block cipher
+| name          = XTEA
+| image         = [[Image:XTEA InfoBox Diagram.svg|center|300px]]
+| caption       = Two Feistel rounds (one cycle) of XTEA
+| designers     = [[Roger Needham]], [[David Wheeler (computer scientist)|David Wheeler]]
+| publish date  = 1997
+| derived from  = [[Tiny Encryption Algorithm|TEA]]
+| derived to    = [[XXTEA|Corrected Block TEA]]
+| key size      = 128 bits
+| block size    = 64 bits
+| structure     = [[Feistel cipher]]
+| rounds        = variable; recommended 64 Feistel rounds (32 cycles)
+| cryptanalysis = A [[related-key attack|related-key]] rectangle attack on 36 rounds of XTEA (Lu, 2009){{vague|date=May 2015}}
+}}
+
+In [[cryptography]], '''XTEA''' ('''eXtended TEA''') is a [[block cipher]] designed to correct weaknesses in [[Tiny Encryption Algorithm|TEA]]. The [[cipher]]'s designers were [[David Wheeler (computer scientist)|David Wheeler]] and [[Roger Needham]] of the [[University of Cambridge Computer Laboratory|Cambridge Computer Laboratory]], and the algorithm was presented in an unpublished technical report in 1997 (Needham and Wheeler, 1997). It is not subject to any [[patent]]s.<ref name=wheeler>{{Cite tech report |author1=Roger M. Needham |author2=David J. Wheeler |date=October 1997 |title=Tea extensions |url=http://www.cix.co.uk/~klockstone/xtea.pdf |work=Computer Laboratory, University of Cambridge}}</ref>
+
+Like TEA, XTEA is a [[block size (cryptography)|64-bit block]] [[Feistel cipher]] with a [[cryptographic key length|128-bit key]] and a suggested 64 rounds. Several differences from TEA are apparent, including a somewhat more complex [[key schedule|key-schedule]] and a rearrangement of the shifts, [[XOR]]s, and additions.
+
+==Implementations==
+This standard [[C (programming language)|C]] source code, adapted from the reference code released into the [[public domain]] by David Wheeler and Roger Needham, encrypts and decrypts using XTEA:
+<syntaxhighlight lang="C">
+#include <stdint.h>
+
+/* take 64 bits of data in v[0] and v[1] and 128 bits of key[0] - key[3] */
+
+void encipher(unsigned int num_rounds, uint32_t v[2], uint32_t const key[4]) {
+    unsigned int i;
+    uint32_t v0=v[0], v1=v[1], sum=0, delta=0x9E3779B9;
+    for (i=0; i < num_rounds; i++) {
+        v0 += (((v1 << 4) ^ (v1 >> 5)) + v1) ^ (sum + key[sum & 3]);
+        sum += delta;
+        v1 += (((v0 << 4) ^ (v0 >> 5)) + v0) ^ (sum + key[(sum>>11) & 3]);
+    }
+    v[0]=v0; v[1]=v1;
+}
+
+void decipher(unsigned int num_rounds, uint32_t v[2], uint32_t const key[4]) {
+    unsigned int i;
+    uint32_t v0=v[0], v1=v[1], delta=0x9E3779B9, sum=delta*num_rounds;
+    for (i=0; i < num_rounds; i++) {
+        v1 -= (((v0 << 4) ^ (v0 >> 5)) + v0) ^ (sum + key[(sum>>11) & 3]);
+        sum -= delta;
+        v0 -= (((v1 << 4) ^ (v1 >> 5)) + v1) ^ (sum + key[sum & 3]);
+    }
+    v[0]=v0; v[1]=v1;
+}
+</syntaxhighlight>
+The changes from the reference source code are minor:
+* The reference source code used the <code>unsigned long</code> type rather than the [[64-bit]] clean <code>uint32_t</code>.
+* The reference source code did not use <code>const</code> types.
+* The reference source code omitted redundant parentheses, using C precedence to write the round function as e.g. <code>v1 += (v0<<4 ^ v0>>5) + v0 ^ sum + k[sum>>11 & 3]</code>;
+
+The recommended value for the "num_rounds" parameter is 32, not 64, as each iteration of the loop does two Feistel-cipher rounds. To additionally improve speed, the loop can be unrolled by pre-computing the values of sum+key[].
+
+==Cryptanalysis==
+{{see also|Cryptanalysis}}
+In 2004, Ko et al. presented a [[related-key attack|related-key]] [[differential attack]] on 27 out of 64 rounds of XTEA, requiring 2<sup>20.5</sup> [[chosen plaintext]]s and a [[time complexity]] of 2<sup>115.15</sup>.<ref>{{Cite conference |conference=FSE 2004 |last1=Ko |first1=Youngdai |last2=Hong |first2=Seokhie |last3=Lee |first3=Wonil |last4=Lee |first4=Sangjin |last5=Kang |first5=Ju-Sung |title=Related Key Differential Attacks on 27 Rounds of XTEA and Full-Round GOST |editor1=Roy, B. |editor2=Meier, W. |book-title=Fast Software Encryption |volume=3017 |date=2004 |pages=299–316 |doi=10.1007/978-3-540-25937-4_19 |doi-access=free |series=Lecture Notes in Computer Science |place=Berlin, Heidelberg |publisher=Springer |url=https://www.iacr.org/archive/fse2004/30170298/30170298.pdf |access-date=2018-10-10 |isbn=978-3-540-22171-5}}</ref><ref>{{Cite conference |last1=Hong |first1=Seokhie |last2=Hong |first2=Deukjo |last3=Ko |first3=Youngdai |last4=Chang |first4=Donghoon |last5=Lee |first5=Wonil |last6=Lee |first6=Sangjin |title=Differential Cryptanalysis of TEA and XTEA |editor1=Lim, JI. |editor2=Lee, DH. |book-title=Information Security and Cryptology |conference=ICISC 2003 |volume=2971 |date=2004 |pages=402–417 |doi=10.1007/978-3-540-24691-6_30 |series=Lecture Notes in Computer Science |place=Berlin, Heidelberg |publisher=Springer |isbn=978-3-540-21376-5}}</ref>
+
+In 2009, Lu presented a related-key rectangle attack on 36 rounds of XTEA, breaking more rounds than any previously published cryptanalytic results for XTEA. The paper presents two attacks, one without and with a weak key assumption, which corresponds to 2<sup>64.98</sup> bytes of data and 2<sup>126.44</sup> operations, and 2<sup>63.83</sup> bytes of data and 2<sup>104.33</sup> operations respectively.<ref>{{cite journal |last1=Lu |first1=Jiqiang |title=Related-key rectangle attack on 36 rounds of the XTEA block cipher |journal=International Journal of Information Security |date=2 July 2008 |volume=8 |issue=1 |pages=1–11 |doi=10.1007/s10207-008-0059-9 |language=en |s2cid=26794956 |issn=1615-5262}}</ref>
+
+==Block TEA==
+Presented along with XTEA was a variable-width block cipher termed '''Block TEA''', which uses the XTEA round function, but Block TEA applies it cyclically across an entire message for several iterations. Because it operates on the entire message, Block TEA has the property that it does not need a [[block cipher modes of operation|mode of operation]]. An attack on the full Block TEA was described by Saarinen,<ref>{{cite web |last1=Saarinen |first1=Markku-Juhani |title=Cryptanalysis of Block Tea |date=1998-10-20 |url=https://www.researchgate.net/publication/228548968 |access-date=2018-10-10 |website=ResearchGate}}</ref> which also details a weakness in Block TEA's successor, [[XXTEA]].
+
+==See also==
+* [[Ascon (cipher)|Ascon]] — A [[National Institute of Standards and Technology|NIST]]-select lightweight authenticated cipher.
+* [[PRESENT]] — an [[ISO]]-standardized lightweight 64-bit block cipher
+* [[RC4]] — A [[stream cipher]] that, just like XTEA, is designed to be very simple to implement.
+* [[Tiny Encryption Algorithm|TEA]] — Block TEA's precursor.
+* [[XXTEA]] — Block TEA's successor.
+
+==References==
+<references />
+
+===Further reading===
+*{{Cite book |last1=Sekar |first1=Gautham |last2=Mouha |first2=Nicky |last3=Velichkov |first3=Vesselin |last4=Preneel |first4=Bart |title=Topics in Cryptology – CT-RSA 2011 |chapter=Meet-in-the-Middle Attacks on Reduced-Round XTEA |author-link4=Bart Preneel |editor1-last=Kiayias |editor1-first=A. |volume=6558 |date=2011 |pages=250–267 |doi=10.1007/978-3-642-19074-2_17 |doi-access=free |url=https://www.cosic.esat.kuleuven.be/publications/article-1505.ps |access-date=2018-10-10 |language=en|series=Lecture Notes in Computer Science |isbn=978-3-642-19073-5 }}
+*{{Cite book |last1=Moon |first1=Dukjae |last2=Hwang |first2=Kyungdeok |last3=Lee |first3=Wonil |last4=Lee |first4=Sangjin |last5=Lim |first5=Jongin |title=Fast Software Encryption |chapter=Impossible Differential Cryptanalysis of Reduced Round XTEA and TEA |volume=2365 |date=2002 |pages=49–60 |doi=10.1007/3-540-45661-9_4 |doi-access=free |url=https://iacr.org/archive/fse2002/23650050/23650050.ps |access-date=2018-10-10 |language=en|series=Lecture Notes in Computer Science |isbn=978-3-540-44009-3 }}
+* {{cite thesis |last1=Andem |first1=Vikram Reddy |title=A cryptanalysis of the Tiny Encryption Algorithm |type=Masters thesis |date=2003 |url=https://www.tayloredge.com/reference/Mathematics/VRAndem.pdf |access-date=2018-10-10 |publisher=The University of Alabama, Tuscaloosa}}
+
+==External links==
+*[http://commons.wikimedia.org/wiki/Image:XTEADataFlow.jpg DataFlow Diagram]
+*[https://web.archive.org/web/20071228053741/http://143.53.36.235:8080/tea.htm A web page advocating TEA and XTEA and providing a variety of implementations]
+*[http://www.cix.co.uk/~klockstone/teavect.htm Test vectors for TEA and XTEA]
+*[http://www.tayloredge.com/reference/Mathematics/VRAndem.pdf A Cryptanalysis of the Tiny Encryption Algorithm]
+*[http://www.php-einfach.de/sonstiges_generator_xtea.php PHP implementation of XTEA]
+*[https://web.archive.org/web/20081022121452/http://www.irnis.net/soft/xted/ Pascal/Delphi implementation of XTEA]
+*[https://github.com/simplito/xtea-js JavaScript implementation of XTEA (32 rounds)]
+*[http://wiki.secondlife.com/wiki/XTEA_Strong_Encryption_Implementation Linden Scripting Language (LSL) implementation of XTEA for Second Life scripting]
+*[https://web.archive.org/web/20160304000233/http://www.instantiations.com/downloads/Goodies-Community/Goodies-xtea_encryption.htm Smalltalk implementation of XTEA]
+*[https://wiki.postgresql.org/wiki/XTEA PostgreSQL implementation of XTEA]
+{{Cryptography navbox | block}}
+
+[[Category:Computer security in the United Kingdom]]
+[[Category:Feistel ciphers]]
+[[Category:Free ciphers]]
+[[Category:History of computing in the United Kingdom]]
+[[Category:University of Cambridge Computer Laboratory]]
+[[Category:Articles with example C code]]

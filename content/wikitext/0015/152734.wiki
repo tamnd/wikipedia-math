@@ -1,0 +1,115 @@
+<!-- wikipedia: en
+     page: 152734
+     title: General number field sieve
+     revision: 1374891831
+     timestamp: 2026-09-14T17:47:32Z
+     history: https://en.wikipedia.org/w/index.php?curid=152734&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374891831 -->
+{{short description|Factorization algorithm}}
+In [[number theory]], the '''general number field sieve''' ('''GNFS''') is the most [[algorithmic efficiency|efficient]] classical [[algorithm]] known for [[integer factorization|factoring integers]] larger than [[googol|{{math|10<sup>100</sup>}}]]. [[Heuristic]]ally, its [[Computational complexity theory|complexity]] for factoring an integer {{mvar|n}} (consisting of {{math|⌊log<sub>2</sub> {{mvar|n}}⌋ + 1}} bits) is of the form
+
+:<math>
+\begin{align}
+& \exp\left(\left((64/9)^{1/3}+o(1)\right)\left(\log n\right)^{1/3} \left(\log\log n\right)^{2/3}\right) \\[5pt]
+= {} & L_n\left[1/3,(64/9)^{1/3}\right]
+\end{align}
+</math>
+
+in [[Big O notation|Big-O]] and [[L-notation]]s.<ref>{{Cite news|last=Pomerance|first=Carl|author-link=Carl Pomerance|date=December 1996|title=A Tale of Two Sieves|periodical=Notices of the AMS|volume=43|issue=12|pages=1473–1485|url=https://www.ams.org/notices/199612/pomerance.pdf}}</ref> It is a generalization of the [[special number field sieve]]: while the latter can only factor numbers of a certain special form (including numbers of the form <math>ab^n+c</math> with small ''a'' and small ''c'', and [[Fibonacci number]]s and [[Lucas number]]s, but not ''n''[[factorial|!]]±1 or ''p''[[primorial|#]]±1), the general number field sieve can factor any number apart from [[prime power]]s (which are trivial to factor by taking roots). 
+
+The principle of the number field sieve (both special and general) can be understood as an improvement to the simpler [[rational sieve]] or [[quadratic sieve]]. When using such algorithms to factor a large number {{mvar|n}}, it is necessary to search for [[smooth number]]s (i.e. numbers with small prime factors) of order {{math|''n''<sup>1/2</sup>}}. The size of these values is exponential in the size of {{mvar|n}} (see below). The general number field sieve, on the other hand, manages to search for smooth numbers that are subexponential in the size of {{mvar|n}}. Since these numbers are smaller, they are more likely to be smooth than the numbers inspected in previous algorithms. This is the key to the efficiency of the number field sieve. In order to achieve this speed-up, the number field sieve has to perform computations and factorizations in [[number field]]s. This results in many rather complicated aspects of the algorithm, as compared to the simpler rational sieve.
+
+The size of the input to the algorithm is {{math|log<sub>2</sub>&nbsp;''n''}} or the number of bits in the binary representation of {{mvar|n}}. Any element of the order {{math|''n''<sup>''c''</sup>}} for a constant {{mvar|c}} is exponential in {{math|log&nbsp;''n''}}.  The running time of the number field sieve is '''super-polynomial but sub-exponential''' in the size of the input.
+
+== Number fields ==
+{{main|Number field}}
+Suppose {{mvar|f}} is a {{mvar|k}}-degree polynomial over <math display=inline>\mathbb Q</math> (the rational numbers), and {{mvar|r}} is a complex root of {{mvar|f}}. Then, {{math|''f''(''r'')&nbsp;{{=}}&nbsp;0}}, which can be rearranged to express {{math|''r''<sup>''k''</sup>}} as a linear combination of powers of {{mvar|r}} less than {{mvar|k}}. This equation can be used to reduce away any powers of {{math|''r''}} with exponent {{math| ''e'' ≥ ''k''}}. For example, if {{math|''f''(''x'')&nbsp;{{=}}&nbsp;''x''<sup>2</sup>&nbsp;+&nbsp;1}} and {{mvar|r}} is the imaginary unit {{mvar|i}}, then {{math|''i''<sup>2</sup>&nbsp;+&nbsp;1&nbsp;{{=}}&nbsp;0}}, or {{math|''i''<sup>2</sup>&nbsp;{{=}}&nbsp;−1}}. This allows us to define the complex product:
+:<math>
+\begin{align}
+(a+bi)(c+di) & = ac + (ad+bc)i + (bd)i^2 \\[4pt]
+& = (ac - bd) + (ad+bc)i.
+\end{align}
+</math>
+In general, this leads directly to the [[algebraic number field]] <math display=inline>\mathbb Q[r]</math>, which can be defined as the set of [[complex number]]s given by:
+
+:<math>a_{k-1}r^{k-1} + \cdots + a_1 r^1 + a_0 r^0, \text{ where } a_0,\ldots,a_{k-1} \in \mathbb Q.</math>
+
+The product of any two such values can be computed by taking the product as polynomials, then reducing any powers of {{math|''r''}} with exponent {{math| ''e'' ≥ ''k''}} as described above, yielding a value in the same form. To ensure that this field is actually {{mvar|k}}-dimensional and does not collapse to an even smaller field, it is sufficient that {{mvar|f}} is an [[irreducible polynomial]] over the rationals. Similarly, one may define the [[ring of integers]] <math display=inline> \mathbb O_{\mathbb Q[r]} </math> as the subset of <math display=inline>\mathbb Q[r]</math> which are roots of [[monic polynomial|monic polynomials]] with integer coefficients. In some cases, this ring of integers is equivalent to the ring <math display=inline> \mathbb Z[r] </math>. However, there are many exceptions.<ref name="AlgNumbersRibenboim">{{cite book | title=Algebraic Numbers | publisher=Wiley-Interscience | author=Ribenboim, Paulo | year=1972 | isbn=978-0-471-71804-8}}</ref>
+
+== Method ==
+{{Confusing|section|reason=there are no examples or pseudocode|date=May 2021}}
+
+=== Polynomial choice ===
+Two [[polynomial]]s ''f''(''x'') and ''g''(''x'') of small [[degree of a polynomial|degrees]] ''d'' and ''e'' are chosen, which have integer coefficients, which are [[irreducible polynomial|irreducible]] over the [[rational number|rationals]], and which, when interpreted [[modular arithmetic|mod ''n'']], have a common integer [[root of a function|root]] ''m''. An optimal strategy for choosing these polynomials is not known; one simple method is to obtain ''f'' from the [[radix|base-''m'']] expansion of ''n'' for an appropriate choice of ''m''. More precisely: for any choice of ''m'', 
+writing ''n'' in base ''m'' is, by definition, finding digits <math display=inline> a_0, a_1, \ldots, a_d </math> where <math display=inline> 0 \leq a_i < m </math> for each ''i'', such that 
+
+:<math> n = a_dm^d + \cdots + a_1 m + a_0 </math>,
+
+which in turn means that ''m'' is a root of the polynomial <math display=inline> f(x) = a_dx^d + \cdots + a_1x + a_0 </math> modulo ''n''. For the purposes of the general number field sieve, we first fix an appropriate degree ''d'' and then perform the above expansion for a number of values ''m'' of order ''n''<sup>1/''d''</sup>, after which we choose the polynomial ''f'' to be the one whose coefficients are overall the smallest among the candidates obtained in this way. We then simply set <math display=inline> g(x) = x - m </math>.
+
+==== Improving polynomial choice ====
+
+The choice of polynomial can dramatically affect the time to complete the remainder of the algorithm. The method of choosing polynomials based on the expansion of {{mvar|n}} in base {{mvar|m}} shown above is suboptimal in many practical situations, leading to the development of better methods.
+
+One such method was suggested by Murphy and Brent;<ref>{{citation |first1=B. |last1=Murphy |first2=R. P. |last2=Brent |title=On quadratic polynomials for the number field sieve |journal=Australian Computer Science Communications |volume=20 |date=1998 |pages=199–213 |url=https://maths-people.anu.edu.au/~brent/pub/pub178.html }}</ref> they introduce a two-part score for polynomials, based on the presence of roots modulo small primes and on the average value that the polynomial takes over the sieving area.
+
+The best reported results<ref>{{citation | last=Franke |first=Jens |year=2006 |title=On RSA 200 and larger projects |url=https://www.hyperelliptic.org/tanja/SHARCS/talks06/Jens_Franke.pdf }}</ref> were achieved by the method of [[Thorsten Kleinjung]],<ref>{{cite journal | last=Kleinjung |first=Thorsten |date=October 2006 |title=On polynomial selection for the general number field sieve |journal=Mathematics of Computation |volume=75 |pages=2037–2047 |url=https://www.ams.org/mcom/2006-75-256/S0025-5718-06-01870-9/S0025-5718-06-01870-9.pdf |access-date=2007-12-13 |doi=10.1090/S0025-5718-06-01870-9 |issue=256|bibcode=2006MaCom..75.2037K |doi-access=free }}</ref> which allows {{math|''g''(''x'') {{=}} ''ax''&nbsp;+&nbsp;''b''}}, and searches over {{mvar|a}} composed of small prime factors congruent to 1 modulo 2{{math|''d''}} and over leading coefficients of {{mvar|f}} which are divisible by 60.
+
+=== Generation of relation pairs (sieving) ===
+
+Consider the number field rings '''Z'''[''r''<sub>1</sub>] and '''Z'''[''r''<sub>2</sub>], where ''r''<sub>1</sub> and ''r''<sub>2</sub> are roots of the polynomials ''f'' and ''g''. Since ''f'' is of degree ''d'' with integer coefficients, if ''a'' and ''b'' are integers, then so will be ''b''<sup>''d''</sup>·''f''(''a''/''b''), which we call ''r''. Similarly, ''s'' = ''b''<sup>''e''</sup>·''g''(''a''/''b'') is an integer. The goal is to find integer values of ''a'' and ''b'' that simultaneously make ''r'' and ''s'' [[smooth number|smooth]] relative to the chosen basis of primes. If ''a'' and ''b'' are small, then ''r'' and ''s'' will be small too, about the size of ''m'', and we have a better chance for them to be smooth at the same time.  The current best-known approach for this search is [[lattice sieving]]; to get acceptable yields, it is necessary to use a large factor base. These pairs are also called "relations".<ref name=msieve_readme_nfs>{{cite web |title=readme.nfs from msieve |url=https://escatter11.fullerton.edu/nfs/forum_thread.php?id=549}}</ref>
+
+=== Postprocessing ===
+
+Having enough such pairs, using [[Gaussian elimination]], one can get products of certain ''r'' and of the corresponding ''s'' to be squares at the same time. A slightly stronger condition is needed—that they are [[field norm|norms]] of squares in our number fields, but that condition can be achieved by this method too.  Each ''r'' is a norm of ''a''&nbsp;−&nbsp;''r''<sub>1</sub>''b'' and hence that the product of the corresponding factors ''a''&nbsp;−&nbsp;''r''<sub>1</sub>''b'' is a square in '''Z'''[''r''<sub>1</sub>], with a "square root" which can be determined (as a product of known factors in '''Z'''[''r''<sub>1</sub>])—it will typically be represented as an irrational [[algebraic number]].  Similarly, the product of the factors ''a''&nbsp;−&nbsp;''r''<sub>2</sub>''b'' is a square in '''Z'''[''r''<sub>2</sub>], with a "square root" which also can be computed.  It should be remarked that the use of Gaussian elimination does not give the optimal run time of the algorithm.  Instead, sparse matrix solving algorithms such as [[Block Lanczos algorithm for nullspace of a matrix over a finite field|Block Lanczos]] or [[Block Wiedemann algorithm|Block Wiedemann]] are used. 
+
+Since ''m'' is a root of both ''f'' and ''g'' mod ''n'', there are [[homomorphism]]s from the rings '''Z'''[''r''<sub>1</sub>] and '''Z'''[''r''<sub>2</sub>] to the ring '''Z'''/''n'''''Z''' (the integers [[Modular arithmetic|modulo ''n'']]), which map ''r''<sub>1</sub> and ''r''<sub>2</sub> to ''m'', and these homomorphisms will map each "square root" (typically not represented as a rational number) into its integer representative. Now the product of the factors ''a''&nbsp;−&nbsp;''mb'' mod ''n'' can be obtained as a square in two ways—one for each homomorphism. Thus, one can find two numbers ''x'' and ''y'', with ''x''<sup>2</sup>&nbsp;−&nbsp;''y''<sup>2</sup> divisible by ''n'' and again with probability at least one half we get a factor of ''n'' by finding the [[greatest common divisor]] of ''n'' and ''x''&nbsp;−&nbsp;''y''.
+
+The post-processing step involves large amounts of data generated from the two proceeding steps. It is practically done by breaking it down into three phases:<ref name=msieve_readme_nfs/>
+# Filtering, which looks through the relations to find a collection that is sufficient for constructing a matrix. It is possible for this step to fail if not enough relations are given and it is hard to estimate how many relations are required beforehand. Using more relations than needed tends to make the later steps easier by producing a smaller matrix.
+# Linear algebra, which looks for a group of vectors that lie in the nullspace of the very large matrix produced in the preceding step.
+# Square root, which can be done over any solution from the last step.
+
+=== Distributed computing ===
+GNFS involves large amounts of computing and requires some form of [[distributed computing]] to complete in practical timelines given large numbers such as [[RSA-768]]. The following steps can be done in parallel:<ref name=rsa768>{{cite web |title=We are pleased to announce the factorization of RSA768, the following 768-bit, 232-digit number from RSA's challenge list: |url=https://caramba.loria.fr/rsa768.txt}}</ref>
+* Sieving, which could produce duplicate relations and requires massive amounts of computation
+* Deduplication of relations, removal of singleton relations
+* Linear algebra, which requires massive amounts of computation
+
+The quadratic character test can be applied to the results of matrix solving to identify true solutions. In the case of RSA-768, 460 out of 512 were true. Eight of them were selected for the square step, producing 5 identical factorizations at the final step after a comparatively small amount of computation.<ref name=rsa768/>
+
+A more in-depth description of a distributed effort can be found for RSA-240, DLP-240, and RSA-250, using CADO-NFS software. Full reproduction files are provided in a repository linked from the paper's appendix.<ref name=Boudot240>F. Boudot et al, [https://eprint.iacr.org/2020/697 "Comparing the difficulty of factorization and discrete logarithm: a 240-digit experiment,"] June 10, 2020.</ref>
+
+== Implementations ==<!-- linked from [[NFSNet]] -->
+Some implementations focus on a certain smaller class of numbers. These are known as [[special number field sieve]] (SNFS) techniques, such as used in the [[Cunningham project]].
+
+Until 2007, the gold-standard<!-- mathematical term?? --> implementation was a suite of software developed and distributed by [[Centrum Wiskunde & Informatica|CWI]] in the Netherlands, which was available only under a relatively restrictive license.{{Citation needed|date=March 2017}} In 2007, [[Jason Papadopoulos]] developed a faster implementation of final processing as part of msieve, which is in the public domain.  Both implementations feature the ability to be distributed among several nodes in a cluster with a sufficiently fast interconnect.
+
+* [https://www.math.ttu.edu/~cmonico/software/ggnfs/ GGNFS] (GNU GPL) by Chris Monico, last updated 2005. Can perform all steps. Handles about 160 digits for SNFS and 135 digits for GNFS. Includes these parts also under GNU GPL:
+** pol5: Polynomial selection by Kleinjung 2005
+** lasieve4: Lattice sieving by Franke and Kleinjung 2001&ndash;2004
+* [https://sourceforge.net/projects/factor-by-gnfs/ factor by gnfs], C++ code by Chris DiBona and Chris Card, last updated 2024. GNU GPL.
+* [https://cado-nfs.inria.fr/ CADO-NFS], C/C++ implementation of all steps by a large team at [[INRIA]]. Last updated 2025 (as of 2025). GNU LGPL.
+* [https://sourceforge.net/projects/msieve/ msieve]. Contains final-processing code, a polynomial selection optimized for smaller numbers, and an implementation of the line sieve. Public domain.
+* [http://kmgnfs.cti.gr kmGNFS]. Basic implementation of all steps by Christos Bakogiannis and Nikolaos Karapanos, last updated 2009.
+* [https://github.com/bbuhrow/yafu YAFU]. Implementation of all steps by Ben Buhrow. Last updated 2025 (as of 2025). Public domain. 
+
+=== Volunteer computing ===
+A project called NFSNET ran from 2002<ref>{{cite web |title= NFSNET: the first year |author= Paul Leyland |work= Presentation at EIDMA-CWI Workshop on Factoring Large Numbers |date= December 12, 2003 |url= http://homepages.cwi.nl/~herman/Leyland.ppt |access-date= August 9, 2011 }}</ref> through at least 2007. It used [[volunteer distributed computing]] on the [[Internet]].<ref>{{cite web |title= Welcome to NFSNET |date= April 23, 2007 |url-status= dead |url= http://www.nfsnet.org/ |archive-url= https://web.archive.org/web/20071022032617/http://www.nfsnet.org/ |archive-date= October 22, 2007 |access-date= August 9, 2011 }}</ref>
+[[Paul Leyland]] of the [[United Kingdom]] and Richard Wackerbarth of Texas were involved.<ref>{{cite web |title=About NFSNET |url-status= dead |url= http://www.nfsnet.org/aboutus.html |archive-url= https://web.archive.org/web/20080509131653/http://www.nfsnet.org/aboutus.html |archive-date= May 9, 2008 |access-date= August 9, 2011 }}</ref>
+
+A newer attempt called [https://escatter11.fullerton.edu/nfs/ NFS@Home] is still running as of September 2025. It has historically used modified versions of msieve. It generally uses special number field sieves.
+
+== Notes ==
+{{Reflist}}
+
+== References ==
+{{Refbegin}}
+* [[Arjen Lenstra|Arjen K. Lenstra]] and [[Hendrik Lenstra|H. W. Lenstra, Jr.]] (eds.). "The development of the number field sieve". Lecture Notes in Math. (1993) 1554. Springer-Verlag.
+* Richard Crandall and [[Carl Pomerance]]. Prime Numbers: A Computational Perspective (2001). 2nd edition, Springer. {{ISBN|0-387-25282-7}}. Section 6.2: Number field sieve, pp.&nbsp;278–301.
+{{Refend}}
+* Matthew E. Briggs: An Introduction to the General Number Field Sieve, 1998
+{{Number theoretic algorithms}}
+
+[[Category:Integer factorization algorithms]]

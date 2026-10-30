@@ -1,0 +1,288 @@
+<!-- wikipedia: en
+     page: 18566488
+     title: Sparse PCA
+     revision: 1332584994
+     timestamp: 2026-01-12T17:55:56Z
+     history: https://en.wikipedia.org/w/index.php?curid=18566488&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1332584994 -->
+{{Short description|Statistical analysis technique}}
+'''Sparse principal component analysis''' (SPCA or sparse PCA) is a technique used in statistical analysis and, in particular, in the analysis of [[multivariate analysis|multivariate]] data sets. It extends the classic method of [[principal component analysis]] (PCA) for the reduction of dimensionality of data by introducing sparsity structures to the input variables.
+
+A particular disadvantage of ordinary PCA is that the principal components are usually linear combinations of all input variables.  SPCA overcomes this disadvantage by finding components that are linear combinations of just a few input variables (SPCs). This means that some of the coefficients of the linear combinations defining the SPCs, called ''loadings'',<ref group="note">  The term loadings is inappropriately used for these vectors, which should be called coefficients, instead. The naming comes from the term loadings used in factor analysis to design the values generating the common covariance matrix. Since in standard PCA the loadings are equal to the coefficients, the term loadings has been used for the coefficients. This is quite unfortunate, because in SPCA the coefficients are not equal to the loadings.</ref>  are equal to zero. The number of nonzero loadings is called the ''cardinality'' of the SPC.  
+
+== Mathematical formulation ==
+Consider a data [[Matrix (mathematics)|matrix]], <math>X</math>, where each of the <math>p</math> columns represent an input variable, and each of the <math>n</math> rows represents an independent sample from data population. One assumes each column of <math>X</math> has mean zero, otherwise one can subtract column-wise mean from each element of <math>X</math>.
+Let <math>\Sigma=\frac{1}{n-1} X^\top X</math> be the empirical [[covariance matrix]] of <math>X</math>, which has dimension <math>p \times p</math>. 
+
+Given an integer <math>k</math> with <math>1\le k \le p</math>, the sparse PCA problem can be formulated as maximizing the variance along a direction represented by vector <math> v \in \mathbb{R}^p</math> while constraining its cardinality:
+:<math>\begin{align}
+\max \quad & v^{T} \Sigma v\\
+\text{subject to} \quad & \left\Vert v\right\Vert _{2}=1\\
+ & \left\Vert v \right\Vert_{0}\leq k.
+\end{align}</math>{{EquationRef|Eq. 1}}
+The first constraint specifies that ''v'' is a [[unit vector]]. In the second constraint, <math>\left\Vert v \right\Vert_{0}</math> represents the [[L0 norm|<math>\ell_0</math> pseudo-norm]] of ''v'', which is defined as the number of its non-zero components. So the second constraint specifies that the number of non-zero components in ''v'' is less than or equal to ''k'', which is typically an integer that is much smaller than dimension ''p''. The optimal value of {{EquationNote|Eq. 1}} is known as the ''k''-sparse largest [[eigenvalue]].
+
+If one takes ''k=p'', the problem reduces to the ordinary [[Principal component analysis|PCA]], and the optimal value becomes the largest eigenvalue of covariance matrix ''Σ''.
+
+After finding the optimal solution ''v'', one deflates ''Σ'' to obtain a new matrix
+:<math>
+\Sigma_1 = \Sigma - (v^T \Sigma v)v v^T,
+</math>
+and iterate this process to obtain further principal components. However, unlike PCA, sparse PCA cannot guarantee that different principal components are [[orthogonal]]. In order to achieve orthogonality, additional constraints must be enforced.
+
+The following equivalent definition is in matrix form.
+Let <math>V</math> be a ''p×p'' [[symmetric matrix]], one can rewrite the sparse PCA problem as
+:<math>
+\begin{align}
+\max \quad & Tr(\Sigma V)\\
+\text{subject to}\quad & Tr(V)=1\\
+ & \Vert V \Vert_{0}\leq k^{2}\\
+ & Rank(V)=1, V\succeq 0.
+\end{align}
+</math>{{EquationRef|Eq. 2}}
+''Tr'' is the [[matrix trace]], and <math>\Vert V \Vert_{0}</math> represents the non-zero elements in matrix ''V''.
+The last line specifies that ''V'' has [[matrix rank]] one and is [[positive semidefinite matrix|positive semidefinite]].
+The last line means that one has <math>V=vv^T</math>, so {{EquationNote|Eq. 2}} is equivalent to {{EquationNote|Eq. 1}}.
+
+Moreover, the rank constraint in this formulation is actually redundant, and therefore sparse PCA can be cast as the following mixed-integer semidefinite program<ref name=BCJ20>
+{{cite arXiv
+ |author1=Dimitris Bertsimas
+ |author2=Ryan Cory-Wright
+ |author3=Jean Pauphilet
+ |year=2020
+ |title=Solving Large-Scale Sparse PCA to Certifiable (Near) Optimality
+ |class=math.OC
+ |eprint=2005.05195}}</ref>
+:<math>
+\begin{align}
+\max \quad & Tr(\Sigma V)\\
+\text{subject to}\quad & Tr(V)=1\\
+ & \vert V_{i,i}\vert \leq z_i, \forall i \in \{1, ..., p\}, \vert V_{i,j}\vert \leq \frac{1}{2} z_i, \forall i,j \in \{1, ..., p\}: i \neq j,\\
+& V\succeq 0, z \in \{0, 1\}^p, \sum_i z_i \leq k
+\end{align}
+</math>{{EquationRef|Eq. 3}}
+
+Because of the cardinality constraint, the maximization problem is hard to solve exactly, especially when dimension ''p'' is high. In fact, the sparse PCA problem in {{EquationNote|Eq. 1}} is [[NP-hard]] in the strong sense.<ref name=TP14>
+{{cite journal
+ |author1=Andreas M. Tillmann
+ |author2=Marc E. Pfetsch
+ |year=2013
+ |title=The Computational Complexity of the Restricted Isometry Property, the Nullspace Property, and Related Concepts in Compressed Sensing
+ |journal=[[IEEE Transactions on Information Theory]]
+ |volume=60 |issue=2 |page=1248&ndash;1259
+ |doi=10.1109/TIT.2013.2290112
+|arxiv=1205.2081|citeseerx=10.1.1.760.2559
+ |s2cid=2788088
+ }}</ref>
+
+== Computational considerations ==
+As most sparse problems, variable selection in SPCA is a computationally intractable non-convex  NP-hard problem,<ref name=":1">{{Cite book |last1=Moghaddam |first1=Baback |url=https://direct.mit.edu/books/book/3168/Advances-in-Neural-Information-Processing-Systems |title=Advances in Neural Information Processing Systems 19: Proceedings of the 2006 Conference |last2=Weiss |first2=Yair |last3=Avidan |first3=Shai |date=2007-09-07 |publisher=The MIT Press |isbn=978-0-262-25691-9 |editor-last=Schölkopf |editor-first=Bernhard |pages=915–922 |language=en |doi=10.7551/mitpress/7503.001.0001 |editor-last2=Platt |editor-first2=John |editor-last3=Hofmann |editor-first3=Thomas}}</ref> therefore greedy sub-optimal algorithms are often employed to find solutions.
+
+Note also that SPCA introduces hyperparameters quantifying in what capacity large parameter values are penalized.<ref>{{Cite journal |last=Zou |first=Hui |first2=Hastie | last2=Trevor |last3=Tibshirani |first3=Robert |date=2006-06-01 |title=Sparse Principal Component Analysis |url=https://www.tandfonline.com/doi/abs/10.1198/106186006X113430 |journal=Journal of Computational and Graphical Statistics |volume=15 |issue=2 |pages=265–286 |doi=10.1198/106186006X113430 |issn=1061-8600|url-access=subscription }}</ref> These might need [[Hyperparameter optimization|tuning]] to achieve satisfactory performance, thereby adding to the total computational cost.
+
+== Algorithms for SPCA ==
+Several alternative approaches (of {{EquationNote|Eq. 1}}) have been proposed, including
+* a regression framework,<ref>
+{{cite journal
+ |author1=Hui Zou
+ |author2=Trevor Hastie
+ |author3=Robert Tibshirani
+ |year=2006
+ |title=Sparse principal component analysis
+ |journal=[[Journal of Computational and Graphical Statistics]]
+ |volume=15 |issue=2 |pages=262–286
+ |url=http://www-stat.stanford.edu/~hastie/Papers/spc_jcgs.pdf
+ |doi=10.1198/106186006x113430
+|citeseerx=10.1.1.62.580
+ |s2cid=5730904
+ }}</ref>
+* a penalized [[matrix decomposition]] framework,<ref>
+{{cite journal
+ |author1=Fan Chen
+ |author2=Karl Rohe
+ |year=2021
+ |title=A New Basis for Sparse Principal Component Analysis
+ |journal=[[Journal of Computational and Graphical Statistics]]
+ |volume=33
+ |issue=2
+ |pages=421–434
+ |url=https://www.tandfonline.com/eprint/8VKDCFHDPTQHXB47MXIR/full?target=10.1080/10618600.2023.2256502
+ |doi=10.1080/10618600.2023.2256502
+ |arxiv=2007.00596
+ }}</ref>
+* a convex relaxation/semidefinite programming framework,<ref name="SDP">
+{{cite journal
+ |author1=Alexandre d’Aspremont
+ |author2=Laurent El Ghaoui
+ |author3=Michael I. Jordan
+ |author4=Gert R. G. Lanckriet
+ |year=2007
+ |title=A Direct Formulation for Sparse PCA Using Semidefinite Programming
+ |journal=[[SIAM Review]]
+ |volume=49 |issue=3 |pages=434–448
+ |url=http://www.cmap.polytechnique.fr/~aspremon/PDF/sparsesvd.pdf
+ |doi=10.1137/050645506
+|arxiv=cs/0406021
+ |s2cid=5490061
+ }}</ref>
+* a generalized power method framework<ref>
+{{cite journal
+ |author1=Michel Journee
+ |author2=Yurii Nesterov
+ |author3=Peter Richtarik
+ |author4=Rodolphe Sepulchre
+ |year=2010
+ |title=Generalized Power Method for Sparse Principal Component Analysis
+ |journal=[[Journal of Machine Learning Research]]
+ |volume=11 |pages=517–553
+ |url=http://jmlr.csail.mit.edu/papers/volume11/journee10a/journee10a.pdf
+ |arxiv=0811.4724
+ |id=CORE Discussion Paper 2008/70
+|bibcode=2008arXiv0811.4724J
+ }}</ref>
+* an alternating maximization framework<ref>
+{{cite journal
+ |author1=Peter Richtarik
+ |author2=Majid Jahani
+ |author3=S. Damla Ahipasaoglu 
+ |author4=Martin Takac
+ |year=2021
+ |title=Alternating Maximization: Unifying Framework for 8 Sparse PCA Formulations and Efficient Parallel Codes
+ |journal=[[Optimization and Engineering]]
+ |volume=22
+ |issue=3
+ |pages=1493–1519
+ |doi=10.1007/s11081-020-09562-3
+ |arxiv=1212.4137
+ |s2cid=2549610
+ |url=https://link.springer.com/article/10.1007/s11081-020-09562-3
+}}</ref>
+* forward-backward greedy search and exact methods using branch-and-bound techniques,<ref>
+{{cite conference
+ |author1=Baback Moghaddam
+ |author2=Yair Weiss
+ |author3=Shai Avidan 
+ |year=2005 
+ |chapter=Spectral Bounds for Sparse PCA: Exact and Greedy Algorithms 
+ |title=Advances in Neural Information Processing Systems
+ |volume=18
+ |publisher=MIT Press
+ |chapter-url=http://books.nips.cc/papers/files/nips18/NIPS2005_0643.pdf
+}}</ref>
+* a certifiably optimal branch-and-bound approach<ref>
+{{cite journal
+ |author1=Lauren Berk
+ |author2=Dimitris Bertsimas
+ |year=2019
+ |title=Certifiably optimal sparse principal component analysis
+ |journal=[[Mathematical Programming Computation]]
+ |volume=11 |issue=3
+ |pages=381–420
+ |publisher=Springer
+ |doi=10.1007/s12532-018-0153-6
+ |s2cid=126998398
+ |hdl=1721.1/131566
+ |hdl-access=free
+ }}</ref>
+* Bayesian formulation framework.<ref>
+{{cite journal
+ |author1=Yue Guan
+ |author2=Jennifer Dy |author2-link=Jennifer Dy
+ |year=2009 
+ |title=Sparse Probabilistic Principal Component Analysis 
+ |journal=[[Journal of Machine Learning Research Workshop and Conference Proceedings]]
+ |volume=5 |page=185
+ |url=http://jmlr.csail.mit.edu/proceedings/papers/v5/guan09a/guan09a.pdf
+}}</ref>
+* A certifiably optimal mixed-integer semidefinite branch-and-cut approach <ref name="BCJ20" />
+The methodological and theoretical developments of Sparse PCA as well as its applications in scientific studies are recently reviewed in a survey paper.<ref>
+{{cite journal
+ |author1=Hui Zou
+ |author2=Lingzhou Xue
+ |year=2018
+ |title=A Selective Overview of Sparse Principal Component Analysis 
+ |journal=[[Proceedings of the IEEE]]
+ |volume=106 |issue=8
+ |pages=1311–1320
+ |doi=10.1109/jproc.2018.2846588
+|doi-access=free
+ }}</ref>
+
+=== Notes on Semidefinite Programming Relaxation ===
+
+It has been proposed that sparse PCA can be approximated by [[semidefinite programming]] (SDP).<ref name="SDP"/> If one drops the rank constraint and relaxes the cardinality constraint by a 1-norm [[convex set|convex]] constraint, one gets a semidefinite programming relaxation, which can be solved efficiently in polynomial time:
+:<math>
+\begin{align}
+\max \quad & Tr(\Sigma V)\\
+\text{subject to}\quad & Tr(V)=1\\
+ & \mathbf{1}^T |V|\mathbf{1} \leq k\\
+ & V\succeq 0.
+\end{align}
+</math>{{EquationRef|Eq. 3}}
+In the second constraint, <math>\mathbf{1}</math> is a ''p×1'' vector of ones, and ''|V|'' is the matrix whose elements are the absolute values of the elements of ''V''.
+
+The optimal solution <math>V</math> to the relaxed problem {{EquationNote|Eq. 3}} is not guaranteed to have rank one. In that case, <math>V</math> can be truncated to retain only the dominant eigenvector.
+
+While the semidefinite program does not scale beyond n=300 covariates, it has been shown that a second-order cone relaxation of the semidefinite relaxation is almost as tight and successfully solves problems with n=1000s of covariates <ref>
+{{cite journal
+ |author1=Dimitris Bertsimas
+ |author2=Ryan Cory-Wright
+ |year=2020
+ |title=On polyhedral and second-order cone decompositions of semidefinite optimization problems
+ |journal=[[Operations Research Letters]]
+ |volume=48 |issue=1|pages=78–85
+ |publisher=Elsevier
+ |doi=10.1016/j.orl.2019.12.003 |arxiv=1910.03143
+ |doi-access=free
+ }}</ref>
+
+== Applications ==
+
+=== Financial Data Analysis ===
+Suppose ordinary PCA is applied to a dataset where each input variable represents a different asset, it may generate principal components that are weighted combination of all the assets. In contrast, sparse PCA would produce principal components that are weighted combination of only a few input assets, so one can easily interpret its meaning. Furthermore, if one uses a trading strategy based on these principal components, fewer assets imply less transaction costs.
+
+=== Biology ===
+Consider a dataset where each input variable corresponds to a specific gene. Sparse PCA can produce a principal component that involves only a few genes, so researchers can focus on these specific genes for further analysis.
+
+=== High-dimensional Hypothesis Testing ===
+Contemporary datasets often have the number of input variables (<math>p</math>) comparable with or even much larger than the number of samples (<math>n</math>). It has been shown that if <math>p/n</math> does not converge to zero, the classical PCA is not [[Consistency (statistics)|consistent]]. In other words, if we let <math>k=p</math> in {{EquationNote|Eq. 1}}, then
+the optimal value does not converge to the largest eigenvalue of data population when the sample size <math>n\rightarrow\infty</math>, and the optimal solution does not converge to the direction of maximum variance.
+But sparse PCA can retain consistency even if <math>p\gg n.</math>
+
+The ''k''-sparse largest eigenvalue (the optimal value of {{EquationNote|Eq. 1}}) can be used to discriminate an isometric model, where every direction has the same variance, from a spiked covariance model in high-dimensional setting.<ref>
+{{cite journal
+ |author1=Quentin Berthet
+ |author2=Philippe Rigollet
+ |year=2013
+ |title=Optimal Detection of Sparse Principal Components in High Dimension
+ |journal=[[Annals of Statistics]]
+ |volume=41 |issue=1 |pages=1780–1815
+ |doi=10.1214/13-aos1127
+|arxiv=1202.5070|s2cid=7162068
+ }}</ref> Consider a hypothesis test where the [[null hypothesis]] specifies that data <math>X</math> are generated from a [[multivariate normal distribution]] with mean 0 and covariance equal to an [[identity matrix]], and the alternative hypothesis specifies that data <math>X</math> is generated from a spiked model with signal strength <math>\theta</math>:
+:<math>
+H_0: X \sim N(0, I_p), \quad H_1: X \sim N(0, I_p + \theta v v^T),
+</math>
+where <math>v \in \mathbb{R}^p</math> has only ''k'' non-zero coordinates. The largest ''k''-sparse eigenvalue can discriminate the two hypotheses if and only if <math>\theta > \Theta(\sqrt{k \log(p)/n})</math>.
+
+Since computing ''k''-sparse eigenvalue is NP-hard, one can approximate it by the optimal value of semidefinite programming relaxation ({{EquationNote|Eq. 3}}). If that case, we can discriminate the two hypotheses if <math>\theta > \Theta(\sqrt{k^2 \log(p)/n})</math>. The additional <math>\sqrt{k}</math> term cannot be improved by any other polynomial time algorithm if the [[planted clique|planted clique conjecture]] holds.
+
+== Software/source code ==
+
+* amanpg - R package for Sparse PCA using the Alternating Manifold Proximal Gradient Method <ref>[https://cran.r-project.org/web/packages/amanpg/index.html] https://cran.r-project.org/web/packages/amanpg/index.html</ref>
+* elasticnet – R package for Sparse Estimation and Sparse PCA using Elastic-Nets <ref>[https://cran.r-project.org/web/packages/elasticnet/index.html] https://cran.r-project.org/web/packages/elasticnet/index.html</ref>
+* epca – R package for exploratory principal component analysis for large-scale dataset, including sparse principal component analysis and sparse matrix approximation. <ref>[https://cran.r-project.org/web/packages/epca/index.html] https://cran.r-project.org/web/packages/epca/index.html</ref>
+* nsprcomp - R package for sparse and/or non-negative PCA based on thresholded power iterations<ref>[https://cran.r-project.org/web/packages/nsprcomp/index.html] https://cran.r-project.org/web/packages/nsprcomp/index.html</ref>
+* [[scikit-learn]] – Python library for machine learning which contains Sparse PCA and other techniques in the decomposition module.<ref>[http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.SparsePCA.html] http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.SparsePCA.html</ref>
+
+
+==Notes==
+{{reflist|group=note}}
+
+
+==References==
+<references/>
+
+[[Category:Dimension reduction]]
+[[Category:Machine learning algorithms]]

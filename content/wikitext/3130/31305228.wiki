@@ -1,0 +1,321 @@
+<!-- wikipedia: en
+     page: 31305228
+     title: ACE Encrypt
+     revision: 1350860423
+     timestamp: 2026-04-24T13:24:23Z
+     history: https://en.wikipedia.org/w/index.php?curid=31305228&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1350860423 -->
+{{One source|date=February 2013}}
+
+'''ACE''' (advanced cryptographic engine) is the collection of units, implementing both a public key encryption scheme and a digital signature scheme. Corresponding names for these schemes — «ACE Encrypt» and «ACE Sign». Schemes are based on Cramer-Shoup public key encryption scheme and Cramer-Shoup signature scheme. Introduced variants of these schemes are intended to achieve a good balance between performance and security of the whole encryption system.
+
+== Authors ==
+All the algorithms, implemented in ACE are based on algorithms developed by [[Victor Shoup]] and [[Ronald Cramer]]. The full algorithms specification is written by Victor Shoup. Implementation of algorithms is done by Thomas Schweinberger and Mehdi Nassehi, its supporting and maintaining is done by Victor Shoup. Thomas Schweinberger participated in construction of ACE specification document and also wrote a user manual.
+
+Ronald Cramer currently stays in the university of Aarhus, [[Denmark]]. He worked on the project of  ACE Encrypt while his staying in ETH in [[Zürich]], [[Switzerland]].
+
+Mehdi Nassehi and Thomas Schweinberger worked on ACE project in the IBM research lab in [[Zürich]], [[Switzerland]].<br />
+Victor Shoup works in the IBM research lab in [[Zürich]], [[Switzerland]].
+
+== Security ==
+The encryption scheme in ACE can be proven secure under reasonable and natural
+intractability assumptions.
+These four assumptions are:
+* The Decisional Diffie-Hellman (DDH) assumption
+* Strong RSA assumption
+* [[SHA-1]] second preimage collision resistance
+* MARS sum/counter mode pseudo-randomness
+
+== Basic Terminology and Notation ==
+Here we introduce some notations, being used in this article.
+
+=== Basic mathematical notation ===
+<math>\Z</math> — The set of integers.<br />
+<math>F_2[T]</math> — The set of univariate polynomials with coefficients in the finite field <math>F_2</math> of cardinality 2.<br />
+<math>A \operatorname{rem} n</math> — integer <math>r \in \left\{0,\dots,n-1\right\}</math> such that <math>A\equiv r\pmod n</math> for integer <math>n>0</math> and <math>A \in \Z</math>.<br />
+<math>A \operatorname{rem} f</math> — polynomial <math>r \in F_2[T]</math> with <math>\deg(r) < \deg(f)</math> such that <math>A\equiv r\pmod f</math> with <math>A,f \in F_2[T],f \ne 0</math>.
+
+=== Basic string notation ===
+<math>A^{\ast}</math> — The set of all strings.<br />
+<math>A^{n}</math> — The set of all strings with length n.<br />
+For <math>x \in A^{\ast} L(x)</math> — length of string <math>x</math>. The string of length zero is denoted <math>\lambda_A</math>.<br />
+For <math>x,y \in A^{\ast}</math> <math>x\|y</math> — the result of <math>x</math> and <math>y</math> concatenation.
+
+=== Bits, Bytes, Words ===
+<math>b\overset{\text{def}}{{}={}}\left\{0,1\right\}</math> — The set of bits.<br /> Let us take all sets of form <math>b, b^{n_1}, (b^{n_1})^{n_2},...</math>. For such a set A we define the "zero element":
+{{center|<math>0_b\stackrel{\mathrm{def}}{=}0 \in b</math>;<br /><math>0_{A^n}\stackrel{\mathrm{def}}{=}(0_A,...,0_A) \in A^n</math> for <math>n>0</math>.}}
+
+We define <math>B\stackrel{\mathrm{def}}{{}={}}b^8</math> as a set of bytes, and <math>W\stackrel{\mathrm{def}}{{}={}}b^{32}</math> as a set of words.
+
+For <math>x \in A^{\ast}</math> with <math>A \in \left\{b,B,W\right\}</math> and <math>l>0</math> we define a padding operator:
+{{center|<math>
+pad_l(x) \stackrel{\mathrm{def}}{=} \begin{cases} 
+x, & L(x) \ge l \\
+x||0_{A^{l-L(x)}}, & L(x)<l
+\end{cases}</math>.}}
+
+=== Conversion operator ===
+Conversion operator <math>I_{src}^{dst}: src \to dst</math> makes a conversion between elements <math>Z,F_2[T],b^{\ast},B^{\ast},W^{\ast}</math>.
+
+== Encryption Scheme ==
+
+=== Encryption Key Pair ===
+The encryption scheme employs two key types:<br />
+ACE public key: <math>(P,q,g_1,g_2,c,d,h_1,h_2,k_1,k_2)</math>.<br />
+ACE private key: <math>(w,x,y,z_1,z_2)</math>.<br />
+For a given size parameter <math>m</math>, such that <math>1024 \le m \le 16384</math>, key components are defined as:<br />
+<math>q</math> — a 256-bit prime number.<br />
+<math>P</math> — a m-bit prime number, such that <math>P\equiv 1\pmod q</math>.<br />
+<math>g_1,g_2,c,d,h_1,h_2</math> — elements <math>\left\{1,\dots,P-1\right\}</math> (whose multiplicative order modulo <math>P</math> divides <math>q</math>).<br />
+<math>w,x,y,z_1,z_2</math> — elements <math>\left\{0,\dots,q-1\right\}</math>.<br />
+<math>k_1,k_2</math> — elements <math>B^\ast</math> with <math>L(k_1)=20l'+64</math> and <math>L(k_2)=32\left\lceil l/16 \right\rceil+40</math>, where <math>l=\left\lceil m/8 \right\rceil</math> and <math>l'=L_b(\left\lceil (2\left\lceil l/4 \right\rceil +4)/16 \right\rceil)</math>.
+
+=== Key Generation ===
+'''Algorithm.''' Key Generation for ACE encryption scheme.<br />
+Input: a size parameter <math>m</math>, such that <math>1024 \le m \le 16384</math>.<br />
+Output: a public/private key pair.
+# Generate a random prime <math>q</math>, such that <math>2^{255} < q < 2^{256}</math>.
+# Generate a random prime <math>P</math>, <math>2^{m-1} < P < 2^{m}</math>, such that <math>P\equiv1(mod q)</math>.
+# Generate a random integer <math>g_1 \in \left\{ 2,...,P-1 \right\}</math>, such that <math>g_1^q\equiv1(mod P)</math>.
+# Generate random integers <math>w \in \left\{ 1,...,q-1 \right\}</math> and <math>x,y,z_1,z_2 \in \left\{ 0,...,q-1 \right\}</math>
+# Compute the following integers in <math>\left\{ 1,...,P-1 \right\}</math>:{{center|<math>g_2 \leftarrow g_1^w rem P</math>,<br /><math>c \leftarrow g_1^x rem P</math>,<br /><math>d \leftarrow g_1^y rem P</math>,<br /><math>h_1 \leftarrow g_1^{z_1} rem P</math>,<br /><math>h_2 \leftarrow g_1^{z_2} rem P</math>.}}
+# Generate random byte strings <math>k_1 \in B^{20l'+64}</math> and <math>k_2 \in B^{2\left\lceil l/16 \right\rceil+40}</math>, where <math>l=L_B(P)</math> and <math>l' = L_B(\left\lceil (2\left\lceil l/4 \right\rceil +4)/16 \right\rceil)</math>.
+# Return the public key/private key pair {{center|<math>((P,q,g_1,g_2,c,d,h_1,h_2,k_1,k_2),(w,x,y,z_1,z_2))</math>}}
+
+=== Ciphertext Representation ===
+A ciphertext of the ACE encryption scheme has the form<br />
+{{center|<math>(s,u_1,u_2,v,e)</math>,}}<br />
+where the components are defined as:<br />
+<math>u_1,u_2,v</math> — integers from <math>\left\{ 1,...,P-1 \right\}</math> (whose multiplicative order modulo <math>P</math> divides <math>q</math>).<br />
+<math>s</math> — element <math>W^4</math>.<br />
+<math>e</math> — element <math>B^{\ast}</math>.<br />
+<math>s,u_1,u_2,v</math> we call the ''preamble'', and <math>e</math> — the ''cryptogram''. If a cleartext is a string consisting of <math>l</math> байт, then the length of <math>e</math> is equal to <math>l+16\left\lceil l/1024 \right\rceil</math>.<br />
+We need to introduce the function <math>CEncode</math>, which maps a ciphertext to its byte-string
+representation, and the corresponding inverse function <math>CDecode</math>. For the integer <math>l>0</math>, word string <math>s \in W^4</math>, integers <math>0 \le u_1,u_2,v<256^l</math>, and byte string <math>e \in B^{\ast}</math>, {{center|<math>CEncode(l,s,u_1,u_2,v,e) \stackrel{\mathrm{def}}{=}I_{W^{\ast}}^{B^{\ast}}(s)||pad_l(I_{Z}^{B^{\ast}}(u_1))||pad_l(I_{Z}^{B^{\ast}}(u_2))||pad_l(I_{Z}^{B^{\ast}}(v))||e \in B^{\ast}</math>.}}<br />
+For integer <math>l>0</math>, byte string <math>\psi \in B^{\ast}</math>, such that <math>L(\psi) \ge 3l+16</math>, {{center|<math>CDecode(l,\psi) \stackrel{\mathrm{def}}{=}(I_{B^{\ast}}^{W^{\ast}}(\Bigl[\psi\Bigr]_{0}^{16}),I_{B^{\ast}}^{Z}(\Bigl[\psi\Bigr]_{16}^{16+l}),I_{B^{\ast}}^{Z}(\Bigl[\psi\Bigr]_{16+l}^{16+2l}),I_{B^{\ast}}^{Z}(\Bigl[\psi\Bigr]_{16+2l}^{16+3l}),\Bigl[\psi\Bigr]_{16+3l}^{L(\psi)}) \in W^4 \times Z \times Z \times Z \times B^{\ast}</math>.}}
+
+=== Encryption Process ===
+'''Algorithm.''' ACE asymmetric encryption operation.<br />
+input: public key <math>(P,q,g_1,g_2,c,d,h_1,h_2,k_1,k_2)</math> and byte string <math>M \in B^{\ast}</math>.<br />
+Output: byte string — ciphertext <math> \psi\ </math> of <math>M</math>.
+# Generate <math>r \in \left\{ 0,...,q-1 \right\}</math> at random.
+# Generate the ciphertext preamble:
+## Generate <math>s \in W^4</math> at random.
+## Compute <math>u_1 \leftarrow g_1^r rem P</math>, <math>u_2 \leftarrow g_2^r rem P</math>.
+## Compute <math>\alpha\ \leftarrow UOWHash^\prime (k_1,L_B(P),s,u_1,u_2) \in Z</math>; note that <math>0 < \alpha\ < 2^{160}</math>.
+## Compute <math>v \leftarrow c^r d^{\alpha\ r} rem P</math>.
+# Compute the key for the symmetric encryption operation:
+## <math>\tilde{h_1} \leftarrow h_1^r rem P</math>, <math>\tilde{h_2} \leftarrow h_2^r rem P</math>.
+## Compute <math>k \leftarrow ESHash(k,L_B(P),s,u_1,u_2,\tilde{h_1},\tilde{h_2}) \in W^8</math>.
+# Compute cryptogram <math>e \leftarrow SEnc(k,s,1024,M)</math>.
+# Encode the ciphertext: {{center|<math>\psi\ \leftarrow CEncode(L_B(P),s,u_1,u_2,v,e)</math>.}}
+# Return <math> \psi\ </math>.
+Before starting off the symmetric encryption process, the input message <math>M \in B^{\ast}</math> is divided into blocks <math>M_1,...,M_t</math>, where each of the block, possibly except the last one, is of 1024 bytes. Each block is encrypted by the stream cipher. For each encrypted block <math>E_i</math> 16-byte message authentication code is computed. We get the cryptogram {{center|<math>e=E_1||C_1||...||E_t||C_t</math>.<math>L(e)=L(M)+16\left\lceil L(M)/m \right\rceil</math>.}} Note that if <math>L(M)=0</math>, then <math>L(e)=0</math>.
+'''Algorithm.''' ACE asymmetric encryption process.<br />
+Input: <math>(k,s,M,m) \in W^8 \times W^4 \times Z \times B^{\ast} </math> <math>m>0</math><br />
+Output: <math>e \in B^l</math>, <math>l=L(M)+16 \left\lceil L(N)/m \right\rceil</math>.
+# If <math>M=\lambda_B </math>, then return <math>\lambda_B </math>.
+# Initialize a pseudo-random generator state:{{center|<math>genState \leftarrow InitGen(k,s) \in GenState</math>}}
+# Generate the key <math>k_{AXU} AXUHash </math>: {{center|<math>(k_{AXU},genState) \leftarrow GenWords((5L_b(\left\lceil m/64 \right\rceil)+24),genState).</math>.}}
+# <math>e \leftarrow \lambda_B, i \leftarrow 0</math>.
+# While <math>i<L(M)</math>, do the following:
+## <math>r \leftarrow min(L(M)-i,m)</math>.
+## Generate mask values for the encryption and MAC:
+### <math>(mask_m,genState) \leftarrow GenWords(4,genState)</math>.
+### <math>(mask_e,genState) \leftarrow GenWords(r,genState)</math>.
+## Encrypt the plaintext: <math>enc \leftarrow \Bigl[M\Bigr]_i^{i+r} \oplus mask_e</math>.
+## Generate the message authentication code:
+### If <math>i+r=L(M)</math>, then <math>lastBlock \leftarrow 1</math>; else <math>lastBlock \leftarrow 0</math>.
+### <math>mac \leftarrow AXUHash(k_{AXU},lastBlock,enc) \in W^4</math>.
+## Update the ciphertext: <math>e \leftarrow e||enc||I_{W^{\ast}}^{B^{\ast}}(mac \oplus mask_m)</math>.
+## <math>i \leftarrow i+r</math>.
+# Return <math>e </math>.
+
+=== Decryption process ===
+'''Algorithm.''' ACE decryption process.<br />
+Input: public key <math>(P,q,g_1,g_2,c,d,h_1,h_2,k_1,k_2)</math> and corresponding private key <math>(w,x,y,z_1,z_2)</math>, byt e string <math>\psi \in B^{\ast}</math>.<br />
+Output: Decrypted message <math>M \in B^{\ast} \cup {Reject}</math>.
+# Decrypt the ciphertext:
+## If <math>L(\psi) < 3L_B(P)+16 </math>, then return <math>Reject </math>.
+## Compute: {{center|<math>(s,u_1,u_2,v,e) \leftarrow CDecode(L_B(P),\psi) \in W^4 \times Z \times Z \times Z \times B^{\ast}</math>;}}<br />note that <math>0 \le u_1,u_2,v<256^l</math>, where <math>l=L_B(P)</math>.
+# Verify the ciphertext preamble:
+## If <math>u_1 \ge P</math> or <math>u_2 \ge P</math> or <math>v \ge P</math>, then return <math>Reject </math>.
+## If <math>u_1^q \ne 1 rem P</math>, then return <math>Reject </math>.
+## <math>reject \leftarrow 0 </math>.
+## If <math>u_2 \ne u_1^w rem P</math>, then <math>reject \leftarrow 1 </math>.
+## Compute <math>\alpha \leftarrow UOWHash^{\prime}(k_1,L_B(P),s,u_1,u_2) \in Z</math>; note that <math>0 \le \alpha \le 2^{160}</math>.
+## If <math>v \ne u_1^{x+{\alpha}y} rem P</math>, then <math>reject \leftarrow 1 </math>.
+## If <math>reject=1 </math>, then return <math>Reject </math>.
+# Compute the key for the symmetric decryption operation:
+## <math>\tilde{h_1} \leftarrow u_1^{z_1} rem P</math>, <math>\tilde{h_2} \leftarrow u_1^{z_2} rem P</math>.
+## Compute <math>k \leftarrow ESHash(k_2,L_B(P),s,u_1,\tilde{h_1},\tilde{h_2}) \in W^8</math>.
+# Compute <math>M \leftarrow SDec(k,s,1024,e)</math>;note that <math>SDec</math> can return <math>Reject </math>.
+# Return <math>M</math>.
+'''Algorithm.''' Decryption operation <math>SDec</math>.<br />
+Input: <math>(k,s,m,e) \in W^8 \times W^4 \times Z \times B^{\ast} </math> <math>m>0</math><br />
+Output: Decrypted message <math>M \in B^{\ast} \cup {Reject}</math>.
+# If <math>e=\lambda_B </math>, then return <math>\lambda_B </math>.
+# Initialize a pseudo-random generator state: {{center|<math>genState \leftarrow InitGen(k,s) \in GenState</math>}}
+# Generate the key <math>k_{AXU} AXUHash </math>: {{center|<math>(k_{AXU},genState^{\prime}) \leftarrow GenWords((5L_b(\left\lceil m/64 \right\rceil)+24),genState).</math>.}}
+# <math>M \leftarrow \lambda_B, i \leftarrow 0</math>.
+# While <math>i<L(e)</math>, do the following:
+## <math>r \leftarrow min(L(e)-i,m+16)-16</math>.
+## If <math>r \le 0</math>, then return <math>Reject </math>.
+## Generate mask values for the encryption and MAC:
+### <math>(mask_m,genState) \leftarrow GenWords(4,genState)</math>.
+### <math>(mask_e,genState) \leftarrow GenWords(r,genState)</math>.
+## Verify the message authentication code:
+### If <math>i+r+16=L(M)</math>, then <math>lastblock \leftarrow 1</math>; else <math>lastblock \leftarrow 0</math>.
+### <math>mac \leftarrow AXUHash(k_{AXU},lastBlock,\Bigl[e\Bigr]_i^{i+r}) \in W^4</math>.
+### If <math>\Bigl[e\Big]r_{i+r}^{i+r+16} \ne I_{W^{\ast}}^{B^{\ast}}(mac \oplus mask_m)</math>, then return <math>Reject </math>.
+## Update the plaintext: <math>M \leftarrow M||(\Bigl[e\Bigr]_i^{i+r}) \oplus mask_e)</math>.
+## <math>i \leftarrow i+r+16</math>.
+# Return <math>M </math>.
+
+== Signature Scheme ==
+The signature scheme employs two key types:<br />
+ACE Signature public key: <math>(N,h,x,e',k',s)</math>.<br />
+ACE Signature private key: <math>(p,q,a)</math>.<br />
+For the given size parameter <math>m</math>, such that <math>1024 \le m \le 16384</math>, key components are defined the following way:<br />
+<math>p</math> — <math>\left\lfloor m/2 \right\rfloor</math>-bit prime number with <math>(p-1)/2</math> — is also a prime number.<br />
+<math>q</math> — <math>\left\lfloor m/2 \right\rfloor</math>-bit prime number with <math>(q-1)/2</math> — is also a prime number.<br />
+<math>N</math> — <math>N=pq</math>and has either <math>m</math> or <math>m-1</math> bit.<br />
+<math>h,x</math> — elements <math>\left\{1,...,N-1\right\}</math> (quadratic residues modulo <math>N</math>).<br />
+<math>e'</math> — 161-bit prime number.<br />
+<math>a</math> — element <math>\left\{0,...,(p-1)(q-1)/4-1\right\}</math><br />
+<math>k'</math> — elements <math>B^{184}</math>.<br />
+<math>s</math> — elements <math>B^{32}</math>.
+
+=== Key Generation ===
+'''Algorithm.''' Key generation for the ACE public-key signature scheme.<br />
+Input: size parameter <math>m</math>, such that <math>1024 \le m \le 16384</math>.<br />
+Output: public/private key pair.
+# Generate random prime numbers<math>p,q</math>, such that <math>(p-1)/2</math> and <math>(q-1)/2</math> — is also a prime number, and {{center|<math>2^{m_1-1} < p < 2^{m_1}</math>, <math>2^{m_2-1}<q<2^{m_2}</math>, и <math>p \ne q</math>,<br />where}}<math>m_1=\left\lfloor m/2 \right\rfloor</math> and <math>m_1=\left\lceil m/2 \right\rceil</math>.
+# Set <math>N \leftarrow pq</math>.
+# Generate random prime number <math>e'</math>, где <math>2^{160} \le e' \le 2^{161}</math>.
+# Generate random <math>h' \in \left\{1,...,N-1\right\}</math>, taking into account <math>gcd(h',N)=1</math> and <math>gcd(h' \pm 1,N)=1</math>, and compute <math>h \leftarrow (h')^{-2} rem N</math>.
+# Generate random <math>a \in \left\{0,...,(p-1)(q-1)/4-1\right\}</math>and compute <math>x \leftarrow h^a rem N</math>.
+# Generate random byte strings <math>k' \in B^{184}</math>, and <math>s \in B^{32}</math>.
+# Return public key/private key pair {{center|<math>((N,h,x,e',k',s),(p,q,a))</math>.}}
+
+=== Signature Representation ===
+The signature in the ACE signature scheme has the form <math>(d,w,y,y',\tilde{k})</math>, where the components are defined the following way:<br />
+<math>d</math> — element <math>B^{64}</math>.<br />
+<math>w</math> — integer, such that <math>2^{160} \le w \le 2^{161}</math>.<br />
+<math>y,y'</math> — elements <math>\left\{1,...,N-1\right\}</math>.<br />
+<math>\tilde{k}</math> — element <math>B^{\ast}</math>;note that <math>L(\tilde{k})=64+20L_B(\left\lceil (L(M)+8)/64 \right\rceil)</math>, where <math>M</math> — message being signed.<br />
+We need to introduce the <math>SEncode</math> function, which maps a signature into its byte string representation, and the corresponding inverse function <math>SDecode</math>. For integer <math>l>0</math>, byte string <math>d \in B^{64}</math>, integers <math>0 \le w \le 256^{21}</math> and <math>0 \le y,y'<256^l</math>, and byte string <math>\tilde{k} \in B^{\ast}</math>,{{center|<math>SEncode(l,d,w,y,y',\tilde{k}) \stackrel{\mathrm{def}}{=}d||pad_{21}(I_{Z}^{B^{\ast}}(w))||pad_l(I_{Z}^{B^{\ast}}(y))||pad_l(I_{Z}^{B^{\ast}}(y'))||\tilde{k} \in B^{\ast}</math>.}}<br />
+For integer <math>l>0</math>, byte string <math>\sigma \in B^{\ast}</math>, where <math>L(\sigma) \ge 2l+53</math>, {{center|<math>CSecode(l,\sigma) \stackrel{\mathrm{def}}{=}(\Bigl[\sigma\Bigr]_{0}^{64},I_{B^{\ast}}^{Z}(\Bigl[\sigma\Bigr]_{64}^{85}),I_{B^{\ast}}^{Z}(\Bigl[\sigma\Bigr]_{85}^{85+l}),I_{B^{\ast}}^{Z}(\Bigl[\sigma\Bigr]_{85+l}^{85+2l}),\Bigl[\sigma\Bigr]_{85+2l}^{L(\sigma)}) \in B^{64} \times Z \times Z \times Z \times B^{\ast}</math>.}}
+
+=== Signature Generation Process ===
+'''Algorithm.''' ACE Signature Generation Process.<br />
+Input: public key <math>(N,h,x,e',k',s)</math> and corresponding private key <math>(p,q,a)</math> and byte string <math>M \in B^{\ast}</math>, <math>0 \le L(M) \le 2^{64}</math>.<br />
+Output: byte string — digital signature <math>\sigma \in B^{\ast}</math>.
+# Perform the following steps to hash the input data:
+## Generate a hash key <math>\tilde{k} \in B^{20m+64}</math> at random, such that <math>m=L_b(\left\lceil (L(M)+8)/64 \right\rceil)</math>.
+## Compute <math>m_h \leftarrow I_{W^{\ast}}^{Z}(UOWHash^{\prime\prime}(\tilde{k},M))</math>.
+# Select <math>\tilde{y} \in \left\{1,...,N-1\right\}</math> at random, and compute <math>y' \leftarrow \tilde{y}^2 rem N</math>.
+# Compute <math>x' \leftarrow (y')^{r'}h^{m_h} rem N</math>.
+# Generate a random prime <math>e</math>, <math>2^{160} \le e \le 2^{161}</math>, and its certificate of correctness <math>(w,d)</math>: <math>(e,w,d) \leftarrow GenCertPrime(s)</math>. Repeat this step until <math>e \ne e'</math>.
+# Set <math>r \leftarrow UOWHash^{\prime\prime\prime}(k',L_B(N),x',\tilde{k}) \in Z</math>; note that <math>0 \le r < 2^{160}</math>.
+# Compute <math>y \leftarrow h^b rem N</math>, where {{center|<math>b \leftarrow e^{-1}(a-r)rem(p'q')</math>,}}<br />and where <math>p'=(p-1)/2</math> and <math>q'=(q-1)/2</math>.
+# Encode the signature: {{center|<math>\sigma \leftarrow SEncode(L_B(N),d,w,y,y',\tilde{k})</math>.}}
+# Return <math>\sigma</math>
+
+== Notes ==
+In the definition of ACE Encryption process and ACE Signature process some auxiliary function (e.g. UOWHash, ESHash and some other) are being used, definition of which goes beyond this article. More details about it can be found in в.<ref>[http://www.zurich.ibm.com/security/ace/ace_spec.pdf ACE: The Advanced Cryptographic Engine, T. Schweinberger and V. Shoup, manuscript 2000]</ref>
+
+== Implementation, Utilization and Performance ==
+ACE Encryption scheme is recommended by NESSIE (New European Schemes for Signatures, Integrity and Encryption) as asymmetric encryption scheme. Press-release is dated by February 2003.
+
+Both schemes were implemented in ANSI C, with the use of GNU GMP library. Tests were done on two platforms: Power PC 604 model 43P under AIX system and 266&nbsp;MHz Pentium under Windows NT system. Result tables:
+
+{| class="wikitable"
+ |+ Time costs on basic operations
+ |
+ |colspan="2" |Power PC
+ |colspan="2" |Pentium
+ |-
+ |
+ |colspan="2" |Operand size(byte)
+ |colspan="2" |Operand size(byte)
+ |-
+ |
+ |512
+ |1024
+ |512
+ |1024
+ |-
+ |Multiplication
+ |{{val|3.5e-5|u=s}}
+ |{{val|1.0e-4|u=s}}
+ |{{val|4.5e-5|u=s}}
+ |{{val|1.4e-4|u=s}}
+ |-
+ |Squaring
+ |{{val|3.3e-5|u=s}}
+ |{{val|1.0e-4|u=s}}
+ |{{val|4.4e-5|u=s}}
+ |{{val|1.4e-4|u=s}}
+ |-
+ |Exponentiation
+ |{{val|1.9e-2|u=s}}
+ |{{val|1.2e-1|u=s}}
+ |{{val|2.6e-2|u=s}}
+ |{{val|1.7e-1|u=s}}
+|}
+
+{| class="wikitable"
+ |+ Performance of encryption scheme and signature scheme
+ |
+ |colspan="2" |Power PC
+ |colspan="2" |Pentium
+ |-
+ |
+ |Fixed costs (ms)
+ |MBit/sec
+ |Fixed costs (ms)
+ |MBit/sec
+ |-
+ |Encrypt
+ |160
+ |18
+ |230
+ |16
+ |-
+ |Decrypt
+ |68
+ |18
+ |97
+ |14
+ |-
+ |Sign
+ |48
+ |64
+ |62
+ |52
+ |-
+ |Sign set-up
+ |29
+ |
+ |41
+ |
+ |-
+ |Verify
+ |52
+ |65
+ |73
+ |53
+|}
+
+== Literature ==
+<references />
+
+==External links==
+* [http://www.alphaworks.ibm.com/tech/ace http://www.alphaworks.ibm.com/tech/ace]
+* [http://www.zurich.ibm.com/security/ace/ http://www.zurich.ibm.com/security/ace/]
+* [https://www.cosic.esat.kuleuven.be/nessie/deliverables/decision-final.pdf NESSIE Portfolio of recommended cryptographic primitives]
+
+{{DEFAULTSORT:Ace Encrypt}}
+[[Category:Cryptographic software]]

@@ -1,0 +1,243 @@
+<!-- wikipedia: en
+     page: 892446
+     title: Levenberg–Marquardt algorithm
+     revision: 1371992872
+     timestamp: 2026-08-29T19:20:04Z
+     history: https://en.wikipedia.org/w/index.php?curid=892446&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1371992872 -->
+{{short description|Algorithm used to solve non-linear least squares problems}}
+In [[mathematics]] and computing, the '''Levenberg–Marquardt algorithm''' ('''LMA''' or just '''LM'''), also known as the  '''damped least-squares''' ('''DLS''') method, is used to solve [[non-linear least squares]] problems.  These minimization problems arise especially in [[least squares]] [[curve fitting]].  The LMA interpolates between the [[Gauss–Newton algorithm]] (GNA) and the method of [[gradient descent]]. The LMA is more [[Robustness (computer science)|robust]] than the GNA, which means that in many cases it finds a solution even if it starts very far off the final minimum. For well-behaved functions and reasonable starting parameters, the LMA tends to be slower than the GNA. LMA can also be viewed as [[Gauss–Newton]] using a [[trust region]] approach.
+
+The algorithm was first published in 1944 by [[Kenneth Levenberg]],<ref name="Levenberg"/> while working at the [[Frankford Arsenal|Frankford Army Arsenal]]. It was rediscovered in 1963 by [[Donald Marquardt]],<ref name="Marquardt"/> who worked as a [[statistician]] at [[DuPont]], and independently by Girard,<ref name="Girard"/> Wynne<ref name="Wynne"/> and Morrison.<ref name="Morrison"/>
+
+The LMA is used in many software applications for solving generic curve-fitting problems. By using the Gauss–Newton algorithm it often converges faster than first-order methods.<ref>{{cite journal|title=Improved Computation for Levenberg–Marquardt Training|last1=Wiliamowski|first1=Bogdan|last2=Yu|first2=Hao|journal=IEEE Transactions on Neural Networks and Learning Systems|volume=21|issue=6|date=June 2010|url=https://www.eng.auburn.edu/~wilambm/pap/2010/Improved%20Computation%20for%20LM%20Training.pdf}}</ref> However, like other iterative optimization algorithms, the LMA finds only a [[local minimum]], which is not necessarily the [[global minimum]].
+
+== The problem ==
+The primary application of the Levenberg–Marquardt algorithm is in the least-squares curve fitting problem: given a set of <math>m</math> empirical pairs <math>\left (x_i, y_i\right )</math> of independent and dependent variables, find the parameters {{tmath|\boldsymbol\beta}} of the model curve <math>f{\left (x, \boldsymbol\beta\right )}</math> so that the sum of the squares of the deviations <math>S{\left (\boldsymbol\beta\right )}</math> is minimized:
+
+<math display="block">\hat{\boldsymbol\beta} \in \mathop\operatorname{argmin}_{\boldsymbol\beta} S{\left (\boldsymbol\beta\right )} \equiv \mathop\operatorname{argmin}_{\boldsymbol\beta} \sum_{i=1}^m \left [y_i - f{\left (x_i, \boldsymbol\beta\right )} \right ]^2,</math> which is assumed to be non-empty.
+
+== The solution ==
+Like other numeric minimization algorithms, the Levenberg–Marquardt algorithm is an [[iteration|iterative]] procedure. To start a minimization, the user has to provide an initial guess for the parameter vector {{tmath|\boldsymbol\beta}}. In cases with only one minimum, an uninformed standard guess like <math>\boldsymbol\beta^\text{T} = \begin{pmatrix}1,\ 1,\ \dots,\ 1\end{pmatrix}</math> will work fine; in cases with [[local minimum|multiple minima]], the algorithm converges to the global minimum only if the initial guess is already somewhat close to the final solution.
+
+In each iteration step, the parameter vector {{tmath|\boldsymbol\beta}} is replaced by a new estimate {{tmath|\boldsymbol\beta + \boldsymbol\delta}}. To determine {{tmath|\boldsymbol\delta}}, the function <math>f{\left (x_i, \boldsymbol\beta + \boldsymbol\delta\right )}</math> is approximated by its [[Gradient#Linear_approximation_to_a_function|linearization]]:
+
+<math display="block">f{\left (x_i, \boldsymbol\beta + \boldsymbol\delta\right )} \approx f{\left (x _i, \boldsymbol\beta\right )} + \mathbf J_i \boldsymbol\delta,</math>
+
+where 
+<math display="block">\mathbf J_i = \frac{\partial f{\left (x_i, \boldsymbol\beta\right )}}{\partial \boldsymbol\beta}</math> 
+is the [[gradient]] (row-vector in this case) of {{tmath|f}} with respect to {{tmath|\boldsymbol\beta}}.
+
+The sum <math>S\left (\boldsymbol\beta\right )</math> of square deviations has its minimum at a zero [[gradient]] with respect to {{tmath|\boldsymbol\beta}}. The above first-order approximation of <math>f{\left (x_i, \boldsymbol\beta + \boldsymbol\delta\right )}</math> gives
+<math display="block">S\left (\boldsymbol\beta + \boldsymbol\delta\right ) \approx \sum_{i=1}^m \left [y_i - f\left (x_i, \boldsymbol\beta\right ) - \mathbf J_i \boldsymbol\delta\right ]^2,</math>
+or in vector notation,
+<math display="block">\begin{align}
+ S\left (\boldsymbol\beta + \boldsymbol\delta\right )
+  &\approx \left \|\mathbf y - \mathbf f{\left (\boldsymbol\beta\right )} - \mathbf J\boldsymbol\delta\right \|^2\\
+  &= \left [\mathbf y - \mathbf f{\left (\boldsymbol\beta\right )} - \mathbf J\boldsymbol\delta \right ]^{\mathrm T}\left [\mathbf y - \mathbf f{\left (\boldsymbol\beta\right )} - \mathbf J\boldsymbol\delta\right ]\\
+  &= \left [\mathbf y - \mathbf f{\left (\boldsymbol\beta\right )}\right ]^{\mathrm T} \left [\mathbf y - \mathbf f{\left (\boldsymbol\beta\right )}\right ] -  \left [\mathbf y - \mathbf f{\left (\boldsymbol\beta\right )}\right ]^{\mathrm T} \mathbf J \boldsymbol\delta - \left (\mathbf J \boldsymbol\delta\right )^{\mathrm T} \left [\mathbf y - \mathbf f{\left (\boldsymbol\beta\right )}\right ] + \boldsymbol\delta^{\mathrm T} \mathbf J^{\mathrm T} \mathbf J \boldsymbol\delta \\
+  &= \left [\mathbf y - \mathbf f{\left (\boldsymbol\beta\right )}\right ]^{\mathrm T} \left [\mathbf y - \mathbf f{\left (\boldsymbol\beta\right )}\right ] - 2\left [\mathbf y - \mathbf f{\left (\boldsymbol\beta\right )}\right ]^{\mathrm T} \mathbf J \boldsymbol\delta + \boldsymbol\delta^{\mathrm T} \mathbf J^{\mathrm T} \mathbf J\boldsymbol\delta.
+\end{align}</math>
+Taking the derivative of this approximation of <math>S\left (\boldsymbol\beta + \boldsymbol\delta\right )</math> with respect to {{tmath|\boldsymbol\delta}} and setting the result to zero gives
+
+<math display="block">\left (\mathbf J^{\mathrm T} \mathbf J\right ) \boldsymbol\delta = \mathbf J^{\mathrm T} \left [\mathbf y - \mathbf f{\left (\boldsymbol\beta\right )}\right ],</math>
+
+where <math>\mathbf J</math> is the [[Jacobian matrix and determinant|Jacobian matrix]], whose {{tmath|i}}-th row equals <math>\mathbf J_i</math>, and where <math>\mathbf f\left (\boldsymbol\beta\right )</math> and <math>\mathbf y</math> are vectors with {{tmath|i}}-th component 
+<math>f\left (x_i, \boldsymbol\beta\right )</math> and <math>y_i</math> respectively. The above expression obtained for {{tmath|\boldsymbol\beta}} comes under the Gauss–Newton method. The Jacobian matrix as defined above is not (in general) a square matrix, but a rectangular matrix of size <math>m \times n</math>, where <math>n</math> is the number of parameters (size of the vector <math>\boldsymbol\beta</math>). The matrix multiplication <math>\left (\mathbf J^{\mathrm T} \mathbf J\right)</math> yields the required <math>n \times n</math> square matrix and the matrix-vector product on the right hand side yields a vector of size <math>n</math>. The result is a set of <math>n</math> linear equations, which can be solved for {{tmath|\boldsymbol\delta}}.
+
+Levenberg's contribution is to replace this equation by a "damped version":
+
+<math display="block">\left (\mathbf J^{\mathrm T} \mathbf J + \lambda\mathbf I\right ) \boldsymbol\delta = \mathbf J^{\mathrm T}\left [\mathbf y - \mathbf f\left (\boldsymbol\beta\right )\right],</math>
+
+where {{tmath|\mathbf I}} is the identity matrix, giving as the increment {{tmath|\boldsymbol\delta}} to the estimated parameter vector {{tmath|\boldsymbol\beta}}.
+
+The (non-negative) damping factor {{tmath|\lambda}} is adjusted at each iteration. If reduction of {{tmath|S}} is rapid, a smaller value can be used, bringing the algorithm closer to the [[Gauss–Newton algorithm]], whereas if an iteration gives insufficient reduction in the residual, {{tmath|\lambda}} can be increased, giving a step closer to the gradient-descent direction. Note that the [[gradient]] of {{tmath|S}} with respect to {{tmath|\boldsymbol\beta}} equals <math>-2\left (\mathbf J^{\mathrm T}\left [\mathbf y - \mathbf f{\left (\boldsymbol\beta\right )}\right ]\right )^{\mathrm T}</math>. Therefore, for large values of {{tmath|\lambda}}, the step will be taken approximately in the direction opposite to the gradient. If either the length of the calculated step {{tmath|\boldsymbol\delta}} or the reduction of sum of squares from the latest parameter vector {{tmath|\boldsymbol\beta + \boldsymbol\delta}} fall below predefined limits, iteration stops, and the last parameter vector {{tmath|\boldsymbol\beta}} is considered to be the solution.
+
+When the damping factor {{tmath|\lambda}} is large relative to <math> \| \mathbf J^{\mathrm T} \mathbf J \| </math>, inverting <math> \mathbf J^{\mathrm T} \mathbf J + \lambda \mathbf I </math> is not necessary, as the update is well-approximated by the small gradient step <math> \lambda^{-1} \mathbf J^{\mathrm T}\left [\mathbf y - \mathbf f{\left (\boldsymbol\beta\right )}\right ]</math>.
+
+To make the solution scale invariant Marquardt's algorithm solved a modified problem with each component of the gradient scaled according to the curvature. This provides larger movement along the directions where the gradient is smaller, which avoids slow convergence in the direction of small gradient. Fletcher in his 1971 paper ''A modified Marquardt subroutine for non-linear least squares'' simplified the form, replacing the identity matrix {{tmath|\mathbf I}} with the diagonal matrix consisting of the diagonal elements of {{tmath|\mathbf J^\text{T}\mathbf J}}:
+
+<math display="block">\left [\mathbf J^{\mathrm T} \mathbf J + \lambda \operatorname{diag}\left (\mathbf J^{\mathrm T} \mathbf J\right )\right ] \boldsymbol\delta = \mathbf J^{\mathrm T}\left [\mathbf y - \mathbf f{\left (\boldsymbol\beta\right )}\right ].</math>
+
+A similar damping factor appears in [[Tikhonov regularization]], which is used to solve linear [[ill-posed problems]], as well as in [[ridge regression]], an [[estimation theory|estimation]] technique in [[statistics]].
+
+=== Choice of damping parameter ===
+Various more or less heuristic arguments have been put forward for the best choice for the damping parameter {{tmath|\lambda}}.  Theoretical arguments exist showing why some of these choices guarantee local convergence of the algorithm; however, these choices can make the global convergence of the algorithm suffer from the undesirable properties of [[gradient descent|steepest descent]], in particular, very slow convergence close to the optimum.
+
+The absolute values of any choice depend on how well-scaled the initial problem is.  Marquardt recommended starting with a value {{tmath|\lambda_0}} and a factor {{tmath|\nu > 1}}. Initially setting <math>\lambda = \lambda_0</math> and computing the residual sum of squares <math>S\left (\boldsymbol\beta\right )</math> after one step from the starting point with the damping factor of <math>\lambda = \lambda_0</math> and secondly with {{tmath|\lambda_0 / \nu}}.  If both of these are worse than the initial point, then the damping is increased by successive multiplication by {{tmath|\nu}} until a better point is found with a new damping factor of {{tmath|\lambda_0\nu^k}} for some {{tmath|k}}.
+
+If use of the damping factor {{tmath|\lambda / \nu}} results in a reduction in squared residual, then this is taken as the new value of {{tmath|\lambda}} (and the new optimum location is taken as that obtained with this damping factor) and the process continues; if using {{tmath|\lambda / \nu}} resulted in a worse residual, but using {{tmath|\lambda}} resulted in a better residual, then {{tmath|\lambda}} is left unchanged and the new optimum is taken as the value obtained with {{tmath|\lambda}} as damping factor.
+
+An effective strategy for the control of the damping parameter, called ''delayed gratification'', consists of increasing the parameter by a small amount for each uphill step, and decreasing by a large amount for each downhill step. The idea behind this strategy is to avoid moving downhill too fast in the beginning of optimization, therefore restricting the steps available in future iterations and therefore slowing down convergence.<ref name="Transtrum2011"/> An increase by a factor of 2 and a decrease by a factor of 3 has been shown to be effective in most cases, while for large problems more extreme values can work better, with an increase by a factor of 1.5 and a decrease by a factor of 5.<ref name="Transtrum2012"/>
+
+=== Geodesic acceleration ===
+
+When interpreting the Levenberg–Marquardt step as the velocity <math>\boldsymbol{v}_k</math> along a [[geodesic]] path in the parameter space, it is possible to improve the method by adding a second order term that accounts for the acceleration <math>\boldsymbol{a}_k</math> along the geodesic
+
+<math display="block">
+\boldsymbol{v}_k + \tfrac{1}{2} \boldsymbol{a}_k
+</math>
+
+where <math>\boldsymbol{a}_k</math> is the solution of
+
+<math display="block">
+\boldsymbol{J}_k \boldsymbol{a}_k = -f_{vv} .
+</math>
+
+Since this geodesic acceleration term depends only on the [[directional derivative]] <math display="inline">f_{vv} = \sum_{\mu\nu} v_{\mu} v_{\nu} \partial_{\mu} \partial_{\nu} f (\boldsymbol{x})</math> along the direction of the velocity <math>\boldsymbol{v}</math>, it does not require computing the full second order derivative matrix, requiring only a small overhead in terms of computing cost.<ref>{{cite web|url=https://www.gnu.org/software/gsl/doc/html/nls.html|title=Nonlinear Least-Squares Fitting|publisher=GNU Scientific Library|archive-url=https://web.archive.org/web/20200414204913/https://www.gnu.org/software/gsl/doc/html/nls.html|archive-date=2020-04-14}}</ref> Since the second order derivative can be a fairly complex expression, it can be convenient to replace it with a [[finite difference]] approximation
+
+<math display="block">
+\begin{align}
+f_{vv}^i &\approx \frac{f_i(\boldsymbol{x} + h \boldsymbol{\delta}) - 2 f_i(\boldsymbol{x}) + f_i(\boldsymbol{x} - h \boldsymbol{\delta})}{h^2} \\
+           &= \frac{2}{h} \left( \frac{f_i(\boldsymbol{x} + h \boldsymbol{\delta}) - f_i(\boldsymbol{x})}{h} - \boldsymbol{J}_i \boldsymbol{\delta} \right)
+\end{align}
+</math>
+
+where <math>f(\boldsymbol{x})</math> and <math>\boldsymbol{J}</math> have already been computed by the algorithm, therefore requiring only one additional function evaluation to compute <math>f(\boldsymbol{x} + h \boldsymbol{\delta})</math>. The choice of the finite difference step <math>h</math> can affect the stability of the algorithm, and a value of around 0.1 is usually reasonable in general.<ref name="Transtrum2012"/>
+
+Since the acceleration may point in opposite direction to the velocity, to prevent it to stall the method in case the damping is too small, an additional criterion on the acceleration is added in order to accept a step, requiring that
+
+<math display="block">
+\frac{2 \left\| \boldsymbol{a}_k \right\|}{\left\| \boldsymbol{v}_k \right\|} \le \alpha
+</math>
+
+where <math>\alpha</math> is usually fixed to a value lesser than 1, with smaller values for harder problems.<ref name="Transtrum2012"/>
+
+The addition of a geodesic acceleration term can allow significant increase in convergence speed and it is especially useful when the algorithm is moving through narrow canyons in the landscape of the objective function, where the allowed steps are smaller and the higher accuracy due to the second order term gives significant improvements.<ref name="Transtrum2012"/>
+
+==Example==
+
+[[Image:Lev-Mar-poor-fit.png|thumb|Poor fit]]
+[[Image:Lev-Mar-better-fit.png|thumb|Better fit]]
+[[Image:Lev-Mar-best-fit.png|thumb|Best fit]]
+
+In this example we try to fit the function <math>y = a \cos\left (bX\right ) + b \sin\left (aX\right )</math> using the Levenberg–Marquardt algorithm implemented in [[GNU Octave]] as the ''leasqr'' function. The graphs show progressively better fitting for the parameters <math>a = 100</math>, <math>b = 102</math> used
+in the initial curve. Only when the parameters in the last graph are chosen closest to the original, are the curves fitting exactly. This equation
+is an example of very sensitive initial conditions for the Levenberg–Marquardt algorithm. One reason for this sensitivity is the existence of multiple minima — the function <math>\cos\left (\beta x\right )</math> has minima at parameter value <math>\hat\beta</math> and <math>\hat\beta + 2n\pi</math>.
+
+== See also ==
+* [[Trust region]]
+* [[Nelder–Mead method]]
+* Variants of the Levenberg–Marquardt algorithm have also been used for solving nonlinear systems of equations.<ref>{{cite journal |doi=10.1016/j.cam.2004.02.013|title=Levenberg–Marquardt methods with strong local convergence properties for solving nonlinear equations with convex constraints|journal=Journal of Computational and Applied Mathematics|volume=172|issue=2|pages=375–397|year=2004|last1=Kanzow|first1=Christian|last2=Yamashita|first2=Nobuo|last3=Fukushima|first3=Masao|bibcode=2004JCoAM.172..375K|doi-access=free}}</ref>
+
+==References==
+{{Reflist|refs=
+<ref name="Levenberg">{{cite journal
+  | last=Levenberg |first=Kenneth |author-link=Kenneth Levenberg
+  | year    = 1944
+  | title   = A Method for the Solution of Certain Non-Linear Problems in Least Squares
+  | journal = Quarterly of Applied Mathematics
+  | volume  = 2
+  |issue=2 | pages   = 164–168
+  |doi=10.1090/qam/10666 | doi-access=free
+  }}</ref>
+<ref name="Girard">{{cite journal
+  | last=Girard |first=André
+  | year    = 1958
+  | title   = Excerpt from ''Revue d'optique théorique et instrumentale''
+  | journal = Rev. Opt.
+  | volume  = 37
+  | pages   = 225–241, 397–424
+  }}
+</ref>
+<ref name="Wynne">{{cite journal
+  | last=Wynne |first=C. G.
+  | year    = 1959
+  | title   = Lens Designing by Electronic Digital Computer: I
+  | journal = Proc. Phys. Soc. Lond.
+  | doi     = 10.1088/0370-1328/73/5/310
+  | volume  = 73
+  | issue   = 5
+  | pages   = 777–787
+  |bibcode=1959PPS....73..777W
+ }}
+</ref>
+<ref name="Morrison">{{cite journal
+  | last    = Morrison  | first   = David D.
+  | year    = 1960
+  | title   = Methods for nonlinear least squares problems and convergence proofs
+  | journal = Proceedings of the Jet Propulsion Laboratory Seminar on Tracking Programs and Orbit Determination
+  | pages   = 1–9
+  }}</ref>
+<ref name="Marquardt">{{cite journal
+  | last=Marquardt |first=Donald |author-link=Donald Marquardt
+  | year    = 1963
+  | title   = An Algorithm for Least-Squares Estimation of Nonlinear Parameters
+  | journal = SIAM Journal on Applied Mathematics
+  | doi     = 10.1137/0111030
+  | volume  = 11
+  | issue   = 2
+  | pages   = 431–441
+  |hdl=10338.dmlcz/104299 | hdl-access= free
+  }}</ref>
+<ref name="Transtrum2011">{{cite journal|title=Geometry of nonlinear least squares with applications to sloppy models and optimization|year=2011|journal=Physical Review E|volume=83|article-number=036701|issue=3|publisher=APS|last1=Transtrum|first1=Mark K|last2=Machta|first2=Benjamin B|last3=Sethna|first3=James P|doi=10.1103/PhysRevE.83.036701|pmid=21517619|arxiv=1010.1449|bibcode=2011PhRvE..83c6701T|s2cid=15361707}}</ref>
+<ref name="Transtrum2012">{{cite arXiv|title=Improvements to the Levenberg-Marquardt algorithm for nonlinear least-squares minimization|year=2012|eprint=1201.5885|last1=Transtrum|first1=Mark K|last2=Sethna|first2=James P|class=physics.data-an}}</ref>
+}}
+
+==Further reading==
+{{Refbegin}}
+* {{cite journal
+  | last1=Moré |first1=Jorge J. 
+  | last2=Sorensen |first2=Daniel C.
+  | year    = 1983
+  | title   = Computing a Trust-Region Step
+  | journal = SIAM J. Sci. Stat. Comput.
+  |volume=4 
+ | pages   = 553–572
+  | issue   = 3
+  |doi=10.1137/0904038 
+ | url=https://digital.library.unt.edu/ark:/67531/metadc283525/m2/1/high_res_d/metadc283525.pdf
+  }}
+* {{cite journal
+  | last1=Gill |first1= Philip E.
+  | last2=Murray |first2=Walter |author-link2=Walter Murray (mathematician)
+  | year    = 1978
+  | title   = Algorithms for the solution of the nonlinear least-squares problem
+  | journal = [[SIAM Journal on Numerical Analysis]]
+  | doi     = 10.1137/0715063
+  | volume  = 15
+  | issue   = 5
+  | pages   = 977–992
+  |bibcode= 1978SJNA...15..977G
+ }}
+* {{cite journal
+ |last      = Pujol
+ |first     = Jose
+ |year      = 2007
+ |title     = The solution of nonlinear inverse problems and the Levenberg-Marquardt method
+ |journal   = Geophysics
+ |publisher = SEG
+ |doi       = 10.1190/1.2732552
+ |volume    = 72
+ |number    = 4
+ |pages     = W1–W16
+ |bibcode   = 2007Geop...72W...1P
+}}
+* {{cite book
+  | last1     = Nocedal  | first1     = Jorge
+  | last2     = Wright   | first2     = Stephen J.
+  | year      = 2006
+  | title     = Numerical Optimization |edition=2nd
+  | publisher = Springer
+  | isbn      = 978-0-387-30303-1
+  }}
+{{Refend}}
+
+== External links ==
+
+* Detailed description of the algorithm can be found in [https://numerical.recipes/book.html Numerical Recipes in C, Chapter 15.5: Nonlinear models]
+* C. T. Kelley, ''Iterative Methods for Optimization'', SIAM Frontiers in Applied Mathematics, no 18, 1999, {{isbn|0-89871-433-8}}. [http://www.siam.org/books/textbooks/fr18_book.pdf Online copy]
+* [https://web.archive.org/web/20140301154319/http://www3.villanova.edu/maple/misc/mtc1093.html History of the algorithm in SIAM news]
+* [http://ananth.in/docs/lmtut.pdf A tutorial by Ananth Ranganathan]
+* K. Madsen, H. B. Nielsen, O. Tingleff, ''[http://www2.imm.dtu.dk/pubdb/views/edoc_download.php/3215/pdf/imm3215.pdf Methods for Non-Linear Least Squares Problems]'' (nonlinear least-squares tutorial; L-M code: {{Deprecated archive|url=https://archive.today/20180516200006/http://www2.imm.dtu.dk/projects/hbn_software/marquardt.m|title=analytic Jacobian|sec=el}} {{Deprecated archive|url=https://archive.today/20180516200045/http://www2.imm.dtu.dk/projects/hbn_software/SMarquardt.m|title=secant|sec=el}})
+* T. Strutz: ''Data Fitting and Uncertainty (A practical introduction to weighted least squares and beyond).'' 2nd edition, Springer Vieweg, 2016, {{isbn|978-3-658-11455-8}}.
+* H. P. Gavin, [http://people.duke.edu/~hpgavin/ce281/lm.pdf ''The Levenberg-Marquardt method for nonlinear least-squares curve-fitting problems''] ([[MATLAB]] implementation included)
+
+{{Optimization algorithms|unconstrained}}
+ 
+{{DEFAULTSORT:Levenberg-Marquardt algorithm}}
+ 	
+[[Category:Statistical algorithms]]
+[[Category:Optimization algorithms and methods]]
+[[Category:Least squares]]

@@ -1,0 +1,57 @@
+<!-- wikipedia: en
+     page: 77166040
+     title: Lottery ticket hypothesis
+     revision: 1378431789
+     timestamp: 2026-10-04T12:51:44Z
+     history: https://en.wikipedia.org/w/index.php?curid=77166040&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1378431789 -->
+{{Short description|Hypothesis in machine learning}}
+
+= Introduction =
+In [[machine learning]], the '''lottery ticket hypothesis''' is that [[artificial neural network]]s with random weights can contain a subnetwork which (entirely by chance) can be tuned to a similar performance as tuning the whole network.<ref name=":1">{{cite arXiv |last1=Frankle |first1=Jonathan |title=The Lottery Ticket Hypothesis: Finding Sparse, Trainable Neural Networks |date=2019-03-04 |eprint=1803.03635 |last2=Carbin |first2=Michael|class=cs.LG }}, published as a conference paper at ICLR 2019.</ref>
+
+LTH was traditionally viewed as only a post-processing step, and that pruned networks cannot be trained from scratch. Recently, a new idea emerged that not only takes pruning one step further but also changes our understanding of the most fundamental aspects of Neural network training. It is the Lottery Ticket Hypothesis (Frankle, Carbin, 2019).<ref name=":4" />
+
+By using pruned networks, we can create what we call winning tickets. By taking the pruned network and changing the non-zero weights back to the original random initializations that were made at the start of the training process, resulting in the network called the winning ticket. The winning ticket can then be trained from scratch and achieve the same or better performance as the original network. The only condition is that, after pruning, the remaining weights are changed back to their original initialization. The combination of the pruning mask and lucky initial weights is essential to the success of a winning ticket. The winning tickets we find have won the initialization lottery: their connections have initial weights that make training particularly effective.<ref name=":4" /><blockquote></blockquote>
+
+== Lottery ticket hypothesis ==
+The original algorithm is:
+
+# Randomily initialize dense network: weights <math>\theta_0</math>.
+# Train for <math>j</math> iterations &rarr; weights <math>\theta_j</math>.
+# Magnitude pruning: build a [[Mask (computing)|bitmask]] <math>m</math> by setting to 0 the lowest-magnitude weights in each layer (one-shot), or repeat train &rarr; prune across rounds to reach higher sparsity (iterative).
+# Reset surviving weights to initialization: use <math>m \odot \theta_0</math> as the starting point. Here <math>\odot</math> is [[Hadamard product (matrices)|elementwise multiplication]].
+# Train the masked network <math>f\!\left(x ; m \odot \theta_0\right)</math> with the same optimizer, schedule, and data.
+# Declare "winning ticket" if it achieves comparable test accuracy in <math>\leq j</math> iterations.
+
+The term derived from considering the probability of a tunable subnetwork as the equivalent to a winning [[lottery ticket]]; the chance of any given ticket winning is tiny, but if you buy enough of them you are certain to win, and the number of possible subnetworks increases exponentially as the [[power set]] of the set of connections, making the number of possible subnetworks astronomical for any reasonably large network.<ref name=":2">{{cite book |last=von Csefalvay |first=Chris |title=Post-Training: A Practical Guide for AI Engineers and Developers |year=2026 |publisher=No Starch Press |isbn=978-1-7185-0520-9 |pages=177–179}}</ref>
+
+Such networks are a priori difficult to find, since before training, one does not know which of the exponentially many subnetwork would be "lottery tickets". However, after training, these lottery tickets can be discovered by the pruning algorithm. 
+
+It was found that during the original training of the initial dense network, the weights that would end up in the winning ticket  change a lot, but the other weights change little.  
+
+It was found that if instead of <math>m \odot \theta_0</math>, they re-sampled a different random initialization <math>\theta_0'</math>, and used <math>m \odot \theta_0'</math> instead, the trained <math>f\!\left(x ; m \odot \theta_0'\right)</math> would perform much worse. This indicates that what makes a ticket winning is both its connection graph and the precise initial weights of the connections. 
+
+== Evidence ==
+Following the initial experiments on small convolutional networks, the hypothesis was tested across larger architectures and different learning tasks. On deeper models such as [[ResNet]]-50 on [[ImageNet]], subnetworks reset strictly to their initial weights (<math>\theta_0</math>) did not consistently achieve the accuracy of the unpruned network. Frankle et al. (2019) found that this was caused by sensitivity to gradient noise during early stochastic gradient descent, proposing instead that weights be "rewound" to a checkpoint from early in training (<math>\theta_k</math>) to stabilize subsequent training.<ref>{{cite arXiv |last1=Frankle |first1=Jonathan |last2=Dziugaite |first2=Gintare Karolina |last3=Roy |first3=Daniel M. |last4=Carbin |first4=Michael |date=2019 |title=Linear Mode Connectivity and the Lottery Ticket Hypothesis |eprint=1912.05671 |class=cs.LG}}</ref>
+
+Winning tickets have also been identified in [[natural language processing]] and [[reinforcement learning]]. In pre-trained [[Transformer (deep learning architecture)|transformer]] models like [[BERT (language model)|BERT]], researchers found that subnetworks pruned to between 40% and 70% sparsity matched full fine-tuning performance across standard GLUE benchmark tasks; some of these tickets transferred to other downstream tasks without re-pruning.<ref>{{cite conference |last1=Chen |first1=Tianlong |last2=Frankle |first2=Jonathan |last3=Chang |first3=Shiyu |last4=Liu |first4=Sijia |last5=Zhang |first5=Yang |last6=Wang |first6=Zhangyang |last7=Carbin |first7=Michael |date=2020 |title=The Lottery Ticket Hypothesis for Pre-trained BERT Models |book-title=Advances in Neural Information Processing Systems (NeurIPS)}}</ref> Similar sparse, trainable subnetworks have been observed in policy gradient and Q-learning networks evaluated on continuous control benchmarks.<ref>{{cite conference |last1=Yu |first1=Haonan |last2=Edunov |first2=Sergey |last3=Tian |first3=Yuandong |last4=Morcos |first4=Ari S. |date=2020 |title=Playing the lottery with rewards and multiple languages: lottery tickets in RL and NLP |book-title=International Conference on Learning Representations (ICLR)}}</ref>
+
+The relative importance of initial weight values compared to network architecture remains debated. Liu et al. (2019) demonstrated that for structured (channel-level) pruning, retraining the pruned architecture from a new random initialization often yields accuracy comparable to rewinding the original weights, suggesting that in some pruning regimes, architecture topology dominates the choice of initial weights.<ref>{{cite conference |last1=Liu |first1=Zhuang |last2=Sun |first2=Mingjie |last3=Zhou |first3=Tinghui |last4=Huang |first4=Gao |last5=Darrell |first5=Trevor |date=2019 |title=Rethinking the Value of Network Pruning |book-title=International Conference on Learning Representations (ICLR)}}</ref>
+
+== Subsequent work ==
+Malach ''et al.'' proved a stronger version of the hypothesis, namely that a sufficiently overparameterized untuned network will typically contain a subnetwork that is ''already'' an approximation to the given goal, even before tuning.<ref name=":3">{{cite arXiv |last1=Malach |first1=Eran |title=Proving the Lottery Ticket Hypothesis: Pruning is All You Need |date=2020-02-03 |eprint=2002.00585 |last2=Yehudai |first2=Gilad |last3=Shalev-Shwartz |first3=Shai |last4=Shamir |first4=Ohad|class=cs.LG }} published in ''Proceedings of the 37th International Conference on Machine Learning'', Online, PMLR 119, 2020</ref> A similar result has been proven for the special case of [[Convolutional neural network|convolutional neural networks]].<ref name=":4">{{Cite journal |last1=Chrabrowa |first1=Aleksandra |last2=Natale |first2=Emanuele |last3=Viennot |first3=Laurent |date=2022 |title=Proving the Strong Lottery Ticket Hypothesis for Convolutional Neural Networks |url=https://okl1m3k.github.io/lottery-ticket-hypothesis/ |journal=The Lottery Ticket Hypothesis - essential papers }}</ref>
+
+== See also ==
+* [[Grokking (machine learning)]]
+* [[Pruning (artificial neural network)]]
+
+== References ==
+{{reflist}}
+[[Category:Machine learning]]
+[[Category:Hypotheses]]
+
+
+
+{{machine-learning-stub}}

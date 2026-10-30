@@ -1,0 +1,173 @@
+<!-- wikipedia: en
+     page: 52198918
+     title: Gradient discretisation method
+     revision: 1375676268
+     timestamp: 2026-09-19T08:06:49Z
+     history: https://en.wikipedia.org/w/index.php?curid=52198918&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375676268 -->
+{{Short description|Method for numerical differential equations}}
+<!-- {{more footnotes|date=March 2017}} answer and improvement completed by Cyclotourist -->
+[[Image:Plaplacien4.svg|thumb|right|400px|Exact solution <br/> <math>\overline{u}(x) = \frac 3 4 \left({0.5}^{4/3}- |x - 0.5|^{4/3}\right)</math>  <br/>
+of the ''p''-Laplace problem <math>-( |\overline{u}'|^2 \overline{u}')'(x) = 1</math> on the domain [0,1] with <math>\overline{u}(0) = \overline{u}(1) = 0</math> 
+(black line) and approximate one (blue line) computed with the first degree discontinuous Galerkin method plugged into the GDM (uniform mesh with 6 elements).]]
+{{Differential equations}}
+In [[numerical mathematics]], the '''gradient discretisation method''' ('''GDM''') is a framework which contains classical and recent numerical schemes for diffusion problems of various kinds: linear or non-linear, steady-state or time-dependent.  The schemes may be conforming or non-conforming,{{clarify|date=September 2026}} and may rely on very general polygonal or polyhedral meshes (or may even be meshless).
+
+Some core properties are required to prove the convergence of a GDM. These core properties enable complete proofs of convergence of the GDM for elliptic and parabolic problems, linear or non-linear. For linear problems, stationary or transient, error estimates can be established based on three indicators specific to the GDM <ref>'''R. Eymard, C. Guichard, and [[Raphaèle Herbin|R. Herbin]].''' Small-stencil 3d schemes for diffusive flows in porous media. M2AN, 46:265–290, 2012.</ref> (the quantities <math>C_{D}</math>, <math>S_{D}</math> and <math>W_{D}</math>, [[#The example of a linear diffusion problem|see below]]). For non-linear problems, the proofs are based on [[compactness]] techniques and do not require any non-physical strong [[regularity theory|regularity assumption]] on the solution or the model data.<ref name=droniou>'''J. Droniou, R. Eymard, T. Gallouët, and [[Raphaèle Herbin|R. Herbin]].''' Gradient schemes: a generic framework for the discretisation of linear, nonlinear and nonlocal elliptic and parabolic equations. Math. Models Methods Appl. Sci. (M3AS), 23(13):2395–2432, 2013.</ref> [[#Some non-linear problems with complete convergence proofs of the GDM|Non-linear models]] for which such convergence proof of the GDM have been carried out comprise: the [[Stefan problem]] which is modelling a melting material, two-phase flows in porous media, the [[Richards equation]] of underground water flow, the fully non-linear Leray—Lions equations.<ref>'''J. Leray and J. Lions.''' Quelques résultats de Višik sur les problèmes elliptiques non linéaires par les méthodes de Minty-Browder. Bull. Soc. Math. France, 93:97–107, 1965.</ref>
+
+Any scheme entering the GDM framework is then known to converge on all these problems. This applies in particular to [[#Galerkin methods and conforming finite element methods|conforming Finite Elements]], [[#Mixed finite element|Mixed Finite Elements]], [[#Nonconforming finite element|nonconforming Finite Elements]], and, in the case of more recent schemes, the [[#Discontinuous Galerkin method|Discontinuous Galerkin method]], [[#Mimetic finite difference method and nodal mimetic finite difference method|Hybrid Mixed Mimetic method, the Nodal Mimetic Finite Difference method]], some Discrete Duality Finite Volume schemes, and some Multi-Point Flux Approximation schemes
+
+==The example of a linear diffusion problem==
+
+Consider [[Poisson's equation]] in a bounded open domain <math>\Omega\subset \mathbb{R}^d</math>, with homogeneous [[Dirichlet boundary condition]]
+
+{{NumBlk|:|<math>-\Delta \overline{u} = f,</math>|{{EquationRef|1}}}}
+
+where <math>f\in L^2(\Omega)</math>. The usual sense of weak solution <ref>'''[[Haïm Brezis|H. Brezis]].''' Functional analysis, Sobolev spaces and partial differential equations. Universitext. Springer, New York, 2011.</ref> to this model is:
+
+{{NumBlk|:|<math>\mbox{Find }\overline{u}\in H^1_0(\Omega)\mbox{ such that, for all } \overline{v} \in H^1_0(\Omega),\quad  \int_{\Omega} \nabla \overline{u}(x)\cdot\nabla \overline{v}(x) dx = \int_{\Omega} f(x)\overline{v}(x) dx. </math>|{{EquationRef|2}}}}
+
+In a nutshell, the GDM for such a model consists in selecting a finite-dimensional space and two reconstruction operators (one for the functions, one for the gradients) and to substitute these discrete elements in lieu of the continuous elements in (2). More precisely, the GDM starts by defining a Gradient Discretization (GD), which is a triplet <math>D = (X_{D,0},\Pi_D,\nabla_D)</math>, where:
+
+* the set of discrete unknowns <math>X_{D,0}</math> is a finite dimensional real vector space,
+* the function reconstruction <math>\Pi_D~:~X_{D,0}\to L^2(\Omega)</math> is a linear mapping that reconstructs, from an element of <math>X_{D,0}</math>, a function over <math>\Omega</math>,
+* the gradient reconstruction <math>\nabla_D~:~X_{D,0}\to L^2(\Omega)^d</math> is a linear mapping which reconstructs, from an element of <math>X_{D,0}</math>, a "gradient" (vector-valued function) over <math>\Omega</math>. This gradient reconstruction must be chosen such that <math>\Vert \nabla_D \cdot \Vert_{L^2(\Omega)^d}</math> is a norm on <math>X_{D,0}</math>.
+
+The related Gradient Scheme for the approximation of (2) is given by: find <math>u\in X_{D,0}</math> such that
+
+{{NumBlk|:|<math>\forall v \in X_{D,0},\qquad  \int_{\Omega} \nabla_D u(x)\cdot\nabla_D v(x) dx = \int_{\Omega} f(x)\Pi_D v(x) dx. </math>|{{EquationRef|3}}}}
+
+The GDM is then in this case a nonconforming method for the approximation of (2), which includes the nonconforming finite element method. Note that the converse is not true, in the sense that the GDM framework includes methods such that the function <math>\nabla_D u</math> cannot be computed from the function <math>\Pi_D u</math>.
+
+The following error estimate, inspired by G. Strang's second lemma,<ref>'''G. Strang.''' Variational crimes in the finite element method.'' In The mathematical foundations of the finite element method with applications to partial differential equations (Proc. Sympos., Univ. Maryland, Baltimore, Md., 1972)'', pages 689–710. Academic Press, New York, 1972.</ref> holds
+
+{{NumBlk|:|<math> W_D(\nabla \overline{u}) \le \Vert \nabla \overline{u}  - \nabla_D u_D\Vert_{L^2(\Omega)^d}
+\le  W_D(\nabla \overline{u}) + 2 S_D(\overline{u}), </math>|{{EquationRef|4}}}}
+
+and
+
+{{NumBlk|:|<math> \Vert \overline{u}  - \Pi_D u_D\Vert_{L^2(\Omega)}
+\le C_D W_D(\nabla \overline{u}) + (C_D+1)S_D(\overline{u}), </math>|{{EquationRef|5}}}}
+
+defining:
+
+{{NumBlk|:|<math> C_D =  \max_{v\in X_{D,0}\setminus\{0\}}\frac {\Vert \Pi_D v\Vert_{L^2(\Omega)}} {\Vert \nabla_D v \Vert_{L^2(\Omega)^d}}, </math>|{{EquationRef|6}}}}
+which measures the coercivity (discrete Poincaré constant),
+
+{{NumBlk|:|<math>\forall \varphi\in H^1_0(\Omega),\,
+ S_{D}(\varphi) = \min_{v\in X_{D,0}}\left(\Vert\Pi_D v - \varphi\Vert_{L^2(\Omega)} + \Vert\nabla_D v -\nabla\varphi\Vert_{L^2(\Omega)^d}\right), </math>|{{EquationRef|7}}}}
+which measures the interpolation error,
+
+{{NumBlk|:|<math>\forall \varphi\in H_\operatorname{div}(\Omega),\,
+ W_D(\varphi) = \max_{v\in X_{D,0}\setminus\{0\}}\frac{
+\left|\int_\Omega \left(\nabla_D v(x)\cdot\varphi(x) + \Pi_D v(x) \operatorname{div}\varphi(x)\right) \, dx \right|}{\Vert \nabla_D v \Vert_{L^2(\Omega)^d}}, </math>|{{EquationRef|8}}}}
+which measures the defect of conformity.
+
+Note that the following upper and lower bounds of the approximation error can be derived:
+
+{{NumBlk|:|<math>\begin{align}
+&&\frac 1 2 [S_D(\overline{u}) + W_D(\nabla \overline{u})] \\
+&\le & \Vert \overline{u}  - \Pi_D u_D\Vert_{L^2(\Omega)} + \Vert \nabla \overline{u}  - \nabla_D u_D\Vert_{L^2(\Omega)^d} \\
+&\le &(C_D+2) [S_D(\overline{u}) + W_D(\nabla \overline{u})].
+\end{align} </math>|{{EquationRef|9}}}}
+
+Then the core properties which are necessary and sufficient for the convergence of the method are, for a family of GDs, the coercivity, the GD-consistency and the limit-conformity properties, as defined in the next section. More generally, these three core properties are sufficient to prove the convergence of the GDM for linear problems and for some nonlinear problems like the <math>p</math>-Laplace problem. For nonlinear problems such as nonlinear diffusion, degenerate parabolic problems..., we add in the next section two other core properties which may be required.
+
+==The core properties allowing for the convergence of a GDM==
+
+Let <math>(D_m)_{m\in\mathbb{N}}</math> be a family of GDs, defined as above (generally associated with a sequence of regular meshes whose size tends to 0).
+
+=== Coercivity ===
+The sequence <math>(C_{D_m})_{m\in\mathbb{N}}</math> (defined by ({{EquationNote|6}})) remains bounded.
+
+=== GD-consistency ===
+For all <math>\varphi\in H^1_0(\Omega)</math>, <math>\lim_{m\to\infty} S_{D_m} (\varphi) = 0</math> (defined by ({{EquationNote|7}})).
+
+=== Limit-conformity ===
+For all <math>\varphi\in H_\operatorname{div}(\Omega)</math>, <math>\lim_{m\to\infty} W_{D_m}(\varphi) = 0</math> (defined by ({{EquationNote|8}})).
+This property implies the coercivity property.
+
+=== Compactness (needed for some nonlinear problems)===
+For all sequence <math>(u_m)_{m\in\mathbb{N}}</math> such that <math>u_m \in  X_{D_m,0} </math> for all  <math>m\in\mathbb{N}</math> and  <math>(\Vert u_m \Vert_{D_m})_{m\in\mathbb{N}}</math> is bounded, then the sequence <math>(\Pi_{D_m} u_m)_{m\in\mathbb{N}}</math> is relatively compact in <math>L^2(\Omega)</math> (this property implies the coercivity property).
+
+=== Piecewise constant reconstruction  (needed for some nonlinear problems)===
+Let  <math>D = (X_{D,0}, \Pi_D,\nabla_D)</math> be a gradient discretisation as defined above.
+The operator <math>\Pi_D</math> is a piecewise constant reconstruction if there exists a basis <math>(e_i)_{i\in B}</math> of <math>X_{D,0}</math> and a family of disjoint subsets  <math>(\Omega_i)_{i\in B}</math> of <math>\Omega</math> such that  <math display="inline">\Pi_D u = \sum_{i\in B}u_i\chi_{\Omega_i}</math> for all <math display="inline">u=\sum_{i\in B} u_i e_i\in X_{D,0}</math>, where <math>\chi_{\Omega_i}</math> is the characteristic function of <math>\Omega_i</math>.
+
+==Some non-linear problems with complete convergence proofs of the GDM==
+
+We review some problems for which the GDM can be proved to converge when the above core properties are satisfied.
+
+=== Nonlinear stationary diffusion problems ===
+
+:<math>-\operatorname{div}(\Lambda(\overline{u})\nabla \overline{u}) = f</math>
+
+In this case, the GDM converges under the coercivity, GD-consistency, limit-conformity and compactness properties.
+
+=== ''p''-Laplace problem for ''p'' > 1===
+
+:<math>-\operatorname{div}\left(|\nabla \overline{u}|^{p-2}\nabla \overline{u}\right) = f</math>
+
+In this case, the core properties must be written, replacing <math>L^2(\Omega)</math>  by <math>L^p(\Omega)</math>, <math>H^1_0(\Omega)</math> by <math>W^{1,p}_0(\Omega)</math>  and <math>H_\operatorname{div}(\Omega)</math> by <math>W_\operatorname{div}^{p'}(\Omega)</math> with <math display="inline">\frac 1 p +\frac 1 {p'}=1</math>, and the GDM converges only under the coercivity, GD-consistency and limit-conformity properties.
+
+=== Linear and nonlinear heat equation ===
+
+:<math>\partial_t \overline{u}- \operatorname{div}(\Lambda (\overline{u}) \nabla \overline{u}) = f</math>
+
+In this case, the GDM converges under the coercivity, GD-consistency (adapted to space-time problems), limit-conformity and compactness (for the nonlinear case) properties.
+
+=== Degenerate parabolic problems ===
+
+Assume that <math>\beta</math> and <math>\zeta</math> are nondecreasing Lipschitz continuous functions:
+
+:<math>\partial_t \beta(\overline{u})-\Delta \zeta(\overline{u}) = f</math>
+
+Note that, for this problem, the piecewise constant reconstruction property is needed, in addition to the coercivity, GD-consistency (adapted to space-time problems), limit-conformity and compactness properties.
+
+==Review of some numerical methods which are GDM==
+
+All the methods below satisfy the first four core properties of GDM (coercivity, GD-consistency, limit-conformity, compactness), and in some cases the fifth one (piecewise constant reconstruction).
+
+===[[Galerkin method]]s and conforming finite element methods===
+
+Let <math>V_h\subset H^1_0(\Omega)</math> be spanned by the finite basis <math>(\psi_i)_{i\in I}</math>. The [[Galerkin method]] in <math>V_h</math> is identical to the GDM where one defines
+
+*<math>X_{D,0} = \{ u = (u_i)_{i\in I} \} = \mathbb{R}^I,</math>
+*<math>\Pi_D u = \sum_{i\in I} u_i \psi_i</math>
+*<math>\nabla_D u = \sum_{i\in I} u_i \nabla\psi_i.</math>
+
+In this case, <math>C_D</math> is the constant involved in the continuous Poincaré inequality, and, for all <math>\varphi\in H_\operatorname{div}(\Omega)</math>, <math>W_{D}(\varphi) = 0</math> (defined by ({{EquationNote|8}})). Then ({{EquationNote|4}}) and ({{EquationNote|5}}) are implied by [[Céa's lemma]].
+
+The "mass-lumped" <math>P^1</math> finite element case enters the framework of the GDM, replacing <math>\Pi_D u</math> by  <math display="inline">\widetilde{\Pi}_D u = \sum_{i\in I} u_i \chi_{\Omega_i}</math>, where <math>\Omega_i</math> is a dual cell centred on the vertex indexed by  <math>i\in I</math>. Using mass lumping allows to get the piecewise constant reconstruction property.
+
+=== Nonconforming finite element ===
+
+On a mesh <math>T</math> which is a conforming set of simplices of <math>\mathbb{R}^d</math>, the nonconforming <math>P^1</math> finite elements are defined by the basis  <math>(\psi_i)_{i\in I}</math> of the functions which are affine in any  <math>K\in T</math>, and whose value at the centre of gravity of one given face of the mesh is 1 and 0 at all the others  (these finite elements are used in [Crouzeix ''et al'']<ref>'''M. Crouzeix and P.-A. Raviart.''' Conforming and nonconforming finite element methods for solving the stationary Stokes equations. I. Rev. Française Automat. Informat. Recherche Opérationnelle Sér. Rouge, 7(R-3):33–75, 1973.</ref> for the approximation of the Stokes and [[Navier-Stokes equations]]). Then the method enters the GDM framework with the same definition as in the case of the Galerkin method, except for the fact that  <math>\nabla\psi_i</math> must be understood as the "broken gradient" of <math>\psi_i</math>, in the sense that it is the piecewise constant function equal in each simplex to the gradient of the affine function in the simplex.
+
+=== Mixed finite element ===
+
+The [[mixed finite element method]] consists in defining two discrete spaces, one for the approximation of <math>\nabla \overline{u}</math> and another one for <math>\overline{u}</math>.<ref>'''P.-A. Raviart and J. M. Thomas.''' A mixed finite element method for 2nd order elliptic problems. In Mathematical aspects of finite element methods ''(Proc. Conf., Consiglio Naz. delle Ricerche (C.N.R.), Rome, 1975)'', pages 292–315. Lecture Notes in Math., Vol. 606. Springer, Berlin, 1977.</ref> 
+It suffices to use the discrete relations between these approximations to define a GDM. Using the low degree [[Raviart–Thomas basis functions]] allows to get the piecewise constant reconstruction property.
+
+=== Discontinuous Galerkin method ===
+
+The Discontinuous Galerkin method consists in approximating problems by a piecewise polynomial function, without requirements on the jumps from an element to the other.<ref>'''D. A. Di Pietro and A. Ern.''' Mathematical aspects of discontinuous Galerkin methods, volume 69 of Mathématiques & Applications (Berlin) [Mathematics & Applications]. Springer, Heidelberg, 2012.</ref> It is plugged in the GDM framework by including in the discrete gradient a jump term, acting as the regularization of the gradient in the distribution sense.
+
+=== Mimetic finite difference method and nodal mimetic finite difference method ===
+
+This family of methods is introduced by [Brezzi ''et al'']<ref>'''F. Brezzi, K. Lipnikov, and M. Shashkov.''' Convergence of the mimetic finite difference method for diffusion problems on polyhedral meshes. SIAM J. Numer. Anal., 43(5):1872–1896, 2005.</ref> and completed in [Lipnikov ''et al''].<ref>'''K. Lipnikov, G. Manzini, and M. Shashkov.''' Mimetic finite difference method. J. Comput. Phys., 257-Part B:1163–1227, 2014.</ref> It allows the approximation of elliptic problems using a large class of polyhedral meshes. The proof that it enters the GDM framework is done in [Droniou ''et al''].<ref name=droniou />
+
+==See also==
+*[[Finite element method]]
+
+==References==
+{{Reflist}}
+
+== External links ==
+* [https://hal.archives-ouvertes.fr/hal-01382358v7/document The Gradient Discretisation Method] by Jérôme Droniou, Robert Eymard, Thierry Gallouët, Cindy Guichard and [[Raphaèle Herbin]]
+
+{{Numerical PDE|state=expanded}}
+
+[[Category:Numerical differential equations]]
+[[Category:Numerical analysis]]

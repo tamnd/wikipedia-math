@@ -1,0 +1,90 @@
+<!-- wikipedia: en
+     page: 41225449
+     title: Uzawa iteration
+     revision: 1244855918
+     timestamp: 2024-09-09T16:14:20Z
+     history: https://en.wikipedia.org/w/index.php?curid=41225449&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1244855918 -->
+In [[numerical mathematics]], the '''Uzawa iteration''' is an algorithm for solving [[saddle point]] problems. It is named after [[Hirofumi Uzawa]] <!--https://www.amazon.com/Studies-Linear-Non-Linear-Programming-Mathematical/dp/1258444062/ref=sr_1_1?s=books&ie=UTF8&qid=1386043803&sr=1-1--> and was originally introduced in the context of concave programming.<ref name="UZ58">{{cite book |first=H. |last=Uzawa |chapter=Iterative methods for concave programming |editor1-first=K. J. |editor1-last=Arrow |editor2-first=L. |editor2-last=Hurwicz |editor3-first=H. |editor3-last=Uzawa |title=Studies in linear and nonlinear programming |url=https://archive.org/details/studiesinlinearn0000arro |url-access=registration |publisher=Stanford University Press |year=1958 }}</ref>
+
+== Basic idea ==
+We consider a saddle point problem of the form
+
+: <math> \begin{pmatrix} A & B\\ B^* & \end{pmatrix} \begin{pmatrix} x_1\\ x_2 \end{pmatrix}
+         = \begin{pmatrix} b_1\\ b_2 \end{pmatrix},</math>
+
+where <math>A</math> is a symmetric [[positive-definite matrix]].
+Multiplying the first row by <math>B^* A^{-1}</math> and subtracting from the second row yields the upper-triangular system
+
+: <math> \begin{pmatrix} A & B\\ & -S \end{pmatrix} \begin{pmatrix} x_1\\ x_2 \end{pmatrix}
+         = \begin{pmatrix} b_1\\ b_2 - B^* A^{-1} b_1 \end{pmatrix},</math>
+
+where <math>S := B^* A^{-1} B</math> denotes the [[Schur complement]].
+Since <math>S</math> is symmetric positive-definite, we can apply standard iterative methods like the [[gradient descent]]
+method or the [[conjugate gradient method]] to solve
+
+: <math> S x_2 = B^* A^{-1} b_1 - b_2</math>
+
+in order to compute <math>x_2</math>.
+The vector <math>x_1</math> can be reconstructed by solving
+
+: <math> A x_1 = b_1 - B x_2. \, </math>
+
+It is possible to update <math>x_1</math> alongside <math>x_2</math> during the iteration for the Schur complement system and thus obtain an efficient algorithm.
+
+== Implementation ==
+
+We start the conjugate gradient iteration by computing the residual
+
+: <math> r_2 := B^* A^{-1} b_1 - b_2 - S x_2 = B^* A^{-1} (b_1 - B x_2) - b_2 = B^* x_1 - b_2,</math>
+
+of the Schur complement system, where
+
+: <math> x_1 := A^{-1} (b_1 - B x_2) </math>
+
+denotes the upper half of the solution vector matching the initial guess <math>x_2</math> for its lower half. We complete the initialization by choosing the first search direction
+
+: <math> p_2 := r_2.\, </math>
+
+In each step, we compute
+
+: <math> a_2 := S p_2 = B^* A^{-1} B p_2 = B^* p_1 </math>
+
+and keep the intermediate result
+
+: <math> p_1 := A^{-1} B p_2 </math>
+
+for later.
+The scaling factor is given by
+
+: <math> \alpha := p_2^* a_2 /p_2^* r_2  </math>
+
+and leads to the updates
+
+: <math> x_2 := x_2 + \alpha p_2, \quad r_2 := r_2 - \alpha a_2. </math>
+
+Using the intermediate result <math>p_1</math> saved earlier, we can also update the upper part of the solution vector
+
+: <math> x_1 := x_1 - \alpha p_1.\, </math>
+
+Now we only have to construct the new search direction by the [[Gram–Schmidt process]], i.e.,
+
+: <math> \beta := r_2^* a_2 / p_2^* a_2,\quad p_2 := r_2 - \beta p_2. </math>
+
+The iteration terminates if the residual <math>r_2</math> has become sufficiently small or if the norm of <math>p_2</math> is significantly smaller than <math>r_2</math> indicating that the [[Krylov subspace]] has been almost exhausted.
+
+== Modifications and extensions ==
+If solving the linear system <math>A x=b</math> exactly is not feasible, inexact solvers can be applied.<ref name="ELGO94">{{cite journal |first=H. C. |last=Elman |first2=G. H. |last2=Golub |author-link2=Gene H. Golub |title=Inexact and preconditioned Uzawa algorithms for saddle point problems |journal=[[SIAM Journal on Numerical Analysis|SIAM J. Numer. Anal.]] |volume=31 |issue=6 |pages=1645–1661 |year=1994 |doi=10.1137/0731085 |citeseerx=10.1.1.307.8178 }}</ref><ref>{{cite journal |first=J. H. |last=Bramble |author-link=James H. Bramble |first2=J. E. |last2=Pasciak |first3=A. T. |last3=Vassilev |title=Analysis of the inexact Uzawa algorithm for saddle point problems |journal=SIAM J. Numer. Anal. |volume=34 |issue=3 |pages=1072–1982 |year=1997 |doi=10.1137/S0036142994273343 |citeseerx=10.1.1.52.9559 }}</ref><ref>{{cite journal |first=W. |last=Zulehner |title=Analysis of iterative methods for saddle point problems. A unified approach |journal=Math. Comp. |volume=71 |issue= 238|pages=479–505 |year=1998 |doi=10.1090/S0025-5718-01-01324-2 |doi-access=free }}</ref>
+
+If the Schur complement system is ill-conditioned, preconditioners can be employed to improve the speed of convergence of the underlying gradient method.<ref name="ELGO94"/><ref name="GRKO07">{{cite book |first=C. |last=Gräser |first2=R. |last2=Kornhuber |chapter=On Preconditioned Uzawa-type Iterations for a Saddle Point Problem with Inequality Constraints |title=Domain Decomposition Methods in Science and Engineering XVI |series=Lec. Not. Comp. Sci. Eng. |volume=55 |pages=91–102 |year=2007 |doi=10.1007/978-3-540-34469-8_8 |isbn=978-3-540-34468-1 |citeseerx=10.1.1.72.9238 }}</ref>
+
+Inequality constraints can be incorporated, e.g., in order to handle obstacle problems.<ref name="GRKO07"/>
+
+== References ==
+{{Reflist}}
+
+== Further reading ==
+* {{cite book |last=Chen |first=Zhangxin |chapter=Linear System Solution Techniques |title=Finite Element Methods and Their Applications |location=Berlin |publisher=Springer |year=2006 |isbn=978-3-540-28078-1 |chapter-url={{Google books |plainurl=yes |id=GvvMfd1chfkC |page=145 }} |pages=145–154 }}
+
+[[Category:Numerical analysis]]

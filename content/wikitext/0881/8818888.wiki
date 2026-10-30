@@ -1,0 +1,116 @@
+<!-- wikipedia: en
+     page: 8818888
+     title: Lin–Kernighan heuristic
+     revision: 1374682694
+     timestamp: 2026-09-13T14:13:21Z
+     history: https://en.wikipedia.org/w/index.php?curid=8818888&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374682694 -->
+{{Short description|Combinatorial algorithm}}
+{{about|the heuristic for the travelling salesman problem|a heuristic algorithm for the graph partitioning problem|Kernighan–Lin algorithm}}
+In [[combinatorial optimization]], '''Lin–Kernighan''' is one of the best [[heuristic algorithm|heuristic]]s for solving the symmetric [[travelling salesman problem]].{{Citation needed|date=December 2020}} It belongs to the class of [[Local search (optimization)|local search]] algorithms, which take a tour ([[Hamiltonian cycle]]) as part of the input and attempt to improve it by searching in the neighbourhood of the given tour for one that is shorter, and upon finding one repeats the process from that new one, until encountering a local minimum. As in the case of the related [[2-opt]] and [[3-opt]] algorithms, the relevant measure of "distance" between two tours is the number of [[edge (graph theory)|edge]]s which are in one but not the other; new tours are built by reassembling pieces of the old tour in a different order, sometimes changing the direction in which a sub-tour is traversed. Lin–Kernighan is adaptive and has no fixed number of edges to replace at a step, but favours small numbers such as 2 or 3.
+
+==Derivation==
+For a given instance <math>(G,c)</math> of the travelling salesman problem, tours are uniquely determined by their sets of edges, so we may as well encode them as such. In the main loop of the local search, we have a current tour <math> T \subset \mathrm{E}(G) </math> and are looking for new tour <math> T' \subset \mathrm{E}(G) </math> such that the [[symmetric difference]] <math> F = T \mathbin{\triangle} T' </math> is not too large and the length <math> \sum_{e \in T'} c(e) </math> of the new tour is less than the length <math> \sum_{e \in T} c(e) </math> of the current tour. Since <math>F</math> is typically much smaller than <math>T</math> and <math>T'</math>, it is convenient to consider the quantity
+: <math> g(F) = \sum_{e \in F \cap T} c(e) - \sum_{e \in F \setminus T} c(e) \quad</math> — the '''gain''' of using <math> F \subseteq \mathrm{E}(G) </math> when switching from <math> T </math> —
+since <math> g(T \mathbin{\triangle} T') = \sum_{e \in T} c(e) - \sum_{e \in T'} c(e) </math>: how much longer the current tour <math>T</math> is than the new tour <math>T'</math>. Naively <math>k</math>-opt can be regarded as examining all <math> F \subseteq \mathrm{E}(G) </math> with exactly <math> 2k </math> elements (<math>k</math> in <math>T</math> but not in <math>T'</math>, and another <math>k</math> in <math>T'</math> but not in <math>T</math>) such that <math> T \mathbin{\triangle} F </math> is again a tour, looking for such a set which has <math> g(F) > 0 </math>. It is however easier to do those tests in the opposite order: first search for plausible <math> F </math> with positive gain, and only second check if <math> T \mathbin{\triangle} F </math> is in fact a tour.
+
+Define a [[trail (graph theory)|trail]] in <math>G</math> to be '''alternating''' (with respect to <math>T</math>) if its edges are alternatingly in <math>T</math> and not in <math>T</math>, respectively. Because the subgraphs <math>\bigl( \mathrm{V}(G),T \bigr)</math> and <math>\bigl( \mathrm{V}(G),T' \bigr)</math> are <math>2</math>-[[regular graph|regular]], the subgraph <math>G[T \mathbin{\triangle} T'] = \bigl( \mathrm{V}(G),T \mathbin{\triangle} T'\bigr)</math> will have vertices of degree <math>0</math>, <math>2</math>, and <math>4</math> only, and at each vertex there are as many incident edges from <math>T</math> as there are from <math>T'</math>. Hence (essentially by [[Eulerian path#Hierholzer's algorithm|Hierholzer's algorithm for finding Eulerian circuits]]) the graph <math>G[T \mathbin{\triangle} T']</math> decomposes into closed alternating trails. Sets <math> F \subseteq \mathrm{E}(G) </math> that may satisfy <math> F = T \mathbin{\triangle} T' </math> for some tour <math>T'</math> may thus be found by enumerating closed alternating trails in <math>G</math>, even if not every closed alternating trail <math>F</math> makes <math> T \mathbin{\triangle} F </math> into a tour; it could alternatively turn out to be a disconnected <math>2</math>-regular subgraph.
+
+===Key idea===
+Alternating trails (closed or open) are built by extending a shorter alternating trail, so when exploring the neighbourhood of the current tour <math>T</math>, one is exploring a search tree of alternating trails. The key idea of the Lin–Kernighan algorithm is to remove from this tree all alternating trails which have gain <math>\leq 0</math>. This does not prevent finding every closed trail with positive gain, thanks to the following lemma.
+
+'''Lemma.''' ''If <math> a_0,\dotsc,a_{n-1} </math> are numbers such that <math> \sum_{i=0}^{n-1} a_i > 0 </math>, then there is a cyclic permutation of these numbers such that all partial sums are positive as well, i.e., there is some <math>k</math> such that''
+: ''<math> \sum_{i=0}^r a_{(k+i) \bmod n} > 0 </math> for all <math>r=0,1,\dotsc,n-1</math>.''
+
+For a closed alternating trail <math>F = e_0 \, e_1 \, \dots \, e_{n-1}</math>, one may define <math> a_i = c(e_i) </math> if <math> e_i \in T </math> and <math> a_i = -c(e_i) </math> if <math> e_i \notin T </math>; the sum <math> \sum\nolimits_{i=0}^{n-1} a_i </math> is then the gain <math> g(F) </math>. Here the lemma implies that there for every closed alternating trail with positive gain exists at least one starting vertex <math>v_0</math> for which all the gains of the partial trails are positive as well, so <math>F</math> will be found when the search explores the branch of alternating trails starting at <math>v_0</math>. (Prior to that the search may have considered other subtrails of <math>F</math> starting at other vertices but backed out because some subtrail failed the positive gain constraint.) Reducing the number of branches to explore translates directly to a reduction in runtime, and the sooner a branch can be pruned, the better.
+
+This yields the following algorithm for finding all closed, positive gain alternating trails in the graph.
+
+:State: a stack of triples <math>(u,i,g)</math>, where <math>u \in \mathrm{V}(G)</math> is a vertex, <math>i \geq 0</math> is the current number of edges in the trail, and <math>g</math> is the current trail gain.
+# For all <math>u \in \mathrm{V}(G)</math>, push <math>(u,0,0)</math> onto the stack.
+# While the stack is nonempty:
+## Pop <math>(u,i,g)</math> off the stack and let <math>v_i := u</math>. The current alternating trail is now <math> F = \{ v_0 v_1, v_1 v_2, \dotsc, v_{i-1} v_i \} </math>.
+## If <math>i</math> is even then:
+##: For each <math>u \in \mathrm{V}(G)</math> such that <math> v_i u \in T \setminus \{ v_0 v_1, v_1 v_2, \dotsc, v_{i-1} v_i \}</math> (there are at most two of these), push <math>\bigl( u, i+1, g+c(v_i u) \bigr)</math> onto the stack.
+## If instead <math>i</math> is odd then:
+### If <math> g > c(v_i v_0) </math> then '''report''' <math> \{ v_0 v_1, v_1 v_2, \dotsc, v_{i-1} v_i, v_i v_0 \} </math> as a closed alternating trail with gain <math> g - c(v_i v_0) > 0 </math>.
+### For each <math>u \in \mathrm{V}(G)</math> such that <math> g > c(v_i u)</math> and <math> v_i u \notin T \cup \{ v_0 v_1, v_1 v_2, \dotsc, v_{i-1} v_i \}</math> (there may be <math>O(n)</math> of these, or there could be none), push <math>\bigl( u, i+1, g-c(v_i u) \bigr)</math> onto the stack.
+# Stop
+
+As an [[enumeration algorithm]] this is slightly flawed, because it may report the same trail multiple times, with different starting points, but Lin–Kernighan does not care because it mostly aborts the enumeration after finding the first hit. It should however be remarked that:
+* Lin–Kernighan is not satisfied with just having found a closed alternating trail <math>F</math> of positive gain, it additionally requires that <math>T \mathbin{\triangle} F</math> is a tour.
+* Lin–Kernighan also restricts the search in various ways, most obviously regarding the search depth (but not only in that way). The above unrestricted search still terminates because at <math> i = 2n </math> there is no longer any unpicked edge remaining in <math>T</math>, but that is far beyond what is practical to explore.
+* In most iterations one wishes to quickly find a better tour <math>T'</math>, so rather than actually listing all siblings in the search tree before exploring the first of them, one may wish to generate these siblings lazily.
+
+===Basic Lin–Kernighan algorithm===
+The basic form of the Lin–Kernighan algorithm not only does a local search counterpart of the above enumeration, but it also introduces two parameters that narrow the search.
+* The ''backtracking depth <math>p_1</math>'' is an upper bound on the length of the alternating trail after [[backtracking]]; beyond this depth, the algorithm explores at most one way of extending the alternating trail. Standard value is that <math> p_1 = 5 </math>.
+* The ''infeasibility depth''  <math>p_2</math> is an alternating path length beyond which it begins to be required that closing the current trail (regardless of the gain of doing so) yields an exchange to a new tour. Standard value is that <math> p_2 = 2 </math>.
+Because there are <math> O( n^{\lfloor p_1/2 \rfloor} ) </math> alternating trails of length <math>p_1</math>, and the final round of the algorithm may have to check all of them before concluding that the current tour is locally optimal, we get <math> \lfloor p_1/2 \rfloor </math> (standard value <math>2</math>) as a lower bound on the exponent of the algorithm complexity. Lin & Kernighan report <math> 2.2 </math> as an empirical exponent of <math>n</math> in the average overall running time for their algorithm, but other implementors have had trouble reproducing that result.<ref>{{cite journal |last1=Melamed |first1=I. I. |last2=Sergeev |first2=S. I. |last3=Sigal |first3=I. Kh. |title=The traveling salesman problem. Approximate algorithms |journal=Avtomatika i Telemekhanika |date=1989 |volume=11 |pages=3–26}}</ref> It appears unlikely that the worst-case running time is polynomial.<ref>{{cite journal |last1=Papadimitriou |first1=C. H. |title=The complexity of the Lin–Kernighan heuristic for the travelling salesman problem |journal=SIAM Journal on Computing |date=1992 |volume=21 |issue=3 |pages=450–465|doi=10.1137/0221030 }}</ref>
+
+In terms of a stack as above, the algorithm is:
+:Input: an instance <math>(G,c)</math> of the travelling salesman problem, and a tour <math> T \subset \mathrm{E}(G) </math>
+:Output: a locally optimal tour
+:Variables: 
+:: a stack of triples <math>(u,i,g)</math>, where <math>u \in \mathrm{V}(G)</math> is a vertex, <math>i \geq 0</math> is the current number of edges in the trail, and <math>g</math> is the current trail gain,
+:: the sequence <math> v_0, v_1, \dotsc </math> of vertices in the current alternating trail, 
+:: the best set <math> F </math> of exchange edges found for current tour, and its corresponding gain <math> g^* </math>.
+:Initialise the stack to being empty.
+:'''Repeat'''
+:: Set <math> g^* := 0 </math> and <math> F := \varnothing </math>.
+:: For all <math>u \in \mathrm{V}(G)</math>, push <math>(u,0,0)</math> onto the stack.
+:: '''While''' the stack is nonempty:
+::: Pop <math>(u,i,g)</math> off the stack and let <math>v_i := u</math>.
+::: '''If''' <math>i</math> is even '''then'''
+:::: for each <math>u \in \mathrm{V}(G)</math> such that <math> v_i u \in T \setminus \{ v_0 v_1, v_1 v_2, \dotsc, v_{i-1} v_i \}</math>,
+::::: push <math>\bigl( u, i+1, g+c(v_i u) \bigr)</math> onto the stack if: <math> i \leq p_2 </math>, or <math> u v_0 \notin T \cup \{ v_0 v_1, v_1 v_2, \dotsc, v_{i-1} v_i, v_i u \} </math> and <math> T \mathbin{\triangle} 
+\{ v_0 v_1, v_1 v_2, \dotsc, v_{i-1} v_i, v_i u, u v_0 \} </math> is a tour (Hamiltonicity check)
+::: '''else''' (<math>i</math> is odd):
+:::: If <math> g > c(v_i v_0) </math>, <math> g - c(v_i v_0) > g^* </math>, and <math> T \mathbin{\triangle} 
+\{ v_0 v_1, v_1 v_2, \dotsc, v_{i-1} v_i, v_i v_0 \} </math> is a tour (Hamiltonicity check) then let <math> F := \{ v_0 v_1, v_1 v_2, \dotsc, v_{i-1} v_i, v_i v_0 \} </math> and <math> g^* := g - c(v_i v_0) </math>.
+:::: For each <math>u \in \mathrm{V}(G)</math> such that <math> g > c(v_i u)</math> and <math> v_i u \notin T \cup \{ v_0 v_1, v_1 v_2, \dotsc, v_{i-1} v_i \}</math>, push <math>\bigl( u, i+1, g-c(v_i u) \bigr)</math> onto the stack.
+::: '''End if.'''
+::: Let <math> (u,j,g) </math> be the top element on the stack (peek, not pop). '''If''' <math> i \leq j </math> '''then'''
+:::: '''if''' <math> g^* > 0 </math> '''then''' 
+::::: set <math> T := T \mathbin{\triangle} F </math> (update current tour) and clear the stack.
+:::: '''else if''' <math> i > p_1 </math> '''then'''
+::::: pop all elements <math> (u,j,g) </math> off the stack that have <math> j > p_1 </math>
+:::: '''end if'''
+::: '''end if'''
+:: '''end while'''
+:'''until''' <math> g^*=0</math>.
+:'''Return''' <math>T</math>
+
+The length of the alternating trails considered are thus not explicitly bounded, but beyond the backtracking depth <math>p_1</math> no more than one way of extending the current trail is considered, which in principle stops those explorations from raising the exponent in the runtime complexity.
+
+===Limitations===
+The closed alternating trails found by the above method are all connected, but the symmetric difference <math> T \mathbin{\triangle} T' </math> of two tours need not be, so in general this method of alternating trails cannot explore the full neighbourhood of a trail <math>T</math>. The literature on the Lin–Kernighan heuristic uses the term ''sequential'' exchanges for those that are described by a single alternating trail. The smallest non-sequential exchange would however replace 4 edges and consist of two cycles of 4 edges each (2 edges added, 2 removed), so it is long compared to the typical Lin–Kernighan exchange, and there are few of these compared to the full set of 4-edge exchanges.
+
+In at least one implementation by Lin & Kernighan there was an extra final step considering such non-sequential exchanges of 4 edges before declaring a tour locally optimal, which would mean the tours produced are 4-opt unless one introduces further constraints on the search (which Lin and Kernighan in fact did). The literature is vague on exactly what is included in the Lin–Kernighan heuristic proper, and what constitutes further refinements.
+
+For the ''asymmetric'' TSP, the idea of using positive gain alternating trails to find favourable exchanges is less useful, because there are fewer ways in which pieces of a tour can be rearranged to yield new tours when one may not reverse the orientation of a piece. Two pieces can only be patched together to reproduce the original tour. Three pieces can be patched together to form a different tour in one way only, and the corresponding alternating trail does not extend to a closed trail for rearranging four pieces into a new tour. To rearrange four pieces, one needs a non-sequential exchange.
+
+==Checking Hamiltonicity==
+The Lin–Kernighan heuristic checks the validity of tour candidates <math> T \mathbin{\triangle} F </math> at two points: obviously when deciding whether a better tour has been found, but also as a constraint to descending in the search tree, as controlled via the infeasibility depth <math>p_2</math>. Concretely, at larger depths in the search a vertex <math> v_{2k+1} </math> is only appended to the alternating trail if <math> T \mathbin{\triangle} \{ v_0 v_1, v_1 v_2, \dotsc, v_{2k} v_{2k+1}, v_{2k+1} v_0 \} </math> is a tour. By design that set of edges constitutes a [[factor (graph theory)|2-factor]] in <math> G </math>, so what needs to be determined is whether that 2-factor consists of a single Hamiltonian cycle, or instead is made up of several cycles.
+
+If naively posing this subproblem as giving a subroutine the set of <math>n</math> edges as input, one ends up with <math>O(n)</math> as the [[time complexity]] for this check, since it is necessary to walk around the full tour before being able to determine that it is in fact a Hamiltonian cycle. That is too slow for the second usage of this test, which gets carried out for every alternating trail with more than <math>2</math> edges from <math>T</math>. If keeping track of more information, the test can instead be carried out in constant time.
+
+A useful degree of freedom here is that one may choose the order in which step 2.3.2 iterates over all vertices; in particular, one may follow the known tour <math>T</math>. After picking <math>k</math> edges from <math>T</math>, the remaining subgraph <math> \bigl( \mathrm{V}(G), T \setminus \{ v_0 v_1, \dotsc, v_{2k-2} v_{2k-1} \} \bigr) </math> consists of <math>k</math> paths. The outcome of the Hamiltonicity test done when considering the <math>(k+1)</math>th edge <math> v_{2k} v_{2k+1} </math> depends only on in which of these paths that <math> v_{2k} </math> resides and whether <math> v_{2k+1} </math> is before or after <math> v_{2k} </math>. Hence it would be sufficient to examine <math>2k</math> different cases as part of performing step 2.3.2 for <math> v_{2k-1} </math>; as far as <math> v_{2k+1} </math> is concerned, the outcome of this test can be inherited information rather than something that has to be computed fresh.
+
+==References==
+{{Reflist}}
+* {{cite journal|doi=10.1287/opre.21.2.498|first1=Shen|last1=Lin|author-link1=Shen Lin|first2=B. W.|last2=Kernighan|author-link2=Brian Kernighan| year = 1973 | title = An Effective Heuristic Algorithm for the Traveling-Salesman Problem | journal = Operations Research | volume = 21|issue=2 | pages = 498–516}}
+* {{cite journal|doi = 10.1016/S0377-2217(99)00284-2|author = K. Helsgaun |title= An Effective Implementation of the Lin-Kernighan Traveling Salesman Heuristic |journal=European Journal of Operational Research |volume= 126 |issue= 1 |year=2000 |pages=106–130 }}
+* {{cite book|chapter-url=http://www.research.att.com/~dsj/papers/TSPchapter.pdf|chapter=The Traveling Salesman Problem: A Case Study in Local Optimization|first1=David S.|last1=Johnson|first2=Lyle A.|last2=McGeoch|title=Local Search in Combinatorial Optimization |editor=E. H. L. Aarts |editor2=J. K. Lenstra |editor2-link=Jan Karel Lenstra |publisher=John Wiley and Sons|location=London|year=1997|pages=215–310|archive-url=https://web.archive.org/web/20070221211217/http://www.research.att.com/~dsj/papers/TSPchapter.pdf|archive-date=21 February 2007}}
+
+==External links==
+* [http://akira.ruc.dk/~keld/research/LKH-3/ LKH implementation]
+* [http://www.math.uwaterloo.ca/tsp/concorde.html Concorde TSP implementation]
+* [https://github.com/kikocastroneto/lk_heuristic LK Heuristic in Python]
+
+{{DEFAULTSORT:Lin-Kernighan heuristic}}
+[[Category:Combinatorial optimization]]
+[[Category:Combinatorial algorithms]]
+[[Category:Heuristic algorithms]]
+[[Category:Travelling salesman problem]]

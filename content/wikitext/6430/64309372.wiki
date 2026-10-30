@@ -1,0 +1,1026 @@
+<!-- wikipedia: en
+     page: 64309372
+     title: LSH (hash function)
+     revision: 1235734140
+     timestamp: 2024-07-20T23:16:18Z
+     history: https://en.wikipedia.org/w/index.php?curid=64309372&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1235734140 -->
+{{short description|Cryptographic hash function}}
+{{Other uses|LSH (disambiguation)}}
+'''LSH''' is a [[cryptographic hash function]] designed in 2014 by [[South Korea]] to provide integrity in general-purpose software environments such as [[Personal computer|PCs]] and [[smart device]]s.<ref name="KHL+14">{{cite book |last1=Kim |first1=Dong-Chan |last2=Hong |first2=Deukjo |last3=Lee |first3=Jung-Keun |last4=Kim |first4=Woo-Hwan |last5=Kwon |first5=Daesung |title=Information Security and Cryptology - ICISC 2014 |chapter=LSH: A New Fast Secure Hash Function Family |series=Lecture Notes in Computer Science |date=2015 |volume=8949 |publisher=Springer International Publishing |isbn=978-3-319-15943-0 |pages=286–313 |doi=10.1007/978-3-319-15943-0_18 |chapter-url=https://link.springer.com/chapter/10.1007/978-3-319-15943-0_18 |language=en}}</ref> LSH is one of the cryptographic algorithms approved by the Korean Cryptographic Module Validation Program (KCMVP).
+And it is the national standard of South Korea (KS X 3262).
+
+== Specification ==
+
+The overall structure of the hash function LSH is shown in the following figure.
+
+[[File:LSH_structure.png|600px|thumb|center|Overall structure of LSH]]
+
+The hash function LSH has the wide-pipe Merkle-Damgård structure with one-zeros padding.
+The message hashing process of LSH consists of the following three stages.
+
+# ''Initialization'':
+#* One-zeros padding of a given bit string message.
+#* Conversion to 32-word array message blocks from the padded bit string message.
+#* Initialization of a chaining variable with the initialization vector.
+# ''Compression'':
+#* Updating of chaining variables by iteration of a compression function with message blocks.
+# ''Finalization'':
+#* Generation of an <math> n </math>-bit hash value from the final chaining variable.
+
+{| class="wikitable" style="text-align: left; margin-left: auto; margin-right:auto; border: none;"
+|
+* '''function''' Hash function LSH
+* '''input:''' Bit string message <math> m </math>
+* '''output:''' Hash value <math> h \in \{ 0, 1 \}^n </math>
+* '''procedure'''
+<math> \qquad </math>One-zeros padding of <math> m </math>
+
+<math> \qquad </math>Generation of <math> t </math> message blocks <math> \{ \textsf{M}^{(i)} \}_{i=0}^{t-1} </math>, where <math> t = \Big\lceil \frac{|m| + 1}{32w} \Big\rceil </math> from the padded bit string
+
+<math> \qquad </math><math> \textsf{CV}^{(0)} \leftarrow \textsf{IV} </math>
+
+<math> \qquad </math>'''for''' <math> i = 0 </math> '''to''' <math> (t-1) </math> '''do'''
+
+<math> \qquad </math><math> \qquad </math><math> \textsf{CV}^{(i+1)} \leftarrow \textrm{CF} (\textsf{CV}^{(i)}, \textsf{M}^{(i)}) </math>
+
+<math> \qquad </math>'''end for'''
+
+<math> \qquad </math><math> h \leftarrow \textrm{FIN}_n(\textsf{CV}^{(t)}) </math>
+
+<math> \qquad </math>'''return''' <math> h </math>
+|}
+
+The specifications of the hash function LSH are as follows.
+
+{| class="wikitable" style="margin-left: auto; margin-right:auto; border: none;"
+|+Hash function LSH specifications
+|-
+! Algorithm
+! Digest size in bits (<math> n </math>)
+! Number of step functions (<math> N_s </math>)
+! Chaining variable size in bits
+! Message block size in bits
+! Word size in bits (<math> w </math>)
+|-
+| style="text-align:center;" | LSH-256-224
+| style="text-align:center;" | 224
+| rowspan="2" style="text-align:center;" | 26
+| rowspan="2" style="text-align:center;" | 512
+| rowspan="2" style="text-align:center;" | 1024
+| rowspan="2" style="text-align:center;" | 32
+|-
+| style="text-align:center;" | LSH-256-256
+| style="text-align:center;" | 256
+|-
+| style="text-align:center;" | LSH-512-224
+| style="text-align:center;" | 224
+| rowspan="4" style="text-align:center;" | 28
+| rowspan="4" style="text-align:center;" | 1024
+| rowspan="4" style="text-align:center;" | 2048
+| rowspan="4" style="text-align:center;" | 64
+|-
+| style="text-align:center;" | LSH-512-256
+| style="text-align:center;" | 256
+|-
+| style="text-align:center;" | LSH-512-384
+| style="text-align:center;" | 384
+|-
+| style="text-align:center;" | LSH-512-512
+| style="text-align:center;" | 512
+|}
+
+===Initialization===
+
+Let <math> m </math> be a given bit string message.
+The given <math> m </math> is padded by one-zeros, i.e., the bit ‘1’ is appended to the end of <math> m </math>, and the bit ‘0’s are appended until a bit length of a padded message is <math> 32wt </math>, where <math> t = \lceil (|m| + 1)/32w\rceil </math> and <math> \lceil x \rceil </math> is the smallest integer not less than <math> x </math>.
+
+Let <math> m_p = m_0 \| m_1 \| \ldots \| m_{(32wt-1)} </math> be the one-zeros-padded <math> 32wt </math>-bit string of <math> m </math>.
+Then <math> m_p </math> is considered as a <math> 4wt </math>-byte array <math> m_a = (m[0], \ldots , m[4wt-1]) </math>, where <math> m[k] = m_{8k} \| m_{(8k+1)} \| \ldots \| m_{(8k+7)} </math> for all <math> 0 \le k \le (4wt-1) </math>.
+The <math> 4wt </math>-byte array <math>m_a</math> converts into a <math> 32t </math>-word array <math> \textsf{M} = (M[0], \ldots , M[32t-1]) </math> as follows.
+
+<math>M[s] \leftarrow m[ws/8+(w/8-1)] \| \ldots \| m[ws/8+1] \| m[ws/8]</math> <math>(0 \le s \le (32t-1))</math>
+
+From the word array <math> \textsf{M} </math>, we define the <math> t </math> 32-word array message blocks <math> \{ \textsf{M}^{(i)} \}_{i=0}^{t-1} </math> as follows.
+
+<math> \textsf{M}^{(i)} \leftarrow (M[32i], M[32i+1], \ldots , M[32i+31])</math> <math>(0 \le i \le (t-1))</math>
+
+The 16-word array chaining variable <math> \textsf{CV}^{(0)} </math> is initialized to the initialization vector <math> \textsf{IV} </math>.
+
+<math> \textsf{CV}^{(0)}[l] \leftarrow \textsf{IV}[l]</math> <math>(0 \le l \le 15)</math>
+
+The initialization vector <math> \textsf{IV} </math> is as follows.
+In the following tables, all values are expressed in hexadecimal form.
+
+{| class="wikitable" style="margin-left: auto; margin-right:auto; border: none;"
+|+LSH-256-224 initialization vector
+|-
+! <math> \textsf{IV}[0] </math>
+! <math> \textsf{IV}[1] </math>
+! <math> \textsf{IV}[2] </math>
+! <math> \textsf{IV}[3] </math>
+! <math> \textsf{IV}[4] </math>
+! <math> \textsf{IV}[5] </math>
+! <math> \textsf{IV}[6] </math>
+! <math> \textsf{IV}[7] </math>
+|-
+| <span style="font-family:Courier;">068608D3</span>
+| <span style="font-family:Courier;">62D8F7A7</span>
+| <span style="font-family:Courier;">D76652AB</span>
+| <span style="font-family:Courier;">4C600A43</span>
+| <span style="font-family:Courier;">BDC40AA8</span>
+| <span style="font-family:Courier;">1ECA0B68</span>
+| <span style="font-family:Courier;">DA1A89BE</span>
+| <span style="font-family:Courier;">3147D354</span>
+|-
+! <math> \textsf{IV}[8] </math>
+! <math> \textsf{IV}[9] </math>
+! <math> \textsf{IV}[10] </math>
+! <math> \textsf{IV}[11] </math>
+! <math> \textsf{IV}[12] </math>
+! <math> \textsf{IV}[13] </math>
+! <math> \textsf{IV}[14] </math>
+! <math> \textsf{IV}[15] </math>
+|-
+| <span style="font-family:Courier;">707EB4F9</span>
+| <span style="font-family:Courier;">F65B3862</span>
+| <span style="font-family:Courier;">6B0B2ABE</span>
+| <span style="font-family:Courier;">56B8EC0A</span>
+| <span style="font-family:Courier;">CF237286</span>
+| <span style="font-family:Courier;">EE0D1727</span>
+| <span style="font-family:Courier;">33636595</span>
+| <span style="font-family:Courier;">8BB8D05F</span>
+|}
+
+{| class="wikitable" style="margin-left: auto; margin-right:auto; border: none;"
+|+LSH-256-256 initialization vector
+|-
+! <math> \textsf{IV}[0] </math>
+! <math> \textsf{IV}[1] </math>
+! <math> \textsf{IV}[2] </math>
+! <math> \textsf{IV}[3] </math>
+! <math> \textsf{IV}[4] </math>
+! <math> \textsf{IV}[5] </math>
+! <math> \textsf{IV}[6] </math>
+! <math> \textsf{IV}[7] </math>
+|-
+| <span style="font-family:Courier;">46A10F1F</span>
+| <span style="font-family:Courier;">FDDCE486</span>
+| <span style="font-family:Courier;">B41443A8</span>
+| <span style="font-family:Courier;">198E6B9D</span>
+| <span style="font-family:Courier;">3304388D</span>
+| <span style="font-family:Courier;">B0F5A3C7</span>
+| <span style="font-family:Courier;">B36061C4</span>
+| <span style="font-family:Courier;">7ADBD553</span>
+|-
+! <math> \textsf{IV}[8] </math>
+! <math> \textsf{IV}[9] </math>
+! <math> \textsf{IV}[10] </math>
+! <math> \textsf{IV}[11] </math>
+! <math> \textsf{IV}[12] </math>
+! <math> \textsf{IV}[13] </math>
+! <math> \textsf{IV}[14] </math>
+! <math> \textsf{IV}[15] </math>
+|-
+| <span style="font-family:Courier;">105D5378</span>
+| <span style="font-family:Courier;">2F74DE54</span>
+| <span style="font-family:Courier;">5C2F2D95</span>
+| <span style="font-family:Courier;">F2553FBE</span>
+| <span style="font-family:Courier;">8051357A</span>
+| <span style="font-family:Courier;">138668C8</span>
+| <span style="font-family:Courier;">47AA4484</span>
+| <span style="font-family:Courier;">E01AFB41</span>
+|}
+
+{| class="wikitable" style="margin-left: auto; margin-right:auto; border: none;"
+|+LSH-512-224 initialization vector
+|-
+! <math> \textsf{IV}[0] </math>
+! <math> \textsf{IV}[1] </math>
+! <math> \textsf{IV}[2] </math>
+! <math> \textsf{IV}[3] </math>
+|-
+| <span style="font-family:Courier;">0C401E9FE8813A55</span>
+| <span style="font-family:Courier;">4A5F446268FD3D35</span>
+| <span style="font-family:Courier;">FF13E452334F612A</span>
+| <span style="font-family:Courier;">F8227661037E354A</span>
+|-
+! <math> \textsf{IV}[4] </math>
+! <math> \textsf{IV}[5] </math>
+! <math> \textsf{IV}[6] </math>
+! <math> \textsf{IV}[7] </math>
+|-
+| <span style="font-family:Courier;">A5F223723C9CA29D</span>
+| <span style="font-family:Courier;">95D965A11AED3979</span>
+| <span style="font-family:Courier;">01E23835B9AB02CC</span>
+| <span style="font-family:Courier;">52D49CBAD5B30616</span>
+|-
+! <math> \textsf{IV}[8] </math>
+! <math> \textsf{IV}[9] </math>
+! <math> \textsf{IV}[10] </math>
+! <math> \textsf{IV}[11] </math>
+|-
+| <span style="font-family:Courier;">9E5C2027773F4ED3</span>
+| <span style="font-family:Courier;">66A5C8801925B701</span>
+| <span style="font-family:Courier;">22BBC85B4C6779D9</span>
+| <span style="font-family:Courier;">C13171A42C559C23</span>
+|-
+! <math> \textsf{IV}[12] </math>
+! <math> \textsf{IV}[13] </math>
+! <math> \textsf{IV}[14] </math>
+! <math> \textsf{IV}[15] </math>
+|-
+| <span style="font-family:Courier;">31E2B67D25BE3813</span>
+| <span style="font-family:Courier;">D522C4DEED8E4D83</span>
+| <span style="font-family:Courier;">A79F5509B43FBAFE</span>
+| <span style="font-family:Courier;">E00D2CD88B4B6C6A</span>
+|}
+
+{| class="wikitable" style="margin-left: auto; margin-right:auto; border: none;"
+|+LSH-512-256 initialization vector
+|-
+! <math> \textsf{IV}[0] </math>
+! <math> \textsf{IV}[1] </math>
+! <math> \textsf{IV}[2] </math>
+! <math> \textsf{IV}[3] </math>
+|-
+| <span style="font-family:Courier;">6DC57C33DF989423</span>
+| <span style="font-family:Courier;">D8EA7F6E8342C199</span>
+| <span style="font-family:Courier;">76DF8356F8603AC4</span>
+| <span style="font-family:Courier;">40F1B44DE838223A</span>
+|-
+! <math> \textsf{IV}[4] </math>
+! <math> \textsf{IV}[5] </math>
+! <math> \textsf{IV}[6] </math>
+! <math> \textsf{IV}[7] </math>
+|-
+| <span style="font-family:Courier;">39FFE7CFC31484CD</span>
+| <span style="font-family:Courier;">39C4326CC5281548</span>
+| <span style="font-family:Courier;">8A2FF85A346045D8</span>
+| <span style="font-family:Courier;">FF202AA46DBDD61E</span>
+|-
+! <math> \textsf{IV}[8] </math>
+! <math> \textsf{IV}[9] </math>
+! <math> \textsf{IV}[10] </math>
+! <math> \textsf{IV}[11] </math>
+|-
+| <span style="font-family:Courier;">CF785B3CD5FCDB8B</span>
+| <span style="font-family:Courier;">1F0323B64A8150BF</span>
+| <span style="font-family:Courier;">FF75D972F29EA355</span>
+| <span style="font-family:Courier;">2E567F30BF1CA9E1</span>
+|-
+! <math> \textsf{IV}[12] </math>
+! <math> \textsf{IV}[13] </math>
+! <math> \textsf{IV}[14] </math>
+! <math> \textsf{IV}[15] </math>
+|-
+| <span style="font-family:Courier;">B596875BF8FF6DBA</span>
+| <span style="font-family:Courier;">FCCA39B089EF4615</span>
+| <span style="font-family:Courier;">ECFF4017D020B4B6</span>
+| <span style="font-family:Courier;">7E77384C772ED802</span>
+|}
+
+{| class="wikitable" style="margin-left: auto; margin-right:auto; border: none;"
+|+LSH-512-384 initialization vector
+|-
+! <math> \textsf{IV}[0] </math>
+! <math> \textsf{IV}[1] </math>
+! <math> \textsf{IV}[2] </math>
+! <math> \textsf{IV}[3] </math>
+|-
+| <span style="font-family:Courier;">53156A66292808F6</span>
+| <span style="font-family:Courier;">B2C4F362B204C2BC</span>
+| <span style="font-family:Courier;">B84B7213BFA05C4E</span>
+| <span style="font-family:Courier;">976CEB7C1B299F73</span>
+|-
+! <math> \textsf{IV}[4] </math>
+! <math> \textsf{IV}[5] </math>
+! <math> \textsf{IV}[6] </math>
+! <math> \textsf{IV}[7] </math>
+|-
+| <span style="font-family:Courier;">DF0CC63C0570AE97</span>
+| <span style="font-family:Courier;">DA4441BAA486CE3F</span>
+| <span style="font-family:Courier;">6559F5D9B5F2ACC2</span>
+| <span style="font-family:Courier;">22DACF19B4B52A16</span>
+|-
+! <math> \textsf{IV}[8] </math>
+! <math> \textsf{IV}[9] </math>
+! <math> \textsf{IV}[10] </math>
+! <math> \textsf{IV}[11] </math>
+|-
+| <span style="font-family:Courier;">BBCDACEFDE80953A</span>
+| <span style="font-family:Courier;">C9891A2879725B3E</span>
+| <span style="font-family:Courier;">7C9FE6330237E440</span>
+| <span style="font-family:Courier;">A30BA550553F7431</span>
+|-
+! <math> \textsf{IV}[12] </math>
+! <math> \textsf{IV}[13] </math>
+! <math> \textsf{IV}[14] </math>
+! <math> \textsf{IV}[15] </math>
+|-
+| <span style="font-family:Courier;">BB08043FB34E3E30</span>
+| <span style="font-family:Courier;">A0DEC48D54618EAD</span>
+| <span style="font-family:Courier;">150317267464BC57</span>
+| <span style="font-family:Courier;">32D1501FDE63DC93</span>
+|}
+
+{| class="wikitable" style="margin-left: auto; margin-right:auto; border: none;"
+|+LSH-512-512 initialization vector
+|-
+! <math> \textsf{IV}[0] </math>
+! <math> \textsf{IV}[1] </math>
+! <math> \textsf{IV}[2] </math>
+! <math> \textsf{IV}[3] </math>
+|-
+| <span style="font-family:Courier;">ADD50F3C7F07094E</span>
+| <span style="font-family:Courier;">E3F3CEE8F9418A4F</span>
+| <span style="font-family:Courier;">B527ECDE5B3D0AE9</span>
+| <span style="font-family:Courier;">2EF6DEC68076F501</span>
+|-
+! <math> \textsf{IV}[4] </math>
+! <math> \textsf{IV}[5] </math>
+! <math> \textsf{IV}[6] </math>
+! <math> \textsf{IV}[7] </math>
+|-
+| <span style="font-family:Courier;">8CB994CAE5ACA216</span>
+| <span style="font-family:Courier;">FBB9EAE4BBA48CC7</span>
+| <span style="font-family:Courier;">650A526174725FEA</span>
+| <span style="font-family:Courier;">1F9A61A73F8D8085</span>
+|-
+! <math> \textsf{IV}[8] </math>
+! <math> \textsf{IV}[9] </math>
+! <math> \textsf{IV}[10] </math>
+! <math> \textsf{IV}[11] </math>
+|-
+| <span style="font-family:Courier;">B6607378173B539B</span>
+| <span style="font-family:Courier;">1BC99853B0C0B9ED</span>
+| <span style="font-family:Courier;">DF727FC19B182D47</span>
+| <span style="font-family:Courier;">DBEF360CF893A457</span>
+|-
+! <math> \textsf{IV}[12] </math>
+! <math> \textsf{IV}[13] </math>
+! <math> \textsf{IV}[14] </math>
+! <math> \textsf{IV}[15] </math>
+|-
+| <span style="font-family:Courier;">4981F5E570147E80</span>
+| <span style="font-family:Courier;">D00C4490CA7D3E30</span>
+| <span style="font-family:Courier;">5D73940C0E4AE1EC</span>
+| <span style="font-family:Courier;">894085E2EDB2D819</span>
+|}
+
+===Compression===
+
+In this stage, the <math> t </math> 32-word array message blocks <math> \{ \textsf{M}^{(i)} \}_{i=0}^{t-1} </math>, which are generated from a message <math> m </math> in the initialization stage, are compressed by iteration of compression functions.
+The compression function <math> \textrm{CF} : \mathcal{W}^{16} \times \mathcal{W}^{32} \rightarrow \mathcal{W}^{16}</math> has two inputs; the <math> i </math>-th 16-word chaining variable <math> \textsf{CV}^{(i)} </math> and the <math> i </math>-th 32-word message block <math> \textsf{M}^{(i)} </math>.
+And it returns the <math> (i+1) </math>-th 16-word chaining variable <math> \textsf{CV}^{(i+1)} </math>.
+Here and subsequently, <math> \mathcal{W}^t </math> denotes the set of all <math> t </math>-word arrays for <math> t \ge 1 </math>.
+
+The following four functions are used in a compression function:
+
+* Message expansion function <math>\textrm{MsgExp}: \mathcal{W}^{32} \rightarrow \mathcal{W}^{16(Ns+1)}</math>
+* Message addition function <math>\textrm{MsgAdd}: \mathcal{W}^{16} \times \mathcal{W}^{16} \rightarrow \mathcal{W}^{16}</math>
+* Mix function <math>\textrm{Mix}_j: \mathcal{W}^{16} \rightarrow \mathcal{W}^{16}</math>
+* Word-permutation function <math>\textrm{WordPerm}: \mathcal{W}^{16} \rightarrow \mathcal{W}^{16}</math>
+
+The overall structure of the compression function is shown in the following figure.
+
+[[File:LSH structure of the compression function.png|600px|thumb|center|Compression function of LSH]]
+
+In a compression function, the message expansion function <math> \textrm{MsgExp} </math> generates <math> (N_s+1) </math> 16-word array sub-messages <math> \{ \textsf{M}_j^{(i)} \}_{j=0}^{N_s} </math> from given <math> \textsf{M}^{(i)} </math>.
+Let <math> \textsf{T} = (T[0], \ldots , T[15]) </math> be a temporary 16-word array set to the <math> i </math>-th chaining variable <math> \textsf{CV}^{(i)} </math>.
+The <math> j </math>-th step function <math> \textrm{Step}_j </math> having two inputs <math> \textsf{T} </math> and <math> \textsf{M}_j^{(i)} </math> updates <math> \textsf{T} </math>, i.e., <math> \textsf{T} \leftarrow \textrm{Step}_j \left( \textsf{T}, \textsf{M}_j^{(i)} \right) </math>.
+All step functions are proceeded in order <math> j = 0, \ldots, N_s - 1 </math>.
+Then one more <math> \textrm{MsgAdd} </math> operation by <math> \textsf{M}_{N_s}^{(i)} </math> is proceeded, and the <math> (i+1) </math>-th chaining variable <math> \textsf{CV}^{(i+1)} </math> is set to <math> \textsf{T} </math>.
+The process of a compression function in detail is as follows.
+
+{| class="wikitable" style="text-align: left; margin-left: auto; margin-right:auto; border: none;"
+|
+* '''function''' Compression function <math> \textrm{CF} </math>
+* '''input:''' The <math> i </math>-th chaining variable <math> \textsf{CV}^{(i)} \in \mathcal{W}^{16} </math> and the <math> i </math>-th message block <math> \textsf{M}^{(i)} \in \mathcal{W}^{32} </math>
+* '''output:''' The <math> (i + 1) </math>-th chaining variable <math> \textsf{CV}^{(i+1)} \in \mathcal{W}^{16} </math>
+* '''procedure'''
+<math> \qquad </math><math> \{ \textsf{M}_j^{(i)} \}_{j=0}^{N_s} \leftarrow \textrm{MsgExp} \left( \textsf{M}^{(i)} \right) </math>
+
+<math> \qquad </math><math> \textsf{T} \leftarrow \textsf{CV}^{(i)} </math>
+
+<math> \qquad </math>'''for''' <math> j = 0 </math> '''to''' <math> (N_s - 1) </math> '''do'''
+
+<math> \qquad </math><math> \qquad </math><math> \textsf{T} \leftarrow \textrm{Step}_j \left( \textsf{T}, \textsf{M}_j^{(i)} \right) </math>
+
+<math> \qquad </math>'''end for'''
+
+<math> \qquad </math><math> \textsf{CV}^{(i+1)} \leftarrow \textrm{MsgAdd} \left( \textsf{T}, \textsf{M}_{N_s}^{(i)} \right) </math>
+
+<math> \qquad </math>'''return''' <math> \textsf{CV}^{(i+1)} </math>
+|}
+
+Here the <math> j </math>-th step function <math> \textrm{Step}_j : \mathcal{W}^{16} \times \mathcal{W}^{16} \rightarrow \mathcal{W}^{16} </math> is as follows.
+
+<math> \textrm{Step}_j := \textrm{WordPerm} \circ \textrm{Mix}_j \circ \textrm{MsgAdd}</math> <math>(0 \le j \le (N_s-1)) </math>
+
+The following figure shows the <math> j </math>-th step function <math> \textrm{Step}_j </math> of a compression function.
+
+[[File:LSH step function.png|600px|thumb|center|The <math> j </math>-th step function <math> \textrm{Step}_j </math>]]
+
+====Message Expansion Function MsgExp====
+
+Let <math> \textsf{M}^{(i)} = ( M^{(i)}[0], \ldots , M^{(i)}[31] ) </math> be the <math> i </math>-th 32-word array message block.
+The message expansion function <math> \textrm{MsgExp} </math> generates <math> (N_s + 1) </math> 16-word array sub-messages <math> \{ \textsf{M}_j^{(i)} \}_{j=0}^{N_s} </math> from a message block <math> \textsf{M}^{(i)} </math>.
+The first two sub-messages <math> \textsf{M}_{0}^{(i)} = ( M_{0}^{(i)}[0], \ldots , M_{0}^{(i)}[15] ) </math> and <math> \textsf{M}_{1}^{(i)} = ( M_{1}^{(i)}[0], \ldots , M_{1}^{(i)}[15] ) </math> are defined as follows.
+
+* <math> \textsf{M}_0^{(i)} \leftarrow (M^{(i)}[0], M^{(i)}[1], \ldots , M^{(i)}[15])</math>
+* <math> \textsf{M}_1^{(i)} \leftarrow (M^{(i)}[16], M^{(i)}[17], \ldots , M^{(i)}[31])</math>
+
+The next sub-messages <math> \{ \textsf{M}_j^{(i)} = ( M_{j}^{(i)}[0], \ldots , M_{j}^{(i)}[15] ) \}_{j=2}^{N_s} </math> are generated as follows.
+
+* <math> \textsf{M}_j^{(i)}[l] \leftarrow \textsf{M}_{j-1}^{(i)}[l] \boxplus\textsf{M}_{j-2}^{(i)}[\tau(l)]</math> <math>(0 \le l \le 15, \ 2 \le j \le N_s)</math>
+
+Here <math> \tau </math> is the permutation over <math> \mathbb{Z}_{16} </math> defined as follows.
+
+{| class="wikitable" style="margin-left: auto; margin-right:auto; border: none;"
+|+The permutation <math> \tau : \mathbb{Z}_{16} \rightarrow \mathbb{Z}_{16} </math>
+|-
+! <math> l </math>
+| style="text-align:center;" | 0
+| style="text-align:center;" | 1
+| style="text-align:center;" | 2
+| style="text-align:center;" | 3
+| style="text-align:center;" | 4
+| style="text-align:center;" | 5
+| style="text-align:center;" | 6
+| style="text-align:center;" | 7
+| style="text-align:center;" | 8
+| style="text-align:center;" | 9
+| style="text-align:center;" | 10
+| style="text-align:center;" | 11
+| style="text-align:center;" | 12
+| style="text-align:center;" | 13
+| style="text-align:center;" | 14
+| style="text-align:center;" | 15
+|-
+! <math> \tau(l) </math>
+| style="text-align:center;" | 3
+| style="text-align:center;" | 2
+| style="text-align:center;" | 0
+| style="text-align:center;" | 1
+| style="text-align:center;" | 7
+| style="text-align:center;" | 4
+| style="text-align:center;" | 5
+| style="text-align:center;" | 6
+| style="text-align:center;" | 11
+| style="text-align:center;" | 10
+| style="text-align:center;" | 8
+| style="text-align:center;" | 9
+| style="text-align:center;" | 15
+| style="text-align:center;" | 12
+| style="text-align:center;" | 13
+| style="text-align:center;" | 14
+|}
+
+====Message Addition Function MsgAdd====
+
+For two 16-word arrays <math> \textsf{X} = (X[0], \ldots , X[15]) </math> and <math> \textsf{Y} = (Y[0], \ldots , Y[15]) </math>, the message addition function <math> \textrm{MsgAdd} : \mathcal{W}^{16} \times \mathcal{W}^{16} \rightarrow \mathcal{W}^{16} </math> is defined as follows.
+
+<math> \textrm{MsgAdd}( \textsf{X}, \textsf{Y} ) := (X[0] \oplus Y[0], \ldots , X[15] \oplus Y[15]) </math>
+
+====Mix Function Mix====
+
+The <math> j </math>-th mix function <math> \textrm{Mix}_j: \mathcal{W}^{16} \rightarrow \mathcal{W}^{16} </math> updates the 16-word array <math> \textsf{T} = (T[0], \ldots , T[15]) </math> by mixing every two-word pair; <math> T[l] </math> and <math> T[l+8] </math> for <math> (0 \le l < 8) </math>.
+For <math> 0 \le j < N_s </math>, the mix function <math> \textrm{Mix}_j </math> proceeds as follows.
+
+<math> (T[l], T[l+8]) \leftarrow \textrm{Mix}_{j,l}(T[l], T[l+8]) </math> <math>(0 \le l < 8) </math>
+
+Here <math> \textrm{Mix}_{j,l} </math> is a two-word mix function.
+Let <math> X </math> and <math> Y </math> be words.
+The two-word mix function <math> \textrm{Mix}_{j,l} : \mathcal{W}^2 \rightarrow \mathcal{W}^2 </math> is defined as follows.
+
+{| class="wikitable" style="text-align: left; margin-left: auto; margin-right:auto; border: none;"
+|
+* '''function''' Two-word mix function <math> \textrm{Mix}_{j,l} </math>
+* '''input:'''  Words <math> X </math> and <math> Y </math>
+* '''output:''' Words <math> X </math> and <math> Y </math>
+* '''procedure'''
+<math> \qquad </math><math> X \leftarrow X \boxplus Y </math>;<math> \qquad X \leftarrow X^{\lll \alpha_j} </math>;
+
+<math> \qquad </math><math> X \leftarrow X \oplus SC_j[l] </math>;
+
+<math> \qquad </math><math> Y \leftarrow X \boxplus Y </math>;<math> \qquad Y \leftarrow Y^{\lll \beta_j} </math>;
+
+<math> \qquad </math><math> X \leftarrow X \boxplus Y </math>;<math> \qquad Y \leftarrow Y^{\lll \gamma_l} </math>;
+
+<math> \qquad </math>'''return''' <math> X </math>, <math> Y </math>;
+|}
+
+The two-word mix function <math> \textrm{Mix}_{j,l} </math> is shown in the following figure.
+
+[[File:LSH mix function.png|250px|thumb|center|Two-word mix function <math> \textrm{Mix}_{j,l} (X, Y) </math>]]
+
+The bit rotation amounts <math>\alpha_j</math>, <math>\beta_j</math>, <math>\gamma_l</math> used in <math> \textrm{Mix}_{j,l} </math> are shown in the following table.
+
+{| class="wikitable" style="margin-left: auto; margin-right:auto; border: none;"
+|+Bit rotation amounts <math>\alpha_j</math>, <math>\beta_j</math>, and <math>\gamma_l</math>
+|-
+! <math> w </math>
+! <math> j </math>
+! <math> \alpha_j </math>
+! <math> \beta_j </math>
+! <math> \gamma_0 </math>
+! <math> \gamma_1 </math>
+! <math> \gamma_2 </math>
+! <math> \gamma_3 </math>
+! <math> \gamma_4 </math>
+! <math> \gamma_5 </math>
+! <math> \gamma_6 </math>
+! <math> \gamma_7 </math>
+|-
+| rowspan="2" style="text-align:center;" | 32
+| style="text-align:center;" | even
+| style="text-align:center;" | 29
+| style="text-align:center;" | 1
+| rowspan="2" style="text-align:center;" | 0
+| rowspan="2" style="text-align:center;" | 8
+| rowspan="2" style="text-align:center;" | 16
+| rowspan="2" style="text-align:center;" | 24
+| rowspan="2" style="text-align:center;" | 24
+| rowspan="2" style="text-align:center;" | 16
+| rowspan="2" style="text-align:center;" | 8
+| rowspan="2" style="text-align:center;" | 0
+|-
+| style="text-align:center;" | odd
+| style="text-align:center;" | 5
+| style="text-align:center;" | 17
+|-
+| rowspan="2" style="text-align:center;" | 64
+| style="text-align:center;" | even
+| style="text-align:center;" | 23
+| style="text-align:center;" | 59
+| rowspan="2" style="text-align:center;" | 0
+| rowspan="2" style="text-align:center;" | 16
+| rowspan="2" style="text-align:center;" | 32
+| rowspan="2" style="text-align:center;" | 48
+| rowspan="2" style="text-align:center;" | 8
+| rowspan="2" style="text-align:center;" | 24
+| rowspan="2" style="text-align:center;" | 40
+| rowspan="2" style="text-align:center;" | 56
+|-
+| style="text-align:center;" | odd
+| style="text-align:center;" | 7
+| style="text-align:center;" | 3
+|}
+
+The <math> j </math>-th 8-word array constant <math> \textsf{SC}_j = (SC_j[0], \ldots , SC_j[7]) </math> used in <math> \textrm{Mix}_{j,l} </math> for <math> 0 \le l < 8 </math> is defined as follows.
+The initial 8-word array constant <math> \textsf{SC}_0 = (SC_0[0], \ldots , SC_0[7]) </math> is defined in the following table.
+For <math> 1 \le j < N_s </math>, the <math> j </math>-th constant <math> \textsf{SC}_j = (SC_j[0], \ldots , SC_j[7]) </math> is generated by <math> SC_j[l] \leftarrow SC_{j-1}[l] \boxplus SC_{j-1}[l]^{\lll 8}</math> for <math> 0 \le l < 8 </math>.
+
+{| class="wikitable" style="margin-left: auto; margin-right:auto; border: none;"
+|+Initial 8-word array constant <math> \textsf{SC}_0 </math>
+|-
+! 
+! <math> w = 32 </math>
+! <math> w = 64 </math>
+|-
+! style="text-align:center;" | <math> SC_0[0] </math>
+| <span style="font-family:Courier;">917caf90</span>
+| <span style="font-family:Courier;">97884283c938982a</span>
+|-
+! style="text-align:center;" | <math> SC_0[1] </math>
+| <span style="font-family:Courier;">6c1b10a2</span>
+| <span style="font-family:Courier;">ba1fca93533e2355</span>
+|-
+! style="text-align:center;" | <math> SC_0[2] </math>
+| <span style="font-family:Courier;">6f352943</span>
+| <span style="font-family:Courier;">c519a2e87aeb1c03</span>
+|-
+! style="text-align:center;" | <math> SC_0[3] </math>
+| <span style="font-family:Courier;">cf778243</span>
+| <span style="font-family:Courier;">9a0fc95462af17b1</span>
+|-
+! style="text-align:center;" | <math> SC_0[4] </math>
+| <span style="font-family:Courier;">2ceb7472</span>
+| <span style="font-family:Courier;">fc3dda8ab019a82b</span>
+|-
+! style="text-align:center;" | <math> SC_0[5] </math>
+| <span style="font-family:Courier;">29e96ff2</span>
+| <span style="font-family:Courier;">02825d079a895407</span>
+|-
+! style="text-align:center;" | <math> SC_0[6] </math>
+| <span style="font-family:Courier;">8a9ba428</span>
+| <span style="font-family:Courier;">79f2d0a7ee06a6f7</span>
+|-
+! style="text-align:center;" | <math> SC_0[7] </math>
+| <span style="font-family:Courier;">2eeb2642</span>
+| <span style="font-family:Courier;">d76d15eed9fdf5fe</span>
+|}
+
+====Word-Permutation Function WordPerm====
+
+Let <math> \textsf{X} = (X[0], \ldots , X[15]) </math> be a 16-word array.
+The word-permutation function <math> \textrm{WordPerm} : \mathcal{W}^{16} \rightarrow \mathcal{W}^{16} </math> is defined as follows.
+
+<math> \textrm{WordPerm}( \textsf{X}) = (X[\sigma(0)], \ldots , X[\sigma(15)]) </math>
+
+Here <math> \sigma </math> is the permutation over <math> \mathbb{Z}_{16} </math> defined by the following table.
+
+{| class="wikitable" style="margin-left: auto; margin-right:auto; border: none;"
+|+The permutation <math> \sigma : \mathbb{Z}_{16} \rightarrow \mathbb{Z}_{16} </math>
+|-
+! <math> l </math>
+| style="text-align:center;" | 0
+| style="text-align:center;" | 1
+| style="text-align:center;" | 2
+| style="text-align:center;" | 3
+| style="text-align:center;" | 4
+| style="text-align:center;" | 5
+| style="text-align:center;" | 6
+| style="text-align:center;" | 7
+| style="text-align:center;" | 8
+| style="text-align:center;" | 9
+| style="text-align:center;" | 10
+| style="text-align:center;" | 11
+| style="text-align:center;" | 12
+| style="text-align:center;" | 13
+| style="text-align:center;" | 14
+| style="text-align:center;" | 15
+|-
+! <math> \sigma(l) </math>
+| style="text-align:center;" | 6
+| style="text-align:center;" | 4
+| style="text-align:center;" | 5
+| style="text-align:center;" | 7
+| style="text-align:center;" | 12
+| style="text-align:center;" | 15
+| style="text-align:center;" | 14
+| style="text-align:center;" | 13
+| style="text-align:center;" | 2
+| style="text-align:center;" | 0
+| style="text-align:center;" | 1
+| style="text-align:center;" | 3
+| style="text-align:center;" | 8
+| style="text-align:center;" | 11
+| style="text-align:center;" | 10
+| style="text-align:center;" | 9
+|}
+
+===Finalization===
+
+The finalization function <math> \textrm{FIN}_n : \mathcal{W}^{16} \rightarrow \{0, 1\}^{n} </math> returns <math> n </math>-bit hash value <math> h </math> from the final chaining variable <math> \textsf{CV}^{(t)} = ( CV^{(t)}[0], \ldots , CV^{(t)}[15])</math>.
+When <math> \textsf{H} = (H[0], \ldots , H[7]) </math> is an 8-word variable and <math> \textsf{h}_\textsf{b} = (h_b[0], \ldots , h_b[w-1]) </math> is a <math> w </math>-byte variable, the finalization function <math> \textrm{FIN}_n </math> performs the following procedure.
+
+* <math>H[l] \leftarrow CV^{(t)}[l] \oplus CV^{(t)}[l+8]</math> <math>(0 \le l \le 7)</math>
+* <math>h_b[s] \leftarrow H[\lfloor 8s/w\rfloor ]^{\ggg (8s \mod w)}_{[7:0]}</math> <math>(0 \le s \le (w-1))</math>
+* <math>h \leftarrow (h_b[0] \| \ldots \| h_b[w-1])_{[0:n-1]}</math>
+
+Here, <math> X_{[i:j]} </math> denotes <math> x_i \| x_{i-1} \| \ldots \| x_j </math>, the sub-bit string of a word <math> X </math> for <math> i \ge j </math>.
+And <math> x_{[i:j]} </math> denotes <math> x _i \| x_{i+1} \| \ldots \| x_j </math>, the sub-bit string of a <math> l </math>-bit string <math> x = x_0 \| x_1 \| \ldots \| x_{l-1} </math> for <math> i \le j </math>.
+
+== Security ==
+
+LSH is secure against known attacks on hash functions up to now.
+LSH is collision-resistant for <math> q < 2^{n/2} </math> and preimage-resistant and second-preimage-resistant for <math> q < 2^n </math> in the ideal cipher model, where <math> q </math> is a number of queries for LSH structure.<ref name=KHL+14 />
+LSH-256 is secure against all the existing hash function attacks when the number of steps is 13 or more, while LSH-512 is secure if the number of steps is 14 or more.
+Note that the steps which work as security margin are 50% of the compression function.<ref name=KHL+14 />
+
+== Performance ==
+
+LSH outperforms SHA-2/3 on various software platforms.
+The following table shows the speed performance of 1MB message hashing of LSH on several platforms.
+
+{| class="wikitable" style="margin-left: auto; margin-right:auto; border: none;"
+|+1MB message hashing speed of LSH (cycles/byte)<ref name=KHL+14 />
+|-
+! Platform
+| style="text-align:center;" | P1{{efn|Intel Core i7-4770K @ 3.5GHz (Haswell), Ubuntu 12.04 64-bit, GCC 4.8.1 with “-m64 -mavx2 -O3”}}
+| style="text-align:center;" | P2{{efn|Intel Core i7-2600K @ 3.40GHz (Sandy Bridge), Ubuntu 12.04 64-bit, GCC 4.8.1 with “-m64 -msse4 -O3”}}
+| style="text-align:center;" | P3{{efn|Intel Core 2 Quad Q9550 @ 2.83GHz (Yorkfield), Windows 7 32-bit, Visual studio 2012}}
+| style="text-align:center;" | P4{{efn|AMD FX-8350 @ 4GHz (Piledriver), Ubuntu 12.04 64-bit, GCC 4.8.1 with “-m64 -mxop -O3”}}
+| style="text-align:center;" | P5{{efn|Samsung Exynos 5250 ARM Cortex-A15 @ 1.7GHz dual core (Huins ACHRO 5250), Android 4.1.1}}
+| style="text-align:center;" | P6{{efn|Qualcomm Snapdragon 800 Krait 400 @ 2.26GHz quad core (LG G2), Android 4.4.2}}
+| style="text-align:center;" | P7{{efn|Qualcomm Snapdragon 800 Krait 400 @ 2.3GHz quad core (Samsung Galaxy S4), Android 4.2.2}}
+| style="text-align:center;" | P8{{efn|Qualcomm Snapdragon 400 Krait 300 @ 1.7GHz dual core (Samsung Galaxy S4 mini), Android 4.2.2}}
+|-
+| style="text-align:center;" | LSH-256-<math> n </math>
+| style="text-align:right;" | 3.60
+| style="text-align:right;" | 3.86
+| style="text-align:right;" | 5.26
+| style="text-align:right;" | 3.89
+| style="text-align:right;" | 11.17
+| style="text-align:right;" | 15.03
+| style="text-align:right;" | 15.28
+| style="text-align:right;" | 14.84
+|-
+| style="text-align:center;" | LSH-512-<math> n </math>
+| style="text-align:right;" | 2.39
+| style="text-align:right;" | 5.04
+| style="text-align:right;" | 7.76
+| style="text-align:right;" | 5.52
+| style="text-align:right;" | 8.94
+| style="text-align:right;" | 18.76
+| style="text-align:right;" | 19.00
+| style="text-align:right;" | 18.10
+|}
+{{notelist}}
+
+The following table is the comparison at the platform based on Haswell, LSH is measured on Intel Core i7-4770k @ 3.5 GHz quad core platform, and others are measured on Intel Core i5-4570S @ 2.9 GHz quad core platform.
+
+{| class="wikitable" style="margin-left: auto; margin-right:auto; border: none;"
+|+Speed benchmark of LSH, SHA-2 and the SHA-3 finalists at the platform based on Haswell CPU (cycles/byte)<ref name=KHL+14 />
+|-
+! rowspan="2" style="text-align:center;" | Algorithm
+! colspan="6" style="text-align:center;" | Message size in bytes
+|-
+! style="text-align:center;" | long
+! style="text-align:center;" | 4,096
+! style="text-align:center;" | 1,536
+! style="text-align:center;" | 576
+! style="text-align:center;" | 64
+! style="text-align:center;" | 8
+|-
+|- style="border-top:double;"
+| style="text-align:center;" | LSH-256-256
+| style="text-align:right;" | 3.60
+| style="text-align:right;" | 3.71
+| style="text-align:right;" | 3.90
+| style="text-align:right;" | 4.08
+| style="text-align:right;" | 8.19
+| style="text-align:right;" | 65.37
+|-
+| style="text-align:center;" | Skein-512-256
+| style="text-align:right;" | 5.01
+| style="text-align:right;" | 5.58
+| style="text-align:right;" | 5.86
+| style="text-align:right;" | 6.49
+| style="text-align:right;" | 13.12
+| style="text-align:right;" | 104.50
+|-
+| style="text-align:center;" | Blake-256
+| style="text-align:right;" | 6.61
+| style="text-align:right;" | 7.63
+| style="text-align:right;" | 7.87
+| style="text-align:right;" | 9.05
+| style="text-align:right;" | 16.58
+| style="text-align:right;" | 72.50
+|-
+| style="text-align:center;" | Grøstl-256
+| style="text-align:right;" | 9.48
+| style="text-align:right;" | 10.68
+| style="text-align:right;" | 12.18
+| style="text-align:right;" | 13.71
+| style="text-align:right;" | 37.94
+| style="text-align:right;" | 227.50
+|-
+| style="text-align:center;" | Keccak-256
+| style="text-align:right;" | 10.56
+| style="text-align:right;" | 10.52
+| style="text-align:right;" | 9.90
+| style="text-align:right;" | 11.99
+| style="text-align:right;" | 23.38
+| style="text-align:right;" | 187.50
+|-
+| style="text-align:center;" | SHA-256
+| style="text-align:right;" | 10.82
+| style="text-align:right;" | 11.91
+| style="text-align:right;" | 12.26
+| style="text-align:right;" | 13.51
+| style="text-align:right;" | 24.88
+| style="text-align:right;" | 106.62
+|-
+| style="text-align:center;" | JH-256
+| style="text-align:right;" | 14.70
+| style="text-align:right;" | 15.50
+| style="text-align:right;" | 15.94
+| style="text-align:right;" | 17.06
+| style="text-align:right;" | 31.94
+| style="text-align:right;" | 257.00
+|- style="border-top:double;"
+| style="text-align:center;" | LSH-512-512
+| style="text-align:right;" | 2.39
+| style="text-align:right;" | 2.54
+| style="text-align:right;" | 2.79
+| style="text-align:right;" | 3.31
+| style="text-align:right;" | 10.81
+| style="text-align:right;" | 85.62
+|-
+| style="text-align:center;" | Skein-512-512
+| style="text-align:right;" | 4.67
+| style="text-align:right;" | 5.51
+| style="text-align:right;" | 5.80
+| style="text-align:right;" | 6.44
+| style="text-align:right;" | 13.59
+| style="text-align:right;" | 108.25
+|-
+| style="text-align:center;" | Blake-512
+| style="text-align:right;" | 4.96
+| style="text-align:right;" | 6.17
+| style="text-align:right;" | 6.82
+| style="text-align:right;" | 7.38
+| style="text-align:right;" | 14.81
+| style="text-align:right;" | 116.50
+|-
+| style="text-align:center;" | SHA-512
+| style="text-align:right;" | 7.65
+| style="text-align:right;" | 8.24
+| style="text-align:right;" | 8.69
+| style="text-align:right;" | 9.03
+| style="text-align:right;" | 17.22
+| style="text-align:right;" | 138.25
+|-
+| style="text-align:center;" | Grøstl-512
+| style="text-align:right;" | 12.78
+| style="text-align:right;" | 15.44
+| style="text-align:right;" | 17.30
+| style="text-align:right;" | 17.99
+| style="text-align:right;" | 51.72
+| style="text-align:right;" | 417.38
+|-
+| style="text-align:center;" | JH-512
+| style="text-align:right;" | 14.25
+| style="text-align:right;" | 15.66
+| style="text-align:right;" | 16.14
+| style="text-align:right;" | 17.34
+| style="text-align:right;" | 32.69
+| style="text-align:right;" | 261.00
+|-
+| style="text-align:center;" | Keccak-512
+| style="text-align:right;" | 16.36
+| style="text-align:right;" | 17.86
+| style="text-align:right;" | 18.46
+| style="text-align:right;" | 20.35
+| style="text-align:right;" | 21.56
+| style="text-align:right;" | 171.88
+|}
+
+The following table is measured on Samsung Exynos 5250 ARM Cortex-A15 @ 1.7 GHz dual core platform.
+
+{| class="wikitable" style="margin-left: auto; margin-right:auto; border: none;"
+|+Speed benchmark of LSH, SHA-2 and the SHA-3 finalists at the platform based on Exynos 5250 ARM Cortex-A15 CPU (cycles/byte)<ref name=KHL+14 />
+|-
+! rowspan="2" style="text-align:center;" | Algorithm
+! colspan="6" style="text-align:center;" | Message size in bytes
+|-
+! style="text-align:center;" | long
+! style="text-align:center;" | 4,096
+! style="text-align:center;" | 1,536
+! style="text-align:center;" | 576
+! style="text-align:center;" | 64
+! style="text-align:center;" | 8
+|-
+|- style="border-top:double;"
+| style="text-align:center;" | LSH-256-256
+| style="text-align:right;" | 11.17
+| style="text-align:right;" | 11.53
+| style="text-align:right;" | 12.16
+| style="text-align:right;" | 12.63
+| style="text-align:right;" | 22.42
+| style="text-align:right;" | 192.68
+|-
+| style="text-align:center;" | Skein-512-256
+| style="text-align:right;" | 15.64
+| style="text-align:right;" | 16.72
+| style="text-align:right;" | 18.33
+| style="text-align:right;" | 22.68
+| style="text-align:right;" | 75.75
+| style="text-align:right;" | 609.25
+|-
+| style="text-align:center;" | Blake-256
+| style="text-align:right;" | 17.94
+| style="text-align:right;" | 19.11
+| style="text-align:right;" | 20.88
+| style="text-align:right;" | 25.44
+| style="text-align:right;" | 83.94
+| style="text-align:right;" | 542.38
+|-
+| style="text-align:center;" | SHA-256
+| style="text-align:right;" | 19.91
+| style="text-align:right;" | 21.14
+| style="text-align:right;" | 23.03
+| style="text-align:right;" | 28.13
+| style="text-align:right;" | 90.89
+| style="text-align:right;" | 578.50
+|-
+| style="text-align:center;" | JH-256
+| style="text-align:right;" | 34.66
+| style="text-align:right;" | 36.06
+| style="text-align:right;" | 38.10
+| style="text-align:right;" | 43.51
+| style="text-align:right;" | 113.92
+| style="text-align:right;" | 924.12
+|-
+| style="text-align:center;" | Keccak-256
+| style="text-align:right;" | 36.03
+| style="text-align:right;" | 38.01
+| style="text-align:right;" | 40.54
+| style="text-align:right;" | 48.13
+| style="text-align:right;" | 125.00
+| style="text-align:right;" | 1000.62
+|-
+| style="text-align:center;" | Grøstl-256
+| style="text-align:right;" | 40.70
+| style="text-align:right;" | 42.76
+| style="text-align:right;" | 46.03
+| style="text-align:right;" | 54.94
+| style="text-align:right;" | 167.52
+| style="text-align:right;" | 1020.62
+|- style="border-top:double;"
+| style="text-align:center;" | LSH-512-512
+| style="text-align:right;" | 8.94
+| style="text-align:right;" | 9.56
+| style="text-align:right;" | 10.55
+| style="text-align:right;" | 12.28
+| style="text-align:right;" | 38.82
+| style="text-align:right;" | 307.98
+|-
+| style="text-align:center;" | Blake-512
+| style="text-align:right;" | 13.46
+| style="text-align:right;" | 14.82
+| style="text-align:right;" | 16.88
+| style="text-align:right;" | 20.98
+| style="text-align:right;" | 77.53
+| style="text-align:right;" | 623.62
+|-
+| style="text-align:center;" | Skein-512-512
+| style="text-align:right;" | 15.61
+| style="text-align:right;" | 16.73
+| style="text-align:right;" | 18.35
+| style="text-align:right;" | 22.56
+| style="text-align:right;" | 75.59
+| style="text-align:right;" | 612.88
+|-
+| style="text-align:center;" | JH-512
+| style="text-align:right;" | 34.88
+| style="text-align:right;" | 36.26
+| style="text-align:right;" | 38.36
+| style="text-align:right;" | 44.01
+| style="text-align:right;" | 116.41
+| style="text-align:right;" | 939.38
+|-
+| style="text-align:center;" | SHA-512
+| style="text-align:right;" | 44.13
+| style="text-align:right;" | 46.41
+| style="text-align:right;" | 49.97
+| style="text-align:right;" | 54.55
+| style="text-align:right;" | 135.59
+| style="text-align:right;" | 1088.38
+|-
+| style="text-align:center;" | Keccak-512
+| style="text-align:right;" | 63.31
+| style="text-align:right;" | 64.59
+| style="text-align:right;" | 67.85
+| style="text-align:right;" | 77.21
+| style="text-align:right;" | 121.28
+| style="text-align:right;" | 968.00
+|-
+| style="text-align:center;" | Grøstl-512
+| style="text-align:right;" | 131.35
+| style="text-align:right;" | 138.49
+| style="text-align:right;" | 150.15
+| style="text-align:right;" | 166.54
+| style="text-align:right;" | 446.53
+| style="text-align:right;" | 3518.00
+|}
+
+== Test vectors ==
+
+Test vectors for LSH for each digest length are as follows.
+All values are expressed in hexadecimal form.
+
+LSH-256-224("abc") = <span style="font-family:Courier;">F7 C5 3B A4 03 4E 70 8E 74 FB A4 2E 55 99 7C A5 12 6B B7 62 36 88 F8 53 42 F7 37 32</span>
+
+LSH-256-256("abc") = <span style="font-family:Courier;">5F BF 36 5D AE A5 44 6A 70 53 C5 2B 57 40 4D 77 A0 7A 5F 48 A1 F7 C1 96 3A 08 98 BA 1B 71 47 41</span>
+
+LSH-512-224("abc") = <span style="font-family:Courier;">D1 68 32 34 51 3E C5 69 83 94 57 1E AD 12 8A 8C D5 37 3E 97 66 1B A2 0D CF 89 E4 89</span>
+
+LSH-512-256("abc") = <span style="font-family:Courier;">CD 89 23 10 53 26 02 33 2B 61 3F 1E C1 1A 69 62 FC A6 1E A0 9E CF FC D4 BC F7 58 58 D8 02 ED EC</span>
+
+LSH-512-384("abc") = <span style="font-family:Courier;">5F 34 4E FA A0 E4 3C CD 2E 5E 19 4D 60 39 79 4B 4F B4 31 F1 0F B4 B6 5F D4 5E 9D A4 EC DE 0F 27 B6 6E 8D BD FA 47 25 2E 0D 0B 74 1B FD 91 F9 FE</span>
+
+LSH-512-512("abc") = <span style="font-family:Courier;">A3 D9 3C FE 60 DC 1A AC DD 3B D4 BE F0 A6 98 53 81 A3 96 C7 D4 9D 9F D1 77 79 56 97 C3 53 52 08 B5 C5 72 24 BE F2 10 84 D4 20 83 E9 5A 4B D8 EB 33 E8 69 81 2B 65 03 1C 42 88 19 A1 E7 CE 59 6D</span>
+
+== Implementations ==
+
+LSH is free for any use public or private, commercial or non-commercial.
+The source code for distribution of LSH implemented in C, Java, and Python can be downloaded from KISA's cryptography use activation webpage.<ref name="LSH_source">{{Cite web|url=https://seed.kisa.or.kr/kisa/Board/22/detailView.do|title=KISA 암호이용활성화 - 암호알고리즘 소스코드|website=seed.kisa.or.kr}}</ref>
+
+== KCMVP ==
+
+LSH is one of the cryptographic algorithms approved by the Korean Cryptographic Module Validation Program (KCMVP).<ref name="KCMVP">{{Cite web|url=https://seed.kisa.or.kr/kisa/kcmvp/EgovSummary.do|title=KISA 암호이용활성화 - 개요|website=seed.kisa.or.kr}}</ref>
+
+== Standardization ==
+
+LSH is included in the following standard.
+
+* KS X 3262, Hash function LSH (in Korean)<ref name="KS_X_3262">{{cite web
+ |url         = https://standard.go.kr
+ |title       = Korean Standards & Certifications (in Korean)
+ |url-status  = 
+ |archiveurl  = 
+ |archivedate = 
+}}</ref>
+
+== References ==
+{{Reflist}}
+
+{{cryptography navbox|hash}}
+
+[[Category:Cryptographic hash functions]]
+[[Category:Cryptographic algorithms]]

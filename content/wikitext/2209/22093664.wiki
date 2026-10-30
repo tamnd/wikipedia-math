@@ -1,0 +1,427 @@
+<!-- wikipedia: en
+     page: 22093664
+     title: SPIKE algorithm
+     revision: 1374109214
+     timestamp: 2026-09-09T22:23:57Z
+     history: https://en.wikipedia.org/w/index.php?curid=22093664&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374109214 -->
+The '''SPIKE algorithm''' is a hybrid [[Parallel computing|parallel]] solver for [[Band matrix|banded]] [[System of linear equations|linear systems]] developed by Eric Polizzi and [[Ahmed Sameh]]{{ref|Spike_Polizzi1}}{{note|Spike_Polizzi2}}{{ref|PSPIKE}}
+
+==Overview==
+The SPIKE algorithm deals with a linear system {{math|'''<var>AX</var>''' {{=}} '''<var>F</var>'''}}, where {{math|'''<var>A</var>'''}} is a banded <math>n\times n</math> matrix of [[matrix bandwidth|bandwidth]] much less than <math>n</math>, and {{math|'''<var>F</var>'''}} is an <math>n\times s</math> matrix containing <math>s</math> right-hand sides. It is divided into a preprocessing stage and a postprocessing stage.
+
+===Preprocessing stage===
+In the preprocessing stage, the linear system {{math|'''<var>AX</var>''' {{=}} '''<var>F</var>'''}} is partitioned into a [[Block matrix#Block tridiagonal matrices|block tridiagonal]] form
+:<math>
+\begin{bmatrix}
+\boldsymbol{A}_1 & \boldsymbol{B}_1\\
+\boldsymbol{C}_2 & \boldsymbol{A}_2 & \boldsymbol{B}_2\\
+& \ddots & \ddots & \ddots\\
+& & \boldsymbol{C}_{p-1} & \boldsymbol{A}_{p-1} & \boldsymbol{B}_{p-1}\\
+& & & \boldsymbol{C}_p & \boldsymbol{A}_p
+\end{bmatrix}
+\begin{bmatrix}
+\boldsymbol{X}_1\\
+\boldsymbol{X}_2\\
+\vdots\\
+\boldsymbol{X}_{p-1}\\
+\boldsymbol{X}_p
+\end{bmatrix}
+=
+\begin{bmatrix}
+\boldsymbol{F}_1\\
+\boldsymbol{F}_2\\
+\vdots\\
+\boldsymbol{F}_{p-1}\\
+\boldsymbol{F}_p
+\end{bmatrix}.
+</math>
+
+Assume, for the time being, that the diagonal blocks {{math|'''<var>A</var>'''<sub><var>j</var></sub>}} ({{math|<var>j</var> {{=}} 1,...,<var>p</var>}} with {{math|<var>p</var> &ge; 2}}) are [[Invertible matrix|nonsingular]]. Define a [[Block matrix#Block diagonal matrices|block diagonal]] matrix
+:{{math|'''<var>D</var>''' {{=}} diag('''<var>A</var>'''<sub>1</sub>,...,'''<var>A</var>'''<sub><var>p</var></sub>)}},
+then {{math|'''<var>D</var>'''}} is also nonsingular. Left-multiplying {{math|'''<var>D</var>'''<sup>−1</sup>}} to both sides of the system gives
+::<math>
+\begin{bmatrix}
+\boldsymbol{I} & \boldsymbol{V}_1\\
+\boldsymbol{W}_2 & \boldsymbol{I} & \boldsymbol{V}_2\\
+& \ddots & \ddots & \ddots\\
+& & \boldsymbol{W}_{p-1} & \boldsymbol{I} & \boldsymbol{V}_{p-1}\\
+& & & \boldsymbol{W}_p & \boldsymbol{I}
+\end{bmatrix}
+\begin{bmatrix}
+\boldsymbol{X}_1\\
+\boldsymbol{X}_2\\
+\vdots\\
+\boldsymbol{X}_{p-1}\\
+\boldsymbol{X}_p
+\end{bmatrix}
+=
+\begin{bmatrix}
+\boldsymbol{G}_1\\
+\boldsymbol{G}_2\\
+\vdots\\
+\boldsymbol{G}_{p-1}\\
+\boldsymbol{G}_p
+\end{bmatrix},
+</math>
+
+which is to be solved in the postprocessing stage. Left-multiplication by {{math|'''<var>D</var>'''<sup>−1</sup>}} is equivalent to solving <math>p</math> systems of the form
+:{{math|'''<var>A</var>'''<sub><var>j</var></sub>['''<var>V</var>'''<sub><var>j</var></sub> '''<var>W</var>'''<sub><var>j</var></sub> '''<var>G</var>'''<sub><var>j</var></sub>] {{=}} ['''<var>B</var>'''<sub><var>j</var></sub> '''<var>C</var>'''<sub><var>j</var></sub> '''<var>F</var>'''<sub><var>j</var></sub>]}}
+(omitting {{math|'''<var>W</var>'''<sub>1</sub>}} and {{math|'''<var>C</var>'''<sub>1</sub>}} for <math>j=1</math>, and {{math|'''<var>V</var>'''<sub><var>p</var></sub>}} and {{math|'''<var>B</var>'''<sub><var>p</var></sub>}} for <math>j=p</math>), which can be carried out in parallel.
+
+Due to the banded nature of {{math|'''<var>A</var>'''}}, only a few leftmost columns of each {{math|'''<var>V</var>'''<sub><var>j</var></sub>}} and a few rightmost columns of each {{math|'''<var>W</var>'''<sub><var>j</var></sub>}} can be nonzero. These columns are called the ''spikes''.
+
+===Postprocessing stage===
+[[Without loss of generality]], assume that each spike contains exactly <math>m</math> columns (<math>m</math> is much less than <math>n</math>) (pad the spike with columns of zeroes if necessary). Partition the spikes in all {{math|'''<var>V</var>'''<sub><var>j</var></sub>}} and {{math|'''<var>W</var>'''<sub><var>j</var></sub>}} into
+
+:<math>
+\begin{bmatrix}
+\boldsymbol{V}_j^{(t)}\\
+\boldsymbol{V}_j'\\
+\boldsymbol{V}_j^{(b)}
+\end{bmatrix}
+</math> and <math>
+\begin{bmatrix}
+\boldsymbol{W}_j^{(t)}\\
+\boldsymbol{W}_j'\\
+\boldsymbol{W}_j^{(b)}\\
+\end{bmatrix}
+</math>
+
+where {{math|{{SubSup|'''<var>V</var>'''|<var>j</var>|(''t'')}}}}, {{math|{{SubSup|'''<var>V</var>'''|<var>j</var>|(''b'')}}}}, {{math|{{SubSup|'''<var>W</var>'''|<var>j</var>|(''t'')}}}} and {{math|{{SubSup|'''<var>W</var>'''|<var>j</var>|(''b'')}}}} are of dimensions <math>m\times m</math>. Partition similarly all {{math|'''<var>X</var>'''<sub><var>j</var></sub>}} and {{math|'''<var>G</var>'''<sub><var>j</var></sub>}} into
+
+:<math>
+\begin{bmatrix}
+\boldsymbol{X}_j^{(t)}\\
+\boldsymbol{X}_j'\\
+\boldsymbol{X}_j^{(b)}
+\end{bmatrix}
+</math> and <math>
+\begin{bmatrix}
+\boldsymbol{G}_j^{(t)}\\
+\boldsymbol{G}_j'\\
+\boldsymbol{G}_j^{(b)}\\
+\end{bmatrix}.
+</math>
+
+Notice that the system produced by the preprocessing stage can be reduced to a block [[Pentadiagonal matrix|pentadiagonal]] system of much smaller size (recall that <math>m</math> is much less than <math>n</math>)
+
+:<math>
+\begin{bmatrix}
+\boldsymbol{I}_m & \boldsymbol{0} & \boldsymbol{V}_1^{(t)}\\
+\boldsymbol{0} & \boldsymbol{I}_m & \boldsymbol{V}_1^{(b)} & \boldsymbol{0}\\
+\boldsymbol{0} & \boldsymbol{W}_2^{(t)} & \boldsymbol{I}_m & \boldsymbol{0} & \boldsymbol{V}_2^{(t)}\\
+& \boldsymbol{W}_2^{(b)} & \boldsymbol{0} & \boldsymbol{I}_m & \boldsymbol{V}_2^{(b)} & \boldsymbol{0} \\
+& & \ddots & \ddots & \ddots & \ddots & \ddots\\
+& & & \boldsymbol{0} & \boldsymbol{W}_{p-1}^{(t)} & \boldsymbol{I}_m & \boldsymbol{0} & \boldsymbol{V}_{p-1}^{(t)}\\
+& & & & \boldsymbol{W}_{p-1}^{(b)} & \boldsymbol{0} & \boldsymbol{I}_m & \boldsymbol{V}_{p-1}^{(b)} & \boldsymbol{0}\\
+& & & & & \boldsymbol{0} & \boldsymbol{W}_p^{(t)} & \boldsymbol{I}_m & \boldsymbol{0}\\
+& & & & & & \boldsymbol{W}_p^{(b)} & \boldsymbol{0} & \boldsymbol{I}_m
+\end{bmatrix}
+\begin{bmatrix}
+\boldsymbol{X}_1^{(t)}\\
+\boldsymbol{X}_1^{(b)}\\
+\boldsymbol{X}_2^{(t)}\\
+\boldsymbol{X}_2^{(b)}\\
+\vdots\\
+\boldsymbol{X}_{p-1}^{(t)}\\
+\boldsymbol{X}_{p-1}^{(b)}\\
+\boldsymbol{X}_p^{(t)}\\
+\boldsymbol{X}_p^{(b)}
+\end{bmatrix}
+=
+\begin{bmatrix}
+\boldsymbol{G}_1^{(t)}\\
+\boldsymbol{G}_1^{(b)}\\
+\boldsymbol{G}_2^{(t)}\\
+\boldsymbol{G}_2^{(b)}\\
+\vdots\\
+\boldsymbol{G}_{p-1}^{(t)}\\
+\boldsymbol{G}_{p-1}^{(b)}\\
+\boldsymbol{G}_p^{(t)}\\
+\boldsymbol{G}_p^{(b)}
+\end{bmatrix}\text{,}
+</math>
+
+which we call the ''reduced system'' and denote by {{math|'''<var>S&#x303;X&#x303;</var>''' {{=}} '''<var>G&#x303;</var>'''}}.
+
+Once all {{math|{{SubSup|'''<var>X</var>'''|<var>j</var>|(''t'')}}}} and {{math|{{SubSup|'''<var>X</var>'''|<var>j</var>|(''b'')}}}} are found, all {{math|'''<var>X</var>'''′<sub><var>j</var></sub>}} can be recovered with perfect parallelism via
+
+:<math>
+\begin{cases}
+\boldsymbol{X}_1'=\boldsymbol{G}_1'-\boldsymbol{V}_1'\boldsymbol{X}_2^{(t)}\text{,}\\
+\boldsymbol{X}_j'=\boldsymbol{G}_j'-\boldsymbol{V}_j'\boldsymbol{X}_{j+1}^{(t)}-\boldsymbol{W}_j'\boldsymbol{X}_{j-1}^{(b)}\text{,} & j=2,\ldots,p-1\text{,}\\
+\boldsymbol{X}_p'=\boldsymbol{G}_p'-\boldsymbol{W}_p\boldsymbol{X}_{p-1}^{(b)}\text{.}
+\end{cases}
+</math>
+
+==SPIKE as a polyalgorithmic banded linear system solver==
+Despite being logically divided into two stages, computationally, the SPIKE algorithm comprises three stages:
+# [[Matrix decomposition|factorizing]] the diagonal blocks,
+# computing the spikes,
+# solving the reduced system.
+Each of these stages can be accomplished in several ways, allowing a multitude of variants. Two notable variants are the ''recursive SPIKE'' algorithm for non-[[Diagonally dominant matrix|diagonally-dominant]] cases and the ''truncated SPIKE'' algorithm for diagonally-dominant cases. Depending on the variant, a system can be solved either exactly or approximately. In the latter case, SPIKE is used as a [[preconditioner]] for iterative schemes like [[Iterative method|Krylov subspace method]]s and [[iterative refinement]].
+
+===Recursive SPIKE===
+
+====Preprocessing stage====
+The first step of the preprocessing stage is to factorize the diagonal blocks {{math|'''<var>A</var>'''<sub><var>j</var></sub>}}. For [[numerical stability]], one can use [[LAPACK]]'s <code>XGBTRF</code> routines to [[LU decomposition|LU factorize]] them with partial pivoting. Alternatively, one can also factorize them without partial pivoting but with a "diagonal boosting" strategy. The latter method tackles the issue of singular diagonal blocks.
+
+In concrete terms, the diagonal boosting strategy is as follows. Let {{math|0<sub><var>&epsilon;</var></sub>}} denote a configurable "machine zero". In each step of LU factorization, we require that the pivot satisfy the condition
+
+:{{math|1={{!}}pivot{{!}} &gt; 0<sub><var>&epsilon;</var></sub>‖'''<var>A</var>'''‖<sub>1</sub>}}.
+
+If the pivot does not satisfy the condition, it is then boosted by
+
+:<math>
+\mathrm{pivot}=
+\begin{cases}
+\mathrm{pivot}+\epsilon\lVert\boldsymbol{A}_j\rVert_1 & \text{if }\mathrm{pivot}\geq 0\text{,}\\
+\mathrm{pivot}-\epsilon\lVert\boldsymbol{A}_j\rVert_1 & \text{if }\mathrm{pivot}<0
+\end{cases}
+</math>
+
+where {{math|<var>&epsilon;</var>}} is a positive parameter depending on the machine's [[Machine epsilon|unit roundoff]], and the factorization continues with the boosted pivot. This can be achieved by modified versions of [[ScaLAPACK]]'s <code>XDBTRF</code> routines. After the diagonal blocks are factorized, the spikes are computed and passed on to the postprocessing stage.
+
+====Postprocessing stage====
+
+=====The two-partition case=====
+In the two-partition case, i.e., when {{math|<var>p</var> {{=}} 2}}, the reduced system {{math|'''<var>S&#x303;X&#x303;</var>''' {{=}} '''<var>G&#x303;</var>'''}} has the form
+
+:<math>
+\begin{bmatrix}
+\boldsymbol{I}_m & \boldsymbol{0} & \boldsymbol{V}_1^{(t)}\\
+\boldsymbol{0} & \boldsymbol{I}_m & \boldsymbol{V}_1^{(b)} & \boldsymbol{0}\\
+\boldsymbol{0} & \boldsymbol{W}_2^{(t)} & \boldsymbol{I}_m & \boldsymbol{0}\\
+& \boldsymbol{W}_2^{(b)} & \boldsymbol{0} & \boldsymbol{I}_m
+\end{bmatrix}
+\begin{bmatrix}
+\boldsymbol{X}_1^{(t)}\\
+\boldsymbol{X}_1^{(b)}\\
+\boldsymbol{X}_2^{(t)}\\
+\boldsymbol{X}_2^{(b)}
+\end{bmatrix}
+=
+\begin{bmatrix}
+\boldsymbol{G}_1^{(t)}\\
+\boldsymbol{G}_1^{(b)}\\
+\boldsymbol{G}_2^{(t)}\\
+\boldsymbol{G}_2^{(b)}
+\end{bmatrix}\text{.}
+</math>
+
+An even smaller system can be extracted from the center:
+
+:<math>
+\begin{bmatrix}
+\boldsymbol{I}_m & \boldsymbol{V}_1^{(b)}\\
+\boldsymbol{W}_2^{(t)} & \boldsymbol{I}_m
+\end{bmatrix}
+\begin{bmatrix}
+\boldsymbol{X}_1^{(b)}\\
+\boldsymbol{X}_2^{(t)}
+\end{bmatrix}
+=
+\begin{bmatrix}
+\boldsymbol{G}_1^{(b)}\\
+\boldsymbol{G}_2^{(t)}
+\end{bmatrix}\text{,}
+</math>
+
+which can be solved using the [[Block LU decomposition|block LU factorization]]
+
+:<math>
+\begin{bmatrix}
+\boldsymbol{I}_m & \boldsymbol{V}_1^{(b)}\\
+\boldsymbol{W}_2^{(t)} & \boldsymbol{I}_m
+\end{bmatrix}
+=
+\begin{bmatrix}
+\boldsymbol{I}_m\\
+\boldsymbol{W}_2^{(t)} & \boldsymbol{I}_m
+\end{bmatrix}
+\begin{bmatrix}
+\boldsymbol{I}_m & \boldsymbol{V}_1^{(b)}\\
+& \boldsymbol{I}_m-\boldsymbol{W}_2^{(t)}\boldsymbol{V}_1^{(b)}
+\end{bmatrix}\text{.}
+</math>
+
+Once {{math|{{SubSup|'''<var>X</var>'''|1|(''b'')}}}} and {{math|{{SubSup|'''<var>X</var>'''|2|(''t'')}}}} are found, {{math|{{SubSup|'''<var>X</var>'''|1|(''t'')}}}} and {{math|{{SubSup|'''<var>X</var>'''|2|(''b'')}}}} can be computed via
+
+:{{math|{{SubSup|'''<var>X</var>'''|1|(''t'')}} {{=}} {{SubSup|'''<var>G</var>'''|1|(''t'')}} &minus; {{SubSup|'''<var>V</var>'''|1|(''t'')}}{{SubSup|'''<var>X</var>'''|2|(''t'')}}}},
+:{{math|{{SubSup|'''<var>X</var>'''|2|(''b'')}} {{=}} {{SubSup|'''<var>G</var>'''|2|(''b'')}} &minus; {{SubSup|'''<var>W</var>'''|2|(''b'')}}{{SubSup|'''<var>X</var>'''|1|(''b'')}}}}.
+
+=====The multiple-partition case=====
+Assume that {{math|<var>p</var>}} is a power of two, i.e., {{math|<var>p</var> {{=}} 2<sup><var>d</var></sup>}}. Consider a block diagonal matrix
+
+:{{math|'''<var>D&#x303;</var>'''<sub>1</sub> {{=}} diag({{SubSup|'''<var>D&#x303;</var>'''|1|[1]}},...,{{SubSup|'''<var>D&#x303;</var>'''|<var>p</var>/2|[1]}})}}
+
+where
+
+:<math>
+\boldsymbol{\tilde{D}}_k^{[1]}=
+\begin{bmatrix}
+\boldsymbol{I}_m & \boldsymbol{0} & \boldsymbol{V}_{2k-1}^{(t)}\\
+\boldsymbol{0} & \boldsymbol{I}_m & \boldsymbol{V}_{2k-1}^{(b)} & \boldsymbol{0}\\
+\boldsymbol{0} & \boldsymbol{W}_{2k}^{(t)} & \boldsymbol{I}_m & \boldsymbol{0}\\
+& \boldsymbol{W}_{2k}^{(b)} & \boldsymbol{0} & \boldsymbol{I}_m
+\end{bmatrix}
+</math>
+
+for {{math|<var>k</var> {{=}} 1,...,<var>p</var>/2}}. Notice that {{math|'''<var>D&#x303;</var>'''<sub>1</sub>}} essentially consists of diagonal blocks of order {{math|4<var>m</var>}} extracted from {{math|'''<var>S&#x303;</var>'''}}. Now we factorize {{math|'''<var>S&#x303;</var>'''}} as
+
+:{{math|'''<var>S&#x303;</var>''' {{=}} '''<var>D&#x303;</var>'''<sub>1</sub>'''<var>S&#x303;</var>'''<sub>2</sub>}}.
+
+The new matrix {{math|'''<var>S&#x303;</var>'''<sub>2</sub>}} has the form
+
+:<math>
+\begin{bmatrix}
+\boldsymbol{I}_{3m} & \boldsymbol{0} & \boldsymbol{V}_1^{[2](t)}\\
+\boldsymbol{0} & \boldsymbol{I}_m & \boldsymbol{V}_1^{[2](b)} & \boldsymbol{0}\\
+\boldsymbol{0} & \boldsymbol{W}_2^{[2](t)} & \boldsymbol{I}_m & \boldsymbol{0} & \boldsymbol{V}_2^{[2](t)}\\
+& \boldsymbol{W}_2^{[2](b)} & \boldsymbol{0} & \boldsymbol{I}_{3m} & \boldsymbol{V}_2^{[2](b)} & \boldsymbol{0} \\
+& & \ddots & \ddots & \ddots & \ddots & \ddots\\
+& & & \boldsymbol{0} & \boldsymbol{W}_{p/2-1}^{[2](t)} & \boldsymbol{I}_{3m} & \boldsymbol{0} & \boldsymbol{V}_{p/2-1}^{[2](t)}\\
+& & & & \boldsymbol{W}_{p/2-1}^{[2](b)} & \boldsymbol{0} & \boldsymbol{I}_m & \boldsymbol{V}_{p/2-1}^{[2](b)} & \boldsymbol{0}\\
+& & & & & \boldsymbol{0} & \boldsymbol{W}_{p/2}^{[2](t)} & \boldsymbol{I}_m & \boldsymbol{0}\\
+& & & & & & \boldsymbol{W}_{p/2}^{[2](b)} & \boldsymbol{0} & \boldsymbol{I}_{3m}
+\end{bmatrix}\text{.}
+</math>
+
+Its structure is very similar to that of {{math|'''<var>S&#x303;</var>'''<sub>2</sub>}}, only differing in the number of spikes and their height (their width stays the same at {{math|<var>m</var>}}). Thus, a similar factorization step can be performed on {{math|'''<var>S&#x303;</var>'''<sub>2</sub>}} to produce
+
+:{{math|'''<var>S&#x303;</var>'''<sub>2</sub> {{=}} '''<var>D&#x303;</var>'''<sub>2</sub>'''<var>S&#x303;</var>'''<sub>3</sub>}}
+
+and
+
+:{{math|'''<var>S&#x303;</var>''' {{=}} '''<var>D&#x303;</var>'''<sub>1</sub>'''<var>D&#x303;</var>'''<sub>2</sub>'''<var>S&#x303;</var>'''<sub>3</sub>}}.
+
+Such factorization steps can be performed recursively. After {{math|<var>d</var> &minus; 1}} steps, we obtain the factorization
+
+:{{math|'''<var>S&#x303;</var>''' {{=}} '''<var>D&#x303;</var>'''<sub>1</sub>'''⋯<var>D&#x303;</var>'''<sub><var>d</var>&minus;1</sub>'''<var>S&#x303;</var>'''<sub><var>d</var></sub>}},
+
+where {{math|'''<var>S&#x303;</var>'''<sub><var>d</var></sub>}} has only two spikes. The reduced system will then be solved via
+
+:{{math|'''<var>X&#x303;</var>''' {{=}} {{SubSup|'''<var>S&#x303;</var>'''|<var>d</var>|&minus;1}}{{SubSup|'''<var>D&#x303;</var>'''|<var>d</var>&minus;1|&minus;1}}⋯{{SubSup|'''<var>D&#x303;</var>'''|1|&minus;1}}'''<var>G&#x303;</var>'''}}.
+
+The block LU factorization technique in the two-partition case can be used to handle the solving steps involving {{math|'''<var>D&#x303;</var>'''<sub>1</sub>}}, ..., {{math|'''<var>D&#x303;</var>'''<sub><var>d</var>&minus;1</sub>}} and {{math|'''<var>S&#x303;</var>'''<sub><var>d</var></sub>}} for they essentially solve multiple independent systems of generalized two-partition forms.
+
+Generalization to cases where {{math|<var>p</var>}} is not a power of two is almost trivial.
+
+===Truncated SPIKE===
+When {{math|'''<var>A</var>'''}} is diagonally-dominant, in the reduced system
+
+:<math>
+\begin{bmatrix}
+\boldsymbol{I}_m & \boldsymbol{0} & \boldsymbol{V}_1^{(t)}\\
+\boldsymbol{0} & \boldsymbol{I}_m & \boldsymbol{V}_1^{(b)} & \boldsymbol{0}\\
+\boldsymbol{0} & \boldsymbol{W}_2^{(t)} & \boldsymbol{I}_m & \boldsymbol{0} & \boldsymbol{V}_2^{(t)}\\
+& \boldsymbol{W}_2^{(b)} & \boldsymbol{0} & \boldsymbol{I}_m & \boldsymbol{V}_2^{(b)} & \boldsymbol{0} \\
+& & \ddots & \ddots & \ddots & \ddots & \ddots\\
+& & & \boldsymbol{0} & \boldsymbol{W}_{p-1}^{(t)} & \boldsymbol{I}_m & \boldsymbol{0} & \boldsymbol{V}_{p-1}^{(t)}\\
+& & & & \boldsymbol{W}_{p-1}^{(b)} & \boldsymbol{0} & \boldsymbol{I}_m & \boldsymbol{V}_{p-1}^{(b)} & \boldsymbol{0}\\
+& & & & & \boldsymbol{0} & \boldsymbol{W}_p^{(t)} & \boldsymbol{I}_m & \boldsymbol{0}\\
+& & & & & & \boldsymbol{W}_p^{(b)} & \boldsymbol{0} & \boldsymbol{I}_m
+\end{bmatrix}
+\begin{bmatrix}
+\boldsymbol{X}_1^{(t)}\\
+\boldsymbol{X}_1^{(b)}\\
+\boldsymbol{X}_2^{(t)}\\
+\boldsymbol{X}_2^{(b)}\\
+\vdots\\
+\boldsymbol{X}_{p-1}^{(t)}\\
+\boldsymbol{X}_{p-1}^{(b)}\\
+\boldsymbol{X}_p^{(t)}\\
+\boldsymbol{X}_p^{(b)}
+\end{bmatrix}
+=
+\begin{bmatrix}
+\boldsymbol{G}_1^{(t)}\\
+\boldsymbol{G}_1^{(b)}\\
+\boldsymbol{G}_2^{(t)}\\
+\boldsymbol{G}_2^{(b)}\\
+\vdots\\
+\boldsymbol{G}_{p-1}^{(t)}\\
+\boldsymbol{G}_{p-1}^{(b)}\\
+\boldsymbol{G}_p^{(t)}\\
+\boldsymbol{G}_p^{(b)}
+\end{bmatrix}\text{,}
+</math>
+
+the blocks {{math|{{SubSup|'''<var>V</var>'''|<var>j</var>|(''t'')}}}} and {{math|{{SubSup|'''<var>W</var>'''|<var>j</var>|(''b'')}}}} are often negligible. With them omitted, the reduced system becomes block diagonal
+
+:<math>
+\begin{bmatrix}
+\boldsymbol{I}_m\\
+& \boldsymbol{I}_m & \boldsymbol{V}_1^{(b)}\\
+& \boldsymbol{W}_2^{(t)} & \boldsymbol{I}_m\\
+& & & \boldsymbol{I}_m & \boldsymbol{V}_2^{(b)}\\
+& & & \ddots & \ddots & \ddots\\
+& & & & \boldsymbol{W}_{p-1}^{(t)} & \boldsymbol{I}_m\\
+& & & & & & \boldsymbol{I}_m & \boldsymbol{V}_{p-1}^{(b)}\\
+& & & & & & \boldsymbol{W}_p^{(t)} & \boldsymbol{I}_m\\
+& & & & & & & & \boldsymbol{I}_m
+\end{bmatrix}
+\begin{bmatrix}
+\boldsymbol{X}_1^{(t)}\\
+\boldsymbol{X}_1^{(b)}\\
+\boldsymbol{X}_2^{(t)}\\
+\boldsymbol{X}_2^{(b)}\\
+\vdots\\
+\boldsymbol{X}_{p-1}^{(t)}\\
+\boldsymbol{X}_{p-1}^{(b)}\\
+\boldsymbol{X}_p^{(t)}\\
+\boldsymbol{X}_p^{(b)}
+\end{bmatrix}
+=
+\begin{bmatrix}
+\boldsymbol{G}_1^{(t)}\\
+\boldsymbol{G}_1^{(b)}\\
+\boldsymbol{G}_2^{(t)}\\
+\boldsymbol{G}_2^{(b)}\\
+\vdots\\
+\boldsymbol{G}_{p-1}^{(t)}\\
+\boldsymbol{G}_{p-1}^{(b)}\\
+\boldsymbol{G}_p^{(t)}\\
+\boldsymbol{G}_p^{(b)}
+\end{bmatrix}
+</math>
+
+and can be easily solved in parallel {{ref|Truncated_Spike}}.
+
+The truncated SPIKE algorithm can be wrapped inside some outer iterative scheme (e.g., [[Biconjugate gradient stabilized method|BiCGSTAB]] or [[iterative refinement]]) to improve the accuracy of the solution.
+
+==SPIKE for tridiagonal systems==
+The first SPIKE partitioning and algorithm was presented in {{ref|KuckSameh78}} and was designed as the means to improve the stability properties of a parallel Givens rotations-based solver for tridiagonal systems. A version of the algorithm, termed g-Spike, that is based on serial Givens rotations applied independently on each block was designed for the NVIDIA GPU {{ref|Venetis_gSpike_GPU}}.  A SPIKE-based algorithm for the GPU that is based on a special  block diagonal pivoting strategy is described in {{ref|Chang_tridiagonal_GPU}}.
+
+==SPIKE as a preconditioner==
+The SPIKE algorithm can also function as a preconditioner for iterative methods for solving linear systems. To solve a linear system {{math|'''<var>Ax</var>''' {{=}} '''<var>b</var>'''}} using a SPIKE-preconditioned iterative solver, one extracts center bands from {{math|'''<var>A</var>'''}} to form a banded preconditioner {{math|'''<var>M</var>'''}} and solves linear systems involving {{math|'''<var>M</var>'''}} in each iteration with the SPIKE algorithm.
+
+In order for the preconditioner to be effective, row and/or column permutation is usually necessary to move "heavy" elements of {{math|'''<var>A</var>'''}} close to the diagonal so that they are covered by the preconditioner. This can be accomplished by computing the [[Algebraic connectivity#The Fiedler vector|weighted spectral reordering]] of {{math|'''<var>A</var>'''}}.
+
+The SPIKE algorithm can be generalized by not restricting the preconditioner to be strictly banded. In particular, the diagonal block in each partition can be a general matrix and thus handled by a direct general linear system solver rather than a banded solver. This enhances the preconditioner, and hence allows better chance of convergence and reduces the number of iterations.
+
+==Implementations==
+[[Intel]] offers an implementation of the SPIKE algorithm under the name ''Intel Adaptive Spike-Based Solver'' {{ref|1}}. Tridiagonal solvers have also been developed for the NVIDIA GPU 
+{{ref|Venetis_gSpike_GPU}}{{ref|Chang_tridiagonal_GPU}} and the [[Xeon Phi]] co-processors. The method in  {{ref|Chang_tridiagonal_GPU}} is the basis for a tridiagonal solver in the cuSPARSE library.<ref>NVIDIA, Accessed October 28, 2014. CUDA Toolkit Documentation v. 6.5: cuSPARSE, http://docs.nvidia.com/cuda/cusparse.</ref> The Givens rotations based solver was also implemented for the 
+GPU and the Intel Xeon Phi.<ref>{{cite web |url=https://www.researchgate.net/publication/282286515 |last1=Venetis |first1=Ioannis |last2=Sobczyk |first2=Aleksandros |last3=Kouris |first3=Alexandros |last4=Nakos |first4=Alexandros |last5=Nikoloutsakos |first5=Nikolaos |last6=Gallopoulos |first6=Efstratios |date=2015-09-03 |title=A general tridiagonal solver for coprocessors: Adapting g-Spike for the Intel Xeon Phi |via=[[ResearchGate]]}}</ref>
+
+==References==
+{{Reflist}}
+# {{note|Spike_Polizzi1}}{{Cite journal| last2 = Sameh| first1 = E.| first2 = A. H.| title = A parallel hybrid banded system solver: the SPIKE algorithm| journal = Parallel Computing| volume = 32| issue = 2| pages = 177–194| year = 2006| last1 = Polizzi| doi = 10.1016/j.parco.2005.07.005}}
+# {{note|Spike_Polizzi2}}{{Cite journal| last2 = Sameh| first1 = E.| first2 = A. H.| title = SPIKE: A parallel environment for solving banded linear systems| journal = Computers & Fluids| volume = 36| pages = 113–141| year = 2007| last1 = Polizzi| doi = 10.1016/j.compfluid.2005.07.005}}
+# {{note|Truncated_Spike}}{{Cite journal | first1 = C. C. K. | last2 = Manguoglu | first2 = M. | title = Analysis of the Truncated SPIKE Algorithm| last1 = Mikkelsen | journal = [[SIAM Journal on Matrix Analysis and Applications|SIAM J. Matrix Anal. Appl.]] | volume = 30| issue = 4 | pages = 1500–1519| year = 2008 | doi = 10.1137/080719571}}
+#  {{note|PSPIKE}}{{cite book | last1 = Manguoglu | first1 = M. | last2 = Sameh | first2 = A. H. | last3 = Schenk | first3 = O. | title = Euro-Par 2009 Parallel Processing | chapter = PSPIKE: A Parallel Hybrid Sparse Linear System Solver | series = Lecture Notes in Computer Science | year = 2009 | volume = 5704 | pages = 797–808 | bibcode = 2009LNCS.5704..797M | doi = 10.1007/978-3-642-03869-3_74 | isbn = 978-3-642-03868-6 | doi-access = free }}
+# {{note|1}}{{cite web|url=http://software.intel.com/en-us/articles/intel-adaptive-spike-based-solver/|title=Intel Adaptive Spike-Based Solver - Intel Software Network|access-date=2009-03-23}}
+# {{note|KuckSameh78}}{{Cite journal| doi = 10.1145/322047.322054| title = On Stable Parallel Linear System Solvers| year = 1978| last1 = Sameh | first1 = A. H.| last2 = Kuck | first2 = D. J.| journal = Journal of the ACM| volume = 25| pages = 81–91 | s2cid = 17109524| doi-access = free}}
+# {{note|Venetis_gSpike_GPU}}{{Cite journal| title = A direct tridiagonal solver based on Givens rotations for GPU architectures| year = 2015| last1 = Venetis|first1=I.E.|last2=Kouris|first2=A.|last3=Sobczyk|first3=A.|last4=Gallopoulos|first4=E.|last5= Sameh | first5 = A. H.| journal = Parallel Computing| volume = 25| pages = 101–116|doi=10.1016/j.parco.2015.03.008 }}
+# {{note|Chang_tridiagonal_GPU}}{{Cite journal| title = A scalable, numerically stable, high-performance tridiagonal solver using GPUs| year = 2012| last1 = Chang|first1=L.-W.|last2=Stratton|first2=J.|last3=Kim|first3=H.|last4=Hwu|first4=W.-M.| journal = Proc. Int'l. Conf. High Performance Computing, Networking Storage and Analysis (SC'12)| pages =  27:1–27:11|location=Los Alamitos, CA, USA|publisher=IEEE Computer Soc. Press|isbn= 978-1-4673-0804-5 }}
+
+==Further reading==
+* {{cite book |last1=Gallopoulos |first1=E. |last2= Philippe | first2=B.| last3=Sameh |first3= A.H.|date= 2015|title=Parallelism in Matrix Computations |url= https://www.springer.com/in/book/9789401771870 |publisher=Springer |isbn=978-94-017-7188-7}}
+
+{{Numerical linear algebra}}
+
+{{DEFAULTSORT:Spike Algorithm}}
+[[Category:Numerical linear algebra]]

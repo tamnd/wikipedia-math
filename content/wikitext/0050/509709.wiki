@@ -1,0 +1,270 @@
+<!-- wikipedia: en
+     page: 509709
+     title: Gibbs sampling
+     revision: 1374408416
+     timestamp: 2026-09-11T22:12:51Z
+     history: https://en.wikipedia.org/w/index.php?curid=509709&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374408416 -->
+{{short description|Monte Carlo algorithm}}{{Redirect|Heat bath algorithm|the thermodynamic system|Heat bath}}
+{{Bayesian statistics}}
+
+In [[statistics]], '''Gibbs sampling''' or a '''Gibbs sampler''', also known in [[statistical mechanics]] as the '''heat bath algorithm''', is a [[Markov chain Monte Carlo]] (MCMC) [[algorithm]] for sampling from a specified [[multivariate distribution|multivariate]] [[probability distribution]] when direct sampling from the joint distribution is difficult, but sampling from the [[Conditional probability distribution|conditional distribution]] is more practical.  This sequence can be used to approximate the joint distribution (e.g., to generate a histogram of the distribution); to approximate the [[marginal distribution]] of one of the variables, or some subset of the variables (for example, the unknown [[parameter]]s or [[latent variable]]s); or to compute an [[integral]] (such as the [[expected value]] of one of the variables).  Typically, some of the variables correspond to observations whose values are known, and hence do not need to be sampled.
+
+Gibbs sampling is commonly used as a means of [[statistical inference]], especially [[Bayesian inference]].  It is a [[randomized algorithm]] (i.e. an algorithm that makes use of [[random number generation|random number]]s), and is an alternative to [[deterministic algorithm]]s for statistical inference such as the [[expectation–maximization algorithm]] (EM).
+
+As with other MCMC algorithms, Gibbs sampling generates a [[Markov chain]] of samples, each of which is [[autocorrelation|correlated]] with nearby samples. As a result, care must be taken if independent samples are desired. Samples from the beginning of the chain (the ''burn-in period'') may not accurately represent the desired distribution and are usually discarded.
+
+== Introduction ==
+Gibbs sampling is named after the physicist [[Josiah Willard Gibbs]], in reference to an analogy between the [[Sampling (statistics)|sampling]] algorithm and [[statistical physics]]. The algorithm was described by brothers [[Stuart Geman|Stuart]] and [[Donald Geman]] in 1984, some eight decades after the death of Gibbs,<ref>{{Cite journal
+ | first1=S. |last1=Geman |author-link1=Stuart Geman
+ | first2=D. |last2=Geman |author-link2=Donald Geman
+ | title = Stochastic Relaxation, Gibbs Distributions, and the Bayesian Restoration of Images
+ | journal = [[IEEE Transactions on Pattern Analysis and Machine Intelligence]]
+ | volume = 6 |issue=6
+ | pages = 721–741
+ | year = 1984
+ | doi = 10.1109/TPAMI.1984.4767596 | pmid=22499653
+|bibcode=1984ITPAM...6..721G }}</ref> and became popularized in the statistics community for calculating marginal probability distribution, especially the posterior distribution.<ref>{{Cite journal |last1=Gelfand |first1=Alan E. |last2=Smith |first2=Adrian F. M. |date=1990-06-01 |title=Sampling-Based Approaches to Calculating Marginal Densities |url=https://www.tandfonline.com/doi/abs/10.1080/01621459.1990.10476213 |journal=Journal of the American Statistical Association |volume=85 |issue=410 |pages=398–409 |doi=10.1080/01621459.1990.10476213 |issn=0162-1459|url-access=subscription }}</ref>
+
+In its basic version, Gibbs sampling is a special case of the [[Metropolis–Hastings algorithm]].  However, in its extended versions (see [[#Variations and extensions|below]]), it can be considered a general framework for sampling from a large set of variables by sampling each variable (or in some cases, each group of variables) in turn, and can incorporate the [[Metropolis–Hastings algorithm]] (or methods such as [[slice sampling]]) to implement one or more of the sampling steps.
+
+Gibbs sampling is applicable when the joint distribution is not known explicitly or is difficult to sample from directly, but the [[conditional distribution]] of each variable is known and is easy (or at least, easier) to sample from. The Gibbs sampling algorithm generates an instance from the distribution of each variable in turn, conditional on the current values of the other variables.  It can be shown that the sequence of samples constitutes a [[Markov chain]], and the stationary distribution of that Markov chain is just the sought-after joint distribution.<ref>{{Cite book|title=Bayesian data analysis|last=Gelman|first=Andrew and Carlin, John B and Stern, Hal S and Dunson, David B and Vehtari, Aki and Rubin, Donald B|publisher=CRC press Boca Raton|year=2014|volume=2|location=FL}}</ref>
+
+Gibbs sampling is particularly well-adapted to sampling the [[posterior probability|posterior distribution]] of a [[Bayesian network]], since Bayesian networks are typically specified as a collection of conditional distributions.
+
+== Implementation ==
+Gibbs sampling, in its basic incarnation, is a special case of the [[Metropolis–Hastings algorithm]].  The point of Gibbs sampling is that given a [[multivariate distribution]] it is simpler to sample from a conditional distribution than to [[marginal distribution|marginalize]] by integrating over a [[joint distribution]].  Suppose we want to obtain <math>k</math> samples of a <math>n</math>-dimensional random vector <math>\mathbf{X} = (X_1, \dots, X_n)</math>. We proceed iteratively:
+
+* Begin with some initial value <math>\mathbf{X}^{(0)}</math>.
+* Given a sample <math>\mathbf{X}^{(i)} = \left(x_1^{(i)}, \dots, x_n^{(i)}\right)</math>, to obtain the next sample <math>\mathbf{X}^{(i+1)} = \left(x_1^{(i+1)}, x_2^{(i+1)}, \dots, x_n^{(i+1)}\right)</math>, we can sample each component <math>x_j^{(i+1)}</math> from the distribution of <math>X_j</math>, conditioned on all the components sampled so far: we condition on <math>X_{\ell}^{(i+1)}</math> for all <math>\ell\leq j-1</math>, and  on <math>X_{\ell}^{(i)}</math> for <math>j+1\leq\ell\leq n</math>. In other words, we sample <math>x_j^{(i+1)}</math> according to the distribution <math>P\left(X_j=\cdot|X_1=x_1^{(i+1)}, \dots, X_{j-1}=x_{j-1}^{(i+1)}, X_{j+1}=x_{j+1}^{(i)}, \dots, X_n=x_n^{(i)}\right)</math>.
+
+== Properties ==
+If such sampling is performed, these important facts hold:
+* The samples approximate the joint distribution of all variables.
+* The marginal distribution of any subset of variables can be approximated by simply considering the samples for that subset of variables, ignoring the rest.
+* The [[expected value]] of any variable can be approximated by averaging over all the samples.
+
+When performing the sampling:
+* The initial values of the variables can be determined randomly or by some other algorithm such as [[expectation–maximization]].
+* It is not actually necessary to determine an initial value for the first variable sampled.
+* It is common to ignore some number of samples at the beginning (the so-called ''burn-in period''), and then consider only every <math>n</math>th sample when averaging values to compute an expectation.  For example, the first 1,000 samples might be ignored, and then every 100th sample averaged, throwing away all the rest. The reason for this is that (1) the [[stationary distribution]] of the Markov chain is the desired joint distribution over the variables, but it may take a while for that stationary distribution to be reached; (2) successive samples are not independent of each other but form a [[Markov chain]] with some amount of correlation. Sometimes, algorithms can be used to determine the amount of [[autocorrelation]] between samples and the value of <math>n</math> (the period between samples that are actually used) computed from this, but in practice there is a fair amount of "[[Black magic (programming)|black magic]]" involved.{{Citation needed|date=October 2025}}
+* The process of [[simulated annealing]] is often used to reduce the "[[random walk]]" behavior in the early part of the sampling process (i.e. the tendency to move slowly around the [[sample space]], with a high amount of [[autocorrelation]] between samples, rather than moving around quickly, as is desired). Other techniques that may reduce autocorrelation are ''collapsed Gibbs sampling'', ''blocked Gibbs sampling'', and ''ordered overrelaxation''; see below.
+
+=== Relation of conditional distribution and joint distribution ===
+Furthermore, the conditional distribution of one variable given all others is proportional to the joint distribution, i.e., for all possible value <math>(x_i)_{1\leq i\leq n}</math> of <math>\mathbf{X}</math>:
+
+:<math>P(X_j=x_j\mid (X_i=x_i)_{i\neq j}) = \frac{P((X_i=x_i)_i)}{P((X_i=x_i)_{i\neq j})} \propto P((X_i=x_i)_i)</math>
+
+"Proportional to" in this case means that the denominator is not a function of <math>x_j</math> and thus is the same for all values of <math>x_j</math>; it forms part of the [[normalization constant]] for the distribution over <math>x_j</math>.  In practice, to determine the nature of the conditional distribution of a factor <math>x_j</math>, it is easiest to factor the joint distribution according to the individual conditional distributions defined by the [[graphical model]] over the variables, ignore all factors that are not functions of <math>x_j</math> (all of which, together with the denominator above, constitute the normalization constant), and then reinstate the normalization constant at the end, as necessary.  In practice, this means doing one of three things:
+# If the distribution is discrete, the individual probabilities of all possible values of <math>x_j</math> are computed, and then summed to find the normalization constant.
+# If the distribution is continuous and of a known form, the normalization constant will also be known.
+# In other cases, the normalization constant can usually be ignored, as most sampling methods do not require it.
+
+== Inference ==
+Gibbs sampling is commonly used for [[statistical inference]] (e.g. determining the best value of a parameter, such as determining the number of people likely to shop at a particular store on a given day, the candidate a voter will most likely vote for, etc.).  The idea is that observed data is incorporated into the sampling process by creating separate variables for each piece of observed data and fixing the variables in question to their observed values, rather than sampling from those variables.  The distribution of the remaining variables is then effectively a [[posterior distribution]] conditioned on the observed data.
+
+The most likely value of a desired parameter (the [[mode (statistics)|mode]]) could then simply be selected by choosing the sample value that occurs most commonly; this is essentially equivalent to [[maximum a posteriori]] estimation of a parameter. (Since the parameters are usually continuous, it is often necessary to "bin" the sampled values into one of a finite number of ranges or "bins" in order to get a meaningful estimate of the mode.) More commonly, however, the [[expected value]] ([[mean]] or average) of the sampled values is chosen; this is a [[Bayes estimator]] that takes advantage of the additional data about the entire distribution that is available from Bayesian sampling, whereas a maximization algorithm such as [[expectation maximization]] (EM) is capable of only returning a single point from the distribution.  For example, for a unimodal distribution the mean (expected value) is usually similar to the mode (most common value), but if the distribution is [[skewness|skewed]] in one direction, the mean will be moved in that direction, which effectively accounts for the extra probability mass in that direction. (If a distribution is multimodal, the expected value may not return a meaningful point, and any of the modes is typically a better choice.)
+
+Although some of the variables typically correspond to parameters of interest, others are uninteresting ("nuisance") variables introduced into the model to properly express the relationships among variables.  Although the sampled values represent the [[joint distribution]] over all variables, the nuisance variables can simply be ignored when computing expected values or modes; this is equivalent to [[marginal distribution|marginalizing]] over the nuisance variables.  When a value for multiple variables is desired, the expected value is simply computed over each variable separately. (When computing the mode, however, all variables must be considered together.)
+
+[[Supervised learning]], [[unsupervised learning]] and [[semi-supervised learning]] (aka learning with missing values) can all be handled by simply fixing the values of all variables whose values are known, and sampling from the remainder.
+
+For observed data, there will be one variable for each observation—rather than, for example, one variable corresponding to the [[sample mean]] or [[sample variance]] of a set of observations.  In fact, there generally will be no variables at all corresponding to concepts such as "sample mean" or "sample variance".  Instead, in such a case there will be variables representing the unknown true mean and true variance, and the determination of sample values for these variables results automatically from the operation of the Gibbs sampler.
+
+[[Generalized linear model]]s (i.e. variations of [[linear regression]]) can sometimes be handled by Gibbs sampling as well.  For example, [[probit regression]] for determining the probability of a given binary (yes/no) choice, with [[normal distribution|normally distributed]] priors placed over the regression coefficients, can be implemented with Gibbs sampling because it is possible to add additional variables and take advantage of [[conjugate prior|conjugacy]].  However, [[logistic regression]] cannot be handled this way.  One possibility is to approximate the [[logistic function]] with a mixture (typically 7–9) of normal distributions.  More commonly, however, [[Metropolis–Hastings]] is used instead of Gibbs sampling.
+
+== Mathematical background ==
+Suppose that a sample <math>\left.X\right.</math> is taken from a distribution depending on a parameter vector <math>\theta \in \Theta \,\!</math> of length <math>\left.d\right.</math>, with prior distribution <math>g(\theta_1, \ldots , \theta_d)</math>.  It may be that <math>\left.d\right.</math> is very large and that [[numerical integration]] to find the marginal densities of the <math>\left.\theta_i\right.</math> would be computationally expensive. Then an alternative method of calculating the marginal densities is to create a Markov chain on the space <math>\left.\Theta\right.</math> by repeating these two steps:
+
+# Pick a random index <math>1 \leq j \leq d</math>
+# Pick a new value for <math>\left.\theta_j\right.</math> according to <math>g(\theta_1, \ldots , \theta_{j-1} , \, \cdot \, , \theta_{j+1} , \ldots , \theta_d )</math>
+
+These steps define a [[Markov chain#Time reversal|reversible Markov chain]] with the desired invariant distribution <math>\left.g\right.</math>. This
+can be proved as follows. Define <math>x \sim_j y</math> if <math>\left.x_i = y_i\right.</math> for all <math>i \neq j</math> and let <math>\left.p_{xy}\right.</math> denote the probability of a jump from <math>x \in \Theta</math> to <math>y \in \Theta</math>. Then, the transition probabilities are
+
+:<math>p_{xy} = \begin{cases}
+\frac{1}{d}\frac{g(y)}{\sum_{z \in \Theta: z \sim_j x} g(z) } & x \sim_j y \\
+0 & \text{otherwise}
+\end{cases}
+ </math>
+
+So
+:<math>
+g(x) p_{xy} = \frac{1}{d}\frac{ g(x) g(y)}{\sum_{z \in \Theta: z \sim_j x} g(z) }
+= \frac{1}{d}\frac{ g(y) g(x)}{\sum_{z \in \Theta: z \sim_j y} g(z) }
+= g(y) p_{yx}
+</math>
+
+since <math>x \sim_j y</math> is an [[equivalence relation]]. Thus the [[detailed balance equations]] are satisfied, implying the chain is reversible and it has invariant distribution <math>\left.g\right.</math>.
+
+In practice, the index <math>\left.j\right.</math> is not chosen at random, and the chain cycles through the indexes in order. In general this gives a non-stationary Markov process, but each individual step will still be reversible, and the overall process will still have the desired stationary distribution (as long as the chain can access all states under the fixed ordering).
+
+== Gibbs sampler in Bayesian inference and its relation to information theory ==
+Let <math>y</math> denote observations generated from the sampling distribution <math>f(y|\theta)</math> and <math>\pi(\theta)</math> be a prior supported on the parameter space <math>\Theta</math>. Then one of the central goals of the [[Bayesian statistics]] is to approximate the posterior density
+
+:<math>\pi(\theta|y) = \frac{f(y|\theta) \cdot \pi(\theta)}{m(y)}</math>
+where the marginal likelihood <math> m(y)  = \int_{\Theta} f(y|\theta) \cdot \pi(\theta) d\theta </math> is assumed to be finite for all <math>y</math>. 
+
+To explain the Gibbs sampler, we additionally assume that the parameter space <math>\Theta</math> is decomposed as
+
+:<math>\Theta = \prod_{i=1}^{K}\Theta_{i} = \Theta_1 \times \cdots \Theta_i \times \cdots \times \Theta_K, \quad\quad (K>1)</math>,
+where <math>\times</math> represents the [[Cartesian product]]. Each component parameter space <math>\Theta_i</math> can be a set of scalar components, subvectors, or matrices. 
+
+Define a set <math>\Theta_{-i}</math> that complements the <math>\Theta_i</math>. Essential ingredients of the Gibbs sampler is the <math>i</math>-th full conditional posterior distribution for each <math>i=1,\cdots, K</math>
+:<math>\pi(\theta_i|\theta_{-i},y)=\pi(\theta_i|\theta_1, \cdots, \theta_{i-1},\theta_{i+1},\cdots, \theta_{K},y)</math>.
+
+[[File:Gibbs sampler picture.jpg|thumb|500px|A pictorial description of the Gibbs sampling algorithm <ref name="Lee2008">{{Cite journal |last=Lee|first=Se Yoon|  title = Gibbs sampler and coordinate ascent variational inference: A set-theoretical review|journal=Communications in Statistics - Theory and Methods|year=2021|volume=51 |issue=6 |pages=1549–1568 |doi=10.1080/03610926.2021.1921214|arxiv=2008.01006|s2cid=220935477 }}</ref>]]
+[[File:Gibbs sampling info eq.jpg|thumb|500px|Schematic description of the information equality associated with the Gibbs sampler at the i-th step within a cycle <ref name="Lee2008" />]]
+
+The following algorithm details a generic Gibbs sampler:
+
+<math>\text{Initialize: pick arbitrary starting value}\,\, \theta^{(1)} = (\theta_1^{(1)},\theta_2^{(1)},\cdots,\theta_i^{(1)},\theta_{i+1}^{(1)},\cdots,\theta_K^{(1)}) </math>
+
+<math>\text{Iterate a Cycle:}\,</math>
+
+<math> \quad\quad  \text{Step 1.     draw}\,\, \theta_1^{(s+1)}\sim \pi(\theta_1|\theta_2^{(s)},\theta_3^{(s)},\cdots,\theta_K^{(s)},y )</math>
+
+<math> \quad\quad  \text{Step 2.     draw}\,\, \theta_2^{(s+1)}\sim \pi(\theta_2|\theta_1^{(s+1)},\theta_3^{(s)},\cdots,\theta_K^{(s)},y )</math>
+
+<math> \quad\quad\quad  \vdots</math>
+
+<math> \quad\quad  \text{Step i.     draw}\,\, \theta_i^{(s+1)}\sim \pi(\theta_i|\theta_1^{(s+1)},\theta_2^{(s+1)},\cdots,
+\theta_{i-1}^{(s+1)},\theta_{i+1}^{(s)} ,\cdots, \theta_K^{(s)},y )</math>
+
+<math> \quad \quad \text{Step i+1. draw}\,\, \theta_{i+1}^{(s+1)}\sim \pi(\theta_{i+1}|\theta_1^{(s+1)},\theta_2^{(s+1)},\cdots,
+\theta_{i}^{(s+1)},\theta_{i+2}^{(s)} ,\cdots, \theta_K^{(s)},y )</math>
+
+<math> \quad\quad\quad  \vdots</math>
+
+<math> \quad\quad  \text{Step K.     draw}\,\, \theta_K^{(s+1)}\sim \pi(\theta_K|\theta_1^{(s+1)},\theta_2^{(s+1)},\cdots,\theta_{K-1}^{(s+1)},y )</math>
+
+<math>\text{end Iterate}</math>
+
+Note that Gibbs sampler is operated by the iterative Monte Carlo scheme within a cycle. The <math>S</math> number of samples <math>\{\theta^{(s)} \}_{s=1}^{S}</math> drawn by the above algorithm formulates Markov Chains with the invariant distribution to be the target density <math>\pi(\theta|y)</math>.
+
+Now, for each <math>i=1,\cdots,K</math>, define the following information theoretic quantities:
+
+<math>I(\theta_i ; \theta_{-i}) = \text{KL}(\pi(\theta|y)||\pi(\theta_i|y) \cdot \pi(\theta_{-i}|y) )
+=\int_{\Theta} \pi(\theta|y) \log \bigg(\frac{\pi(\theta|y)}{\pi(\theta_i|y) \cdot \pi(\theta_{-i}|y)}\bigg)  d\theta,
+</math>
+
+<math>H(\theta_{-i}) = -\int_{\Theta_{-i}} \pi(\theta_{-i}|y) \log \pi(\theta_{-i}|y) d\theta_{-i},
+</math>
+
+<math>H(\theta_{-i}|\theta_{i}) = -\int_{\Theta} \pi(\theta|y) \log \pi(\theta_{-i}|\theta_{i},y) d\theta,
+</math> 
+
+namely, posterior [[mutual information]], posterior differential entropy, and posterior conditional differential entropy, respectively. We can similarly define information theoretic quantities <math>I(\theta_{-i} ; \theta_{i})</math>, <math>H(\theta_{i})</math>, and <math>H(\theta_{i}|\theta_{-i})</math> by interchanging the <math>i</math> and <math>-i</math> in the defined quantities. Then, the following <math>K</math> equations hold.<ref name="Lee2008" />
+
+<math>I(\theta_i ; \theta_{-i}) = H(\theta_{-i}) - H(\theta_{-i}|\theta_{i}) 
+=  H(\theta_{i}) - H(\theta_{i}|\theta_{-i}) = I(\theta_{-i} ; \theta_{i}), \quad (i=1,\cdots,K) </math>.
+
+The mutual information <math>I(\theta_i ; \theta_{-i}) </math> quantifies the reduction in uncertainty of random quantity <math>\theta_{i}</math> once we know <math>\theta_{-i}</math>, a posteriori. It vanishes if and only if <math>\theta_{i}</math> and <math>\theta_{-i}</math> are marginally independent, a posterior. The mutual information <math>I(\theta_i ; \theta_{-i})</math> can be interpreted as the quantity that is transmitted from the <math>i</math>-th step to the <math>i+1</math>-th step within a single cycle of the Gibbs sampler.
+
+== Variations and extensions ==
+
+Numerous variations of the basic Gibbs sampler exist.  The goal of these variations is to reduce the [[autocorrelation]] between samples sufficiently to overcome any added computational costs.
+
+=== Blocked Gibbs sampler ===
+*A '''blocked Gibbs sampler''' groups two or more variables together and samples from their [[joint distribution]] conditioned on all other variables, rather than sampling from each one individually.  For example, in a [[hidden Markov model]], a blocked Gibbs sampler might sample from all the [[latent variable]]s making up the [[Markov chain]] in one go, using the [[forward-backward algorithm]].
+
+=== Collapsed Gibbs sampler ===
+*A '''collapsed Gibbs sampler''' integrates out ([[marginal distribution|marginalizes over]]) one or more variables when sampling for some other variable.  For example, imagine that a model consists of three variables ''A'', ''B'', and ''C''.  A simple Gibbs sampler would sample from ''p''(''A''&nbsp;|&nbsp;''B'',''C''), then ''p''(''B''&nbsp;|&nbsp;''A'',''C''), then ''p''(''C''&nbsp;|&nbsp;''A'',''B'').  A collapsed Gibbs sampler might replace the sampling step for ''A'' with a sample taken from the marginal distribution ''p''(''A''&nbsp;|&nbsp;''C''), with variable ''B'' integrated out in this case.  Alternatively, variable ''B'' could be collapsed out entirely, alternately sampling from ''p''(''A''&nbsp;|&nbsp;''C'') and ''p''(''C''&nbsp;|&nbsp;''A'') and not sampling over ''B'' at all.  The distribution over a variable ''A'' that arises when collapsing a parent variable ''B'' is called a [[compound distribution]]; sampling from this distribution is generally tractable when ''B'' is the [[conjugate prior]] for ''A'', particularly when ''A'' and ''B'' are members of the [[exponential family]].  For more information, see the article on [[compound distribution]]s or Liu (1994).<ref>{{cite journal
+| last        = Liu
+| first       = Jun S.
+|date=September 1994
+| title       = The Collapsed Gibbs Sampler in Bayesian Computations with Applications to a Gene Regulation Problem
+| jstor        = 2290921
+| journal     = Journal of the American Statistical Association
+| volume      = 89
+| issue       = 427
+| pages       = 958–966
+| doi         = 10.2307/2290921
+}}</ref>
+
+==== Implementing a collapsed Gibbs sampler ====
+
+===== Collapsing Dirichlet distributions =====
+
+In [[hierarchical Bayesian model]]s with [[categorical distribution|categorical variable]]s, such as [[latent Dirichlet allocation]] and various other models used in [[natural language processing]], it is quite common to collapse out the [[Dirichlet distribution]]s that are typically used as [[prior distribution]]s over the categorical variables.  The result of this collapsing introduces dependencies among all the categorical variables dependent on a given Dirichlet prior, and the joint distribution of these variables after collapsing is a [[Dirichlet-multinomial distribution]].  The conditional distribution of a given categorical variable in this distribution, conditioned on the others, assumes an extremely simple form that makes Gibbs sampling even easier than if the collapsing had not been done.  The rules are as follows:
+#Collapsing out a Dirichlet prior node affects only the parent and children nodes of the prior.  Since the parent is often a constant, it is typically only the children that we need to worry about.
+#Collapsing out a Dirichlet prior introduces dependencies among all the categorical children dependent on that prior — but ''no'' extra dependencies among any other categorical children. (This is important to keep in mind, for example, when there are multiple Dirichlet priors related by the same hyperprior.  Each Dirichlet prior can be independently collapsed and affects only its direct children.)
+#After collapsing, the conditional distribution of one dependent children on the others assumes a very simple form: The probability of seeing a given value is proportional to the sum of the corresponding hyperprior for this value, and the count of all of the ''other dependent nodes'' assuming the same value.  Nodes not dependent on the same prior '''must not''' be counted. The same rule applies in other iterative inference methods, such as [[variational Bayes]] or [[expectation maximization]]; however, if the method involves keeping partial counts, then the partial counts for the value in question must be summed across all the other dependent nodes.  Sometimes this summed up partial count is termed the ''expected count'' or similar. The probability is ''proportional to'' the resulting value; the actual probability must be determined by normalizing across all the possible values that the categorical variable can take (i.e. adding up the computed result for each possible value of the categorical variable, and dividing all the computed results by this sum).
+#If a given categorical node has dependent children (e.g. when it is a [[latent variable]] in a [[mixture model]]), the value computed in the previous step (expected count plus prior, or whatever is computed) must be multiplied by the actual conditional probabilities (''not'' a computed value that is proportional to the probability!) of all children given their parents.  See the article on the [[Dirichlet-multinomial distribution]] for a detailed discussion.
+#In the case where the group membership of the nodes dependent on a given Dirichlet prior may change dynamically depending on some other variable (e.g. a categorical variable indexed by another latent categorical variable, as in a [[topic model]]), the same expected counts are still computed, but need to be done carefully so that the correct set of variables is included.   See the article on the [[Dirichlet-multinomial distribution]] for more discussion, including in the context of a topic model.
+
+===== Collapsing other conjugate priors =====
+
+In general, any conjugate prior can be collapsed out, if its only children have distributions conjugate to it.  The relevant math is discussed in the article on [[compound distribution]]s.  If there is only one child node, the result will often assume a known distribution.  For example, collapsing an [[inverse gamma distribution|inverse-gamma-distributed]] [[variance]] out of a network with a single [[Gaussian distribution|Gaussian]] child will yield a [[Student's t-distribution]]. (For that matter, collapsing both the mean and variance of a single Gaussian child will still yield a Student's t-distribution, provided both are conjugate, i.e. Gaussian mean, inverse-gamma variance.)
+
+If there are multiple child nodes, they will all become dependent, as in the [[Dirichlet distribution|Dirichlet]]-[[categorical distribution|categorical]] case.  The resulting [[joint distribution]] will have a closed form that resembles in some ways the compound distribution, although it will have a product of a number of factors, one for each child node, in it.
+
+In addition, and most importantly, the resulting [[conditional distribution]] of one of the child nodes given the others (and also given the parents of the collapsed node(s), but ''not'' given the children of the child nodes) will have the same density as the [[posterior predictive distribution]] of all the remaining child nodes.  Furthermore, the posterior predictive distribution has the same density as the basic compound distribution of a single node, although with different parameters.  The general formula is given in the article on [[compound distribution]]s.
+
+For example, given a Bayes network with a set of conditionally [[independent identically distributed]] [[Gaussian distribution|Gaussian-distributed]] nodes with [[conjugate prior]] distributions placed on the mean and variance, the conditional distribution of one node given the others after compounding out both the mean and variance will be a [[Student's t-distribution]].  Similarly, the result of compounding out the [[gamma distribution|gamma]] prior of a number of [[Poisson distribution|Poisson-distributed]] nodes causes the conditional distribution of one node given the others to assume a [[negative binomial distribution]].
+
+In these cases where compounding produces a well-known distribution, efficient sampling procedures often exist, and using them will often (although not necessarily) be more efficient than not collapsing, and instead sampling both prior and child nodes separately. However, in the case where the compound distribution is not well-known, it may not be easy to sample from, since it generally will not belong to the [[exponential family]] and typically will not be [[Logarithmically concave function|log-concave]] (which would make it easy to sample using [[adaptive rejection sampling]], since a closed form always exists).
+
+In the case where the child nodes of the collapsed nodes themselves have children, the conditional distribution of one of these child nodes given all other nodes in the graph will have to take into account the distribution of these second-level children.  In particular, the resulting conditional distribution will be proportional to a product of the compound distribution as defined above, and the conditional distributions of all of the child nodes given their parents (but not given their own children).  This follows from the fact that the full conditional distribution is proportional to the joint distribution.  If the child nodes of the collapsed nodes are [[continuous distribution|continuous]], this distribution will generally not be of a known form, and may well be difficult to sample from despite the fact that a closed form can be written, for the same reasons as described above for non-well-known compound distributions.  However, in the particular case that the child nodes are [[discrete distribution|discrete]], sampling is feasible, regardless of whether the children of these child nodes are continuous or discrete.  In fact, the principle involved here is described in fair detail in the article on the [[Dirichlet-multinomial distribution]].
+
+=== Gibbs sampler with ordered overrelaxation ===
+*A Gibbs sampler with '''ordered overrelaxation''' samples a given odd number of candidate values for <math>x_j^{(i)}</math> at any given step and sorts them, along with the single value for <math>x_j^{(i-1)}</math> according to some well-defined ordering.  If <math>x_j^{(i-1)}</math> is the ''s''<sup>th</sup> smallest in the sorted list then the <math>x_j^{(i)}</math> is selected as the ''s''<sup>th</sup> largest in the sorted list.  For more information, see Neal (1995).<ref>{{cite tech report
+| first       = Radford M.
+| last        = Neal
+| title       = Suppressing Random Walks in Markov Chain Monte Carlo Using Ordered Overrelaxation
+| institution = University of Toronto, Department of Statistics
+| year        = 1995
+| arxiv       = bayes-an/9506004
+| bibcode= 1995bayes.an..6004N
+}}</ref>
+
+=== Other extensions ===
+It is also possible to extend Gibbs sampling in various ways.  For example, in the case of variables whose conditional distribution is not easy to sample from, a single iteration of [[slice sampling]] or the [[Metropolis–Hastings algorithm]] can be used to sample from the variables in question.
+It is also possible to incorporate variables that are not [[random variables]], but whose value is [[Deterministic algorithm|deterministically]] computed from other variables.  [[Generalized linear models]], e.g. [[logistic regression]] (aka "[[maximum entropy classifier|maximum entropy]] models"), can be incorporated in this fashion. (BUGS, for example, allows this type of mixing of models.)
+
+== Failure modes ==
+
+There are two ways that Gibbs sampling can fail.  The first is when there are islands of high-probability states, with no paths between them.  For example, consider a probability distribution  over 2-bit vectors, where the vectors (0,0) and (1,1) each have probability {{sfrac|1|2}}, but the other two vectors (0,1) and (1,0) have probability zero.  Gibbs sampling will become trapped in one of the two high-probability vectors, and will never reach the other one.  More generally, for any distribution over high-dimensional, real-valued vectors, if two particular elements of the vector are perfectly correlated (or perfectly anti-correlated), those two elements will become stuck, and Gibbs sampling will never be able to change them.
+
+The second problem can happen even when all states have nonzero probability and there is only a single island of high-probability states.  For example, consider a probability distribution over 100-bit vectors, where the all-zeros vector occurs with probability {{sfrac|1|2}}, and all other vectors are equally probable, and so have a probability of <math>\frac{1}{2(2^{100}-1)}</math> each.  If you want to estimate the probability of the zero vector, it would be sufficient to take 100 or 1000 samples from the true distribution.  That would very likely give an answer very close to {{sfrac|1|2}}.  But you would probably have to take more than <math>2^{100}</math> samples from Gibbs sampling to get the same result.  No computer could do this in a lifetime.
+
+This problem occurs no matter how long the burn-in period is.  This is because in the true distribution, the zero vector occurs half the time, and those occurrences are randomly mixed in with the nonzero vectors.  Even a small sample will see both zero and nonzero vectors.  But Gibbs sampling will alternate between returning only the zero vector for long periods (about <math>2^{99}</math> in a row), then only nonzero vectors for long periods (about <math>2^{99}</math> in a row).  Thus convergence to the true distribution is extremely slow, requiring much more than <math>2^{99}</math> steps; taking this many steps is not computationally feasible in a reasonable time period. The slow convergence here can be seen as a consequence of the [[curse of dimensionality]].
+A problem like this can be solved by block sampling the entire 100-bit vector at once. (This assumes that the 100-bit vector is part of a larger set of variables.  If this vector is the only thing being sampled, then block sampling is equivalent to not doing Gibbs sampling at all, which by hypothesis would be difficult.)
+== Software ==
+* The [[OpenBUGS]] software (''Bayesian inference Using Gibbs Sampling'') does a [[Bayesian analysis]] of complex statistical models using [[Markov chain Monte Carlo]].
+
+* [[Just another Gibbs sampler|JAGS]] (''Just another Gibbs sampler'') is a GPL program for analysis of Bayesian hierarchical models using Markov Chain Monte Carlo.
+
+* [[Church (programming language)|Church]] is free software for performing Gibbs inference over arbitrary distributions that are specified as probabilistic programs.
+
+* [[PyMC]] is an open source [[Python (programming language)|Python]] library for [[Bayesian learning]] of general [[Graphical model|Probabilistic Graphical Models]].
+*[https://turing.ml/ Turing] is an open source [[Julia (programming language)|Julia]] library for [[Bayesian inference|Bayesian Inference]] using [[probabilistic programming]].
+
+== Notes ==
+{{Reflist|30em}}
+
+== References ==
+* {{Citation
+  | last1 = Bishop   | first1 = Christopher M.
+  | title = Pattern Recognition and Machine Learning
+  | year = 2006
+  | publisher = Springer
+  | isbn = 978-0-387-31073-2
+  }}
+* Bolstad, William M. (2010), ''Understanding Computational Bayesian Statistics'', John Wiley {{ISBN|978-0-470-04609-8}}
+* {{Cite journal |doi=10.2307/2685208 |jstor=2685208 |title=Explaining the Gibbs Sampler |journal=The American Statistician |volume=46 |issue=3 |page=167 |year=1992 |last1=Casella |first1=G. |author-link=George Casella |last2=George |first2=E. I. }} (Contains a basic summary and many references.)
+* {{Citation
+ |first1=Alan E. |last1=Gelfand
+ |first2=Adrian F. M. |last2=Smith
+ |title=Sampling-Based Approaches to Calculating Marginal Densities
+ |journal=[[Journal of the American Statistical Association]]
+ |volume=85 |issue=410 |pages=398–409 |year=1990
+ |mr=1141740 |doi=10.2307/2289776
+ |jstor=2289776
+}}
+* [[Andrew Gelman|Gelman, A.]], Carlin J. B., Stern H. S., Dunson D., Vehtari A., Rubin D. B. (2013), ''Bayesian Data Analysis'', third edition. London: [[Chapman & Hall]].
+* Levin, David A.; [[Yuval Peres|Peres, Yuval]]; [[Elizabeth Wilmer|Wilmer, Elizabeth L.]] (2008), "[[Markov Chains and Mixing Times]]", [[American Mathematical Society]].
+* Robert, C. P.; Casella, G. (2004), ''Monte Carlo Statistical Methods'' (second edition), Springer-Verlag.
+
+[[Category:Markov chain Monte Carlo]]

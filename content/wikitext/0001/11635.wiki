@@ -1,0 +1,209 @@
+<!-- wikipedia: en
+     page: 11635
+     title: Flood fill
+     revision: 1330386064
+     timestamp: 2025-12-31T02:59:06Z
+     history: https://en.wikipedia.org/w/index.php?curid=11635&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1330386064 -->
+{{Short description|Algorithm in computer graphics to add color or texture}}
+[[Image:Recursive Flood Fill 4 (aka).gif|right|thumb|Recursive flood fill with 4 directions]]
+
+'''Flood fill''', also called '''seed fill''', is a [[flooding algorithm]] that determines and alters the area [[Glossary of graph theory#Connectivity|connected]] to a given node in a multi-dimensional [[Array data structure|array]] with some matching attribute. It is used in the "bucket" fill tool of [[paint program]]s to fill connected, similarly colored areas with a different color, and in games such as [[Go (game)|Go]] and [[Minesweeper (video game)|Minesweeper]] for determining which pieces are cleared. A variant called '''boundary fill''' uses the same algorithms but is defined as the area [[Glossary of graph theory#Connectivity|connected]] to a given node that does not have a particular attribute.<ref name="79Smith">{{Cite conference |title=Tint Fill |last=Smith |first=Alvy Ray |year=1979 |conference=SIGGRAPH '79: Proceedings of the 6th annual conference on Computer graphics and interactive techniques |pages=276–283 |doi=10.1145/800249.807456 }}</ref>
+
+Note that flood filling is not suitable for drawing filled polygons, as it will miss some pixels in more acute corners.<ref name="81Ackland">{{Cite conference |title=The edge flag algorithm — A fill method for raster scan displays |last1=Ackland |first1=Bryan D |last2=Weste |first2=Neil H |year=1981 |conference=IEEE Transactions on Computers (Volume: C-30, Issue: 1) |pages=41–48 |doi=10.1109/TC.1981.6312155 }}</ref> Instead, see [[Even–odd rule|Even-odd rule]] and [[Nonzero-rule]].
+
+==Algorithm parameters==
+[[Image:Recursive Flood Fill 8 (aka).gif|right|thumb|Recursive flood fill with 8 directions]]
+The traditional flood-fill algorithm takes three parameters: a start node, a target color, and a replacement color. The algorithm looks for all nodes in the array that are connected to the start node by a path of the target color and changes them to the replacement color. For a boundary-fill, in place of the target color, a border color would be supplied.
+
+In order to generalize the algorithm in the common way, the following descriptions will instead have two routines available.<ref name="85Fishkin" /> One called <code>Inside</code> which returns true for unfilled points that, by their color, would be inside the filled area, and one called <code>Set</code> which fills a pixel/node. Any node that has <code>Set</code> called on it must then no longer be <code>Inside</code>.
+
+Depending on whether we consider nodes touching at the corners connected or not, we have two variations: eight-way and four-way respectively.
+
+== Stack-based recursive implementation (four-way) ==
+
+The earliest-known, implicitly stack-based, [[recursion (computer science)|recursive]], four-way flood-fill implementation goes as follows:<ref name="73Newman">{{Cite book |title=Principles of Interactive Computer Graphics |last1=Newman |first1=William M |last2=Sproull |first2=Robert Fletcher |page=253 |edition=2nd |year=1979 |publisher=McGraw-Hill |isbn=978-0-07-046338-7 }}</ref><ref name="82Pavlidis">{{Cite book |title=Algorithms for Graphics and Image Processing |last=Pavlidis |first=Theo |page=181 |year=1982 |publisher=Springer-Verlag |isbn=978-3-642-93210-6 }}</ref><ref name="82Levoy">{{Cite conference |title=Area Flooding Algorithms |last=Levoy |first=Marc |year=1982 |conference=SIGGRAPH 1981 Two-Dimensional Computer Animation course notes}}</ref><ref name="90Foley">{{Cite book |title=Computer Graphics: Principles and Practice |last1=Foley |first1=J D |last2=van Dam |first2=A |last3=Feiner |first3=S K |last4=Hughes |first4=S K |year=1990 |edition=2nd |publisher=Addison–Wesley |pages=979–982 |isbn=978-0-201-84840-3}}</ref>
+
+ '''Flood-fill''' (node):
+  1. If ''node'' is not ''Inside'' return.
+  2. ''Set'' the ''node''
+  3. Perform '''Flood-fill''' one step to the south of ''node''.
+  4. Perform '''Flood-fill''' one step to the north of ''node''
+  5. Perform '''Flood-fill''' one step to the west of ''node''
+  6. Perform '''Flood-fill''' one step to the east of ''node''
+  7. Return.
+
+Though easy to understand, the implementation of the algorithm used above is impractical in languages and environments where stack space is severely constrained (e.g. [[Microcontroller]]s).
+
+=== Moving the recursion into a data structure ===
+
+{{multiple image
+| align = right
+| image1 = Wfm floodfill animation queue.gif
+| width1 = 200
+| alt1 = 
+| caption1 = Four-way flood fill using a queue for storage
+| image2 = Wfm floodfill animation stack.gif
+| width2 = 200
+| alt2 = 
+| caption2 = Four-way flood fill using a stack for storage
+| footer = 
+}}
+
+Moving the recursion into a [[data structure]] (either a [[Stack (abstract data type)|stack]] or a [[Queue (abstract data type)|queue]]) prevents a [[stack overflow]]. It is similar to the simple recursive solution, except that instead of making recursive calls, it pushes the nodes onto a [[Stack (abstract data type)|stack]] or [[Queue (abstract data type)|queue]] for consumption, with the choice of data structure affecting the proliferation pattern:
+
+{{clear}}
+
+ '''Flood-fill''' (node):
+   1. Set ''Q'' to the empty queue or stack.
+   2. Add ''node'' to the end of ''Q''.
+   3. While ''Q'' is not empty:
+   4.   Set ''n'' equal to the first element of ''Q''.
+   5.   Remove first element from ''Q''.
+   6.   If ''n'' is ''Inside'':
+          ''Set'' the ''n''
+          Add the node to the west of ''n'' to the end of ''Q''.
+          Add the node to the east of ''n'' to the end of ''Q''.
+          Add the node to the north of ''n'' to the end of ''Q''.
+          Add the node to the south of ''n'' to the end of ''Q''.
+   7. Continue looping until ''Q'' is exhausted.
+   8. Return.
+
+=== Further potential optimizations ===
+* Check and set each node's pixel color before adding it to the stack/queue, reducing stack/queue size.
+* Use a loop for the east–west directions, queuing pixels above/below as you go (making it similar to the span filling algorithms, below).
+* Interleave two or more copies of the code with extra stacks/queues, to allow [[Out-of-order execution|out-of-order processors]] more opportunity to parallelize.
+* Use multiple threads (ideally with slightly different visiting orders, so they don't stay in the same area).<ref name="82Levoy" />
+
+=== Advantages ===
+* Very simple algorithm - easy to make bug-free.<ref name="82Levoy" />
+
+=== Disadvantages ===
+* Uses a lot of memory, particularly when using a stack.<ref name="82Levoy" />
+* Tests most filled pixels a total of four times.
+* Not suitable for pattern filling, as it requires pixel test results to change.
+* Access pattern is not cache-friendly, for the queuing variant.
+* Cannot easily optimize for multi-pixel words or bitplanes.<ref name="81Ackland" />
+
+== Span filling ==
+
+[[Image:Smiley fill.gif|right|thumb|212px|Scanline fill using a stack for storage]]
+
+It's possible to optimize things further by working primarily with spans, a row with constant <code>y</code>. The first published complete example works on the following basic principle.<ref name="79Smith" />
+
+# Starting with a seed point, fill left and right. Keep track of the leftmost filled point <code>lx</code> and rightmost filled point <code>rx</code>. This defines the span. 
+# Scan from <code>lx</code> to <code>rx</code> above and below the seed point, searching for new seed points to continue with.
+
+As an optimisation, the scan algorithm does not need restart from every seed point, but only those at the start of the next span. Using a [[Stack (abstract data type)|stack]] explores spans depth first, whilst a [[Queue (abstract data type)|queue]] explores spans breadth first.
+
+{{clear}}
+
+ fn '''fill'''(''x'', ''y''):
+     if not '''Inside'''(''x'', ''y'') then return
+     let ''s'' = new empty stack or queue
+     Add (''x'', ''y'') to ''s''
+     while ''s'' is not empty:
+         Remove an (''x'', ''y'') from ''s''
+         let ''lx'' = ''x''
+         while '''Inside'''(''lx'' - 1, ''y''):
+             '''Set'''(''lx'' - 1, ''y'')
+             ''lx'' = ''lx'' - 1
+         while '''Inside'''(''x'', ''y''):
+             '''Set'''(''x'', ''y'')
+             ''x'' = ''x'' + 1
+       '''scan'''(''lx'', ''x'' - 1, ''y'' + 1, ''s'')
+       '''scan'''(''lx'', ''x'' - 1, ''y'' - 1, ''s'')
+ 
+ fn '''scan'''(''lx'', ''rx'', ''y'', ''s''):
+     let ''span_added'' = ''false''
+     for ''x'' in ''lx'' .. ''rx'':
+         if not '''Inside'''(''x'', ''y''):
+             ''span_added'' = ''false''
+         else if not ''span_added'':
+             Add (''x'', ''y'') to ''s''
+             ''span_added'' = ''true''
+
+Over time, the following optimizations were realized:
+* When a new scan would be entirely within a grandparent span, it would certainly only find filled pixels, and so wouldn't need queueing.<ref name="79Smith" /><ref name="82Levoy" /><ref name="85Fishkin">{{Cite conference |title=An Analysis and Algorithm for Filling Propagation |last1=Fishkin |first1=Kenneth P |last2=Barsky |first2=Brian A |year=1985 |conference=Computer-Generated Images: The State of the Art Proceedings of Graphics Interface ’85 |pages=56–76 |doi=10.1007/978-4-431-68033-8_6 }}</ref>
+* Further, when a new scan overlaps a grandparent span, only the overhangs (U-turns and W-turns) need to be scanned.<ref name="85Fishkin" />
+* It's possible to fill while scanning for seeds <ref name="82Levoy" />
+
+The final, combined-scan-and-fill span filler was then published in 1990. In pseudo-code form:<ref name="90Heckbert">{{Cite book |title=Graphics Gems |last=Heckbert |first=Paul S |chapter=IV.10: A Seed Fill Algorithm |pages=275–277 |editor-last=Glassner |editor-first=Andrew S |year=1990 |publisher=Academic Press |isbn=0122861663 }}</ref>
+
+ fn '''fill'''(''x'', ''y''):
+     if not '''Inside'''(''x'', ''y'') then return
+     let ''s'' = new empty queue or stack
+     Add (''x'', ''x'', ''y'', 1) to ''s''
+     Add (''x'', ''x'', ''y'' - 1, -1) to ''s''
+     while ''s'' is not empty:
+         Remove an (''x1'', ''x2'', ''y'', ''dy'') from ''s''
+         let ''x'' = ''x1''
+         if '''Inside'''(''x'', ''y''):
+             while '''Inside'''(''x'' - 1, ''y''):
+                 '''Set'''(''x'' - 1, ''y'')
+                 ''x'' = ''x'' - 1
+             if ''x'' < ''x1'':
+                 Add (''x'', ''x1'' - 1, ''y'' - ''dy'', -''dy'') to ''s''
+         while ''x1'' <= ''x2'':
+             while '''Inside'''(''x1'', ''y''):
+                 '''Set'''(''x1'', ''y'')
+                 ''x1'' = ''x1'' + 1
+             if ''x1'' > ''x'':
+                 '''Add''' (''x'', ''x1'' - 1, ''y'' + ''dy'', ''dy'') to ''s''
+             if ''x1'' - 1 > ''x2'':
+                 '''Add''' (''x2'' + 1, ''x1'' - 1, ''y'' - ''dy'', -''dy'') to ''s''
+             ''x1'' = ''x1'' + 1
+             while ''x1'' <= ''x2'' and not '''Inside'''(''x1'', ''y''):
+                 ''x1'' = ''x1'' + 1
+             ''x'' = ''x1''
+
+===Advantages===
+* 2–8x faster than the pixel-recursive algorithm.
+* Access pattern is cache and bitplane-friendly.<ref name="82Levoy" />
+* Can draw a horizontal line rather than setting individual pixels.<ref name="82Levoy" />
+
+===Disadvantages===
+* Still visits pixels it has already filled. (For the popular algorithm, 3 scans of most pixels. For the final one, only doing extra scans of pixels where there are holes in the filled area.)<ref name="85Fishkin" />
+* Not suitable for pattern filling, as it requires pixel test results to change.
+
+== Adding pattern filling support ==
+
+Two common ways to make the span and pixel-based algorithms support pattern filling are either to use a unique color as a plain fill and then replace that with a pattern or to keep track (in a 2d Boolean array or as regions) of which pixels have been visited, using it to indicate pixels are no longer fillable. ''Inside'' must then return ''false'' for such visited pixels.<ref name="85Fishkin" />
+
+== Graph-theoretic filling ==
+
+Some theorists applied explicit [[graph theory]] to the problem, treating spans of pixels, or aggregates of such, as nodes and studying their connectivity. The first published graph theory algorithm worked similarly to the span filling, above, but had a way to detect when it would duplicate filling of spans.<ref name="78Lieberman">{{Cite conference |title=How to Color in a Coloring Book |last=Lieberman |first=Henry |year=1978 |conference=SIGGRAPH '78: Proceedings of the 5th annual conference on Computer graphics and interactive techniques |pages=111–116 |doi=10.1145/800248.807380 }}</ref> Unfortunately, it had bugs that made it not complete some fills.<ref name="80Shani">{{Cite conference |title=Filling regions in binary raster images: A graph-theoretic approach |last=Shani |first=Uri |year=1980 |conference=SIGGRAPH '80: Proceedings of the 7th annual conference on Computer graphics and interactive techniques |pages=321–327 |doi=10.1145/800250.807511 |doi-access=free }}</ref> A corrected algorithm was later published with a similar basis in graph theory; however, it alters the image as it goes along, to temporarily block off potential loops, complicating the programmatic interface.<ref name="80Shani" /> A later published algorithm depended on the boundary being distinct from everything else in the image and so isn't suitable for most uses;<ref name="81Pavlidis">{{Cite conference |title=Contour Filling in Raster Graphics |last=Pavlidis |first=Theo |year=1981 |conference=SIGGRAPH '81: Proceedings of the 8th annual conference on Computer graphics and interactive techniques |pages=29–36 |doi=10.1145/800224.806786 }}</ref><ref name="85Fishkin" /> it also requires an extra bit per pixel for bookkeeping.<ref name="85Fishkin" />
+
+===Advantages===
+* Suitable for pattern filling, directly, as it never retests filled pixels.<ref name="78Lieberman" /><ref name="80Shani" /><ref name="81Pavlidis" />
+* Double the speed of the original span algorithm, for uncomplicated fills.<ref name="85Fishkin" />
+* Access pattern is cache and bitplane-friendly.<ref name="82Levoy" /><ref name="85Fishkin" />
+
+===Disadvantages===
+* Regularly, a span has to be compared to every other 'front' in the queue, which significantly slows down complicated fills.<ref name="85Fishkin" />
+* Switching back and forth between graph theoretic and pixel domains complicates understanding.
+* The code is fairly complicated, increasing the chances of bugs.
+
+==Vector implementations==
+Version 0.46 of [[Inkscape]] includes a bucket fill tool, giving output similar to ordinary bitmap operations and indeed using one: the canvas is rendered, a flood fill operation is performed on the selected area and the result is then traced back to a path. The tool utilizes the [[boundary value problem]].
+
+==See also==
+* [[Breadth-first search]]
+* [[Depth-first search]]
+* [[Graph traversal]]
+* [[Connected-component labeling]]
+* [[Dijkstra's algorithm]]
+* [[Watershed (image processing)]]
+
+== References ==
+<references />
+
+==External links==
+* [http://lodev.org/cgtutor/floodfill.html Sample implementations for recursive and non-recursive, classic and scanline flood fill], by Lode Vandevenne
+* {{web archive |url=https://web.archive.org/web/20240208183414/https://web.piyushgarg.in/2021/09/flood-fill-4-directional-using-java.html |title=Sample Java implementation using Q non-recursive}}
+
+{{DEFAULTSORT:Flood Fill}}
+[[Category:Computer graphics algorithms]]
+[[Category:Articles with example pseudocode]]
+[[Category:Flooding algorithms]]

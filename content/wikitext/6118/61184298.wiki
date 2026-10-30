@@ -1,0 +1,122 @@
+<!-- wikipedia: en
+     page: 61184298
+     title: Bernstein–Vazirani algorithm
+     revision: 1371471620
+     timestamp: 2026-08-26T17:07:27Z
+     history: https://en.wikipedia.org/w/index.php?curid=61184298&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1371471620 -->
+{{Short description|Quantum algorithm}}
+[[File:Bernstein-Vazirani algorithm.svg|thumb|400x400px|Apply the function using the oracle to a superposition of states and determine the secret string through measurement]]
+The '''Bernstein–Vazirani algorithm''', which solves the '''Bernstein–Vazirani problem''',  is a [[quantum algorithm]] invented by Ethan Bernstein and [[Umesh Vazirani]] in 1997.<ref name="BV97">
+{{cite journal
+  | author = Ethan Bernstein and [[Umesh Vazirani]]
+  | title = Quantum Complexity Theory
+  | journal = SIAM Journal on Computing
+  | volume = 26
+  | issue = 5
+  | pages = 1411–1473
+  | year = 1997 
+  | doi = 10.1137/S0097539796300921
+  }}
+</ref> It is a restricted version of the [[Deutsch–Jozsa algorithm]]  where instead of distinguishing between two different classes of functions, it tries to learn a string encoded in a function.<ref name="BVION2016"/>  The Bernstein–Vazirani algorithm was designed to prove an [[oracle separation]] between [[Complexity class|complexity classes]] [[BQP]] and [[BPP (complexity)|BPP]].<ref name="BV97"/>
+
+== Problem statement ==
+Given an [[Oracle machine|oracle]] that implements a function <math>f\colon\{0,1\}^n\rightarrow \{0,1\}</math> in which <math>f(x)</math> is [[promise problem|promised]] to be the [[dot product]] between <math>x</math> and a secret string <math> s \in \{0,1\}^n</math> [[Modular arithmetic|modulo]] 2, <math> f(x) = x \cdot s = x_1s_1 \oplus x_2s_2 \oplus \cdots \oplus x_ns_n</math>, find <math>s</math>.
+
+== Algorithm ==
+
+Classically, the most efficient method to find the secret string is by evaluating the function <math>n</math> times with the input values <math>x = 2^{i}</math> for all <math>i \in \{0, 1, \dots, n-1\}</math>:<ref name="BVION2016">
+{{cite journal
+  | author = S D Fallek, C D Herold, B J McMahon, K M Maller, K R Brown, and J M Amini
+  | title = Transport implementation of the Bernstein–Vazirani algorithm with ion qubits
+  | journal = New Journal of Physics
+  | volume = 18
+  | year = 2016 
+  | doi = 10.1088/1367-2630/aab341
+  | doi-access = free
+  | arxiv = 1710.01378
+  }}
+</ref> 
+
+: <math>\begin{align}
+f(1000\cdots0_n) & = s_1 \\
+f(0100\cdots0_n) & = s_2 \\
+f(0010\cdots0_n) & = s_3 \\
+& \,\,\,\vdots \\
+f(0000\cdots1_n) & = s_n \\
+\end{align}</math>
+
+In contrast to the classical solution which needs at least <math>n</math> queries of the function to find <math>s</math>, only one query is needed using quantum computing. The quantum algorithm is as follows: <ref name="BVION2016"/>
+
+Apply a [[Hadamard transform]] to the <math>n</math> qubit state <math>|0\rangle^{\otimes n} </math> to get 
+
+:<math>\frac{1}{\sqrt{2^{n}}}\sum_{x=0}^{2^n-1} |x\rangle.</math>
+
+Next, apply the oracle <math>U_f</math> which transforms <math>|x\rangle \to (-1)^{f(x)}|x\rangle</math>. This can be simulated through the standard oracle that transforms <math>|b\rangle|x\rangle \to |b \oplus f(x)\rangle |x\rangle</math> by applying this oracle to <math>\frac{|0\rangle - |1\rangle}{\sqrt{2}}|x\rangle</math>. (<math>\oplus</math> denotes addition mod two.) This transforms the superposition into
+
+:<math>\frac{1}{\sqrt{2^{n}}}\sum_{x=0}^{2^n-1} (-1)^{f(x)} |x\rangle.</math>
+
+Another Hadamard transform is applied to each qubit which makes it so that for qubits where <math>s_i = 1</math>, its state is converted from <math>|-\rangle</math> to <math>|1\rangle </math> and for qubits where <math>s_i = 0</math>, its state is converted from <math>|+\rangle</math> to <math>|0\rangle </math>. To obtain <math>s</math>, a measurement in the [[standard basis]] (<math>\{|0\rangle, |1\rangle\}</math>) is performed on the qubits.
+
+Graphically, the algorithm may be represented by the following diagram, where <math>H^{\otimes n}</math> denotes the Hadamard transform on <math>n</math> qubits:
+
+: <math>
+    |0\rangle^n \xrightarrow{H^{\otimes n }} \frac{1}{\sqrt{2^n}} \sum_{x \in \{0,1\}^n} |x\rangle \xrightarrow{U_f} \frac{1}{\sqrt{2^n}}\sum_{x \in \{0,1\}^n}(-1)^{f(x)}|x\rangle \xrightarrow{H^{\otimes n}} \frac{1}{2^n} \sum_{x,y \in \{0,1\}^n}(-1)^{f(x) + x\cdot y}|y\rangle = |s\rangle
+</math>
+
+The reason that the last state is <math>|s\rangle</math> is because, for a particular <math>y</math>,
+: <math>
+    \frac{1}{2^n}\sum_{x \in \{0,1\}^n}(-1)^{f(x) + x\cdot y}
+    = \frac{1}{2^n}\sum_{x \in \{0,1\}^n}(-1)^{x\cdot s + x\cdot y}
+    = \frac{1}{2^n}\sum_{x \in \{0,1\}^n}(-1)^{x\cdot (s \oplus y)}
+    = 1 \text{ if } s \oplus y = \vec{0},\, 0 \text{ otherwise}.
+</math>
+Since <math>s \oplus y = \vec{0}</math> is only true when <math>s = y</math>, this means that the only non-zero amplitude is on <math>|s\rangle</math>. So, measuring the output of the circuit in the computational basis yields the secret string <math>s</math>.
+
+A generalization of Bernstein–Vazirani problem has been proposed that involves finding one or more secret keys using a probabilistic oracle. 
+<ref name="SV23">
+{{cite journal
+  | author = Alok Shukla and Prakash Vedula
+  | title = A generalization of Bernstein--Vazirani algorithm with multiple secret keys and a probabilistic oracle
+  | journal = Quantum Information Processing
+  | volume = 22:244
+  | issue = 6
+  | pages = 1–18
+  | year = 2023
+  | doi = 10.1007/s11128-023-03978-3
+  | arxiv = 2301.10014
+  | bibcode = 2023QuIP...22..244S
+ }}
+</ref> 
+This is an interesting problem for which a quantum algorithm can provide efficient solutions with certainty or with a high degree of confidence, while classical algorithms completely fail to solve the problem in the general case.
+
+==Classical ''vs.'' quantum complexity==
+
+The Bernstein-Vazirani problem is usually stated in its [[#Problem statement|non-decision version]]. In this form, it is an example of a problem solvable by a [[Quantum Turing machine]] (QTM) with <math>O(1)</math> queries to the problem's oracle, but for which any [[Probabilistic Turing machine]] (PTM) algorithm must make <math>\Omega(n)</math> queries.
+
+To provide a separation between [[BQP]] and [[BPP (complexity)|BPP]], the problem must be reshaped into a decision problem (as these complexity classes refer to decision problems). This is accomplished with a recursive construction and the inclusion of a second, random oracle.<ref name="BV97"/><ref>{{cite web
+| url = https://courses.cs.washington.edu/courses/cse599d/06wi/lecturenotes7.pdf
+| archive-url = https://web.archive.org/web/20241201172704/https://courses.cs.washington.edu/courses/cse599d/06wi/lecturenotes7.pdf
+| archive-date = 2024-12-01
+| title = CSE 599d - Quantum Computing The Recursive and Nonrecursive Bernstein-Vazirani Algorithm
+| last = Bacon
+| first = Dave
+| date = 2006
+| access-date = 2025-01-17}}</ref>
+The resulting decision problem is solvable by a QTM with <math>O(n)</math> queries to the problem's oracle, while a PTM must make <math>\Omega(n^{\log n})</math> queries to solve the same problem. Therefore, Bernstein-Vazirani provides a super-polynomial separation between BPP and BQP.
+
+==See also==
+* [[Hidden Linear Function problem]]
+* [[Simon's problem]]
+==References==
+{{reflist}}
+
+{{Quantum computing}}
+
+{{DEFAULTSORT:Bernstein-Vazirani algorithm}}
+[[Category:Quantum algorithms]]
+
+[[Category:Quantum complexity theory |Quantum complexity theory ]]
+
+[[Category:Computational complexity theory ]]

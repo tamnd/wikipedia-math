@@ -1,0 +1,527 @@
+<!-- wikipedia: en
+     page: 14263
+     title: Horner's method
+     revision: 1352787781
+     timestamp: 2026-05-06T07:26:31Z
+     history: https://en.wikipedia.org/w/index.php?curid=14263&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1352787781 -->
+{{short description|Algorithm for polynomial evaluation}}
+{{cleanup|reason = See [[Talk:Horner's method#This Article is about Two Different Algorithms]]|date=November 2018}}
+
+In [[mathematics]] and [[computer science]], '''Horner's method''' (or '''Horner's scheme''') is an algorithm for [[polynomial evaluation]]. It is named after [[William George Horner]], although it is much older, attributed by Horner to [[Joseph-Louis Lagrange]], and was discovered hundreds of years earlier by Chinese and Persian mathematicians.<ref>600 years earlier, by the Chinese mathematician [[Qin Jiushao]] and 700 years earlier, by the Persian mathematician [[Sharaf al-Dīn al-Ṭūsī]]</ref> After the introduction of computers, this algorithm became fundamental for computing efficiently with polynomials.
+
+The algorithm is based on Horner's rule, in which a polynomial is written in ''nested form'':
+<math display="block">\begin{align}
+      &a_0 + a_1x + a_2x^2 + a_3x^3 + \cdots + a_nx^n \\
+  ={} &a_0 + x \bigg(a_1 + x \Big(a_2 + x \big(a_3 + \cdots + x(a_{n-1} + x \, a_n) \cdots \big) \Big) \bigg).
+\end{align}</math>
+
+This allows the evaluation of a [[polynomial]] of degree {{mvar|n}} with only <math>n</math> multiplications and <math>n</math> additions. This is optimal, as it is impossible to evaluate polynomials of degree {{mvar|n}} with fewer arithmetic operations when both ''x'' and the coefficients ''a''<sub>0</sub>, ..., ''a<sub>n</sub>'' are given as input.<ref>{{harvnb|Pan|1966}}</ref>
+
+Horner's method and {{vanchor|Horner–Ruffini method}} also refers to a method for approximating the roots of polynomials, described by Horner in 1819. It is a variant of the [[Newton's method|Newton–Raphson method]] made more efficient for hand calculation by application of Horner's rule. It was widely used until computers came into general use around 1970.
+
+== Polynomial evaluation and long division ==
+
+Given the polynomial<math display="block">p(x) = \sum_{i=0}^n a_i x^i = a_0 + a_1 x + a_2 x^2 + a_3 x^3 + \cdots + a_n x^n,</math>where <math>a_0, \ldots, a_n</math> are constant coefficients, the problem is to evaluate the polynomial at a specific value <math>x_0</math> of <math>x.</math>
+
+For this, a new sequence of constants is defined [[Recurrence relation|recursively]] as follows:
+{{NumBlk||<math display="block">\begin{align}
+b_n & := a_n \\
+b_{n-1} & := a_{n-1} + b_n x_0 \\
+& ~~~ \vdots \\
+b_1 & := a_1 + b_2 x_0 \\
+b_0 & := a_0 + b_1 x_0.
+\end{align}</math>|{{EquationRef|1}}}}
+Then <math>b_0</math> is the value of <math>p(x_0)</math>.
+
+To see why this works, the polynomial can be written in the form
+<math display="block">p(x) = a_0 + x \bigg(a_1 + x \Big(a_2 + x \big(a_3 + \cdots + x(a_{n-1} + x \, a_n) \cdots \big) \Big) \bigg) \ .</math>
+
+Thus, by iteratively substituting the <math>b_i</math> into the expression,
+<math display="block">\begin{align}
+p(x_0) & = a_0 + x_0\Big(a_1 + x_0\big(a_2 + \cdots + x_0(a_{n-1} + b_n x_0) \cdots \big)\Big) \\
+& = a_0 + x_0\Big(a_1 + x_0\big(a_2 + \cdots + x_0 b_{n-1}\big)\Big) \\
+& ~~ \vdots \\
+& = a_0 + x_0 b_1 \\
+& = b_0.
+\end{align}</math>
+
+Similarly, it can be shown that:
+{{NumBlk||<math display="block">
+p(x) = \left(b_1 + b_2 x + b_3 x^2 + b_4x^3 + \cdots + b_{n-1} x^{n-2} +b_nx^{n-1}\right) \left(x - x_0\right) + b_0
+</math>|{{EquationRef|2}}}}
+Suggesting a convenient procedure for determining the result of the polynomial division
+<math display="block">p(x) / (x-x_0) </math>
+with <math>b_0</math> (which is equal to <math>p(x_0)</math>) being the division's remainder. If <math>x_0</math> is a root of <math>p(x)</math>, then <math>b_0 = 0</math> (meaning the remainder is <math>0</math>) and <math>x-x_0</math> a factor of <math>p(x)</math>. 
+
+=== Examples ===
+
+Evaluate <math>f(x)=2x^3-6x^2+2x-1</math> for <math>x=3</math>.
+
+We use [[synthetic division]] as follows:
+
+:<math>\begin{array}{cc}
+    \begin{array}{r} \\ 3 \\ \\ \\ \end{array}
+    &
+    \begin{array}{|rrrr} \ 
+        2 & -6 & 2 & -1 \\
+          &  6 & 0 & 6  \\
+        \hline
+        2 & 0 & 2 & 5
+    \end{array}
+\end{array}</math>
+
+The entries in the third row are the sum of those in the first two. Each entry in the second row is the product of the {{mvar|x}}-value ({{val|3}} in this example) with the third-row entry immediately to the left. The entries in the first row are the coefficients of the polynomial to be evaluated. Then the remainder of <math>f(x)</math> on division by <math>x-3</math> is {{val|5}}.
+
+But by the [[polynomial remainder theorem]], we know that the remainder is <math>f(3) </math>. Thus, <math>f(3) = 5</math>.
+
+In this example, if <math>a_3 = 2, a_2 = -6, a_1 = 2, a_0 = -1</math> we can see that <math>b_3 = 2, b_2 = 0, b_1 = 2, b_0 = 5 </math>, the entries in the third row. So, synthetic division (which was actually invented and published by Ruffini 10 years before Horner's publication) is easier to use;  it can be shown to be equivalent to Horner's method.
+
+As a consequence of the polynomial remainder theorem, the entries in the third row are the coefficients of the second-degree polynomial, the quotient of <math>f(x)</math> on division by <math> x-3 </math>. 
+The remainder is {{val|5}}. This makes Horner's method useful for [[polynomial long division]].
+
+Divide <math>x^3-6x^2+11x-6</math> by <math>x-2</math>:
+
+:<math>\begin{array}{cc}
+    \begin{array}{r} \\ 2 \\ \\ \\ \end{array}
+    &
+    \begin{array}{|rrrr} \ 
+        1 & -6 & 11 & -6 \\
+          &  2 & -8 & 6  \\
+        \hline
+        1 & -4 & 3 & 0
+    \end{array}
+\end{array}</math>
+
+The quotient is <math>x^2-4x+3</math>.
+
+Let <math>f_1(x)=4x^4-6x^3+3x-5</math> and <math>f_2(x)=2x-1</math>. Divide <math>f_1(x)</math> by <math>f_2\,(x)</math> using Horner's method.
+
+<math>\begin{array}{cc}
+    \begin{array}{r} \\ 0.5 \\ \\ \\ \end{array}
+    &
+    \begin{array}{|rrrrr} \ 
+        4 & -6 & 0 & 3 & -5 \\
+          &  2 & -2 & -1 & 1 \\
+        \hline
+        2 & -2 & -1 & 1 & -4
+    \end{array}
+\end{array}</math>
+
+The third row is the sum of the first two rows, divided by {{val|2}}. Each entry in the second row is the product of {{val|1}} with the third-row entry to the left. The answer is
+<math display="block">\frac{f_1(x)}{f_2(x)}=2x^3-2x^2-x+1-\frac{4}{2x-1}.</math>
+
+=== Efficiency ===
+
+Evaluation using the monomial form of a degree <math>n</math> polynomial requires at most <math>n</math> additions and <math>(n^2+n)/2</math> multiplications, if powers are calculated by repeated multiplication and each monomial is evaluated individually.  The cost can be reduced to <math>n</math> additions and <math>2n-1</math> multiplications by evaluating the powers of <math>x</math> by iteration.  
+
+If numerical data are represented in terms of digits (or bits), then the naive algorithm also entails storing approximately <math>2n</math> times the number of bits of <math>x</math>: the evaluated polynomial has approximate magnitude <math>x^n</math>, and one must also store <math>x^n</math> itself.  By contrast, Horner's method requires only <math>n</math> additions and <math>n</math> multiplications, and its storage requirements are only <math>n</math> times the number of bits of <math>x</math>. Alternatively, Horner's method can be computed with <math>n</math> [[fused multiply–add]]s.  Horner's method can also be extended to evaluate the first <math>k</math> derivatives of the polynomial with <math>kn</math> additions and multiplications.<ref>{{harvnb|Pankiewicz|1968}}.</ref>
+
+Horner's method is optimal, in the sense that any algorithm to evaluate an arbitrary polynomial must use at least as many operations. [[Alexander Ostrowski]] proved in 1954 that the number of additions required is minimal.<ref>{{harvnb|Ostrowski|1954}}.</ref> [[Victor Pan]] proved in 1966 that the number of multiplications is minimal.<ref>{{harvnb|Pan|1966}}.</ref> 
+
+However, Horner's method is [[Polynomial evaluation#Matrix polynomials|not optimal]] for evaluation of matrix polynomials (where <math>x</math> is a matrix, but the coefficients are scalar), when we count scalar multiplications and matrix multiplications separately as the former are cheaper than the latter.
+
+This assumes that the polynomial is evaluated in monomial form and no [[preconditioning]] of the representation is allowed, which makes sense if the polynomial is evaluated only once. However, if preconditioning is allowed and the polynomial is to be evaluated many times, then [[Polynomial evaluation#Evaluation with preprocessing|faster algorithms are possible]]. They involve a transformation of the representation of the polynomial. In general, a degree-<math>n</math> polynomial can be evaluated using only {{floor|''n''/2}}+2 multiplications and <math>n</math> additions.<ref>{{harvnb|Knuth|1997}}.</ref>
+
+====Parallel evaluation====
+{{see also|Estrin's scheme}}
+A disadvantage of Horner's rule is that all of the operations are [[data dependency|sequentially dependent]], so it is not possible to take advantage of [[instruction level parallelism]] on modern computers.  In most applications where the efficiency of polynomial evaluation matters, many low-order polynomials are evaluated simultaneously (for each pixel or polygon in computer graphics, or for each grid square in a numerical simulation), so it is not necessary to find parallelism within a single polynomial evaluation.
+
+If, however, one is evaluating a single polynomial of very high order, it may be useful to break it up as follows:
+<math display="block">\begin{align}
+p(x)
+& = \sum_{i=0}^n a_i x^i \\[1ex]
+& = a_0 + a_1 x + a_2 x^2 + a_3 x^3 + \cdots + a_n x^n \\[1ex]
+& = \left( a_0 + a_2 x^2 + a_4 x^4 + \cdots\right) + \left(a_1 x + a_3 x^3 + a_5 x^5 + \cdots \right) \\[1ex]
+& = \left( a_0 + a_2 x^2 + a_4 x^4 + \cdots\right) + x \left(a_1 + a_3 x^2 + a_5 x^4 + \cdots \right) \\[1ex]
+& = \sum_{i=0}^{\lfloor n/2 \rfloor} a_{2i} x^{2i} + x \sum_{i=0}^{\lfloor n/2 \rfloor} a_{2i+1} x^{2i} \\[1ex]
+& = p_0(x^2) + x p_1(x^2).
+\end{align}</math>
+
+More generally, the summation can be broken into ''k'' parts:
+<math display="block">p(x)
+= \sum_{i=0}^n a_i x^i
+= \sum_{j=0}^{k-1} x^j \sum_{i=0}^{\lfloor n/k \rfloor} a_{ki+j} x^{ki}
+= \sum_{j=0}^{k-1} x^j p_j(x^k)</math>
+where the inner summations may be evaluated using separate parallel instances of Horner's method.  This requires slightly more operations than the basic Horner's method, but allows ''k''-way [[SIMD]] execution of most of them. Modern compilers generally evaluate polynomials this way when advantageous, although for [[floating-point]] calculations this requires enabling (unsafe) reassociative math{{Citation needed|date=February 2022}}. Another use of breaking a polynomial down this way is to calculate steps of the inner summations in an alternating fashion to take advantage of [[instruction-level parallelism]].
+
+===Application to floating-point multiplication and division===
+{{main|binary logarithm#Calculation|multiplication algorithm#Shift and add}}
+
+Horner's method is a fast, code-efficient method for multiplication and division of binary numbers on a [[microcontroller]] with no [[binary multiplier|hardware multiplier]].  One of the binary numbers to be multiplied is represented as a trivial polynomial, where (using the above notation) <math>a_i = 1</math>, and <math>x = 2</math>.  Then, ''x'' (or ''x'' to some power) is repeatedly factored out.  In this [[binary numeral system]] (base 2), <math>x = 2</math>, so powers of 2 are repeatedly factored out.
+
+====Example====
+For example, to find the product of two numbers (0.15625) and ''m'':
+<math display="block">\begin{align}
+  (0.15625) m & = (0.00101_b) m = \left( 2^{-3} + 2^{-5} \right) m = \left( 2^{-3})m + (2^{-5} \right)m \\
+              & = 2^{-3} \left(m + \left(2^{-2}\right)m\right) = 2^{-3} \left(m + 2^{-2} (m)\right).
+\end{align}</math>
+
+====Method====
+To find the product of two binary numbers ''d'' and ''m'':
+# A register holding the intermediate result is initialized to ''d''.
+# Begin with the least significant (rightmost) non-zero bit in ''m''. {{ordered list | list-style-type = lower-alpha | start = 2
+| Count (to the left) the number of bit positions to the next most significant non-zero bit.  If there are no more-significant bits, then take the value of the current bit position.
+| Using that value, perform a left-shift operation by that number of bits on the register holding the intermediate result}}
+# If all the non-zero bits were counted, then the intermediate result register now holds the final result.  Otherwise, add d to the intermediate result, and continue in step 2 with the next most significant bit in ''m''.
+
+====Derivation====
+In general, for a binary number with bit values (<math> d_3 d_2 d_1 d_0 </math>) the product is
+<math display="block"> (d_3 2^3 + d_2 2^2 + d_1 2^1 + d_0 2^0)m = d_3 2^3 m + d_2 2^2 m + d_1 2^1 m + d_0 2^0 m. </math>
+At this stage in the algorithm, it is required that terms with zero-valued coefficients are dropped, so that only binary coefficients equal to one are counted, thus the problem of multiplication or [[division by zero]] is not an issue, despite this implication in the factored equation:
+<math display="block"> = d_0\left(m + 2 \frac{d_1}{d_0} \left(m + 2 \frac{d_2}{d_1} \left(m + 2 \frac{d_3}{d_2} (m)\right)\right)\right). </math>
+
+The denominators all equal one (or the term is absent), so this reduces to
+<math display="block"> = d_0(m + 2 {d_1} (m + 2 {d_2} (m + 2 {d_3} (m)))),</math>
+or equivalently (as consistent with the "method" described above)
+<math display="block"> = d_3(m + 2^{-1} {d_2} (m + 2^{-1}{d_1} (m + {d_0} (m)))). </math>
+
+In binary (base-2) math, multiplication by a power of 2 is merely a [[arithmetic shift|register shift]] operation.  Thus, multiplying by 2 is calculated in base-2 by an [[arithmetic shift]].  The factor (2<sup>−1</sup>) is a right [[arithmetic shift]], a (0) results in no operation (since 2<sup>0</sup> = 1 is the multiplicative [[identity element]]), and a (2<sup>1</sup>) results in a left arithmetic shift.
+The multiplication product can now be quickly calculated using only arithmetic shift operations, addition and [[subtraction]].
+
+The method is particularly fast on processors supporting a single-instruction shift-and-addition-accumulate.  Compared to a C floating-point library, Horner's method sacrifices some accuracy, however it is nominally 13 times faster (16 times faster when the "[[canonical signed digit]]" (CSD) form is used) and uses only 20% of the code space.<ref>{{harvnb|Kripasagar|2008|p=62}}.</ref>
+
+=== Other applications ===
+
+Horner's method can be used to convert between different positional [[numeral system]]s – in which case ''x'' is the base of the number system, and the ''a''<sub>''i''</sub> coefficients are the digits of the base-''x'' representation of a given number – and can also be used if ''x'' is a [[matrix (math)|matrix]], in which case the gain in computational efficiency is even greater. However, for such cases [[Polynomial evaluation#Matrix polynomials|faster methods]] are known.<ref>{{harvnb|Higham|2002|loc=Section 5.4}}.</ref>
+
+== Polynomial root finding ==
+Using the long division algorithm in combination with [[Newton's method]], it is possible to approximate the real roots of a polynomial. The algorithm works as follows. Given a polynomial <math>p_n(x)</math> of degree <math>n</math> with zeros <math> z_n < z_{n-1} < \cdots < z_1,</math> make some initial guess <math> x_0 </math> such that <math> z_1 < x_0 </math>. Now iterate the following two steps:
+
+# Using [[Newton's method]], find the largest zero <math>z_1</math> of <math>p_n(x)</math> using the guess <math>x_0</math>.
+# Using Horner's method, divide out <math>(x-z_1)</math> to obtain <math>p_{n-1}</math>. Return to step 1 but use the polynomial <math>p_{n-1}</math> and the initial guess <math>z_1</math>.
+
+These two steps are repeated until all real zeros are found for the polynomial. If the approximated zeros are not precise enough, the obtained values can be used as initial guesses for Newton's method but using the full polynomial rather than the reduced polynomials.<ref>{{harvnb|Kress|1991|p=112}}.</ref>
+
+=== Example ===
+
+[[File:HornerandNewton.gif|thumb|right|400px|Polynomial root finding using Horner's method]]
+
+Consider the polynomial
+<math display="block">p_6(x) = (x+8)(x+5)(x+3)(x-2)(x-3)(x-7)</math>
+which can be expanded to
+<math display="block">p_6(x) = x^6 + 4x^5 - 72x^4 -214x^3 + 1127x^2 + 1602x -5040.</math>
+
+From the above we know that the largest root of this polynomial is 7 so we are able to make an initial guess of 8. Using Newton's method the first zero of 7 is found as shown in black in the figure to the right. Next <math>p(x)</math> is divided by <math>(x-7)</math> to obtain
+<math display="block">p_5(x) = x^5 + 11x^4 + 5x^3 - 179x^2 - 126x + 720</math>
+which is drawn in red in the figure to the right. Newton's method is used to find the largest zero of this polynomial with an initial guess of 7. The largest zero of this polynomial which corresponds to the second largest zero of the original polynomial is found at 3 and is circled in red. The degree 5 polynomial is now divided by <math>(x-3)</math> to obtain
+<math display="block">p_4(x) = x^4 + 14x^3 + 47x^2 - 38x - 240</math>
+which is shown in yellow. The zero for this polynomial is found at 2 again using Newton's method and is circled in yellow. Horner's method is now used to obtain
+<math display="block">p_3(x) = x^3 + 16x^2 + 79x + 120</math>
+which is shown in green and found to have a zero at&nbsp;&minus;3. This polynomial is further reduced to
+<math display="block">p_2(x) = x^2 + 13x + 40</math>
+which is shown in blue and yields a zero of&nbsp;&minus;5. The final root of the original polynomial may be found by either using the final zero as an initial guess for Newton's method, or by reducing <math>p_2(x)</math> and solving the [[linear equation]]. As can be seen, the expected roots of &minus;8, &minus;5, &minus;3, 2, 3, and 7 were found.
+
+== Divided difference of a polynomial ==
+
+Horner's method can be modified to compute the [[divided difference]] <math>(p(y) - p(x))/(y - x).</math> Given the polynomial (as before)
+<math display="block">p(x) = \sum_{i=0}^n a_i x^i = a_0 + a_1 x + a_2 x^2 + a_3 x^3 + \cdots + a_n x^n,</math>
+proceed as follows<ref name="Fateman & Kahan">{{harvnb|Fateman|Kahan|2000}}</ref>
+<math display="block">\begin{align}
+b_n & = a_n,                 &\quad d_n &= b_n, \\
+b_{n-1} & = a_{n-1} + b_n x, &\quad d_{n-1} &= b_{n-1} + d_n y, \\
+& {}\  \  \vdots             &\quad &  {}\ \ \vdots \\
+b_1 & = a_1 + b_2 x,         &\quad d_1 &= b_1 + d_2 y, \\
+b_0 & = a_0 + b_1 x.
+\end{align}</math>
+
+At completion, we have
+<math display="block">\begin{align}
+p(x) &= b_0, \\
+\frac{p(y) - p(x)}{y - x} &= d_1, \\
+p(y) &= b_0 + (y - x) d_1.
+\end{align}</math>
+This computation of the divided difference is subject to less [[round-off error]] than evaluating <math>p(x)</math> and <math>p(y)</math> separately, particularly when <math>x \approx y</math>.
+
+=== Derivative of a polynomial ===
+Substituting <math>y = x</math> in this method gives <math display=inline>d_1 = p'(x) = \sum_{i=1}^n i a_i x^{i-1}</math>, the [[derivative]] of <math>p(x)</math>.  Evaluating a polynomial and its derivative at a point is useful for root-finding via [[Newton's method]].
+
+== History ==
+[[File:Qingjiushaoquad1.GIF|thumb|right|200px|[[Qin Jiushao]]'s algorithm for solving the quadratic polynomial equation<math>-x^4+763200x^2-40642560000=0</math><br />result: ''x''=840<ref>{{harvnb|Libbrecht|2005|pages=181–191}}.</ref>]]
+Horner's paper, titled "A new method of solving numerical equations of all orders, by continuous approximation",<ref name="Horner">{{harvnb|Horner|1819}}.</ref> was [http://hdl.handle.net/2027/mdp.39015014105277?urlappend=%3Bseq=158 read]  before the Royal Society of London, at its meeting on July 1, 1819, with a sequel in 1823.<ref name="Horner" /> Horner's paper in Part II of ''Philosophical Transactions of the Royal Society of London'' for 1819 was warmly and expansively welcomed by a [http://turing.une.edu.au/~ernie/Horner/Horner1820MonthlyRev91-4.pdf reviewer]{{Dead link|date=January 2020|bot=InternetArchiveBot|fix-attempted=yes}} in the issue of ''The Monthly Review: or, Literary Journal'' for April, 1820; in comparison, a technical paper by [[Charles Babbage]] is dismissed curtly in this review. The sequence of reviews in ''The Monthly Review'' for September, 1821, concludes that Holdred was the first person to discover a direct and general practical solution of numerical equations. Fuller<ref>{{harvnb|Fuller|1999|pages=29–51}}.</ref> showed that the method in Horner's 1819 paper differs from what afterwards became known as "Horner's method" and that in consequence the priority for this method should go to Holdred (1820).
+
+Unlike his English contemporaries, Horner drew on the Continental literature, notably the work of [[Louis François Antoine Arbogast|Arbogast]]. Horner is also known to have made a close reading of John Bonneycastle's book on algebra, though he neglected the work of [[Paolo Ruffini (mathematician)|Paolo Ruffini]].
+
+Although Horner is credited with making the method accessible and practical, it was known long before Horner. In reverse chronological order, Horner's method was already known to:
+
+* [[Paolo Ruffini (mathematician)|Paolo Ruffini]] in 1809 (see [[Ruffini's rule]])<ref name="Cajori">{{harvnb|Cajori|1911}}.</ref><ref name="St Andrews">{{MacTutor|id=Horner}}</ref>
+* [[Isaac Newton]] in 1669<ref>Analysis  Per  Quantitatum  Series,  Fluctiones  ac  Differentias : Cum   Enumeratione   Linearum   Tertii   Ordinis,   Londini.      Ex     Officina    Pearsoniana.    Anno  MDCCXI,  p.   10,  4th   paragraph.</ref><ref>Newton's  collected  papers,  the  edition  1779, in  a  footnote,  vol.  I,  p.  270-271</ref>
+* the [[Chinese mathematics|Chinese mathematician]] [[Zhu Shijie]] in the 14th century<ref name="St Andrews" />
+* the [[Chinese mathematics|Chinese mathematician]] [[Qin Jiushao]] in his ''[[Mathematical Treatise in Nine Sections]]'' in the 13th century
+* the [[Persian people|Persian]] [[Mathematics in medieval Islam|mathematician]] [[Sharaf al-Dīn al-Ṭūsī]] in the 12th century (the first to use that method in a general case of [[cubic equation]])<ref>{{harvnb|Berggren|1990|pages=304–309}}.</ref>
+* the Chinese mathematician [[Jia Xian]] in the 11th century ([[Song dynasty]])
+* ''[[The Nine Chapters on the Mathematical Art]]'', a Chinese work of the [[Han dynasty]] (202 BC&nbsp;– 220 AD) edited by [[Liu Hui]] (fl. 3rd century).<ref>{{harvnb|Temple|1986|p=142}}.</ref>
+
+[[Qin Jiushao]], in his ''Shùshū Jiǔzhāng'' (''[[Mathematical Treatise in Nine Sections]]''; 1247), presents a portfolio of methods of Horner-type for solving polynomial equations, which was based on earlier works of the 11th century Song dynasty mathematician [[Jia Xian]]; for example, one method is specifically suited to bi-quintics, of which Qin gives an instance, in keeping with the then Chinese custom of case studies. [[Yoshio Mikami]] in ''Development of Mathematics in China and Japan'' (Leipzig 1913) wrote:{{Blockquote | style=font-size:100% | text="...&nbsp;who can deny the fact of Horner's illustrious process being used in China at least nearly six long centuries earlier than in Europe&nbsp;... We of course don't intend in any way to ascribe Horner's invention to a Chinese origin, but the lapse of time sufficiently makes it not altogether impossible that the Europeans could have known of the Chinese method in a direct or indirect way."<ref>{{harvnb|Mikami|1913|p=77}}</ref>}}
+[[Ulrich Libbrecht]] concluded: ''It is obvious that this procedure is a Chinese invention&nbsp;... the method was not known in India''. He said, Fibonacci probably learned of it from Arabs, who perhaps borrowed from the Chinese.<ref>{{harvnb|Libbrecht|2005|p=208}}.</ref> The extraction of square and cube roots along similar lines is already discussed by [[Liu Hui]] in connection with Problems IV.16 and 22 in ''Jiu Zhang Suan Shu'', while [[Wang Xiaotong]] in the 7th century supposes his readers can solve cubics by an approximation method described in his book [[Jigu Suanjing]].
+
+== See also ==
+
+*[[Clenshaw algorithm]] to evaluate polynomials in [[Chebyshev form]]
+*[[De Boor's algorithm]] to evaluate [[spline curve|splines]] in [[B-spline]] form
+*[[De Casteljau's algorithm]] to evaluate polynomials in [[Bézier form]]
+*[[Estrin's scheme]] to facilitate parallelization on modern computer architectures
+*[[Lill's method]] to approximate roots graphically
+*[[Ruffini's rule]] and [[synthetic division]] to divide a polynomial by a binomial of the form x − r
+
+== Notes ==
+{{Reflist}}
+
+== References ==
+{{refbegin}}
+*{{cite journal
+ | last = Berggren
+ | first = J. L.
+ | year = 1990
+ | title = Innovation and Tradition in Sharaf al-Din al-Tusi's Muadalat
+ | journal = Journal of the American Oriental Society
+ | volume = 110
+ | issue = 2
+ | pages = 304–309
+ | doi = 10.2307/604533
+ | jstor = 604533
+ }}
+*{{cite journal
+ | last = Cajori
+ | first = Florian
+ | author-link = Florian Cajori
+ | title = Horner's method of approximation anticipated by Ruffini
+ | journal = Bulletin of the American Mathematical Society
+ | volume = 17
+ | number = 8
+ | pages = 409–414
+ | year = 1911
+ | url = http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdf_1&handle=euclid.bams/1183421253
+ | doi = 10.1090/s0002-9904-1911-02072-9
+ | doi-access = free
+ | access-date = 2012-03-04
+ | archive-date = 2017-09-04
+ | archive-url = https://web.archive.org/web/20170904152220/http://projecteuclid.org/DPubS/Repository/1.0/Disseminate?view=body&id=pdf_1&handle=euclid.bams%2F1183421253
+ | url-status = live
+ }} Read before the Southwestern Section of the American Mathematical Society on November 26, 1910.
+*{{cite journal
+ | last1 = Cormen
+ | first1 = Thomas H.
+ | author1-link = Thomas H. Cormen
+ | last2 = Leiserson
+ | first2 = Charles E.
+ | author2-link = Charles E. Leiserson
+ | last3 = Rivest
+ | first3 = Ronald L.
+ | author3-link = Ron Rivest
+ | last4 = Stein
+ | first4 = Clifford
+ | author4-link = Clifford Stein
+ | title = Introduction to Algorithms
+ | journal = Historia Mathematica
+ | volume = 8
+ | issue = 3
+ | pages = 277–318
+ | edition = 3rd
+ | year = 2009
+ | publisher = MIT Press
+| doi = 10.1016/0315-0860(81)90069-0
+ | doi-access = free
+ }}
+*{{cite report
+ | last1 = Fateman
+ | first1 = R. J.
+ | author-link1 = Richard Fateman
+ | last2 = Kahan
+ | first2 = W.
+ | author-link2 = William Kahan
+ | title = Improving exact integrals from symbolic algebra systems
+ | series = PAM
+ | number = 386
+ | year = 2000
+ | institution = Center for Pure and Applied Mathematics
+ | location = University of California, Berkeley
+ | url = https://people.eecs.berkeley.edu/~fateman/papers/nform.pdf
+ | access-date = 2018-05-17
+ | archive-url = https://web.archive.org/web/20170814190521/https://people.eecs.berkeley.edu/~fateman/papers/nform.pdf
+ | archive-date = 2017-08-14
+ | url-status = dead
+ }}
+*{{cite journal
+ | last = Fuller
+ | first = A. T.
+ | title = Horner versus Holdred: An Episode in the History of Root Computation
+ | journal = Historia Mathematica
+ | volume = 26
+ | year = 1999
+ | doi = 10.1006/hmat.1998.2214
+ | pages=29–51
+| doi-access = free
+ }}
+*{{cite book
+ | last = Higham
+ | first = Nicholas
+ | year = 2002
+ | title = Accuracy and Stability of Numerical Algorithms
+ | publisher = SIAM
+ | isbn = 978-0-89871-521-7
+}}
+*{{cite book
+ | last = Holdred
+ | first = T.
+ | year = 1820
+ | url = http://turing.une.edu.au/~ernie/Horner/Holdred1820.pdf
+ | title = A New Method of Solving Equations with Ease and Expedition; by which the True Value of the Unknown Quantity is Found Without Previous Reduction. With a Supplement, Containing Two Other Methods of Solving Equations, Derived from the Same Principle
+ | publisher = Richard Watts
+ | access-date = 2012-12-10
+ | archive-url = https://web.archive.org/web/20140106040238/http://turing.une.edu.au/~ernie/Horner/Holdred1820.pdf
+ | archive-date = 2014-01-06
+ | url-status = dead
+ }}
+*: Holdred's method is in the supplement following page numbered 45 (which is the 52nd page of the pdf version).
+*{{cite journal|last = Horner|first = William George|author-link = William George Horner|date = July 1819|title = A new method of solving numerical equations of all orders, by continuous approximation|journal = Philosophical Transactions|publisher = Royal Society of London|volume = 109|pages = 308–335|jstor = 107508|doi = 10.1098/rstl.1819.0023|s2cid = 186210512|doi-access = }}
+*: Directly available online via the link, but also reprinted with appraisal in D.E. Smith: ''A Source Book in Mathematics'', McGraw-Hill, 1929; Dover reprint, 2 vols, 1959.
+*{{cite book
+ | last = Knuth
+ | first = Donald
+ | author-link = Donald Knuth
+ | title = The Art of Computer Programming
+ | volume = 2: Seminumerical Algorithms
+ | edition = 3rd
+ | year = 1997
+ | publisher = Addison-Wesley
+ | isbn = 978-0-201-89684-8
+ | pages = 486–488 in section 4.6.4
+}}
+*{{cite book
+ | last = Kress
+ | first = Rainer
+ | title = Numerical Analysis
+ | publisher = Springer
+ | year = 1991
+}}
+*{{cite journal
+ | last = Kripasagar 
+ | first =  Venkat
+ | title = Efficient Micro Mathematics &ndash; Multiplication and Division Techniques for MCUs
+ | journal = Circuit Cellar Magazine
+ | issue = 212
+ | date = March 2008
+}}
+*{{cite book
+ | last = Libbrecht
+ | first = Ulrich
+ | title = Chinese Mathematics in the Thirteenth Century
+ | chapter = Chapter 13
+ | edition = 2nd
+ | year = 2005
+ | publisher = Dover
+ | isbn = 978-0-486-44619-6
+ | chapter-url = http://store.doverpublications.com/0486446190.html
+ | access-date = 2016-08-23
+ | archive-date = 2017-06-06
+ | archive-url = https://web.archive.org/web/20170606084226/http://store.doverpublications.com/0486446190.html
+ | url-status = dead
+ }}
+*{{cite book
+ | last = Mikami
+ | first = Yoshio
+ | title = The Development of Mathematics in China and Japan
+ | chapter = Chapter 11. Ch'in Chiu-Shao
+ | edition = 1st
+ | year = 1913
+ | publisher = Chelsea Publishing Co reprint
+ | pages = 74–77
+ | chapter-url = https://archive.org/stream/treatiseindynami033561mbp#page/n89/mode/2up
+ }} <!-- Yes, really! It looks as though the link is taking you to a completely different work, but you end up at Mikami's book, as you find on checking the specified pages. -->
+*{{cite book
+ | last = Ostrowski
+ | first = Alexander M.
+ | year = 1954
+ | chapter = On two problems in abstract algebra connected with Horner's rule
+ | title = Studies in Mathematics and Mechanics presented to Richard von Mises
+ | pages = 40–48
+ | publisher = Academic Press
+ | isbn = 978-1-4832-3272-0
+ | chapter-url = http://www.sciencedirect.com/science/book/9781483232720
+ | access-date = 2016-08-23
+ | archive-date = 2019-04-15
+ | archive-url = https://web.archive.org/web/20190415045523/http://www.sciencedirect.com/science/book/9781483232720
+ | url-status = live
+ }}
+*{{cite journal
+ | last = Pan
+ | first = Y. Ja
+ | year = 1966
+ | title = On means of calculating values of polynomials
+ | journal = Russian Math. Surveys
+ | volume = 21
+ | pages = 105–136
+ | doi = 10.1070/rm1966v021n01abeh004147
+| s2cid = 250869179
+ }}
+*{{cite journal
+ | last = Pankiewicz
+ | first = W.
+ | title = Algorithm 337: calculation of a polynomial and its derivative values by Horner scheme
+ | journal = [[Communications of the ACM]]
+ | volume = 11
+ | issue = 9
+ | year = 1968
+ | page = 633
+ | publisher = ACM
+ | doi=10.1145/364063.364089
+| s2cid = 52859619
+ | doi-access = free
+ }}
+*{{cite book
+ | last = Spiegel
+ | first = Murray R.
+ | title = Schaum's Outline of Theory and Problems of College Algebra
+ | url = https://archive.org/details/schaumsoutlineof00murr
+ | url-access = registration
+ | year = 1956
+ | publisher = McGraw-Hill
+ | isbn = 9780070602267
+ }}
+*{{cite book
+ | last = Temple
+ | first = Robert
+ | year = 1986
+ | title = The Genius of China: 3,000 Years of Science, Discovery, and Invention
+ | publisher = Simon and Schuster
+ | isbn = 978-0-671-62028-8
+}}
+* {{cite book
+ | last1 = Whittaker
+ | first1 = E.T.
+ | author1-link = E. T. Whittaker
+ | last2 = Robinson
+ | first2 = G.
+ | title = The Calculus of Observations
+ | location = London
+ | year = 1924
+ | publisher = Blackie
+ | url = https://archive.org/stream/calculusofobserv031400mbp#page/n119/mode/2up/search/100
+ }}
+* {{cite book
+ | last = Wylie
+ | first = Alexander
+ | title = Chinese Researches
+ | chapter = Jottings on the Science of Chinese Arithmetic
+ | year = 1897
+ | pages = 159–194
+ | location = Shanghai
+ | chapter-url = https://archive.org/details/chineseresearche00wyliuoft
+ }}
+*: Reprinted from issues of ''The North China Herald'' (1852).
+{{refend}}
+
+== External links ==
+{{wikibooks|Algorithm Implementation|Mathematics/Polynomial evaluation|Polynomial evaluation}}
+* {{springer|title=Horner scheme|id=p/h048030}}
+* {{Cite web |title=Horner's Method |url=http://turing.une.edu.au/~ernie/Chinese/SSJZ.pdf |last=Qiu |first=Jin-Shao|archive-url=https://web.archive.org/web/20140106040413/http://turing.une.edu.au/~ernie/Chinese/SSJZ.pdf |archive-date=2014-01-06 |access-date=2026-01-17 |website=turing.une.edu.au|lang= zh }}
+* {{Cite web |last=Weisstein |first=Eric W. |title=Horner's Method |date=2018-09-28 |url=https://mathworld.wolfram.com/HornersMethod.html |access-date=2026-01-17 |website=mathworld.wolfram.com |language=en}} More on the root-finding application 
+
+{{Polynomials}}
+
+[[Category:Computer algebra]]
+[[Category:Polynomials]]
+[[Category:Numerical analysis]]
+[[Category:Science and technology of the Song dynasty]]

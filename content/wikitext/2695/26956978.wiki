@@ -1,0 +1,352 @@
+<!-- wikipedia: en
+     page: 26956978
+     title: Derivation of the conjugate gradient method
+     revision: 1333045632
+     timestamp: 2026-01-15T10:24:41Z
+     history: https://en.wikipedia.org/w/index.php?curid=26956978&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1333045632 -->
+In [[numerical linear algebra]], the [[conjugate gradient method]] is an [[iterative method]] for numerically solving the [[System of linear equations|linear system]]
+
+:<math>\boldsymbol{Ax}=\boldsymbol{b}</math>
+
+where <math>\boldsymbol{A}</math> is [[Symmetric matrix|symmetric]] [[Positive-definite matrix|positive-definite]], without computing <math>\boldsymbol{A}^{-1}</math> explicitly. The conjugate gradient method can be derived from several different perspectives, including specialization of the [[conjugate direction method]]<ref>Conjugate Direction Methods http://user.it.uu.se/~matsh/opt/f8/node5.html</ref> for [[Optimization (mathematics)|optimization]], and variation of the [[Arnoldi iteration|Arnoldi]]/[[Lanczos iteration|Lanczos]] iteration for [[eigenvalue]] problems.
+
+The intent of this article is to document the important steps in these derivations.
+
+==Conjugate direction==
+The conjugate gradient method can be seen as a special case of the conjugate direction method applied to minimization of the quadratic function
+
+:<math>f(\boldsymbol{x})=\boldsymbol{x}^\mathrm{T}\boldsymbol{A}\boldsymbol{x}-2\boldsymbol{b}^\mathrm{T}\boldsymbol{x}\text{.}</math>
+which allows us to apply geometric intuition.
+
+=== Line search ===
+[[File:Conjugate gradient illustration.svg|thumb]]
+Geometrically, the quadratic function can be equivalently presented by writing down its value at every point in space. The points of equal value make up its contour surfaces, which are concentric [[Ellipsoid|ellipsoids]] with the equation <math display="block">\boldsymbol{x}^\mathrm{T}\boldsymbol{A}\boldsymbol{x}-2\boldsymbol{b}^\mathrm{T}\boldsymbol{x} = C </math>for varying <math>C</math>. As <math>C</math> decreases, the ellipsoids become smaller and smaller, until at its minimal value, the ellipsoid shrinks to their shared center.
+
+Minimizing the quadratic function is then a problem of moving around the plane, searching for that shared center of all those ellipsoids. The center can be found by  computing <math>\boldsymbol{A}^{-1}</math> explicitly, but this is precisely what we are trying to avoid.
+
+The simplest method is greedy [[line search]], where we start at some point <math>\boldsymbol{x}_0</math>, pick a direction <math>\boldsymbol{p}_0</math> somehow, then minimize <math>f(\boldsymbol{x}_0 + \boldsymbol{p}_0 \alpha_0)</math>. This has a simple closed-form solution that does not involve matrix inversion:<math display="block">\alpha_0 = \frac{\boldsymbol{p}_0^\mathrm{T}(\boldsymbol{b}-\boldsymbol{Ax}_0) }{\boldsymbol{p}_0^\mathrm{T}\boldsymbol{A}\boldsymbol{p}_0}  </math>Geometrically, we start at some point <math>\boldsymbol{x}_0</math> on some ellipsoid, then choose a direction and travel along that direction, until we hit the point where the ellipsoid is minimized in that direction. This is not necessarily the minimum, but it is progress towards it. Visually, it is moving along a line, and stopping as soon as we reach a point tangent to the contour ellipsoid.
+
+We can now repeat this procedure, starting at our new point <math>\boldsymbol{x}_1 = \boldsymbol{x}_0 + \alpha_0\boldsymbol{p}_0 </math>, pick a new direction <math>\boldsymbol{p}_1</math>, compute <math>\alpha_1</math>, etc.
+
+We can summarize this as the following algorithm:
+
+Start by picking an initial guess <math>\boldsymbol{x}_0</math>, and compute the initial residual <math>\boldsymbol{r}_0=\boldsymbol{b}-\boldsymbol{Ax}_0</math>, then iterate:
+
+:<math>\begin{align}
+\alpha_i&=\frac{\boldsymbol{p}_i^\mathrm{T}\boldsymbol{r}_i}{\boldsymbol{p}_i^\mathrm{T}\boldsymbol{Ap}_i}\text{,}\\
+\boldsymbol{x}_{i+1}&=\boldsymbol{x}_i+\alpha_i\boldsymbol{p}_i\text{,}\\
+\boldsymbol{r}_{i+1}&=\boldsymbol{r}_i-\alpha_i\boldsymbol{Ap}_i
+\end{align}</math>
+
+where <math>\boldsymbol{p}_0,\boldsymbol{p}_1,\boldsymbol{p}_2,\ldots</math> are to be picked. Notice in particular how the residual is calculated iteratively step-by-step, instead of anew every time:<math display="block">\boldsymbol{r}_{i+1} = \boldsymbol{b} - \boldsymbol{Ax}_{i+1} 
+= \boldsymbol{b} - \boldsymbol{A} (\boldsymbol{x}_i+\alpha_i\boldsymbol{p}_i) = \boldsymbol{r}_i 
+ -\alpha_i \boldsymbol{A} \boldsymbol{p}_i </math>It is possibly true that <math>\alpha_i = 0</math> prematurely, which would bring numerical problems. However, for particular choices of <math>\boldsymbol{p}_0,\boldsymbol{p}_1,\boldsymbol{p}_2,\ldots</math>, this will not occur before convergence, as we will prove below.
+
+=== Conjugate directions ===
+If the directions <math>\boldsymbol{p}_0,\boldsymbol{p}_1,\boldsymbol{p}_2,\ldots</math> are not picked well, then progress will be slow. In particular, the [[gradient descent]] method would be slow. This can be seen in the diagram, where the green line is the result of always picking the local gradient direction. It zig-zags towards the minimum, but repeatedly overshoots. In contrast, if we pick the directions to be a set of '''mutually conjugate directions''', then there will be no overshoot, and we would obtain the global minimum after <math>n</math> steps, where <math>n</math> is the number of dimensions.
+[[File:Conjugate_Diameters.svg|right|thumb|300x300px|Two conjugate diameters of an [[ellipse]]. Each edge of the bounding [[parallelogram]] is [[Parallel (geometry)|parallel]] to one of the diameters.]]
+The concept of conjugate directions came from classical geometry of ellipse. For an ellipse, two semi-axes are mutually conjugate with respect to the ellipse iff the lines are parallel to the tangent bounding parallelogram, as pictured. The concept generalizes to ''n''-dimensional ellipsoids, where ''n'' semi-axes <math>t_0\boldsymbol{p}_0, \dots, t_{n-1}\boldsymbol{p}_{n-1}</math> are mutually conjugate with respect to the ellipsoid iff each axis is parallel to the tangent bounding [[parallelepiped]]. In other words, for any <math>i</math>, the tangent plane to the ellipsoid at <math>\boldsymbol{c} + t_i \boldsymbol{p}_i</math> is a [[hyperplane]] spanned by the vectors <math>\{\boldsymbol{p}_j : j \neq i\}</math>, where <math>\boldsymbol{c} </math> is the center of the ellipsoid.
+
+Note that we need to scale each directional vector <math>\boldsymbol{p}_i </math> by a scalar <math>t_i </math>, so that <math>\boldsymbol{c} + t_i \boldsymbol{p}_i</math> falls exactly on the ellipsoid.
+
+Given an ellipsoid with equation <math display="block">\boldsymbol{x}^\mathrm{T}\boldsymbol{A}\boldsymbol{x}-2\boldsymbol{b}^\mathrm{T}\boldsymbol{x} = C </math>for some constant <math>C </math>, we can translate it so that its center is at origin. This changes the equation to <math display="block">\boldsymbol{x}^\mathrm{T}\boldsymbol{A}\boldsymbol{x} = C' </math>for some other constant <math>C' </math>. The condition of tangency is then:<math display="block">(t_i\boldsymbol{p}_i + \boldsymbol{p}_j dt_j)^\mathrm{T}\boldsymbol{A} (t_i\boldsymbol{p}_i + \boldsymbol{p}_j dt_j) = C' + O(dt_j^2), \quad \forall i \neq j </math>that is, <math>\boldsymbol{p}_i^\mathrm{T}\boldsymbol{Ap}_j=0</math> for any <math>i\neq j</math>.
+
+The conjugate direction method is imprecise in the sense that no formulae are given for selection of the directions <math>\boldsymbol{p}_0,\boldsymbol{p}_1,\boldsymbol{p}_2,\ldots</math>. Specific choices lead to various methods including the conjugate gradient method and [[Gaussian elimination]].
+
+=== Gram–Schmidt process ===
+We can tabulate the equations that we need to set to zero:
+
+{| class="wikitable"
+|+
+!
+|0
+|1
+|2
+|3
+|<math>\cdots</math>
+|-
+| 0
+|
+| <math>\boldsymbol{p}_0^\mathrm{T}\boldsymbol{Ap}_1</math>
+| <math>\boldsymbol{p}_0^\mathrm{T}\boldsymbol{Ap}_2</math>
+| <math>\boldsymbol{p}_0^\mathrm{T}\boldsymbol{Ap}_3</math>
+| <math>\cdots</math>
+|-
+| 1
+|
+|
+| <math>\boldsymbol{p}_1^\mathrm{T}\boldsymbol{Ap}_2</math>
+| <math>\boldsymbol{p}_1^\mathrm{T}\boldsymbol{Ap}_3</math>
+| <math>\cdots</math>
+|-
+| 2
+|
+|
+|
+| <math>\boldsymbol{p}_2^\mathrm{T}\boldsymbol{Ap}_3</math>
+| <math>\cdots</math> 
+|-
+| <math>\vdots</math>
+|
+|
+|
+|
+| <math>\ddots</math>
+|}
+
+This resembles the problem of [[orthogonalization]], which requires <math>\boldsymbol{p}_i^\mathrm{T}\boldsymbol{p}_j=0</math> for any <math>i\neq j</math>, and <math>\boldsymbol{p}_i^\mathrm{T}\boldsymbol{p}_j=1</math> for any <math>i = j</math>. Thus the problem of finding conjugate axes is less constrained than the problem of orthogonalization, so the [[Gram–Schmidt process]] works, with additional degrees of freedom that we can later use to pick the ones that would simplify the computation:
+
+* Arbitrarily set <math>\boldsymbol{p}_0</math>.
+* Arbitrarily set <math>\boldsymbol{p}_{10}</math>, then modify it to <math>\boldsymbol{p}_{1} = \boldsymbol{p}_{10} - 
+\frac{\boldsymbol{p}_0^\mathrm{T}\boldsymbol{Ap}_{10}}{\boldsymbol{p}_0^\mathrm{T}\boldsymbol{Ap}_0}\boldsymbol{p}_{0}</math>.
+* Arbitrarily set <math>\boldsymbol{p}_{20}</math>, then modify it to <math>\boldsymbol{p}_{2} = \boldsymbol{p}_{20} - \sum_{i = 0}^1
+\frac{\boldsymbol{p}_i^\mathrm{T}\boldsymbol{Ap}_{20}}{\boldsymbol{p}_i^\mathrm{T}\boldsymbol{Ap}_i}\boldsymbol{p}_{i}</math>.
+* ...
+* Arbitrarily set <math>\boldsymbol{p}_{n-1,0}</math>, then modify it to <math>\boldsymbol{p}_{n-1} = \boldsymbol{p}_{n-1,0} - \sum_{i = 0}^{n-2}
+\frac{\boldsymbol{p}_i^\mathrm{T}\boldsymbol{Ap}_{n-1,0}}{\boldsymbol{p}_i^\mathrm{T}\boldsymbol{Ap}_i}\boldsymbol{p}_{i} </math>.
+The most natural choice of <math>\boldsymbol{p}_{k,0}</math> is the gradient. That is, <math>\boldsymbol{p}_{k,0} = \nabla f(\boldsymbol{x}_k)</math>. Since conjugate directions can be scaled by a nonzero value, we scale it by <math>-1/2</math> for notational cleanness, obtaining <math display="block"> \boldsymbol{p}_{k, 0} = \mathbf{r}_k = \mathbf{b} - \mathbf{Ax}_k</math>Thus, we have <math>\boldsymbol{p}_{k} = \boldsymbol{r}_{k} - \sum_{i = 0}^{k-1}
+\frac{\boldsymbol{p}_i^\mathrm{T}\boldsymbol{Ar}_{k}}{\boldsymbol{p}_i^\mathrm{T}\boldsymbol{Ap}_i}\boldsymbol{p}_{i}</math>. Plugging it in, we have the conjugate gradient algorithm:<math display="block">\begin{align}
+& \mathbf{r}_0 := \mathbf{b} - \mathbf{A x}_0 \\
+& \mathbf{p}_0 := \mathbf{r}_0 \\
+& k := 0 \\
+& \text{do while }k < n \\
+& \qquad \alpha_k := \frac{\mathbf{p}_k^\mathsf{T} \mathbf{r}_k}{\mathbf{p}_k^\mathsf{T} \mathbf{A p}_k}  \\ 
+& \qquad \mathbf{x}_{k+1} := \mathbf{x}_k + \alpha_k \mathbf{p}_k \\
+& \qquad \text{if } |\alpha_k| \text{ is sufficiently small, then exit loop}\\
+& \qquad \mathbf{r}_{k+1} := \mathbf{r}_k - \alpha_k \mathbf{A p}_k \\
+& \qquad \mathbf{p}_{k+1} := \boldsymbol{r}_{k+1} - \sum_{i = 0}^{k}
+\frac{\boldsymbol{p}_i^\mathrm{T}\boldsymbol{Ar}_{k+1}}{\boldsymbol{p}_i^\mathrm{T}\boldsymbol{Ap}_i}\boldsymbol{p}_{i}\\
+& \qquad k := k + 1 \\
+& \text{return } \mathbf{x}_{k+1} \text{ as the result}  
+\end{align}</math>'''Proposition.''' If at some point, <math>\alpha_k = 0</math>, then the algorithm has converged, that is, <math>\nabla f(\mathrm{x}_{k+1}) = 0</math>.
+
+'''Proof.''' By construction, it would mean that <math>\mathbf{x}_{k+1} = \mathbf{x}_k</math>, that is, taking a conjugate gradient step gets us exactly back to where we were. This is only possible if the local gradient is already zero.
+
+=== Simplification ===
+This algorithm can be significantly simplified by some lemmas, resulting in the conjugate gradient algorithm.
+
+'''Lemma 1.''' <math> \mathbf{p}_i^T \mathbf{r}_j = 0, \;\forall i < j</math> and <math> \mathbf{r}_i^T \mathbf{r}_j = 0, \;\forall i < j</math>.
+
+'''Proof.''' By the geometric construction, the tangent plane to the ellipsoid at <math> \mathbf{x}_j</math> contains each of the previous conjugate direction vectors <math>\mathbf{p}_0, \mathbf{p}_1, \dots,\mathbf{p}_{j-1}</math>. Further, <math> \mathbf{r}_j</math> is perpendicular to the tangent, thus <math> \mathbf{p}_i^T \mathbf{r}_j = 0, \;\forall i < j</math>. The second equation is true since by construction, <math> \mathbf{r}_0, \mathbf{r}_1, \dots,\mathbf{r}_{j-1}</math> is a linear transform of <math> \mathbf{p}_0, \mathbf{p}_1, \dots,\mathbf{p}_{j-1}</math>.
+
+'''Lemma 2.''' <math> \mathbf{p}_k^T \mathbf{r}_k = \mathbf{r}_k^T\mathbf{r}_k</math>.
+
+'''Proof.''' By construction, <math> \mathbf{p}_{k} := \boldsymbol{r}_{k} - \sum_{i = 0}^{k-1}
+\frac{\boldsymbol{p}_i^\mathrm{T}\boldsymbol{Ar}_{k-1}}{\boldsymbol{p}_i^\mathrm{T}\boldsymbol{Ap}_i}\boldsymbol{p}_{i}</math>, now apply lemma 1.
+
+'''Lemma 3.''' <math>\boldsymbol{p}_i^\mathrm{T}\boldsymbol{Ar}_{k+1} = \begin{cases}
+0, \; i < k \\
+-\boldsymbol{r}_{k+1}^T \boldsymbol{r}_{k+1} /\alpha_{k}, \; i = k
+\end{cases}</math>.
+
+'''Proof.''' By construction, we have <math>\mathbf{r}_{i+1} = \mathbf{r}_i - \alpha_i \mathbf{A p}_i</math>, thus<math display="block">\boldsymbol r_{k+1}^T \boldsymbol A \boldsymbol p_i = \boldsymbol r_{k+1}^T \frac{\boldsymbol r_{i} -\boldsymbol r_{i+1}}{\alpha_i}</math>Now apply lemma 1.
+
+
+Plugging lemmas 1-3 in, we have <math>\alpha_k=\frac{\mathbf{r}_k^{\top} \mathbf{r}_k}{\mathbf{p}_k^{\top} \mathbf{A} \mathbf{p}_k}</math> and <math>\mathbf{p}_{k+1}:=\boldsymbol{r}_{k+1} + \frac{\mathbf{r}_{k+1}^{\top} \mathbf{r}_{k+1}}{\mathbf{r}_k^{\top} \mathbf{r}_k} \mathbf p_k</math>, which is the proper conjugate gradient algorithm.
+
+==Arnoldi/Lanczos iteration==
+{{see|Arnoldi iteration|Lanczos iteration}}
+The conjugate gradient method can also be seen as a variant of the Arnoldi/Lanczos iteration applied to solving linear systems.
+
+===The general Arnoldi method===
+In the Arnoldi iteration, one starts with a vector <math>\boldsymbol{r}_0</math> and gradually builds an [[orthonormal]] basis <math>\{\boldsymbol{v}_1,\boldsymbol{v}_2,\boldsymbol{v}_3,\ldots\}</math> of the [[Krylov subspace]]
+
+:<math>\mathcal{K}(\boldsymbol{A},\boldsymbol{r}_0)=\mathrm{span}\{\boldsymbol{r}_0,\boldsymbol{Ar}_0,\boldsymbol{A}^2\boldsymbol{r}_0,\ldots\}</math>
+
+by defining <math>\boldsymbol{v}_i=\boldsymbol{w}_i/\lVert\boldsymbol{w}_i\rVert_2</math> where
+
+:<math>\boldsymbol{w}_i=\begin{cases}
+\boldsymbol{r}_0 & \text{if }i=1\text{,}\\
+\boldsymbol{Av}_{i-1}-\sum_{j=1}^{i-1}(\boldsymbol{v}_j^\mathrm{T}\boldsymbol{Av}_{i-1})\boldsymbol{v}_j & \text{if }i>1\text{.}
+\end{cases}</math>
+
+In other words, for <math>i>1</math>, <math>\boldsymbol{v}_i</math> is found by [[Gram-Schmidt orthogonalization|Gram-Schmidt orthogonalizing]] <math>\boldsymbol{Av}_{i-1}</math> against <math>\{\boldsymbol{v}_1,\boldsymbol{v}_2,\ldots,\boldsymbol{v}_{i-1}\}</math> followed by normalization.
+
+Put in matrix form, the iteration is captured by the equation
+
+:<math>\boldsymbol{AV}_i=\boldsymbol{V}_{i+1}\boldsymbol{\tilde{H}}_i</math>
+
+where
+
+:<math>\begin{align}
+\boldsymbol{V}_i&=\begin{bmatrix}
+\boldsymbol{v}_1 & \boldsymbol{v}_2 & \cdots & \boldsymbol{v}_i
+\end{bmatrix}\text{,}\\
+\boldsymbol{\tilde{H}}_i&=\begin{bmatrix}
+h_{11} & h_{12} & h_{13} & \cdots & h_{1,i}\\
+h_{21} & h_{22} & h_{23} & \cdots & h_{2,i}\\
+& h_{32} & h_{33} & \cdots & h_{3,i}\\
+& & \ddots & \ddots & \vdots\\
+& & & h_{i,i-1} & h_{i,i}\\
+& & & & h_{i+1,i}
+\end{bmatrix}=\begin{bmatrix}
+\boldsymbol{H}_i\\
+h_{i+1,i}\boldsymbol{e}_i^\mathrm{T}
+\end{bmatrix}
+\end{align}</math>
+
+with
+
+:<math>h_{ji}=\begin{cases}
+\boldsymbol{v}_j^\mathrm{T}\boldsymbol{Av}_i & \text{if }j\leq i\text{,}\\
+\lVert\boldsymbol{w}_{i+1}\rVert_2 & \text{if }j=i+1\text{,}\\
+0 & \text{if }j>i+1\text{.}
+\end{cases}</math>
+
+When applying the Arnoldi iteration to solving linear systems, one starts with <math>\boldsymbol{r}_0=\boldsymbol{b}-\boldsymbol{Ax}_0</math>, the residual corresponding to an initial guess <math>\boldsymbol{x}_0</math>. After each step of iteration, one computes <math>\boldsymbol{y}_i=\boldsymbol{H}_i^{-1}(\lVert\boldsymbol{r}_0\rVert_2\boldsymbol{e}_1)</math> and the new iterate <math>\boldsymbol{x}_i=\boldsymbol{x}_0+\boldsymbol{V}_i\boldsymbol{y}_i</math>.
+
+===The direct Lanczos method===
+For the rest of discussion, we assume that <math>\boldsymbol{A}</math> is symmetric positive-definite. With symmetry of <math>\boldsymbol{A}</math>, the [[upper Hessenberg matrix]] <math>\boldsymbol{H}_i=\boldsymbol{V}_i^\mathrm{T}\boldsymbol{AV}_i</math> becomes symmetric and thus tridiagonal. It then can be more clearly denoted by
+
+:<math>\boldsymbol{H}_i=\begin{bmatrix}
+a_1 & b_2\\
+b_2 & a_2 & b_3\\
+& \ddots & \ddots & \ddots\\
+& & b_{i-1} & a_{i-1} & b_i\\
+& & & b_i & a_i
+\end{bmatrix}\text{.}</math>
+
+This enables a short three-term recurrence for <math>\boldsymbol{v}_i</math> in the iteration, and the Arnoldi iteration is reduced to the Lanczos iteration.
+
+Since <math>\boldsymbol{A}</math> is symmetric positive-definite, so is <math>\boldsymbol{H}_i</math>. Hence, <math>\boldsymbol{H}_i</math> can be [[LU factorization|LU factorized]] without [[partial pivoting]] into
+
+:<math>\boldsymbol{H}_i=\boldsymbol{L}_i\boldsymbol{U}_i=\begin{bmatrix}
+1\\
+c_2 & 1\\
+& \ddots & \ddots\\
+& & c_{i-1} & 1\\
+& & & c_i & 1
+\end{bmatrix}\begin{bmatrix}
+d_1 & b_2\\
+& d_2 & b_3\\
+& & \ddots & \ddots\\
+& & & d_{i-1} & b_i\\
+& & & & d_i
+\end{bmatrix}</math>
+
+with convenient recurrences for <math>c_i</math> and <math>d_i</math>:
+
+:<math>\begin{align}
+c_i&=b_i/d_{i-1}\text{,}\\
+d_i&=\begin{cases}
+a_1 & \text{if }i=1\text{,}\\
+a_i-c_ib_i & \text{if }i>1\text{.}
+\end{cases}
+\end{align}</math>
+
+Rewrite <math>\boldsymbol{x}_i=\boldsymbol{x}_0+\boldsymbol{V}_i\boldsymbol{y}_i</math> as
+
+:<math>\begin{align}
+\boldsymbol{x}_i&=\boldsymbol{x}_0+\boldsymbol{V}_i\boldsymbol{H}_i^{-1}(\lVert\boldsymbol{r}_0\rVert_2\boldsymbol{e}_1)\\
+&=\boldsymbol{x}_0+\boldsymbol{V}_i\boldsymbol{U}_i^{-1}\boldsymbol{L}_i^{-1}(\lVert\boldsymbol{r}_0\rVert_2\boldsymbol{e}_1)\\
+&=\boldsymbol{x}_0+\boldsymbol{P}_i\boldsymbol{z}_i
+\end{align}</math>
+
+with
+
+:<math>\begin{align}
+\boldsymbol{P}_i&=\boldsymbol{V}_{i}\boldsymbol{U}_i^{-1}\text{,}\\
+\boldsymbol{z}_i&=\boldsymbol{L}_i^{-1}(\lVert\boldsymbol{r}_0\rVert_2\boldsymbol{e}_1)\text{.}
+\end{align}</math>
+
+It is now important to observe that
+
+:<math>\begin{align}
+\boldsymbol{P}_i&=\begin{bmatrix}
+\boldsymbol{P}_{i-1} & \boldsymbol{p}_i
+\end{bmatrix}\text{,}\\
+\boldsymbol{z}_i&=\begin{bmatrix}
+\boldsymbol{z}_{i-1}\\
+\zeta_i
+\end{bmatrix}\text{.}
+\end{align}</math>
+
+In fact, there are short recurrences for <math>\boldsymbol{p}_i</math> and <math>\zeta_i</math> as well:
+
+:<math>\begin{align}
+\boldsymbol{p}_i&=\frac{1}{d_i}(\boldsymbol{v}_i-b_i\boldsymbol{p}_{i-1})\text{,}\\
+\zeta_i&=-c_i\zeta_{i-1}\text{.}
+\end{align}</math>
+
+With this formulation, we arrive at a simple recurrence for <math>\boldsymbol{x}_i</math>:
+
+:<math>\begin{align}
+\boldsymbol{x}_i&=\boldsymbol{x}_0+\boldsymbol{P}_i\boldsymbol{z}_i\\
+&=\boldsymbol{x}_0+\boldsymbol{P}_{i-1}\boldsymbol{z}_{i-1}+\zeta_i\boldsymbol{p}_i\\
+&=\boldsymbol{x}_{i-1}+\zeta_i\boldsymbol{p}_i\text{.}
+\end{align}</math>
+
+The relations above straightforwardly lead to the direct Lanczos method, which turns out to be slightly more complex.
+
+===The conjugate gradient method from imposing orthogonality and conjugacy===
+If we allow <math>\boldsymbol{p}_i</math> to scale and compensate for the scaling in the constant factor, we potentially can have simpler recurrences of the form:
+
+:<math>\begin{align}
+\boldsymbol{x}_i&=\boldsymbol{x}_{i-1}+\alpha_{i-1}\boldsymbol{p}_{i-1}\text{,}\\
+\boldsymbol{r}_i&=\boldsymbol{r}_{i-1}-\alpha_{i-1}\boldsymbol{Ap}_{i-1}\text{,}\\
+\boldsymbol{p}_i&=\boldsymbol{r}_i+\beta_{i-1}\boldsymbol{p}_{i-1}\text{.}
+\end{align}</math>
+
+As premises for the simplification, we now derive the orthogonality of <math>\boldsymbol{r}_i</math> and conjugacy of <math>\boldsymbol{p}_i</math>, i.e., for <math>i\neq j</math>,
+
+:<math>\begin{align}
+\boldsymbol{r}_i^\mathrm{T}\boldsymbol{r}_j&=0\text{,}\\
+\boldsymbol{p}_i^\mathrm{T}\boldsymbol{Ap}_j&=0\text{.}
+\end{align}</math>
+
+The residuals are mutually orthogonal because <math>\boldsymbol{r}_i</math> is essentially a multiple of <math>\boldsymbol{v}_{i+1}</math> since for <math>i=0</math>, <math>\boldsymbol{r}_0=\lVert\boldsymbol{r}_0\rVert_2\boldsymbol{v}_1</math>, for <math>i>0</math>,
+
+:<math>\begin{align}
+\boldsymbol{r}_i&=\boldsymbol{b}-\boldsymbol{Ax}_i\\
+&=\boldsymbol{b}-\boldsymbol{A}(\boldsymbol{x}_0+\boldsymbol{V}_i\boldsymbol{y}_i)\\
+&=\boldsymbol{r}_0-\boldsymbol{AV}_i\boldsymbol{y}_i\\
+&=\boldsymbol{r}_0-\boldsymbol{V}_{i+1}\boldsymbol{\tilde{H}}_i\boldsymbol{y}_i\\
+&=\boldsymbol{r}_0-\boldsymbol{V}_i\boldsymbol{H}_i\boldsymbol{y}_i-h_{i+1,i}(\boldsymbol{e}_i^\mathrm{T}\boldsymbol{y}_i)\boldsymbol{v}_{i+1}\\
+&=\lVert\boldsymbol{r}_0\rVert_2\boldsymbol{v}_1-\boldsymbol{V}_i(\lVert\boldsymbol{r}_0\rVert_2\boldsymbol{e}_1)-h_{i+1,i}(\boldsymbol{e}_i^\mathrm{T}\boldsymbol{y}_i)\boldsymbol{v}_{i+1}\\
+&=-h_{i+1,i}(\boldsymbol{e}_i^\mathrm{T}\boldsymbol{y}_i)\boldsymbol{v}_{i+1}\text{.}\end{align}</math>
+
+To see the conjugacy of <math>\boldsymbol{p}_i</math>, it suffices to show that <math>\boldsymbol{P}_i^\mathrm{T}\boldsymbol{AP}_i</math> is diagonal:
+
+:<math>\begin{align}
+\boldsymbol{P}_i^\mathrm{T}\boldsymbol{AP}_i&=\boldsymbol{U}_i^{-\mathrm{T}}\boldsymbol{V}_i^\mathrm{T}\boldsymbol{AV}_i\boldsymbol{U}_i^{-1}\\
+&=\boldsymbol{U}_i^{-\mathrm{T}}\boldsymbol{H}_i\boldsymbol{U}_i^{-1}\\
+&=\boldsymbol{U}_i^{-\mathrm{T}}\boldsymbol{L}_i\boldsymbol{U}_i\boldsymbol{U}_i^{-1}\\
+&=\boldsymbol{U}_i^{-\mathrm{T}}\boldsymbol{L}_i
+\end{align}</math>
+
+is symmetric and lower triangular simultaneously and thus must be diagonal.
+
+Now we can derive the constant factors <math>\alpha_i</math> and <math>\beta_i</math> with respect to the scaled <math>\boldsymbol{p}_i</math> by solely imposing the orthogonality of <math>\boldsymbol{r}_i</math> and conjugacy of <math>\boldsymbol{p}_i</math>.
+
+Due to the orthogonality of <math>\boldsymbol{r}_i</math>, it is necessary that <math>\boldsymbol{r}_{i+1}^\mathrm{T}\boldsymbol{r}_i=(\boldsymbol{r}_i-\alpha_i\boldsymbol{Ap}_i)^\mathrm{T}\boldsymbol{r}_i=0</math>. As a result,
+
+:<math>\begin{align}
+\alpha_i&=\frac{\boldsymbol{r}_i^\mathrm{T}\boldsymbol{r}_i}{\boldsymbol{r}_i^\mathrm{T}\boldsymbol{Ap}_i}\\
+&=\frac{\boldsymbol{r}_i^\mathrm{T}\boldsymbol{r}_i}{(\boldsymbol{p}_i-\beta_{i-1}\boldsymbol{p}_{i-1})^\mathrm{T}\boldsymbol{Ap}_i}\\
+&=\frac{\boldsymbol{r}_i^\mathrm{T}\boldsymbol{r}_i}{\boldsymbol{p}_i^\mathrm{T}\boldsymbol{Ap}_i}\text{.}
+\end{align}</math>
+
+Similarly, due to the conjugacy of <math>\boldsymbol{p}_i</math>, it is necessary that <math>\boldsymbol{p}_{i+1}^\mathrm{T}\boldsymbol{Ap}_i=(\boldsymbol{r}_{i+1}+\beta_i\boldsymbol{p}_i)^\mathrm{T}\boldsymbol{Ap}_i=0</math>. As a result,
+
+:<math>\begin{align}
+\beta_i&=-\frac{\boldsymbol{r}_{i+1}^\mathrm{T}\boldsymbol{Ap}_i}{\boldsymbol{p}_i^\mathrm{T}\boldsymbol{Ap}_i}\\
+&=-\frac{\boldsymbol{r}_{i+1}^\mathrm{T}(\boldsymbol{r}_i-\boldsymbol{r}_{i+1})}{\alpha_i\boldsymbol{p}_i^\mathrm{T}\boldsymbol{Ap}_i}\\
+&=\frac{\boldsymbol{r}_{i+1}^\mathrm{T}\boldsymbol{r}_{i+1}}{\boldsymbol{r}_i^\mathrm{T}\boldsymbol{r}_i}\text{.}
+\end{align}</math>
+
+This completes the derivation.
+
+==References==
+{{reflist}}
+#{{cite journal|last1 = Hestenes|first1 = M. R.|authorlink1 = David Hestenes|last2 = Stiefel|first2 = E.|authorlink2 = Eduard Stiefel|title = Methods of conjugate gradients for solving linear systems|journal = Journal of Research of the National Bureau of Standards|volume = 49|issue = 6|date=December 1952|page = 409|doi = 10.6028/jres.049.044|url = http://nvlpubs.nist.gov/nistpubs/jres/049/6/V49.N06.A08.pdf}}
+#Shewchuk, Jonathan Richard. "''[https://www.cs.cmu.edu/~quake-papers/painless-conjugate-gradient.pdf An introduction to the conjugate gradient method without the agonizing pain]''." (1994)
+#{{cite book|last = Saad|first = Y.|title = Iterative methods for sparse linear systems|url = https://archive.org/details/iterativemethods0000saad|url-access = registration|edition = 2nd|chapter = Chapter 6: Krylov Subspace Methods, Part I|publisher = SIAM|year = 2003|isbn = 978-0-89871-534-7}}
+
+{{Numerical linear algebra}}
+
+[[Category:Numerical linear algebra]]
+[[Category:Optimization algorithms and methods]]
+[[Category:Gradient methods]]
+[[Category:Articles containing proofs]]

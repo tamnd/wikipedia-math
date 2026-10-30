@@ -1,0 +1,71 @@
+<!-- wikipedia: en
+     page: 34201204
+     title: Alias method
+     revision: 1367374876
+     timestamp: 2026-08-02T18:43:33Z
+     history: https://en.wikipedia.org/w/index.php?curid=34201204&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1367374876 -->
+{{Short description|Family of algorithms for sampling from discrete probability distributions}}
+[[File:Alias Table.png|alt=A circle on the left has 5 lines to 5 boxes in a column labeled "Acceptance". The first and second box are solid and each have the number 1 in them. The second box is half full and has the number 0.5 in it. The fourth box is solid with a 1 and the fifth box is three quarters full with a 0.75. Each box has an arrow from the filled region to its index, i.e., the first box points to a 1, the second box to a two, etc. There is a second column of five boxes labeled "Alias", each corresponding to one of the first boxes. Three are empty, but the third has a 2 in it and the fifth has a 1 in it. There is an arrow from the empty part of the third box in the first column to the third box in the second column and similarly for the fifth boxes.|thumb|A diagram of an alias table that represents the probability distribution〈0.25, 0.3, 0.1, 0.2, 0.15〉]]
+In [[computing]], the '''alias method''' is a family of efficient [[algorithm]]s for [[Non-uniform random variate generation|sampling from a discrete probability distribution]], published in 1974 by Alastair J. Walker.<ref name=Walker1974>{{Cite journal |doi=10.1049/el:19740097 |title=New fast method for generating discrete random numbers with arbitrary frequency distributions |journal=Electronics Letters |volume=10 |issue=8 |pages=127–128 |date=18 April 1974 |last1=Walker |first1=A. J. |bibcode=1974ElL....10..127W }}</ref><ref name=Walker1977>{{Cite journal |doi=10.1145/355744.355749 |title=An Efficient Method for Generating Discrete Random Variables with General Distributions |journal=ACM Transactions on Mathematical Software |volume=3 |issue=3 |pages=253–256 |date=September 1977 |last1=Walker |first1=Alastair J. |s2cid=4522588 |doi-access=free }}</ref> That is, it returns integer values {{math |1 ≤ ''i'' ≤ ''n''}} according to some arbitrary [[discrete probability distribution]] {{mvar|p<sub>i</sub>}}.  The algorithms typically use {{math|''O''(''n'' log ''n'')}} or {{math|''O''(''n'')}} preprocessing time, after which random values can be drawn from the distribution in {{math|''O''(1)}} time.<ref name=Vose>{{Cite journal |doi=10.1109/32.92917 |title=A linear algorithm for generating random numbers with a given distribution |journal=IEEE Transactions on Software Engineering |volume=17 |issue=9 |pages=972–975 |date=September 1991 |last1=Vose |first1=Michael D. |url=http://web.eecs.utk.edu/~vose/Publications/random.pdf |archive-url=https://web.archive.org/web/20131029203736/http://web.eecs.utk.edu/~vose/Publications/random.pdf |archive-date=2013-10-29|citeseerx=10.1.1.398.3339 }}</ref>
+
+==Operation==
+Internally, the algorithm consults two tables, a ''[[probability]] [[Table (information)|table]]'' {{mvar|U<sub>i</sub>}} and an ''alias table'' {{mvar|K<sub>i</sub>}} (for {{math|1 ≤ ''i'' ≤ ''n''}}). To generate a random outcome, a fair [[dice|die]] is rolled to determine an index {{mvar|i}} into the two tables. A [[biased coin]] is then flipped, choosing a result of {{mvar|i}} with probability {{mvar|U<sub>i</sub>}}, or {{mvar|K<sub>i</sub>}} otherwise (probability {{math|1 − ''U<sub>i</sub>''}}).<ref>{{cite web |url=http://www.keithschwarz.com/darts-dice-coins/ |title=Darts, Dice, and Coins: Sampling from a Discrete Distribution |date=29 December 2011 |website=KeithSchwarz.com |access-date=2011-12-27}}</ref>
+
+More concretely, the algorithm operates as follows:
+
+# Generate a [[Uniform distribution (continuous)|uniform]] [[random variate]] {{math|0 ≤ ''x'' &lt; 1}}.
+# Let {{math|1=''i'' = ⌊''nx''⌋ + 1}} and {{math|1=''y'' = ''nx'' + 1 − ''i''}}.  (This makes {{math|''i''}} uniformly distributed on {{math|{1, 2, ..., ''n''} }} and {{math|''y''}} uniformly distributed on {{math|[0, 1)}}.) 
+# If {{math|''y'' &lt; ''U<sub>i</sub>''}}, return {{mvar|i}}.  This is the biased coin flip.
+# Otherwise, return {{mvar|K<sub>i</sub>}}.
+
+An alternative formulation of the probability table, proposed by Marsaglia et al.<ref name=marsaglia>{{Citation |first1=George |last1=Marsaglia |author-link1=George Marsaglia |first2=Wai Wan |last2=Tsang |first3=Jingbo |last3=Wang |title=Fast Generation of Discrete Random Variables |journal=Journal of Statistical Software |date=2004-07-12 |volume=11 |issue=3 |pages=1–11 |doi=10.18637/jss.v011.i03 |doi-access=free |url=https://www.researchgate.net/publication/5142858}}</ref> as the '''square histogram method''', avoids the computation of {{mvar|y}} by instead checking the condition {{math|1=''x'' &lt;&nbsp;''V<sub>i</sub>'' =&nbsp;(''U<sub>i</sub>''&nbsp;+&nbsp;''i''&nbsp;−&nbsp;1)/''n''}} in the third step.
+
+==Table generation==
+The distribution may be padded with additional probabilities {{math|1=''p<sub>i</sub>'' = 0}} to increase {{mvar|n}} to a convenient value, such as a [[power of two]].
+
+To generate the two tables, first initialize {{math|1=''U<sub>i</sub>'' = ''np<sub>i</sub>''}}.  While doing this, divide the table entries into three categories:
+* The "overfull" group, where {{math|''U<sub>i</sub>'' > 1}},
+* The "underfull" group, where {{math|''U<sub>i</sub>'' &lt; 1}} and {{mvar|K<sub>i</sub>}} has not been initialized, and
+* The "exactly full" group, where {{math|1=''U<sub>i</sub>'' = 1}} or {{mvar|K<sub>i</sub>}} ''has'' been initialized.
+
+If {{math|1=''U<sub>i</sub>'' = 1}}, the corresponding value {{mvar|K<sub>i</sub>}} will never be consulted and is unimportant, but a value of {{math|1=''K<sub>i</sub>'' = ''i''}} is sensible.  This also avoids problems if the probabilities are represented as [[fixed-point number]]s which cannot represent {{math|1=''U<sub>i</sub>'' = 1}} exactly.
+
+As long as not all table entries are exactly full, repeat the following steps:
+# Arbitrarily choose an overfull entry {{math|''U<sub>i</sub>'' > 1}} and an underfull entry {{math|''j''}} with {{math|1 − ''U<sub>j</sub>'' ≤ ''U<sub>i</sub>'' − 1}}.  (If one of these exists, the other must, as well.)
+# Allocate all unused space in entry {{mvar|j}} to outcome {{mvar|i}}, by setting {{math|1=''K<sub>j</sub>'' ← ''i''}}.
+# Remove the allocated space from entry {{mvar|i}} by changing {{math|1=''U<sub>i</sub>'' ← ''U<sub>i</sub>'' − (1 − ''U<sub>j</sub>'') = ''U<sub>i</sub>'' + ''U<sub>j</sub>'' − 1}}.
+# Entry {{mvar|j}} is now exactly full.
+# Assign entry {{mvar|i}} to the appropriate category based on the new value of {{mvar|U<sub>i</sub>}}.
+
+Each iteration moves at least one entry to the "exactly full" category (and the last moves two), so the procedure is guaranteed to terminate after at most {{math|''n''&thinsp;−1}} iterations.  Each iteration can be done in {{math|''O''(1)}} time, so the table can be set up in {{math|''O''(''n'')}} time.
+
+Vose<ref name=Vose/>{{Rp|974}} points out that floating-point rounding errors may cause the guarantee referred to in step 1 to be violated.  If one category empties before the other, the remaining entries may have {{mvar|U<sub>i</sub>}} set to 1 with negligible error. The solution accounting for floating point is sometimes called the '''Walker-Vose method''' or the '''Vose alias method'''.
+
+Because of the arbitrary choice in step 1, the alias structure is not unique.
+
+As the lookup procedure is slightly faster if {{math|''y'' &lt; ''U<sub>i</sub>''}} (because {{mvar|K<sub>i</sub>}} does not need to be consulted), one goal during table generation is to maximize the sum of the {{mvar|U<sub>i</sub>}}.  Doing this optimally turns out to be [[NP hard]],<ref name=marsaglia/>{{Rp|6}} but a [[greedy algorithm]] comes reasonably close: rob from the richest and give to the poorest.  That is, at each step choose the largest {{mvar|U<sub>i</sub>}} and the smallest {{mvar|U<sub>j</sub>}}.  Because this requires sorting the {{mvar|U<sub>i</sub>}}, it requires {{math|''O''(''n'' log ''n'')}} time.
+
+==Efficiency==
+Although the alias method is very efficient if generating a uniform deviate is itself fast, there are cases where it is far from optimal in terms of random bit usage.  This is because it uses a full-precision random variate {{mvar|x}} each time, even when only a few random bits are needed.
+
+One case arises when the probabilities are particularly well balanced, so many {{math|1=''U<sub>i</sub>'' = 1}}.  For these values of {{mvar|i}}, {{mvar|K<sub>i</sub>}} is not needed and generating {{mvar|y}} is a waste of time.  For example if {{math|1=''p''<sub>1</sub> = ''p''<sub>2</sub> = {{frac|1|2}}}}, then a 32-bit random variate {{mvar|x}} could be used to generate 32 outputs, but the alias method will only generate one.
+
+Another case arises when the probabilities are strongly unbalanced, so many {{math|''U<sub>i</sub>'' ≈ 0}}.  For example if {{math|1=''p''<sub>1</sub> = 0.999}} and {{math|1=''p''<sub>2</sub> = 0.001}}, then the great majority of the time, only a few random bits are required to determine that case 1 applies. 
+In such cases, the table method described by Marsaglia et al.{{r|marsaglia|p=1–4}} is more efficient.  If we make many choices with the same probability we can on average require much less than one unbiased random bit.  Using [[arithmetic coding]] techniques arithmetic we can approach the limit given by the [[binary entropy function]].
+
+==Literature==
+* [[Donald Knuth]], ''[[The Art of Computer Programming]]'', Vol 2: Seminumerical Algorithms, section 3.4.1.
+
+==Implementations==
+* http://www.keithschwarz.com/darts-dice-coins/ Keith Schwarz: Detailed explanation, numerically stable version of Vose's algorithm, and link to Java implementation
+* https://jugit.fz-juelich.de/mlz/ransampl Joachim Wuttke: Implementation as a small C library.
+* https://gist.github.com/0b5786e9bfc73e75eb8180b5400cd1f8 Liam Huang's Implementation in C++
+* https://github.com/joseftw/jos.weightedresult/blob/develop/src/JOS.WeightedResult/AliasMethodVose.cs C# implementation of Vose's algorithm.
+* https://github.com/cdanek/KaimiraWeightedList C# implementation of Vose's algorithm without floating point instability.
+
+==References==
+{{reflist}}
+
+[[Category:Pseudorandom number generators]]

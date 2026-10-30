@@ -1,0 +1,348 @@
+<!-- wikipedia: en
+     page: 51574459
+     title: Time Warp Edit Distance
+     revision: 1224223782
+     timestamp: 2024-05-17T00:46:08Z
+     history: https://en.wikipedia.org/w/index.php?curid=51574459&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1224223782 -->
+{{Technical|date=November 2016}}
+In the [[data analysis]] of [[time series]], '''Time Warp Edit Distance''' (TWED) is a [[similarity measure|measure of similarity]] (or dissimilarity) between pairs of discrete time series, controlling the relative distortion of the time units of the two series using the physical notion of [[elasticity (physics)|elasticity]]. In comparison to other distance measures, (e.g. DTW ([[dynamic time warping]]) or  LCS ([[longest common subsequence problem]])), TWED is a [[metric (mathematics)|metric]]. Its [[computational complexity|computational time complexity]] is <math>O(n^2)</math>, but can be drastically reduced in some specific situations by using a corridor to reduce the search space. Its [[memory]] [[space complexity]] can be reduced to <math>O(n)</math>. It was first proposed in 2009 by P.-F. Marteau.
+
+== Definition ==
+<math>
+  \delta_{\lambda,\nu}(A^p_1,B^q_1) = Min
+  \begin{cases}
+    \delta_{\lambda,\nu}(A^{p-1}_1,B^q_1) + \Gamma(a^{'}_p \to \Lambda) & \rm{delete \ in \ A} \\
+    \delta_{\lambda,\nu}(A^{p-1}_1,B^{q-1}_1) + \Gamma(a^{'}_p \to b^{'}_q) & \rm{match \ or \ substitution}\\
+    \delta_{\lambda,\nu}(A^{p}_1,B^{q-1}_1) + \Gamma(\Lambda \to b^{'}_q) & \rm{delete \ in \ B}
+  \end{cases}
+</math><br />whereas
+
+<math>
+  \Gamma(\alpha^{'}_p \to \Lambda) = d_{LP}(a^{'}_{p}, a^{'}_{p-1}) + \nu \cdot (t_{a_p} - t_{a_{p-1}}) + \lambda
+</math><br />
+<math>
+  \Gamma(\alpha^{'}_p \to b^{'}_q) = d_{LP}(a^{'}_p, b^{'}_q) + d_{LP}(a^{'}_{p-1}, b^{'}_{q-1}) + \nu \cdot (|t_{a_p} - t_{b_q}| + |t_{a_{p-1}} - t_{b_{q-1}}|)
+</math><br />
+<math>
+  \Gamma(\Lambda \to b^{'}_q) = d_{LP}(b^{'}_{p}, b^{'}_{p-1}) + \nu \cdot (t_{b_q} - t_{b_{q-1}}) + \lambda
+</math>
+
+Whereas the [[recursion]]
+<math>
+  \delta_{\lambda,\nu}
+</math>
+is initialized as:<br />
+<math>
+  \delta_{\lambda,\nu}(A^0_1,B^0_1) = 0,
+</math><br />
+<math>
+  \delta_{\lambda,\nu}(A^0_1,B^j_1) = \infty\ \rm{for\ }j \ge 1
+</math><br />
+<math>
+  \delta_{\lambda,\nu}(A^i_1,B^0_1) = \infty\ \rm{for\ }i \ge 1
+</math><br />
+with
+<math>
+  a'_0 = b'_0 = 0
+</math>
+
+=== Implementations ===
+An implementation of the TWED [[algorithm]] in [[C (programming language)|C]] with a [[Python (programming language)|Python]] [[wrapper function|wrapper]] is available at <ref>{{cite web
+| last = Marcus-Voß and Jeremie Zumer
+| first = pytwed
+| title = Github repository
+| website = [[GitHub]]
+| url = https://github.com/jzumer/pytwed
+| accessdate = 2020-09-11
+}}</ref>
+
+TWED is also implemented into the Time Series Subsequence Search Python package (TSSEARCH for short) available at [https://github.com/fraunhoferportugal/tssearch/blob/main/docs/index.rst].
+
+An [[R (programming language)|R]] implementation of TWED has been integrated into the TraMineR, a [[R package]] for [[Data mining|mining]], describing and visualizing sequences of states or events, and more generally discrete sequence [[data]].<ref>{{cite web
+| last = TraMineR
+| title = Website on the servers of the Geneva University, CH
+| url = http://traminer.unige.ch/
+| accessdate = 2016-09-11
+}}</ref>
+
+Additionally, [https://github.com/garrettwrong/cuTWED cuTWED] is a [[CUDA]]- accelerated implementation of TWED which uses an improved algorithm due to G. Wright (2020). This method is linear in memory and massively parallelized.  cuTWED is written in CUDA C/[[C++]], comes with Python bindings, and also includes Python bindings for Marteau's reference C implementation.
+
+==== Python ====
+<syntaxhighlight lang="numpy">
+import numpy as np
+
+
+def dlp(A, B, p=2):
+    cost = np.sum(np.power(np.abs(A - B), p))
+    return np.power(cost, 1 / p)
+
+
+def twed(A, timeSA, B, timeSB, nu, _lambda):
+    """Compute Time Warp Edit Distance (TWED) for given time series A and B."""
+    # [distance, DP] = TWED(A, timeSA, B, timeSB, lambda, nu)
+    # 
+    # A      := Time series A (e.g. [ 10 2 30 4])
+    # timeSA := Time stamp of time series A (e.g. 1:4)
+    # B      := Time series B
+    # timeSB := Time stamp of time series B
+    # lambda := Penalty for deletion operation
+    # nu     := Elasticity parameter - nu >=0 needed for distance measure
+    # Reference :
+    #    Marteau, P.; F. (2009). "Time Warp Edit Distance with Stiffness Adjustment for Time Series Matching".
+    #    IEEE Transactions on Pattern Analysis and Machine Intelligence. 31 (2): 306–318. arXiv:cs/0703033
+    #    http://people.irisa.fr/Pierre-Francois.Marteau/
+
+    # Check if input arguments
+    if len(A) != len(timeSA):
+        print("The length of A is not equal length of timeSA")
+        return None, None
+
+    if len(B) != len(timeSB):
+        print("The length of B is not equal length of timeSB")
+        return None, None
+
+    if nu < 0:
+        print("nu is negative")
+        return None, None
+
+    # Add padding
+    A = np.array([0] + list(A))
+    timeSA = np.array([0] + list(timeSA))
+    B = np.array([0] + list(B))
+    timeSB = np.array([0] + list(timeSB))
+
+    n = len(A)
+    m = len(B)
+    # Dynamical programming
+    DP = np.zeros((n, m))
+
+    # Initialize DP matrix and set first row and column to infinity
+    DP[0, :] = np.inf
+    DP[:, 0] = np.inf
+    DP[0, 0] = 0
+
+    # Compute minimal cost
+    for i in range(1, n):
+        for j in range(1, m):
+            # Calculate and save cost of various operations
+            C = np.ones((3, 1)) * np.inf
+            # Deletion in A
+            C[0] = (
+                DP[i - 1, j]
+                + dlp(A[i - 1], A[i])
+                + nu * (timeSA[i] - timeSA[i - 1])
+                + _lambda
+            )
+            # Deletion in B
+            C[1] = (
+                DP[i, j - 1]
+                + dlp(B[j - 1], B[j])
+                + nu * (timeSB[j] - timeSB[j - 1])
+                + _lambda
+            )
+            # Keep data points in both time series
+            C[2] = (
+                DP[i - 1, j - 1]
+                + dlp(A[i], B[j])
+                + dlp(A[i - 1], B[j - 1])
+                + nu * (abs(timeSA[i] - timeSB[j]) + abs(timeSA[i - 1] - timeSB[j - 1]))
+            )
+            # Choose the operation with the minimal cost and update DP matrix
+            DP[i, j] = np.min(C)
+    distance = DP[n - 1, m - 1]
+    return distance, DP
+</syntaxhighlight>
+
+Backtracking, to find the most [[cost efficiency|cost-efficient]] path:
+
+<syntaxhighlight lang="numpy">
+def backtracking(DP):
+    """Compute the most cost-efficient path."""
+    # [ best_path ] = BACKTRACKING (DP)
+    # DP := DP matrix of the TWED function
+
+    x = np.shape(DP)
+    i = x[0] - 1
+    j = x[1] - 1
+
+    # The indices of the paths are save in opposite direction
+    # path = np.ones((i + j, 2 )) * np.inf;
+    best_path = []
+
+    steps = 0
+    while i != 0 or j != 0:
+        best_path.append((i - 1, j - 1))
+
+        C = np.ones((3, 1)) * np.inf
+
+        # Keep data points in both time series
+        C[0] = DP[i - 1, j - 1]
+        # Deletion in A
+        C[1] = DP[i - 1, j]
+        # Deletion in B
+        C[2] = DP[i, j - 1]
+
+        # Find the index for the lowest cost
+        idx = np.argmin(C)
+
+        if idx == 0:
+            # Keep data points in both time series
+            i = i - 1
+            j = j - 1
+        elif idx == 1:
+            # Deletion in A
+            i = i - 1
+            j = j
+        else:
+            # Deletion in B
+            i = i
+            j = j - 1
+        steps = steps + 1
+
+    best_path.append((i - 1, j - 1))
+
+    best_path.reverse()
+    return best_path[1:]
+</syntaxhighlight>
+
+==== MATLAB ====
+<syntaxhighlight lang="matlab">
+function [distance, DP] = twed(A, timeSA, B, timeSB, lambda, nu)
+    % [distance, DP] = TWED( A, timeSA, B, timeSB, lambda, nu )
+    % Compute Time Warp Edit Distance (TWED) for given time series A and B
+    %
+    % A      := Time series A (e.g. [ 10 2 30 4])
+    % timeSA := Time stamp of time series A (e.g. 1:4)
+    % B      := Time series B
+    % timeSB := Time stamp of time series B
+    % lambda := Penalty for deletion operation
+    % nu     := Elasticity parameter - nu >=0 needed for distance measure
+    %
+    % Code by: P.-F. Marteau - http://people.irisa.fr/Pierre-Francois.Marteau/
+ 
+    % Check if input arguments
+    if length(A) ~= length(timeSA)
+        warning('The length of A is not equal length of timeSA')
+        return
+    end
+ 
+    if length(B) ~= length(timeSB)
+        warning('The length of B is not equal length of timeSB')
+        return
+    end
+ 
+    if nu < 0
+        warning('nu is negative')
+        return
+    end
+    % Add padding
+    A = [0 A];
+    timeSA = [0 timeSA];
+    B = [0 B];
+    timeSB = [0 timeSB];
+ 
+    % Dynamical programming
+    DP = zeros(length(A), length(B));
+ 
+    % Initialize DP Matrix and set first row and column to infinity
+    DP(1, :) = inf;
+    DP(:, 1) = inf;
+    DP(1, 1) = 0;
+ 
+    n = length(timeSA);
+    m = length(timeSB);
+    % Compute minimal cost
+    for i = 2:n
+        for j = 2:m
+            cost = Dlp(A(i), B(j));
+         
+            % Calculate and save cost of various operations
+            C = ones(3, 1) * inf;
+         
+            % Deletion in A
+            C(1) = DP(i - 1, j) + Dlp(A(i - 1), A(i)) + nu * (timeSA(i) - timeSA(i - 1)) + lambda;
+            % Deletion in B
+            C(2) = DP(i, j - 1) + Dlp(B(j - 1), B(j)) + nu * (timeSB(j) - timeSB(j - 1)) + lambda;
+            % Keep data points in both time series
+            C(3) = DP(i - 1, j - 1) + Dlp(A(i), B(j)) + Dlp(A(i - 1), B(j - 1)) + ...
+            nu * (abs(timeSA(i) - timeSB(j)) + abs(timeSA(i - 1) - timeSB(j - 1)));
+         
+            % Choose the operation with the minimal cost and update DP Matrix
+            DP(i, j) = min(C);
+        end
+    end
+ 
+    distance = DP(n, m);
+ 
+    % Function to calculate euclidean distance
+    function [cost] = Dlp(A, B)
+        cost = sqrt(sum((A - B) .^ 2, 2));
+    end
+ 
+end
+</syntaxhighlight>
+
+Backtracking, to find the most cost-efficient path:
+
+<syntaxhighlight lang="matlab">
+function [path] = backtracking(DP)
+    % [ path ] = BACKTRACKING ( DP )
+    % Compute the most cost-efficient path
+    % DP := DP matrix of the TWED function
+ 
+    x = size(DP);
+    i = x(1);
+    j = x(2);
+ 
+    % The indices of the paths are save in opposite direction
+    path = ones(i + j, 2) * Inf;
+ 
+    steps = 1;
+    while (i ~= 1 || j ~= 1)
+        path(steps, :) = [i; j];
+     
+        C = ones(3, 1) * inf;
+     
+        % Keep data points in both time series
+        C(1) = DP(i - 1, j - 1);
+        % Deletion in A
+        C(2) = DP(i - 1, j);
+        % Deletion in B
+        C(3) = DP(i, j - 1);
+     
+        % Find the index for the lowest cost
+        [~, idx] = min(C);
+     
+        switch idx
+            case 1
+                % Keep data points in both time series
+                i = i - 1;
+                j = j - 1;
+            case 2
+                % Deletion in A
+                i = i - 1;
+                j = j;
+            case 3
+                % Deletion in B
+                i = i;
+                j = j - 1;
+        end
+        steps = steps + 1;
+    end
+    path(steps, :) = [i j];
+ 
+    % Path was calculated in reversed direction.
+    path = path(1:steps, :);
+    path = path(end: - 1:1, :);
+ 
+end
+</syntaxhighlight>
+
+==References==
+{{Reflist}}
+*{{cite journal |last1=Marteau |first1=P. |last2=F. |year=2009 |title=Time Warp Edit Distance with Stiffness Adjustment for Time Series Matching |journal=IEEE Transactions on Pattern Analysis and Machine Intelligence |volume=31 |issue=2 |pages=306–318 |doi=10.1109/TPAMI.2008.76 |pmid=19110495 |arxiv=cs/0703033|s2cid=10049446 }}
+
+[[Category:Time series]]
+[[Category: Algorithms]]

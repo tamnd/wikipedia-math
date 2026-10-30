@@ -1,0 +1,481 @@
+<!-- wikipedia: en
+     page: 35683165
+     title: Matrix completion
+     revision: 1374104780
+     timestamp: 2026-09-09T21:44:42Z
+     history: https://en.wikipedia.org/w/index.php?curid=35683165&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374104780 -->
+{{Short description|Filling in missing entries of a matrix}}
+[[File:Rank-1-matrix-completion.png|thumbnail|Matrix completion of a partially revealed 5 by 5 matrix with rank-1. Left: observed incomplete matrix; Right: matrix completion result.|440x440px]]
+'''Matrix completion''' is the task of filling in the missing entries of a partially observed matrix, which is equivalent to performing data [[imputation (statistics)|imputation]] in statistics. A wide range of datasets are naturally organized in matrix form. One example is the movie-ratings matrix, as appears in the [[Netflix Prize|Netflix problem]]: Given a ratings matrix in which each entry <math>(i,j)</math> represents the rating of movie <math>j</math> by customer <math>i</math>, if customer <math>i</math> has watched movie <math>j</math> and is otherwise missing, we would like to predict the remaining entries in order to make good recommendations to customers on what to watch next. Another example is the [[document-term matrix]]: The frequencies of words used in a collection of documents can be represented as a matrix, where each entry corresponds to the number of times the associated term appears in the indicated document.
+
+Without any restrictions on the number of [[degrees of freedom]] in the completed matrix, this problem is [[Underdetermined system|underdetermined]] since the hidden entries could be assigned arbitrary values. Thus, we require some assumption on the matrix to create a [[well-posed problem]], such as assuming it has maximal determinant, is positive definite, or is low-rank.<ref name="johnson"/><ref name="laurent"/>
+
+For example, one may assume the matrix has low-rank structure, and then seek to find the lowest [[Rank (linear algebra)|rank]] matrix or, if the rank of the completed matrix is known, a matrix of [[Rank (linear algebra)|rank]] <math>r</math> that matches the known entries. The illustration shows that a partially revealed rank-1 matrix (on the left) can be completed with zero-error (on the right) since all the rows with missing entries should be the same as the third row. In the case of the Netflix problem the ratings matrix is expected to be low-rank since user preferences can often be described by a few factors, such as the movie genre and time of release. Other applications include [[computer vision]], where missing pixels in images need to be reconstructed, detecting the global positioning of sensors in a network from partial distance information, and [[Multiclass classification|multiclass learning]]. The matrix completion problem is in general [[NP-hard]], but under additional assumptions there are efficient algorithms that achieve exact reconstruction [[with high probability]].
+
+In statistical learning point of view, the matrix completion problem is an application of [[matrix regularization]] which is a generalization of vector [[regularization (mathematics)|regularization]]. For example, in the low-rank matrix completion problem one may apply the regularization penalty taking the form of a nuclear norm <math>R(X) = \lambda\|X\|_*</math>
+
+== Low rank matrix completion ==
+One of the variants of the matrix completion problem is to find the lowest [[Rank (linear algebra)|rank]] matrix <math>X</math> which matches the matrix <math>M</math>, which we wish to recover, for all entries in the set <math>E</math> of observed entries. The mathematical formulation of this problem is as follows:
+:<math>\begin{align}
+& \underset{X}{\text{min}} & \text{rank} (X) \\
+& \text{subject to} & X_{ij} = M_{ij} & \;\; \forall i,j \in E\\
+\end{align}</math>
+
+Candès and Recht<ref name="candesrecht" /> proved that with assumptions on the sampling of the observed entries and sufficiently many sampled entries this problem has a unique solution with high probability.
+
+An equivalent formulation, given that the matrix <math>M</math> to be recovered is known to be of [[Rank (linear algebra)|rank]] <math>r</math>, is to solve for <math>X</math> where <math>X_{ij} = M_{ij} \;\; \forall i,j \in E</math>
+
+=== Assumptions ===
+A number of assumptions on the sampling of the observed entries and the number of sampled entries are frequently made to simplify the analysis and to ensure the problem is not [[underdetermined system|underdetermined]].
+
+==== Uniform sampling of observed entries ====
+To make the analysis tractable, it is often assumed that the set <math>E</math> of observed entries and fixed [[cardinality]] is sampled uniformly at random from the collection of all subsets of entries of cardinality <math>|E|</math>.  To further simplify the analysis, it is instead assumed that <math>E</math> is constructed by [[Bernoulli sampling]], i.e. that each entry is observed with probability <math> p </math>.  If <math>p</math> is set to <math>\frac{N}{mn}</math> where <math>N</math> is the desired expected [[cardinality]] of <math>E</math>, and <math>m,\;n</math> are the dimensions of the matrix (let <math>m < n</math> [[without loss of generality]]), <math>|E|</math> is within <math>O(n \log n)</math> of <math>N</math> with high probability, thus [[Bernoulli sampling]] is a good approximation for uniform sampling.<ref name="candesrecht" />  Another simplification is to assume that entries are sampled independently and with replacement.<ref name="recht" />
+
+==== Lower bound on number of observed entries ====
+Suppose the <math>m</math> by <math>n</math> matrix <math>M</math> (with <math>m < n</math>) we are trying to recover has [[rank (linear algebra)|rank]] <math>r</math>.  There is an information theoretic lower bound on how many entries must be observed before <math>M</math> can be uniquely reconstructed.  The set of  <math>m</math> by <math>n</math> matrices with rank less than or equal to  <math>r</math> is an [[algebraic variety]] in <math>{\mathbb C}^{m\times n}</math>with dimension  <math>(n+m)r - r^2</math>.
+Using this result,
+one can show that at least
+<math>4nr - 4r^2</math>
+entries must be observed for matrix completion in
+<math> {\mathbb C}^{n \times n} </math>
+to have a unique solution 
+when
+<math> r \leq n/2 </math>
+.<ref name = "xu"/>
+
+Secondly, there must be at least one observed entry per row and column of <math>M</math>.  The [[singular value decomposition]] of <math>M</math> is given by <math>U\Sigma V^\dagger</math>.  If column <math>i</math> is unobserved, it is easy to see the <math>i^{\text{th}}</math> right singular vector of <math>M</math>, <math>v_i</math>, can be changed to some arbitrary value and still yield a matrix matching <math>M</math> over the set of observed entries.  Similarly, if row <math>j</math> is unobserved, the <math>j^{\text{th}}</math> left singular vector of <math>M</math>, <math>u_i</math> can be arbitrary.  If we assume Bernoulli sampling of the set of observed entries, the [[Coupon collector's problem|Coupon collector effect]] implies that entries on the order of <math>O(n\log n)</math> must be observed to ensure that there is an observation from each row and column with high probability.<ref name="candestao" />
+
+Combining the necessary conditions and assuming that <math>r \ll m, n</math> (a valid assumption for many practical applications), the lower bound on the number of observed entries required to prevent the problem of matrix completion from being underdetermined is on the order of <math>nr\log n </math>.
+
+==== Incoherence ====
+The concept of incoherence arose in [[compressed sensing]].  It is introduced in the context of matrix completion to ensure the singular vectors of <math>M</math> are not too "sparse" in the sense that all coordinates of each singular vector are of comparable magnitude instead of just a few coordinates having significantly larger magnitudes.<ref name="tao" /><ref name="nguyenkimshim" />  The [[standard basis]] vectors are then undesirable as singular vectors, and the vector <math> \frac{1}{\sqrt{n}} \begin{bmatrix} 1 \\ 1 \\ \vdots \\ 1 \end{bmatrix} </math> in <math>\mathbb{R}^n</math> is desirable.  As an example of what could go wrong if the singular vectors are sufficiently "sparse", consider the <math>m</math> by <math>n</math> matrix <math>\begin{bmatrix} 1 & 0 & \cdots & 0 \\ \vdots & & \vdots \\ 0 & 0 & 0 & 0 \end{bmatrix}</math> with [[singular value decomposition]] <math>I_m \begin{bmatrix} 1 & 0 & \cdots & 0 \\ \vdots & & \vdots \\ 0 & 0 & 0 & 0 \end{bmatrix} I_n</math>.  Almost all the entries of <math>M</math> must be sampled before it can be reconstructed.
+
+Candès and Recht<ref name="candesrecht" /> define the coherence of a matrix <math>U</math> with [[column space]] an <math>r-</math>dimensional subspace of <math>\mathbb{R}^n</math> as <math>\mu (U) = \frac{n}{r} \max_{i < n} \|P_U e_i\|^2 </math>, where <math>P_U</math> is the orthogonal [[Projection (mathematics)|projection]] onto <math> U </math>.  Incoherence then asserts that given the [[singular value decomposition]] <math>U\Sigma V^\dagger</math> of the <math>m</math> by <math>n</math> matrix <math>M</math>,
+
+# <math>\mu (U), \; \mu (V) \leq \mu_0 </math>
+# The entries of <math> \sum_k u_k v_k ^\dagger </math> have magnitudes upper bounded by <math> \mu_1 \sqrt{\frac{r}{mn}} </math>
+
+for some <math>\mu_0, \; \mu_1</math>.
+
+== Low rank matrix completion with noise ==
+In real world application, one often observe only a few entries corrupted at least by a small amount of noise. For example, in the Netflix problem, the ratings are uncertain. Candès and Plan<ref name="candesplan"/> showed that it is possible to fill in the many missing entries of large low-rank matrices from just a few noisy samples by nuclear norm minimization. The noisy model assumes that we observe
+
+: <math> Y_{ij} = M_{ij} + Z_{ij}, (i,j) \in \Omega, </math>
+
+where <math>{Z_{ij}:(i,j) \in \Omega}</math> is a noise term. Note that the noise can be either stochastic or deterministic. Alternatively the model can be expressed as
+
+: <math> P_\Omega(Y) = P_\Omega(M) + P_\Omega(Z), </math>
+
+where <math>Z</math> is an <math>n \times n</math> matrix with entries <math>Z_{ij}</math> for <math>(i,j) \in \Omega</math> assuming that <math>\|P_\Omega(Z)\|_F\leq\delta </math> for some <math>\delta > 0 </math> .To recover the incomplete matrix, we try to solve the following [[optimization problem]]:
+
+: <math>
+\begin{align}
+& \underset{X}{\text{min}} & \|X\|_* \\
+& \text{subject to} & \|P_\Omega(X-Y)\|_F \leq \delta\\
+\end{align}
+</math>
+
+Among all matrices consistent with the data, find the one with minimum nuclear norm. Candès and Plan<ref name="candesplan"/> have shown that this reconstruction is accurate. They have proved that when perfect noiseless recovery occurs, then matrix completion is stable vis a vis perturbations. The error is proportional to the noise level <math>\delta</math>. Therefore, when the noise level is small, the error is small. Here the matrix completion problem does not obey the [[restricted isometry property]] (RIP). For matrices, the RIP would assume that the sampling operator obeys
+
+: <math>
+(1-\delta)\|X\|^2_F \leq \frac{1}{p}\|P_\Omega(X)\|^2_F \leq (1+\delta)\|X\|^2_F
+</math>
+
+for all matrices <math>X</math> with sufficiently small rank and <math>\delta<1</math> sufficiently small.
+The methods are also applicable to sparse signal recovery problems in which the RIP does not hold.
+
+== High-rank matrix completion ==
+The high-rank matrix completion in general is [[NP-hard]]{{Citation needed|date=November 2025|reason=Membership in NP-hard is not a trivial assumption}}. However, with certain assumptions, some incomplete high rank matrix or even full rank matrix can be completed.
+
+Eriksson, Balzano and Nowak<ref name="erikssonbalzano"/> have considered the problem of completing a matrix with the assumption that the columns of the matrix belong to a union of multiple low-rank subspaces. Since the columns belong to a union of subspaces, the problem may be viewed as a missing-data version of the [[Clustering high-dimensional data|subspace clustering]] problem. Let <math>X</math> be an <math>n \times N</math> matrix whose (complete) columns lie in a union of at most <math>k</math> subspaces, each of <math>\operatorname{rank} \leq r < n</math>, and assume <math>N \gg kn</math>. Eriksson, Balzano and Nowak<ref name="erikssonbalzano" /> showed that under mild assumptions each column of <math>X</math> can be perfectly recovered with high probability from an incomplete version so long as at least <math>CrN\log^2(n)</math> entries of <math>X</math> are observed uniformly at random, with <math>C>1</math> a constant depending on the usual incoherence conditions, the geometrical arrangement of subspaces, and the distribution of columns over the subspaces.
+
+The algorithm involves several steps: (1) local neighborhoods; (2) local subspaces; (3) subspace refinement; (4) full matrix completion. This method can be applied to Internet distance matrix completion and topology identification.
+
+== Algorithms for low-rank matrix completion ==
+Various matrix completion algorithms have been proposed.<ref name="nguyenkimshim" /> These include convex relaxation-based algorithm,<ref name="candesrecht" /> gradient-based algorithm,<ref name="keshavan" /> alternating minimization-based algorithm,<ref name="jainnetrapalli" /> Gauss-Newton algorithm,<ref name="Zilber2022">{{cite journal |author1=Zilber, Pini |author2=Nadler, Boaz |title=GNMR: A provable one-line algorithm for low rank matrix recovery |journal=SIAM Journal on Mathematics of Data Science |year=2022 |volume=4 |issue=2 |pages=909–934 |doi=10.1137/21M1433812|pmid=39896132 |pmc=11784930 }}</ref> and discrete-aware based algorithm.<ref name="Fuhrling2023">{{cite journal |author1=Führling, Niclas |author2=Ando, Kengo |author3=Abreu, Giuseppe Thadeu Freitas de |author4=González G., David |author5=Gonsa, Osvaldo |title=Discrete Aware Matrix Completion via Convexized \ell_0-Norm Approximation |journal=IEEE Transactions on Signal Processing |year=2023 |volume=XX |issue=X |pages=XXX-XXX |doi=10.1109/TSP.2023.XXXXXXX|doi-broken-date=1 July 2025 }}</ref>
+
+=== Convex relaxation ===
+The rank minimization problem is [[NP-hard]].  One approach, proposed by Candès and Recht, is to form a [[Convex function|convex]] relaxation of the problem and minimize the nuclear [[norm (mathematics)|norm]] <math>\|M\|_*</math> (which gives the sum of the [[singular value]]s of <math>M</math>) instead of <math>\text{rank}(M)</math> (which counts the number of non zero [[singular value]]s of <math>M</math>).<ref name="candesrecht" /> This is analogous to minimizing the L1-[[norm (mathematics)|norm]] rather than the L0-[[norm (mathematics)|norm]] for vectors.  The [[Convex function|convex]] relaxation can be solved using [[semidefinite programming]] (SDP) by noticing that the optimization problem is equivalent to
+
+: <math>\begin{align}
+& \min\limits_{W_1, W_2} & & \operatorname{trace} (W_1) + \operatorname{trace} (W_2) \\
+& \text{subject to} & & X_{ij} = M_{ij}  \;\; \forall i,j \in E\\
+& & &  \begin{bmatrix} W_1 & X \\ X^T & W_2 \end{bmatrix} \succeq 0 
+\end{align}</math>
+
+The complexity of using [[semidefinite programming|SDP]] to solve the convex relaxation is <math>O(\text{max}(m,n)^4)</math>.  State of the art solvers like SDPT3 can only handle matrices of size up to 100 by 100.<ref name = "caicandesshen"/>  An alternative first order method that approximately solves the convex relaxation is the Singular Value Thresholding Algorithm introduced by Cai, Candès and Shen.<ref name = "caicandesshen"/>
+
+Candès and Recht show, using the study of random variables on [[Banach space]]s, that if the number of observed entries is on the order of <math>\max{\{\mu_1^2, \sqrt{\mu_0}\mu_1, \mu_0 n^{0.25}\}}nr \log n </math> (assume without loss of generality <math>m < n</math>), the rank minimization problem has a unique solution which also happens to be the solution of its convex relaxation with probability <math>1-\frac{c}{n^3}</math> for some constant <math>c</math>.  If the rank of <math>M</math> is small (<math> r \leq \frac{n^{0.2}}{\mu_0}</math>), the size of the set of observations reduces to the order of <math>\mu_0 n^{1.2} r \log n</math>.  These results are near optimal, since the minimum number of entries that must be observed for the matrix completion problem to not be underdetermined is on the order of <math>nr \log n</math>.
+
+This result has been improved by Candès and Tao.<ref name="candestao" />  They achieve bounds that differ from the optimal bounds only by [[Polylogarithmic function|polylogarithm]]ic factors by strengthening the assumptions.  Instead of the incoherence property, they assume the strong incoherence property with parameter <math>\mu_3</math>.  This property states that:
+
+# <math>| \langle e_a, P_U e_{a'} \rangle - \frac{r}{m} 1_{a = a'} | \leq \mu_3 \frac{\sqrt{r}}{m}  </math> for <math>a, a' \leq m</math> and <math>| \langle e_b, P_U e_{b'} \rangle - \frac{r}{n} 1_{b = b'} | \leq \mu_3 \frac{\sqrt{r}}{n}  </math> for <math>b, b' \leq n </math>
+# The entries of <math>\sum_i u_i v_i^\dagger </math> are bounded in magnitude by <math>\mu_3 \sqrt{\frac{r}{mn}}</math>
+
+Intuitively, strong incoherence of a matrix <math>U</math> asserts that the orthogonal projections of standard basis vectors to <math>U</math> has magnitudes that have high likelihood if the singular vectors were distributed randomly.<ref name="tao" />
+
+Candès and Tao find that when <math>r</math> is <math>O(1)</math> and the number of observed entries is on the order of <math>\mu_3^4 n(\log n)^2</math>, the rank minimization problem has a unique solution which also happens to be the solution of its convex relaxation with probability <math>1-\frac{c}{n^3}</math> for some constant <math>c</math>.  For arbitrary <math>r</math>, the number of observed entries sufficient for this assertion hold true is on the order of <math>\mu_3^2 nr (\log n)^6</math>
+
+Another convex relaxation approach<ref name="bertsimas2021mixed" /> is to minimize the Frobenius squared norm under a rank constraint. This is equivalent to solving
+
+: <math>
+\begin{align}
+& \min\limits_{X} & & \Vert X \Vert_F^2 \\
+& \text{subject to} & & X_{ij} = M_{ij}  \;\; \forall i,j \in E\\
+& & &  \operatorname{Rank}(X) \leq k.
+\end{align}
+</math>
+
+By introducing an orthogonal projection matrix <math>Y</math> (meaning <math>Y^2=Y, Y=Y'</math>) to model the rank of <math>X</math> via <math>X=YX, \text{trace}(Y)\leq k</math> and taking this problem's convex relaxation, we obtain the following semidefinite program
+
+: <math>
+\begin{align}
+& \min\limits_{X, Y, \theta} & & \text{trace}(\theta) \\
+& \text{subject to} & & X_{ij} = M_{ij}  \;\; \forall i,j \in E\\
+& & & \operatorname{trace}(Y) \leq k, 0 \preceq Y \preceq I\\
+& & &  \begin{pmatrix} Y & X \\ X^\top & \theta \end{pmatrix}\succeq 0.
+\end{align}
+</math>
+
+If ''Y'' is a projection matrix (i.e., has binary eigenvalues) in this relaxation, then the relaxation is tight. Otherwise, it gives a valid lower bound on the overall objective. Moreover, it can be converted into a feasible solution with a (slightly) larger objective by rounding the eigenvalues of ''Y'' greedily.<ref name="bertsimas2021mixed" /> Remarkably, this convex relaxation can be solved by alternating minimization on ''X'' and ''Y'' without solving any SDPs, and thus it scales beyond the typical numerical limits of state-of-the-art SDP solvers like SDPT3 or Mosek.
+
+This approach is a special case of a more general reformulation technique, which can be applied to obtain a valid lower bound on any low-rank problem with a trace-matrix-convex objective.<ref name="bertsimas2021perspective" />
+
+=== Gradient descent ===
+Keshavan, Montanari and Oh<ref name="keshavan" /> consider a variant of matrix completion where the [[rank (linear algebra)|rank]] of the <math>m</math> by <math>n</math> matrix <math>M</math>, which is to be recovered, is known to be <math>r</math>.  They assume [[Bernoulli sampling]] of entries, constant aspect ratio <math>\frac{m}{n}</math>, bounded magnitude of entries of <math>M</math> (let the upper bound be <math>M_{\text{max}}</math>), and constant [[condition number]] <math>\frac{\sigma_1}{\sigma_r}</math> (where <math>\sigma_1</math> and <math>\sigma_r</math> are the largest and smallest [[singular value]]s of <math>M</math> respectively).  Further, they assume the two incoherence conditions are satisfied with <math>\mu_0</math> and <math>\mu_1 \frac{\sigma_1}{\sigma_r}</math> where <math>\mu_0</math> and <math>\mu_1</math> are constants.  Let <math>M^E</math> be a matrix that matches <math>M</math> on the set <math>E</math> of observed entries and is 0 elsewhere. They then propose the following algorithm:
+# '''Trim''' <math>M^E</math> by removing all observations from columns with degree larger than <math>\frac{2|E|}{n}</math> by setting the entries in the columns to 0.  Similarly remove all observations from rows with degree larger than <math>\frac{2|E|}{n}</math>.
+# '''Project''' <math>M^E</math> onto its first <math>r</math> [[principal component analysis|principal components]].  Call the resulting matrix <math>\text{Tr}(M^E)</math>.
+# '''Solve''' <math> \min_{X,Y} \min_{S \in \mathbb{R}^{r \times r}} \frac{1}{2} \sum_{i,j \in E} (M_{ij} - (XSY^\dagger)_{ij})^2 + \rho G(X,Y)</math> where <math>G(X,Y)</math> is some [[regularization (mathematics)|regularization]] function by [[gradient descent]] with [[line search]].  Initialize <math>X,\;Y</math> at <math>X_0,\;Y_0</math> where <math>\text{Tr}(M_E) = X_0 S_0 Y_0^\dagger</math>.  Set <math>G(X,Y)</math> as some function forcing <math>X, \; Y</math> to remain incoherent throughout gradient descent if <math>X_0</math> and <math>Y_0</math> are incoherent.  
+# '''Return''' the matrix <math>XSY^\dagger</math>.
+
+Steps 1 and 2 of the algorithm yield a matrix <math>\text{Tr}(M^E)</math> very close to the true matrix <math>M</math> (as measured by the [[Root mean square deviation|root mean square error (RMSE)]]) with high probability.  In particular, with probability <math>1-\frac{1}{n^3}</math>, <math>\frac{1}{mnM_{\text{max}}^2} \| M - \text{Tr}(M^E) \|_F^2 \leq C \frac{r}{m|E|} \sqrt{\frac{m}{n}} </math> for some constant <math>C</math>.  <math>\| \cdot \|_F</math> denotes the Frobenius [[Matrix norm|norm]].  Note that the full suite of assumptions is not needed for this result to hold.  The incoherence condition, for example, only comes into play in exact reconstruction.  Finally, although trimming may seem counter intuitive as it involves throwing out information, it ensures projecting <math>M^E</math> onto its first <math>r</math> [[principal component analysis|principal components]] gives more information about the underlying matrix <math>M</math> than about the observed entries.
+
+In Step 3, the space of candidate matrices <math>X,\;Y</math> can be reduced by noticing that the inner minimization problem has the same solution for <math>(X,Y)</math> as for <math>(XQ,YR)</math> where <math>Q</math> and <math>R</math> are [[orthonormality|orthonormal]] <math>r</math> by <math>r</math> matrices.  Then [[gradient descent]] can be performed over the [[cross product]] of two [[Grassmannian|Grassmann manifolds]].  If <math>r \ll m,\;n</math> and the observed entry set is in the order of <math>nr\log n</math>, the matrix returned by Step 3 is exactly <math>M</math>.  Then the algorithm is order optimal, since we know that for the matrix completion problem to not be [[underdetermined system|underdetermined]] the number of entries must be in the order of <math>nr\log n</math>.
+
+=== Alternating least squares minimization ===
+Alternating minimization represents a widely applicable and empirically successful approach for finding low-rank matrices that best fit the given data. For example, for the problem of low-rank matrix completion, this method is believed to be one of the most accurate and efficient, and formed a major component of the winning entry in the Netflix problem. In the alternating minimization approach, the low-rank target matrix is written in a [[bilinear form]]:
+
+<math>X= UV^T</math>;
+
+the algorithm then alternates between finding the best <math>U</math> and the best <math>V</math>. While the overall problem is non-convex, each sub-problem is typically convex and can be solved efficiently. Jain, Netrapalli and Sanghavi<ref name="jainnetrapalli" /> have given one of the first guarantees for performance of alternating minimization for both matrix completion and matrix sensing.
+
+The alternating minimization algorithm can be viewed as an approximate way to solve the following non-convex problem:
+
+<math>
+\begin{align}
+& \underset{U, V \in \mathbb{R}^{n\times k}}{\text{min}} & \|P_\Omega(UV^T)-P_\Omega(M)\|^2_F \\
+\end{align}
+</math>
+
+The AltMinComplete Algorithm proposed by Jain, Netrapalli and Sanghavi is listed here:<ref name="jainnetrapalli" />
+# '''Input''': observed set <math>\Omega</math>, values <math>P_\Omega(M)</math>
+# '''Partition''' <math>\Omega</math> into <math>2T+1</math> subsets <math>\Omega_0,\cdots,\Omega_{2T}</math> with each element of <math>\Omega</math> belonging to one of the <math>\Omega_t</math> with equal probability (sampling with replacement)
+# <math>\hat{U}^0 = SVD(\frac{1}{p}P_{\Omega_0}(M), k)</math> i.e., top-<math>k</math> left singular vectors of <math>\frac{1}{p}P_{\Omega_0}(M)</math>
+# '''Clipping''': Set all elements of <math>\hat{U}^0</math> that have magnitude greater than <math>\frac{2\mu\sqrt{k}}{\sqrt{n}}</math> to zero and orthonormalize the columns of <math>\hat{U}^0</math>
+# '''for''' <math>t = 0, \cdots, T-1 </math> '''do'''
+#     <math>\quad \hat{V}^{t+1}\leftarrow \text{argmin}_{V\in \mathbb{R}^{n\times k}}\|P_{\Omega_{t+1}}(\hat{U}V^T-M)\|^2_F</math>
+#     <math>\quad \hat{U}^{t+1}\leftarrow \text{argmin}_{U\in \mathbb{R}^{m\times k}}\|P_{\Omega_{T+t+1}}(U(\hat{V}^{t+1})^T-M)\|^2_F</math>
+# '''end for'''
+# '''Return''' <math>X= \hat{U}^T(\hat{V}^T)^T</math>
+
+They showed that by observing <math>|\Omega| = O((\frac{\sigma_1^*}{\sigma_k^*})^6k^7\log n \log (k \|M\|_F/\epsilon))</math> random entries of an incoherent matrix <math>M</math>, AltMinComplete algorithm can recover <math>M</math> in <math>O(\log(1/\epsilon))</math> steps. In terms of [[sample complexity]] (<math>|\Omega|</math>), theoretically, Alternating Minimization may require a bigger <math>\Omega</math> than Convex Relaxation. However empirically it seems not the case which implies that the sample complexity bounds can be further tightened. In terms of time complexity, they showed that AltMinComplete needs time
+ 
+<math>O(|\Omega|k^2\log(1/\epsilon))</math>.
+
+It is worth noting that, although convex relaxation based methods have rigorous analysis, alternating minimization based algorithms are more successful in practice.{{Citation needed|date=November 2020}}
+
+=== Gauss-Newton ===
+A simple addition to factorization-based algorithms is Gauss–Newton Matrix Recovery (GNMR).<ref name="Zilber2022" /> Similar to alternating minimization, GNMR addresses the factorized low-rank matrix completion objective:
+
+<math>
+\begin{align}
+& \underset{U, V \in \mathbb{R}^{n\times k}}{\text{min}} & \|P_\Omega(UV^T)-P_\Omega(M)\|^2_F \\
+\end{align}
+</math>
+
+Inspired by the classical [[Gauss-Newton]] approach, GNMR linearizes the objective. This results in the following linear [[least-squares]] subproblem:
+
+<math>
+\begin{align}
+& \underset{\Delta U, \Delta V \in \mathbb{R}^{n\times k}}{\text{min}} & \|P_\Omega(U_0 V_0^T + U_0 \Delta V^T + \Delta U V_0^T)-P_\Omega(M)\|^2_F \\
+\end{align}
+</math>
+
+Starting from an initialization <math>(U_0, V_0)</math>, GNMR iteratively solves the linear least squares subproblem and updates <math>U_{t+1} \leftarrow U_t + \Delta U,</math> <math>V_{t+1} \leftarrow V_t + \Delta V</math> until convergence.
+Since the least squares subproblem is rank deficient, GNMR selects the minimal norm solution, thereby preserving balance between <math>U</math> and <math>V</math> without explicit regularization.
+This algorithm was shown to enjoy strong theoretical guarantees. In addition, despite its simplicity, empirical results indicate that GNMR outperforms several popular algorithms, particularly when observations are sparse or the matrix is ill-conditioned.
+
+=== Discrete-aware matrix completion ===
+
+In applications such as recommender systems, where matrix entries are discrete (e.g., integer ratings from 1 to 5), incorporating this discreteness into the matrix completion problem can improve performance. Discrete-aware matrix completion approaches introduce a regularizer that encourages the completed matrix entries to align with a finite discrete alphabet.
+
+An early method in this domain utilized the <math>\ell_1</math>-norm as a convex relaxation of the <math>\ell_0</math>-norm to enforce discreteness, enabling efficient optimization using proximal gradient methods. Building upon this, Führling et al. (2023)<ref name="Fuhrling2023">{{cite journal |author1=Führling, Niclas |author2=Ando, Kengo |author3=Abreu, Giuseppe Thadeu Freitas de |author4=González G., David |author5=Gonsa, Osvaldo |title=Discrete Aware Matrix Completion via Convexized \ell_0-Norm Approximation |journal=IEEE Transactions on Signal Processing |year=2023 |volume=XX |issue=X |pages=XXX-XXX |doi=10.1109/TSP.2023.XXXXXXX|doi-broken-date=1 July 2025 }}</ref> replaces the <math>\ell_1</math>-norm with a continuous and differentiable approximation of the <math>\ell_0</math>-norm, making the problem more tractable and improving the performance.
+
+The discrete-aware matrix completion problem can be formulated as:
+
+:<math>\underset{\boldsymbol{X} \in \mathbb{R}^{m \times n}}{\arg \min} \, f(\boldsymbol{X}) + \lambda g(\boldsymbol{X}) + \zeta r(\boldsymbol{X} \mid 0),</math>
+
+where:
+* <math>(\boldsymbol{X}) = \frac{1}{2} \left\| P_{\Omega}(\boldsymbol{X} - \boldsymbol{O}) \right\|_F^2</math> ensures fidelity to the observed entries, with <math>P_{\Omega}</math> as the projection onto the observed set <math>\Omega</math> and <math>\boldsymbol{O}</math> as the observed matrix.
+* <math>g(\boldsymbol{X}) = \|\boldsymbol{X}\|_*</math> is the nuclear norm to enforce low-rank structure.
+* <math>r(\boldsymbol{X} \mid 0) = \sum_{k=1}^{|\mathcal{A}|} \left\| \operatorname{vec}_{\overline{\Omega}}(\boldsymbol{X}) - a_k \mathbf{1} \right\|_0</math> is the discrete-space regularizer, with <math>\mathcal{A}</math> being the discrete alphabet (e.g., {1, 2, 3, 4, 5}) and <math>\overline{\Omega}</math> the set of unobserved entries.
+
+To solve this non-convex problem, the <math>\ell_0</math>-norm is approximated by a [[continuous function]]. This approximation is convexized using [[fractional programming]], transforming the problem into a series of convex subproblems. 
+
+The algorithm iteratively updates the matrix estimate by applying proximal operations to the discrete-space regularizer and singular value thresholding to enforce the low-rank constraint. Initializing the process with the solution from the <math>\ell_1</math>-norm-based method can accelerate convergence. Simulation results, tested on datasets like MovieLens-100k, demonstrate that this method outperforms both its <math>\ell_1</math>-norm-based predecessor and other state-of-the-art techniques, particularly when the ratio of observed entries is low (e.g., 20% to 60%).<ref name="Fuhrling2023"/>
+
+== Applications ==
+Several applications of matrix completion are summarized by Candès and Plan<ref name = "candesplan"/> as follows:
+
+===Collaborative filtering===
+[[Collaborative filtering]] is the task of making automatic predictions about the interests of a user by collecting taste information from many users. Companies like Apple, Amazon, Barnes and Noble, and Netflix are trying to predict their user preferences from partial knowledge. In these kind of matrix completion problem, the unknown full matrix is often considered low rank because only a few factors typically contribute to an individual's tastes or preference.
+
+===System identification===
+In control, one would like to fit a discrete-time linear time-invariant state-space model
+
+: <math>\begin{align}
+x(t+1)&=Ax(t)+Bu(t)\\
+y(t)&=Cx(t)+Du(t)
+\end{align}</math>
+
+to a sequence of inputs <math>u(t) \in \mathbb{R}^m</math> and outputs <math>y(t) \in \mathbb{R}^p, t = 0, \ldots, N</math>. The vector <math>x(t) \in \mathbb{R}^n</math> is the state of the system at time <math>t</math> and <math>n</math> is the order of the system model. From the input/output pair, one would like to recover the matrices <math>A,B,C,D</math> and the initial state <math>x(0)</math>. This problem can also be viewed as a low-rank matrix completion problem.
+
+===Internet of things (IoT) localization===
+The localization (or global positioning) problem emerges naturally in IoT sensor networks. The problem is to recover the sensor map in [[Euclidean space]] from a local or partial set of pairwise distances. Thus it is a matrix completion problem with rank two if the sensors are located in a 2-D plane and three if they are in a 3-D space.<ref name = "nguyenkimkimshim"/>
+
+===Social networks recovery===
+Most of the real-world social networks have low-rank distance matrices. When we are not able to measure the complete network, which can be due to reasons such as private nodes, limited storage or compute resources, we only have a fraction of distance entries known. Criminal networks are a good example of such networks. Low-rank Matrix Completion can be used to recover these unobserved distances.<ref name = "topologyrecovery"/>
+
+==See also==
+{{Div col|colwidth=25em}}
+*[[Matrix regularization]]
+*[[Netflix Prize]]
+*[[Collaborative filtering]]
+*[[System identification]]
+*[[Convex optimization]]
+*[[Imputation (statistics)|Imputation]]
+{{Div col end}}
+
+== References ==
+{{Reflist|refs=
+<ref name="johnson">
+{{cite book
+ |last1=Johnson |first1=Charles R.
+ |title=Matrix Theory and Applications
+ |chapter=Matrix completion problems: A survey
+ |series=Proceedings of Symposia in Applied Mathematics
+ |year=1990
+ |volume=40 |pages=171–198
+ |doi=10.1090/psapm/040/1059486
+ |isbn=9780821801543
+ }}
+</ref>
+<ref name="laurent">
+{{cite book
+ |last1=Laurent |first1=Monique
+ |title=Encyclopedia of Optimization
+ |chapter=Matrix Completion Problems
+ |year=2008
+ |volume=3 |pages=221–229
+ |doi=10.1007/978-0-387-74759-0_355
+ |isbn=978-0-387-74758-3
+ }}
+</ref>
+<ref name="bertsimas2021mixed">
+{{cite journal
+ |last1=Bertsimas |first1=Dimitris
+ |last2=Cory-Wright |first2=Ryan
+ |last3=Pauphilet |first3=Jean
+ |year=2021
+ |title=Mixed-Projection Conic Optimization: A New Paradigm for Modeling Rank Constraints
+ |journal=[[Operations Research]]
+ |volume=70
+ |issue=6
+ |pages=3321–3344
+ |arxiv=2009.10395
+ |doi=10.1287/opre.2021.2182
+|s2cid=221836263
+ }}</ref>
+<ref name="bertsimas2021perspective">
+{{cite journal
+ |last1=Bertsimas |first1=Dimitris
+ |last2=Cory-Wright |first2=Ryan
+ |last3=Pauphilet |first3=Jean
+ |year=2023
+ |title=A New Perspective on Low-Rank Optimization
+ |journal=[[Optimization Online]]
+ |volume=202
+ |issue=1–2
+ |pages=47–92
+ |doi=10.1007/s10107-023-01933-9
+ |arxiv=2105.05947
+}}</ref>
+<ref name="candesrecht">
+{{cite journal
+ |last1=Candès |first1=E. J.
+ |last2=Recht |first2=B.
+ |year=2009
+ |title=Exact Matrix Completion via Convex Optimization
+ |journal=[[Foundations of Computational Mathematics]]
+ |volume=9 |issue=6 |pages=717–772
+ |arxiv=0805.4471
+ |doi=10.1007/s10208-009-9045-5
+ |doi-access=free
+}}</ref>
+<ref name="candestao">
+{{cite journal
+ |last1=Candès |first1=E. J.
+ |last2=Tao |first2=T.
+ |year=2010
+ |title=The Power of Convex Relaxation: Near-Optimal Matrix Completion
+ |journal=[[IEEE Transactions on Information Theory]]
+ |volume=56 |issue=5 |pages=2053–2080
+ |arxiv=0903.1476
+ |doi=10.1109/TIT.2010.2044061
+|bibcode=2010ITIT...56.2053C
+ |s2cid=1255437
+ }}</ref>
+<ref name="keshavan">
+{{cite journal
+ |last1=Keshavan |first1=R. H.
+ |last2=Montanari |first2=A.
+ |last3=Oh |first3=S.
+ |year=2010
+ |title=Matrix Completion from a Few Entries
+ |journal=[[IEEE Transactions on Information Theory]]
+ |volume=56 |issue=6 |pages=2980–2998
+ |arxiv=0901.3150
+ |doi=10.1109/TIT.2010.2046205
+|bibcode=2010ITIT...56.2980K
+ |s2cid=53504
+ }}</ref>
+<ref name="recht">
+{{cite journal
+ |last1=Recht |first1=B.
+ |year=2009
+ |title=A Simpler Approach to Matrix Completion
+ |url=http://www.jmlr.org/papers/volume12/recht11a/recht11a.pdf
+ |journal=[[Journal of Machine Learning Research]]
+ |volume=12 |pages=3413–3430
+ |arxiv=0910.0651
+ |bibcode=2009arXiv0910.0651R
+}}</ref>
+<ref name="candesplan">
+{{cite journal
+ |last1=Candès |first1=E. J.
+ |last2=Plan |first2=Y.
+ |year=2010
+ |title=Matrix Completion with Noise
+ |journal=[[Proceedings of the IEEE]]
+ |volume=98 |issue=6 |pages=925–936
+ |arxiv=0903.3131
+ |doi=10.1109/JPROC.2009.2035722
+|s2cid=109721
+ }}</ref>
+<ref name="erikssonbalzano">
+{{cite arXiv
+ |last1=Eriksson |first1=B.
+ |last2=Balzano |first2=L.
+ |last3=Nowak |first3=R.
+ |year=2011
+ |title=High-Rank Matrix Completion and Subspace Clustering with Missing Data
+ |eprint=1112.5629
+ |class=cs.IT
+}}</ref>
+<ref name="nguyenkimshim">
+{{cite journal
+ |last1=Nguyen |first1=L.T.
+ |last2=Kim |first2=J.
+ |last3=Shim |first3=B.
+ |date=10 July 2019
+ |title=Low-Rank Matrix Completion: A Contemporary Survey
+ |journal=[[IEEE Access]]
+ |volume=7 |issue=1 |pages=94215–94237
+|doi=10.1109/ACCESS.2019.2928130
+ |doi-access=free|bibcode=2019arXiv190711705N
+ |arxiv=1907.11705
+ |s2cid=198930899
+ }}</ref>
+<ref name="tao">
+{{cite web
+ |last=Tao |first=T.
+ |date=10 March 2009
+ |title=The power of convex relaxation: near-optimal matrix completion
+ |url=http://terrytao.wordpress.com/2009/03/10/the-power-of-convex-relaxation-near-optimal-matrix-completion/
+ |website=What's new
+}}</ref>
+<ref name="caicandesshen">
+{{cite journal
+ |last1=Cai |first1=J.-F.
+ |last2=Candès |first2=E. J.
+ |last3=Shen |first3=Z.
+ |year=2010
+ |title=A Singular Value Thresholding Algorithm for Matrix Completion
+ |journal=[[SIAM Journal on Optimization]]
+ |volume=20 |issue=4 |pages=1956–1982
+ |arxiv=0810.3286
+ |doi=10.1137/080738970
+|s2cid=1254778
+ }}</ref>
+<ref name="jainnetrapalli">
+{{cite book
+ |last1=Jain |first1=P.
+ |last2=Netrapalli |first2=P.
+ |last3=Sanghavi |first3=S.
+ |year=2013
+ |chapter=Low-rank Matrix Completion using Alternating Minimization
+ |title=Proceedings of the 45th annual ACM symposium on Symposium on theory of computing
+ |pages=665–674
+ |publisher=ACM
+ |arxiv=1212.0467
+ |doi=10.1145/2488608.2488693
+ |isbn=978-1-4503-2029-0
+|s2cid=447011
+ }}</ref>
+<ref name="xu">
+{{cite journal
+ |last1=Xu |first1=Zhiqiang
+ |year=2018
+ |title=The minimal measurement number for low-rank matrix recovery
+ |journal=[[Applied and Computational Harmonic Analysis]]
+ |volume=44 |issue=2 |pages=497–508
+ |arxiv=1505.07204
+ |doi=10.1016/j.acha.2017.01.005
+|s2cid=11990443
+ }}</ref>
+<ref name="nguyenkimkimshim">
+{{cite journal
+ |last1=Nguyen |first1=L.T.
+ |last2=Kim |first2=J.
+ |last3=Kim |first3=S.
+ |last4=Shim |first4=B.
+ |year=2019
+ |title=Localization of IoT Networks Via Low-Rank Matrix Completion
+ |journal=[[IEEE Transactions on Communications]]
+|volume=67
+ |issue=8
+ |pages=5833–5847
+ |doi=10.1109/TCOMM.2019.2915226
+ |bibcode=2019ITCom..67.5833N
+ |s2cid=164605437
+ }}</ref>
+<ref name="topologyrecovery">
+{{cite book
+ |last1=Mahindre |first1=G.
+ |last2=Jayasumana |first2=A.P.
+ |last3=Gajamannage |first3=K.
+ |last4=Paffenroth |first4=R.
+ |title=2019 IEEE 44th Conference on Local Computer Networks (LCN)
+ |chapter=On Sampling and Recovery of Topology of Directed Social Networks – A Low-Rank Matrix Completion Based Approach
+ |year=2019
+ |publisher=IEEE
+ |pages=324–331
+ |doi=10.1109/LCN44214.2019.8990707
+ |isbn=978-1-7281-1028-8
+ |s2cid=211206354
+ }}</ref>
+}}
+
+[[Category:Matrix theory]]

@@ -1,0 +1,190 @@
+<!-- wikipedia: en
+     page: 7300967
+     title: Automatically Tuned Linear Algebra Software
+     revision: 1341536784
+     timestamp: 2026-03-03T19:32:15Z
+     history: https://en.wikipedia.org/w/index.php?curid=7300967&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1341536784 -->
+{{Short description|Software library for linear algebra}}
+{{Primary sources|date=November 2012}}
+{{Infobox software
+| title = Automatically Tuned Linear Algebra Software
+| logo = <!-- File name without 'File:' -->
+| logo caption = 
+| logo alt = 
+| logo size =
+| collapsible = <!-- Any text here will collapse the screenshot. -->
+| screenshot = <!-- File name without 'File:' -->
+| screenshot size =
+| screenshot alt = 
+| caption = 
+| other_names =
+| author = 
+| developer = 
+| released = <!-- {{Start date and age|YYYY|MM|DD|df=yes/no}} -->
+| ver layout = <!-- simple (default) or stacked -->
+| discontinued = <!-- Set to yes, if software is discontinued, otherwise omit. -->
+| latest release version = 3.10.3
+| latest release date = {{Start date and age|2016|7|28}}
+| latest preview version = 
+| latest preview date = <!-- {{Start date and age|YYYY|MM|DD|df=yes/no}} -->
+| repo = <!-- {{URL|example.org}} -->
+| qid = 
+| programming language = [[C (programming language)|C]], [[Fortran|FORTRAN 77]]
+| middleware =
+| engine = <!-- or |engines= -->
+| operating system = 
+| platform = 
+| included with = 
+| replaces =
+| replaced_by =
+| service_name = 
+| size = 
+| standard = 
+| language = 
+| language count = <!-- Number only -->
+| language footnote = 
+| genre = [[Software library]]
+| license = [[BSD License]]<!-- or |licence= -->
+| website = <!-- {{URL|example.org}} or {{official URL}} -->
+| AsOf = 
+}}
+{{Portal|Free and open-source software}}
+'''Automatically Tuned Linear Algebra Software''' ('''ATLAS''') is a [[Library (computer science)|software library]] for [[linear algebra]]. It provides a mature [[Open-source software|open source]] implementation of [[Basic Linear Algebra Subprograms|BLAS]] [[application programming interface|APIs]] for [[C programming language|C]] and [[Fortran|FORTRAN 77]].
+
+ATLAS is often recommended as a way to automatically generate an [[Optimization (computer science)|optimized]] BLAS library. While its performance often trails that of specialized libraries written for one specific [[platform (computing)|hardware platform]], it is often the first or even only optimized BLAS implementation available on new systems and is a large improvement over the generic BLAS available at [[Netlib]]. For this reason, ATLAS is sometimes used as a performance baseline for comparison with other products.
+
+ATLAS runs on most [[Unix]]-like operating systems and on [[Microsoft Windows]] (using [[Cygwin]]). It is released under a [[BSD licenses|BSD-style license]] without advertising clause, and many well-known mathematics applications including [[MATLAB]], [[Mathematica]], [[Scilab]], [[SageMath]], and some builds of [[GNU Octave]] may use it.
+
+==Functionality==
+ATLAS provides a full implementation of the BLAS APIs as well as some additional functions from [[LAPACK]], a higher-level library built on top of BLAS. In BLAS, functionality is divided into three groups called levels 1, 2 and 3.
+
+* Level 1 contains ''vector operations'' of the form
+
+::<math>\mathbf{y} \leftarrow \alpha \mathbf{x} + \mathbf{y} \!</math>
+
+:as well as scalar [[dot product]]s and [[norm (mathematics)|vector norm]]s, among other things.
+
+* Level 2 contains ''matrix-vector operations'' of the form
+
+::<math>\mathbf{y} \leftarrow \alpha A \mathbf{x} + \beta \mathbf{y} \!</math>
+
+:as well as solving <math>T \mathbf{x} = \mathbf{y}</math> for <math>\mathbf{x}</math> with <math>T</math> being triangular, among other things.
+
+* Level 3 contains ''matrix-matrix operations'' such as the widely used [[General Matrix Multiply]] (GEMM) operation
+
+::<math>C \leftarrow \alpha A B + \beta C \!</math>
+
+:as well as solving <math>B \leftarrow \alpha T^{-1} B</math> for triangular matrices <math>T</math>, among other things.
+
+==Optimization approach==
+The [[Optimization (computer science)|optimization]] approach is called Automated Empirical Optimization of Software (AEOS), which identifies four fundamental approaches to computer assisted optimization of which ATLAS employs three:<ref>{{cite journal
+ |author1=R. Clint Whaley |author2=Antoine Petitet |author3=Jack J. Dongarra  |name-list-style=amp | title = Automated Empirical Optimization of Software and the ATLAS Project
+ | journal = Parallel Computing
+ | volume = 27
+ |issue=1–2 | pages = 3–35
+ | year = 2001
+ | doi = 10.1016/S0167-8191(00)00087-9
+ | url = http://www.netlib.org/lapack/lawnspdf/lawn147.pdf
+ | accessdate = 2006-10-06
+|citeseerx=10.1.1.35.2297 }}</ref>
+
+# [[Parameter (computer science)|Parameter]]ization—searching over the parameter space of a function, used for blocking factor, cache edge, etc.
+# Multiple implementation—searching through various approaches to implementing the same function, e.g., for [[Streaming SIMD Extensions|SSE]] support before intrinsics made them available in C code
+# [[Automatic programming|Code generation]]—programs that write programs incorporating what knowledge they can about what will produce the best performance for the system
+
+* Optimization of the level 1 BLAS uses parameterization and multiple implementation
+: Every ATLAS level 1 BLAS function has its own kernel. Since it would be difficult to maintain thousands of cases in ATLAS there is little architecture specific optimization for Level 1 BLAS. Instead multiple implementation is relied upon to allow for [[compiler optimization]] to produce high performance implementation for the system.
+
+* Optimization of the level 2 BLAS uses parameterization and multiple implementation
+: With <math>N^2</math> data and <math>N^2</math> operations to perform the function is usually limited by bandwidth to memory, and thus there is not much opportunity for optimization
+: All routines in the ATLAS level 2 BLAS are built from two Level 2 BLAS kernels:
+:* GEMV—matrix by vector multiply update:
+:::<math>\mathbf{y} \leftarrow \alpha A \mathbf{x} + \beta \mathbf{y} \!</math>
+:* GER—general rank 1 update from an outer product:
+:::<math>A \leftarrow \alpha \mathbf{x} \mathbf{y}^T + A \! </math>
+
+* Optimization of the level 3 BLAS uses code generation and the other two techniques
+: Since we have <math>N^3</math> ops with only <math>N^2</math> data, there are many opportunities for optimization
+
+==Level 3 BLAS==
+Most of the Level 3 BLAS is derived from [[General Matrix Multiply|GEMM]], so that is the primary focus of the optimization.
+
+:<math>O(n^3)</math> operations vs. <math>O(n^2)</math> data
+
+The intuition that the <math>n^3</math> operations will dominate over the <math>n^2</math> data accesses only works for roughly square matrices.
+The real measure should be some kind of surface area to volume.
+The difference becomes important for very non-square matrices.
+
+===Can it afford to copy?===
+Copying the inputs allows the data to be arranged in a way that provides optimal access for the kernel functions, 
+but this comes at the cost of allocating temporary space, and an extra read and write of the inputs.
+
+So the first question GEMM faces is, can it afford to copy the inputs?
+
+If so, 
+* Put into block major format with good alignment
+* Take advantage of user contributed kernels and cleanup
+* Handle the transpose cases with the copy: make everything into TN (transpose - no-transpose)
+* Deal with &alpha; in the copy
+
+If not,
+* Use the nocopy version
+* Make no assumptions on the stride of matrix ''A'' and ''B'' in memory
+* Handle all transpose cases explicitly
+* No guarantee about alignment of data
+* Support &alpha; specific code
+* Run the risk of [[Translation Lookaside Buffer|TLB]] issues, bad strides, etc.
+
+The actual decision is made through a simple [[Heuristic (computer science)|heuristic]] which checks for "skinny cases".
+
+===Cache edge===
+For 2nd Level Cache blocking a single cache edge parameter is used.
+The high level choose an order to traverse the blocks: ''ijk, jik, ikj, jki, kij, kji''. 
+These need not be the same order as the product is done within a block.
+
+Typically chosen orders are ''ijk'' or ''jik''.
+For ''jik'' the ideal situation would be to copy ''A'' and the ''NB'' wide panel of ''B''. 
+For ''ijk'' swap the role of ''A'' and ''B''.
+
+Choosing the bigger of ''M'' or ''N'' for the outer loop reduces the footprint of the copy.
+But for large ''K'' ATLAS does not even allocate such a large amount of memory.
+Instead it defines a parameter, ''Kp'', to give best use of the L2 cache. 
+Panels are limited to ''Kp'' in length.
+It first tries to allocate (in the ''jik'' case) <math>M\cdot p + NB\cdot Kp + NB\cdot NB</math>.
+If that fails it tries <math>2\cdot Kp\cdot NB + NB\cdot NB</math>.
+(If that fails it uses the no-copy version of GEMM, but this case is unlikely for reasonable choices of cache edge.)
+''Kp'' is a function of cache edge and ''NB''.
+
+==LAPACK==
+When integrating the ATLAS BLAS with [[LAPACK]] an important consideration is the choice of blocking factor for LAPACK. If the ATLAS blocking factor is small enough the blocking factor of LAPACK could be set to match that of ATLAS.
+
+To take advantage of recursive factorization, ATLAS provides replacement routines for some LAPACK routines. These simply overwrite the corresponding LAPACK routines from [[Netlib]].
+
+==Need for installation==
+Installing ATLAS on a particular platform is a challenging process which is typically done by a system vendor or a local expert and made available to a wider audience.
+
+For many systems, architectural default parameters are available; these are essentially saved searches plus the results of hand tuning. 
+If the arch defaults work they will likely get 10–15% better performance than the install search. On such systems the installation process is greatly simplified.
+
+==See also==
+* [[List of free and open-source software packages#Mathematical libraries|List of open-source mathematical libraries]]
+
+==References==
+{{Reflist}}
+
+==External links==
+*{{sourceforge|math-atlas}}
+*[https://math-atlas.sourceforge.net/devel/atlas_contrib/ User contribution to ATLAS]
+*[https://math-atlas.sourceforge.net/devel/atlas_devel/ A Collaborative guide to ATLAS Development]
+*The [https://math-atlas.sourceforge.net/faq.html#doc FAQ] has links to the Quick reference guide to BLAS and Quick reference to ATLAS LAPACK API reference
+*[http://www.terborg.net/research/kml/installation.html Microsoft Visual C++ Howto] {{Webarchive|url=https://web.archive.org/web/20070928202711/http://www.terborg.net/research/kml/installation.html |date=2007-09-28 }} for ATLAS
+
+{{Numerical linear algebra}}
+
+[[Category:C (programming language) libraries]]
+[[Category:Fortran libraries]]
+[[Category:Numerical linear algebra]]
+[[Category:Numerical software]]
+[[Category:Software using the BSD license]]

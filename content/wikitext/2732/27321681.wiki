@@ -1,0 +1,81 @@
+<!-- wikipedia: en
+     page: 27321681
+     title: Local outlier factor
+     revision: 1374372579
+     timestamp: 2026-09-11T16:57:58Z
+     history: https://en.wikipedia.org/w/index.php?curid=27321681&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374372579 -->
+{{Short description|Algorithm for anomaly detection}}
+{{Machine learning|Anomaly detection}}
+In [[anomaly detection]], the '''local outlier factor''' ('''LOF''') is an algorithm proposed by Markus M. Breunig, [[Hans-Peter Kriegel]], Raymond T. Ng and Jörg Sander in 2000 for finding anomalous data points by measuring the local deviation of a given data point with respect to its neighbours.<ref name="orig_paper">{{Cite conference| doi = 10.1145/335191.335388| title = LOF: Identifying Density-based Local Outliers| year = 2000| last1 = Breunig | first1 = M. M.| last2 = Kriegel | first2 = H.-P. | author-link2 = Hans-Peter Kriegel| last3 = Ng | first3 = R. T.| last4 = Sander | first4 = J.| work = Proceedings of the 2000 ACM SIGMOD International Conference on Management of Data| series = [[SIGMOD]]| isbn = 1-58113-217-4| pages = 93–104| url = http://www.dbs.ifi.lmu.de/Publikationen/Papers/LOF.pdf}}</ref>
+
+LOF shares some concepts with [[DBSCAN]] and [[OPTICS algorithm|OPTICS]] such as the concepts of "core distance" and "reachability distance", which are used for local density estimation.<ref>{{Cite book| last1 = Breunig | first1 = M. M. | last2 = Kriegel | first2 = H.-P. | author-link2 = Hans-Peter Kriegel| last3 = Ng | first3 = R. T. | last4 = Sander | first4 = J. R. | chapter = OPTICS-OF: Identifying Local Outliers | doi = 10.1007/978-3-540-48247-5_28 | title = Principles of Data Mining and Knowledge Discovery | series = Lecture Notes in Computer Science | volume = 1704 | pages = 262–270 | year = 1999 | isbn = 978-3-540-66490-1 | chapter-url = http://www.dbs.ifi.lmu.de/Publikationen/Papers/PKDD99-Outlier.pdf}}</ref>
+
+== Basic idea ==
+
+[[File:LOF-idea.svg|thumb|right|250px|Basic idea of LOF: comparing the local density of a point with the densities of its neighbors. A has a much lower density than its neighbors.]]
+
+The local outlier factor is based on a concept of a local density, where locality is given by ''k'' nearest neighbors, whose distance is used to estimate the density. By comparing the local density of an object to the local densities of its neighbors, one can identify regions of similar density, and points that have a substantially lower density than their neighbors. These are considered to be [[outlier]]s.
+
+The local density is estimated by the typical distance at which a point can be "reached" from its neighbors. The definition of "reachability distance" used in LOF is an additional measure to produce more stable results within clusters. The "reachability distance" used by LOF has some subtle details that are often found incorrect in secondary sources, e.g., in the textbook of Ethem Alpaydin.<ref>{{Cite book|last=Alpaydin|first=Ethem|title=Introduction to machine learning|year=2020|isbn=978-0-262-04379-3|edition=Fourth|location=Cambridge, Massachusetts|oclc=1108782604}}</ref>
+
+== Formal definition ==
+
+Let <math>k\text{-distance}(A)</math> be the distance of the object ''A'' to the ''k''-th nearest neighbor. Note that the set of the ''k'' nearest neighbors includes all objects at this distance, which can in the case of a "tie" be more than ''k'' objects. We denote the set of ''k'' nearest neighbors as <math>N_k(A)</math>.
+
+[[File:Reachability-distance.svg|thumb|right|250px|Illustration of the reachability distance. Objects ''B'' and ''C'' have the same reachability distance ({{math|k{{=}}3}}), while {{math|''D''}} is not a ''k'' nearest neighbor.]]
+
+This distance is used to define what is called ''reachability distance'':
+
+<math display=block>
+\text{reachability-distance}_k(A,B)=\max\{k \text{-distance}(B), d(A,B)\}
+</math>
+
+In words, the ''reachability distance'' of an object ''A'' ''from'' ''B'' is the true distance between the two objects, but at least the <math>k\text{-distance}</math> of ''B''. Objects that belong to the ''k'' nearest neighbors of ''B'' (the "core" of ''B'', see [[DBSCAN|DBSCAN cluster analysis]]) are considered to be equally distant. The reason for this is to reduce the statistical fluctuations between all points ''A'' close to ''B'', where increasing the value for ''k'' increases the smoothing effect.<ref name="orig_paper"/> Note that this is not a [[distance]] in the mathematical definition, since it is not symmetric. (While it is a common mistake<ref name="generalized" /> to always use the <math>k\text{-distance}(A)</math>, this yields a slightly different method, referred to as Simplified-LOF<ref name="generalized" />)
+
+The ''local reachability density'' of an object ''A'' is defined by
+
+:<math>\text{lrd}_k(A) := \frac{|N_k(A)|}{\sum_{B \in N_k(A)} \text{reachability-distance}_k(A, B)}</math>
+
+which is the inverse of the average reachability distance of the object ''A'' ''from'' its neighbors. Note that it is not the average reachability of the neighbors from ''A'' (which by definition would be the <math>k\text{-distance}(A)</math>), but the distance at which ''A'' can be "reached" ''from'' its neighbors. With duplicate points, this value can become infinite.
+
+The local reachability densities are then compared with those of the neighbors using
+
+:<math> \text{LOF}_k(A) := \frac{1}{|N_k(A)|} \sum_{B \in N_k(A)} \frac{\text{lrd}_k(B)}{\text{lrd}_k(A)} = \frac{1}{|N_k(A)| \cdot \text{lrd}_k(A)} \sum_{B \in N_k(A)} \text{lrd}_k(B) </math>
+
+which is the ''average local reachability density of the neighbors'' divided by the object's own local reachability density. A value of approximately {{math|1}} indicates that the object is comparable to its neighbors (and thus not an outlier). A value below {{math|1}} indicates a denser region (which would be an inlier), while values significantly larger than {{math|1}} indicate outliers.
+
+<math> \text{LOF}_k(A) \sim 1 </math> means '''Similar density as neighbors,'''
+
+<math> \text{LOF}_k(A) < 1 </math> means '''Higher density than neighbors (Inlier),'''
+
+<math> \text{LOF}_k(A) > 1 </math> means '''Lower density than neighbors (Outlier).'''
+
+== Advantages ==
+
+[[File:LOF.svg|thumb|right|400px|LOF scores as visualized by [[Environment for DeveLoping KDD-Applications Supported by Index-Structures|ELKI]]. While the upper right cluster has a comparable density to the outliers close to the bottom left cluster, they are detected correctly.]]
+
+Due to the local approach, LOF is able to identify outliers in a data set that would not be outliers in another area of the data set. For example, a point at a "small" distance to a very dense cluster is an outlier, while a point within a sparse cluster might exhibit similar distances to its neighbors.
+
+While the geometric intuition of LOF is only applicable to low-dimensional vector spaces, the algorithm can be applied in any context a dissimilarity function can be defined. It has experimentally been shown to work very well in numerous setups, often outperforming the competitors, for example in [[Network intrusion detection system|network intrusion detection]]<ref>{{cite book  | year=2003 |author1=Lazarevic, A. |author2=Ozgur, A. |author3=Ertoz, L. |author4=Srivastava, J. |author5=Kumar, V.  |title=Proceedings of the 2003 SIAM International Conference on Data Mining |chapter=A Comparative Study of Anomaly Detection Schemes in Network Intrusion Detection | chapter-url=http://www.siam.org/proceedings/datamining/2003/dm03_03LazarevicA.pdf | pages=25–36 |doi=10.1137/1.9781611972733.3 |isbn=978-0-89871-545-3 | access-date=2010-05-14 | archive-url=https://web.archive.org/web/20130717233143/http://www.siam.org/proceedings/datamining/2003/dm03_03LazarevicA.pdf | archive-date=2013-07-17 }}</ref> and on processed classification benchmark data.<ref name="CamposZimek2016">{{cite journal|last1=Campos|first1=Guilherme O.|last2=Zimek|first2=Arthur|last3=Sander|first3=Jörg|last4=Campello|first4=Ricardo J. G. B.|last5=Micenková|first5=Barbora|last6=Schubert|first6=Erich|last7=Assent|first7=Ira|last8=Houle|first8=Michael E.|title=On the evaluation of unsupervised outlier detection: measures, datasets, and an empirical study|journal=Data Mining and Knowledge Discovery|volume=30|issue=4|pages=891–927|year=2016|issn=1384-5810|doi=10.1007/s10618-015-0444-8|s2cid=1952214}}</ref>
+
+The LOF family of methods can be easily generalized and then applied to various other problems, such as detecting outliers in geographic data, video streams or authorship networks.<ref name="generalized" />
+
+== Disadvantages and Extensions ==
+
+The resulting values are [[quotient]]-values and hard to interpret. A value of 1 or even less indicates a clear inlier, but there is no clear rule for when a point is an outlier. In one data set, a value of 1.1 may already be an outlier, in another dataset and parameterization (with strong local fluctuations) a value of 2 could still be an inlier. These differences can also occur within a dataset due to the locality of the method. There exist extensions of LOF that try to improve over LOF in these aspects:
+
+* ''Feature Bagging for Outlier Detection''<ref>{{Cite book| doi = 10.1145/1081870.1081891| year = 2005| last1 = Lazarevic | first1 = A.| last2 = Kumar | first2 = V.| title = Proceedings of the eleventh ACM SIGKDD international conference on Knowledge discovery in data mining| chapter = Feature bagging for outlier detection| pages = 157–166| isbn = 1-59593-135-X| s2cid = 2054204}}</ref> runs LOF on multiple projections and combines the results for improved detection qualities in high dimensions. This is the first [[ensemble learning]] approach to outlier detection, for other variants see ref.<ref>{{Cite journal | doi = 10.1145/2594473.2594476| title = Ensembles for unsupervised outlier detection| journal = ACM SIGKDD Explorations Newsletter| volume = 15| pages = 11–22| year = 2014| last1 = Zimek | first1 = A. | last2 = Campello | first2 = R. J. G. B. | last3 = Sander | first3 = J. R. | s2cid = 8065347}}</ref>
+* ''Local Outlier Probability'' (LoOP)<ref>{{Cite book | doi = 10.1145/1645953.1646195| isbn = 978-1-60558-512-3| title = Proceedings of the 18th ACM conference on Information and knowledge management| series = CIKM '09| year = 2009| last1 = Kriegel | first1 = H.-P. | author-link1 =Hans-Peter Kriegel| last2 = Kröger | first2 = P.| last3 = Schubert | first3 = E.| last4 = Zimek | first4 = A.| chapter = LoOP: Local outlier probabilities| pages = 1649–1652| url = http://www.dbs.ifi.lmu.de/Publikationen/Papers/LoOP1649.pdf}}</ref> is a method derived from LOF but using inexpensive local statistics to become less sensitive to the choice of the parameter ''k''. In addition, the resulting values are scaled to a value range of {{math|[0:1]}}.
+* ''Interpreting and Unifying Outlier Scores''<ref>{{Cite conference | doi = 10.1137/1.9781611972818.2| title = Interpreting and Unifying Outlier Scores| conference = Proceedings of the 2011 SIAM International Conference on Data Mining| pages = 13–24| year = 2011| last1 = Kriegel | first1 = H. P. | author-link1 = Hans-Peter Kriegel| last2 = Kröger | first2 = P. | last3 = Schubert | first3 = E. | last4 = Zimek | first4 = A. | isbn = 978-0-89871-992-5}}</ref> proposes a normalization of the LOF outlier scores to the interval {{math|[0:1]}} using statistical scaling to increase [[usability]] and can be seen an improved version of the LoOP ideas.
+* ''On Evaluation of Outlier Rankings and Outlier Scores''<ref>{{Cite conference | doi = 10.1137/1.9781611972825.90| title = On Evaluation of Outlier Rankings and Outlier Scores| conference = Proceedings of the 2012 SIAM International Conference on Data Mining| pages = 1047–1058| year = 2012| last1 = Schubert | first1 = E. | last2 = Wojdanowski | first2 = R. | last3 = Zimek | first3 = A. | last4 = Kriegel | first4 = H. P. | author-link4 = Hans-Peter Kriegel| isbn = 978-1-61197-232-0}}</ref> proposes methods for measuring similarity and diversity of methods for building advanced outlier detection [[Ensemble learning|ensembles]] using LOF variants and other algorithms and improving on the Feature Bagging approach discussed above.
+* ''Local outlier detection reconsidered: a generalized view on locality with applications to spatial, video, and network outlier detection''<ref name="generalized">{{Cite journal | last1 = Schubert | first1 = E. | last2 = Zimek | first2 = A. | last3 = Kriegel | first3 = H. -P. | author-link3 = Hans-Peter Kriegel| doi = 10.1007/s10618-012-0300-z | title = Local outlier detection reconsidered: A generalized view on locality with applications to spatial, video, and network outlier detection | journal = Data Mining and Knowledge Discovery | volume = 28 | pages = 190–237 | year = 2012 | s2cid = 19036098 }}</ref> discusses the general pattern in various local outlier detection methods (including, e.g., LOF, a simplified version of LOF and LoOP) and abstracts from this into a general framework. This framework is then applied, e.g., to detecting outliers in geographic data, video streams and authorship networks.
+
+== References ==
+
+<references />
+
+[[Category:Statistical outliers]]
+[[Category:Data mining]]
+[[Category:Machine learning algorithms]]

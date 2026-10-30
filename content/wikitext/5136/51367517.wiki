@@ -1,0 +1,70 @@
+<!-- wikipedia: en
+     page: 51367517
+     title: Counter-based random number generator
+     revision: 1372117078
+     timestamp: 2026-08-30T11:48:16Z
+     history: https://en.wikipedia.org/w/index.php?curid=51367517&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1372117078 -->
+{{Tone|date=February 2026}}
+{{Short description|Algorithms to produce pseudo-random numbers}}
+
+A '''counter-based random number generation''' ('''CBRNG''', also known as a counter-based pseudo-random number generator, or CBPRNG) is a kind of [[pseudorandom number generator]] that uses only an integer counter as its internal state. They are generally used for generating pseudorandom numbers for large parallel computations.
+
+== Background ==
+
+We can think of a pseudorandom number generator (PRNG) as a function that transforms a series of bits known as the ''state'' into a new state and a random number.
+
+That is, given a PRNG function and an initial state <math>\mathrm{state}_0</math>, we can repeatedly use the PRNG to generate a sequence of states and random numbers.
+
+<math display="block">
+\begin{align}
+  \mathrm{PRNG}(\mathrm{state}_0) &= \mathrm{state}_1,\ \mathrm{num}_1 \\
+  \mathrm{PRNG}(\mathrm{state}_1) &= \mathrm{state}_2,\ \mathrm{num}_2 \\
+  \mathrm{PRNG}(\mathrm{state}_2) &= \mathrm{state}_3,\ \mathrm{num}_3 \\
+  \mathrm{PRNG}(\mathrm{state}_3) &= \ldots
+\end{align}
+</math>
+
+In some PRNGs, such as the [[Mersenne Twister]], the state is large, more than 2048 bytes.  In other PRNGs, such as [[xorshift]], <math>\mathrm{state}_i</math> and <math>\mathrm{num}_i</math> are one and the same (and so the state is small, just 4, 8, or 16 bytes, depending on the size of the numbers being generated).  But in both cases, and indeed in most traditional PRNGs, the state evolves unpredictably, so if you want to calculate a particular <math>\mathrm{state}_i</math> given an initial state <math>\mathrm{state}_0</math>, you have to calculate <math>\mathrm{state}_1</math>, <math>\mathrm{state}_2</math>, and so on, running the PRNG <math>i</math> times.
+
+Such algorithms are inherently ''sequential'' and not amenable to running on parallel machines like [[multi-core CPU|multi-core CPUs]] and [[GPU|GPUs]].
+
+In contrast, a counter-based random number generator (CBRNG) is a PRNG where the state "evolves" in a particularly simple manner: <math>\mathrm{state}_i = i</math>.  This way you can generate each number independently, without knowing the result of the previous call to the PRNG.
+
+This property make it easy to run a CBRNG on a multiple CPU threads or a GPU.  For example, to generate <math>n</math> random numbers on a GPU, you might spawn <math>n</math> threads and have the <math>i</math>th thread calculate <math>\mathrm{PRNG}(i)</math>.
+
+== CBRNGs based on block ciphers ==
+
+Some CBRNGs are based on reduced-strength versions of [[block cipher]]s.  Below we explain how this works.
+
+When using a cryptographic [[block cipher]] in [[Block cipher mode of operation#CTR|counter mode]], you generate a series of blocks of random bits.  The <math>i</math>th block is calculated by encrypting the number <math>i</math> using the encryption key <math>k</math>: <math>\mathrm{Block}_i = E(i, k)</math>.
+
+This is similar to a CBRNG, where you calculate the <math>i</math>th random number as <math>\mathrm{PRNG}(i)</math>.  Indeed, any block cipher can be used as a CBRNG; simply let <math>\mathrm{PRNG}(i) = E(i, \mathrm{seed})</math>!
+
+This yields a strong, [[Cryptographically secure pseudorandom number generator|cryptographically-secure source of randomness]]{{citation needed|reason=doesn't this contradict the "state compromise extension attacks" clause in the linked article?|date=April 2025}}.  But cryptographically-secure pseudorandom number generators tend to be slow compared to insecure PRNGs, and in practice many uses of random numbers don't require this degree of security.
+
+In 2011, Salmon et al. at [[D. E. Shaw Research]] introduced<ref name="salmon-desres">{{Cite conference|title = Parallel random numbers: as easy as 1, 2, 3|last1 = Salmon|first1 = John|date = 2011|book-title = Proceedings of 2011 International Conference for High Performance Computing, Networking, Storage and Analysis, Article No. 16|doi = 10.1145/2063384.2063405|last2 = Moraes|first2 = Mark|last3 = Dror|first3 = Ron|last4 = Shaw|first4 = David}}</ref> two CBRNGs based on reduced-strength versions of block ciphers.
+
+* [[Threefry]] uses a reduced-strength version of the [[Threefish]] block cipher. (Juvenile fish are known as "[[Juvenile_fish|fry]]".)
+
+* [[ARS (random number generator)|ARS]] uses a reduced-strength version of the [[Advanced Encryption Standard|AES]] block cipher.  ("ARS" is a pun on "AES"; "AES" stands for "advanced encryption standard", and "ARS" stands for "advanced randomization system"<ref>{{cite web |url=http://www.thesalmons.org/john/random123/releases/1.11.2pre/docs/ |access-date=August 8, 2020|title=Random123: A Library of Counter-Based Random Number Generators}}</ref>).
+
+ARS is used in recent versions of [[Intel]]'s [[Math Kernel Library]]<ref>{{cite web |url=https://software.intel.com/en-us/articles/new-counter-based-random-number-generators-in-intel-math-kernel-library |title=New counter-based Random Number Generators in Intel® Math Kernel Library |last1=Fedorov |first1=Gennady |last2=Gladkov |first2=Eugeny |date=2015 |publisher=Intel |access-date=August 22, 2016}}</ref> and gets good performance by using instructions from the [[AES-NI]] instruction set, which specifically accelerate AES encryption.
+
+Code implementing Threefry, ARS, and Philox (see below) is available from the authors.<ref>{{Cite web|url=https://github.com/DEShawResearch/random123|title=Random123 |website=[[GitHub]] }}</ref>
+
+== CBRNGs based on multiplication ==
+
+In addition to Threefry and ARS, Salmon et al. described a third counter-based PRNG, [[Philox]],<ref name="salmon-desres" /> based on wide multiplies; e.g. multiplying two 32-bit numbers and producing a 64-bit number, or multiplying two 64-bit numbers and producing a 128-bit number.
+
+As of 2020, Philox is popular on CPUs and GPUs.  On GPUs, [[nVidia]]'s {{proper name|cuRAND}} library<ref>{{Cite web|url=https://docs.nvidia.com/cuda/curand/device-api-overview.html |access-date=August 8, 2020|title=Device API Overview}}</ref> and [[TensorFlow]]<ref>{{Cite web |url=https://www.tensorflow.org/guide/random_numbers#general|title=Random number generation &#124; TensorFlow Core}}</ref> provide implementations of Philox.  On CPUs, Intel's [[Math Kernel Library|MKL]] provides an implementation.
+
+A more recent CBRNG based on multiplication is the Squares RNG,<ref name="widynski">{{cite arXiv |last=Widynski |first=Bernard |eprint=2004.06278 |title=Squares: A Fast Counter-Based RNG |class=cs.DS |year=2020}}</ref> which applies four rounds of squaring to a counter for a 32-bit output, or five rounds for a 64-bit output. Its author reports that both versions pass stringent tests of randomness and that they "may be the fastest counter-based generators".<ref name="widynski" />
+
+L'Ecuyer et al. confirm that the proposal passes the standard empirical tests of L'Ecuyer and Simard, but note that it fails with only three rounds and describe the construction as highly heuristic.<ref name="lecuyer-wsc21">{{Cite conference |title=Multiple streams with recurrence-based, counter-based, and splittable random number generators |book-title=2021 Winter Simulation Conference (WSC) |publisher=IEEE |date=2021 |last1=L'Ecuyer |first1=Pierre |last2=Nadeau-Chamard |first2=Olivier |last3=Chen |first3=Yi-Fan |last4=Lebar |first4=Justin}}</ref> Unlike a block cipher, it is not known to produce every 32-bit output equally often as the counter runs over its full range, and output quality depends strongly on the key: for the key 0 the output is always 0, and for a small integer key {{mvar|k}} approximately the first 2<sup>16</sup>/{{mvar|k}} outputs are 0. Consequently, using 1, 2, ..., {{mvar|s}} as keys to define {{mvar|s}} streams — a common practice — gives poor results unless the keys are first hashed to random-looking values.<ref name="lecuyer-wsc21" />
+
+==References==
+{{Reflist}}
+
+[[Category:Pseudorandom number generators]]

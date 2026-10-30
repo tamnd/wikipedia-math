@@ -1,0 +1,61 @@
+<!-- wikipedia: en
+     page: 62612416
+     title: Leimkuhler–Matthews method
+     revision: 1362663064
+     timestamp: 2026-07-05T13:32:38Z
+     history: https://en.wikipedia.org/w/index.php?curid=62612416&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1362663064 -->
+In mathematics, the '''Leimkuhler-Matthews method''' (or '''LM method''' in its original paper <ref>{{cite journal |last1=Leimkuhler |first1=Benedict |last2=Matthews |first2=Charles |title=Rational Construction of Stochastic Numerical Methods for Molecular Sampling |journal=Applied Mathematics Research EXpress |date=1 January 2013 |volume=2013 |issue=1 |pages=34–56 |doi=10.1093/amrx/abs010 |url=https://academic.oup.com/amrx/article/2013/1/34/166771 |language=en |issn=1687-1200|arxiv=1203.5428 }}</ref>) is an [[algorithm]] for finding discretized solutions to the [[Brownian dynamics]]
+
+:<math>\mathrm{d} X = -\nabla V(X ) \, \mathrm{d} t + \sigma \, \mathrm{d} W,</math>
+
+where <math> \sigma>0</math> is a constant, <math> V(X) </math> is an [[energy function]] and <math> W(t) </math> is a [[Wiener process]]. This [[stochastic differential equation]] has solutions (denoted <math>X(t) \in \mathbb{R}^N </math> at time <math> t </math>) distributed according to <math> \pi(X) \propto \exp(-V(x)) </math> in the limit of large-time, making solving these dynamics relevant in sampling-focused applications such as classical [[molecular dynamics]] and [[machine learning]].
+
+Given a time step <math>\Delta t>0</math>, the Leimkuhler-Matthews update scheme is compactly written as
+
+:<math>X_{t+\Delta t} = X_t -\nabla V(X_t) \Delta t  + \sigma\frac{\sqrt{\Delta t}}2 \, (R_t+R_{t+\Delta t}),</math>
+
+with initial condition <math> X_0 := X(0) </math>, and where <math> X_t \approx X(t) </math>. The vector <math>R_t</math> is a vector of independent [[Normal_distribution|normal random numbers]] redrawn at each step so <math>\text{E}[ R_t \cdot R_{s}]=N\delta_{ts}</math> (where <math>\text{E}[\bullet]</math> denotes [[expected_value|expectation]]). Despite being of equal cost to the [[Euler-Maruyama]] scheme (in terms of the number of evaluations of the function <math> \nabla V(X) </math> per update), given some assumptions on <math> \Delta t,\, V(X)</math> and <math>f(X)</math> solutions have been shown <ref>{{cite journal |last1=Leimkuhler |first1=B. |last2=Matthews |first2=C. |last3=Tretyakov |first3=M. V. |title=On the long-time integration of stochastic gradient systems |journal=Proceedings of the Royal Society A: Mathematical, Physical and Engineering Sciences |date=8 October 2014 |volume=470 |issue=2170 |article-number=20140120 |doi=10.1098/rspa.2014.0120 |arxiv=1402.2797 |bibcode=2014RSPSA.47040120L |s2cid=15596798 }}</ref> to have a superconvergence property 
+
+:<math> |\text{E}[f( X_t )] - \text{E}[f(X(t))]| \leq C_1 e^{-\lambda t} \Delta t + C_2 \Delta t^2 </math>
+
+for constants <math>C_k\geq0,\, \lambda>0 </math> not depending on <math>t</math>. This means that as <math>t</math> gets large we obtain an effective second order with <math>\Delta t^2</math> error in computed expectations. For small time step <math> \Delta t</math> this can give significant improvements over the [[Euler-Maruyama]] scheme, at no extra cost.
+
+==Discussion==
+[[File:Euler-Maruyama Leimkuhler-Matthews.gif|alt=A comparison between the Euler-Maruyama and Leimkuhler-Matthews schemes.|thumb|The distribution of solutions at time <math>t</math> for the Euler-Maruyama method and the Leimkuhler-Matthews method, using discretization <math>\Delta t=0.5</math> and initializing from a Normal distribution. The target distribution (in black) is the sum of two Gaussian distributions centered at <math>-2</math> and <math>+2</math>. While the Euler-Maruyama scheme results in a visible discretization error in the sampled distribution, the Leimkuhler-Matthews scheme performs significantly better for no extra cost.]]
+
+===Comparison to other schemes===
+The obvious method for comparison is the [[Euler-Maruyama]] scheme as it has the same cost, requiring one evaluation of <math>\nabla V(X)</math> per step. Its update is of the form 
+
+:<math>\hat{X}_{t+\Delta t} = \hat{X}_t -\nabla V(\hat{X}_t) \Delta t  + \sigma{\sqrt{\Delta t}} \, R_t,</math>
+
+with error (given some assumptions <ref>{{cite book|author1-link=Peter Kloeden |author1=Kloeden, P.E. |author2= Platen, E. |name-list-style=amp | title=Numerical Solution of Stochastic Differential Equations | publisher=Springer, Berlin | year=1992 | isbn=3-540-54062-8 }}</ref> ) as <math> |\text{E}[f(\hat{X}_{t})] - \text{E}[f(X(t))]| \leq C \Delta t </math> with constant <math>C>0</math> independent of <math>t</math>. Compared to the above definition, the only difference between the schemes is the ''one-step'' averaged noise term, making it simple to implement.
+
+For sufficiently small time step <math>\Delta t</math> and large enough time <math>t</math> it is clear that the LM scheme gives a smaller error than Euler-Maruyama. While there are many algorithms that can give reduced error compared to the Euler scheme (see e.g. [[Milstein method|Milstein]], [[Runge–Kutta method (SDE)|Runge-Kutta]] or [[Heun's method]]) these almost always come at an efficiency cost, requiring more computation in exchange for reducing the error. However the Leimkuhler-Matthews scheme can give significantly reduced error with minimal change to the standard Euler scheme. The trade-off comes from the (relatively) limited scope of the [[stochastic differential equation]] it solves: <math>\sigma</math> must be a scalar constant and the drift function must be of the form <math>\nabla V(X)</math>. The LM scheme also is not [[Markov_chain|Markovian]], as updates require more than just the state at time <math>t</math>. However, we can recast the scheme as a Markov process by extending the space.
+
+===Markovian Form===
+We can rewrite the algorithm in a Markovian form by extending the state space with a ''momentum vector''   <math>P_t\in\mathbb{R}^N</math> so that the overall state is <math>(X_t,P_t)</math> at time <math>t</math>. Initializing the momentum to be a vector of <math>N</math> standard normal random numbers, we have
+
+:<math>X'_{t+\Delta t} = X_t -\nabla V(X_t) \Delta t  + \sigma\frac{\sqrt{\Delta t}}2 \, P_t,</math>
+:<math>P_{t+\Delta t} \sim \text{Normal}(0,I),</math>
+:<math>X_{t+\Delta t} = X'_{t+\Delta t} + \sigma\frac{\sqrt{\Delta t}}2 \, P_{t+\Delta t},</math>
+
+where the middle step completely redraws the momentum so that each component is an independent normal random number. This scheme is Markovian, and has the same properties as the original LM scheme.
+
+===Applications===
+The algorithm has application in any area where the weak (i.e. average) properties of solutions to [[Brownian dynamics]] are required. This applies to any molecular simulation problem (such as classical [[molecular dynamics]]), but also can apply to statistical [[Sampling_(statistics)|sampling problems]] due to the properties of solutions at large times. In the limit of <math>t\to\infty</math>, solutions will become distributed according to the [[Probability distribution]] <math>\pi(X) \propto \exp(-V(X))</math>. Thus we can generate independent samples according to a required distribution by using <math>V(X) = -\log(\pi(X))</math> and running the LM algorithm until large <math>t</math>. Such strategies can be efficient in (for instance) [[Bayesian inference]] problems.
+
+== See also ==
+* [[Euler-Maruyama method]]
+* [[Milstein method]]
+* [[Runge–Kutta method (SDE)]]
+* [[Heun's method]]
+
+==References==
+{{Reflist}}
+{{Numerical integrators}}
+
+[[Category:Numerical differential equations]] 
+[[Category:Stochastic differential equations]]
+{{DEFAULTSORT:Leimkuhler-Matthews method}}

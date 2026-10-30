@@ -1,0 +1,639 @@
+<!-- wikipedia: en
+     page: 2609001
+     title: Hungarian algorithm
+     revision: 1375874851
+     timestamp: 2026-09-20T16:32:53Z
+     history: https://en.wikipedia.org/w/index.php?curid=2609001&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375874851 -->
+{{Short description|Polynomial-time algorithm for the assignment problem}}
+The '''Hungarian algorithm''' or '''Hungarian method''' is a [[combinatorial optimization]] [[algorithm]] that solves the [[assignment problem]] in [[polynomial time]] and which anticipated later [[Duality (optimization)|primal–dual methods]]. It was developed and published in 1955 by [[Harold Kuhn]], who gave it the name "Hungarian method" because the algorithm was largely based on the earlier works of two Hungarian mathematicians, [[Dénes Kőnig]] and [[Jenő Egerváry]].<ref name="kuhn1955">Harold W. Kuhn, "The Hungarian Method for the assignment problem", ''[[Naval Research Logistics Quarterly]]'', '''2''': 83–97, 1955.  Kuhn's original publication.</ref><ref name="kuhn1956">Harold W. Kuhn, "Variants of the Hungarian method for assignment problems", ''Naval Research Logistics Quarterly'', '''3''': 253–258, 1956.</ref> However, in 2006 it was discovered that [[Carl Gustav Jacobi]] had solved the assignment problem in the 19th century, and the solution had been published posthumously in 1890 in Latin.<ref>{{Cite web|url=http://www.lix.polytechnique.fr/~ollivier/JACOBI/presentationlEngl.htm|archive-url = https://web.archive.org/web/20151016182619/http://www.lix.polytechnique.fr/~ollivier/JACOBI/presentationlEngl.htm|archive-date = 16 October 2015|title = Presentation}}</ref>
+
+[[James Munkres]] reviewed the algorithm in 1957 and observed that it is [[Strongly-polynomial time|(strongly) polynomial]].<ref name="munkres">J. Munkres, "Algorithms for the Assignment and Transportation Problems", ''[[Journal of the Society for Industrial and Applied Mathematics]]'', '''5'''(1):32–38, 1957 March.</ref> Since then the algorithm has been known also as the '''Kuhn–Munkres algorithm''' or '''Munkres assignment algorithm'''. The [[Computational complexity theory#Time and space complexity|time complexity]] of the original algorithm was <math>O(n^4)</math>, however [[Jack Edmonds|Edmonds]] and [[Richard Karp|Karp]], and independently Tomizawa, noticed that it can be modified to achieve an <math>O(n^3)</math> running time.<ref>{{Cite journal|last1=Edmonds|first1=Jack|last2=Karp|first2=Richard M.|date=1972-04-01|title=Theoretical Improvements in Algorithmic Efficiency for Network Flow Problems|journal=Journal of the ACM|volume=19|issue=2|pages=248–264|language=EN|doi=10.1145/321694.321699|s2cid=6375478|doi-access=free}}</ref><ref>{{Cite journal|last=Tomizawa|first=N.|date=1971|title=On some techniques useful for solution of transportation network problems|journal=Networks|language=en|volume=1|issue=2|pages=173–194|doi=10.1002/net.3230010206|issn=1097-0037}}</ref>  [[L. R. Ford, Jr.|Ford]] and [[D. R. Fulkerson|Fulkerson]] extended the method to general maximum flow problems in the form of the [[Ford–Fulkerson algorithm]].
+
+==The problem==
+{{Main|Assignment problem}}
+
+=== Example ===
+In this simple example, there are three workers: Alice, Bob and Carol. One of them has to clean the bathroom, another sweep the floors and the third washes the windows, but they each demand different pay for the various tasks. The problem is to find the lowest-cost way to assign the jobs. The problem can be represented in a [[Matrix (mathematics)|matrix]] of the costs of the workers doing the jobs. For example:
+:{| class="wikitable" style="text-align:center;"
+! {{diagonal split header|Worker &nbsp; &nbsp;|Task}}
+! Clean<br />bathroom
+! Sweep<br />floors
+! Wash <br />windows
+|-
+! Alice
+| '''$8'''
+| $4
+| $7
+|-
+! Bob
+| $5
+| $2
+| '''$3'''
+|-
+! Carol
+| $9
+| '''$4'''
+| $8
+|}
+
+The Hungarian method, when applied to the above table, would give the minimum cost: this is $15, achieved by having Alice clean the bathroom, Carol sweep the floors, and Bob wash the windows. This can be confirmed using brute force:
+:{| class="wikitable" style="text-align:center;"
+! {{diagonal split header|Sweep|Clean}}
+! Alice
+! Bob
+! Carol
+|-
+! Alice
+| &mdash;
+| $17
+| $16
+|-
+! Bob
+| $18
+| &mdash;
+| $18
+|-
+! Carol
+| '''$15'''
+| $16
+| &mdash;
+|} (the unassigned person washes the windows)
+
+=== Matrix formulation ===
+In the matrix formulation, we are given an ''n''×''n'' [[Matrix (mathematics)|matrix]], where the element in the ''i''-th row and ''j''-th column represents the cost of assigning the ''j''-th job to the ''i''-th worker. We have to find an assignment of the jobs to the workers, such that each job is assigned to one worker and each worker is assigned one job, such that the total cost of assignment is minimum.
+
+This can be expressed as permuting the rows of a cost matrix ''C'' to minimize the [[Trace (linear algebra)|trace]] of a matrix,
+
+:<math>
+\min_P \operatorname{Tr} (PC)\;,
+</math>
+
+where ''P'' is a [[permutation matrix]]. (Equivalently, the columns can be permuted using ''CP''.)
+
+If the goal is to find the assignment that yields the ''maximum'' cost, the problem can be solved by negating the cost matrix ''C''.
+
+=== Bipartite graph formulation ===
+The algorithm can equivalently be described by formulating the problem using a bipartite graph. We have a [[complete bipartite graph]] <math>G=(S, T; E)</math> with {{mvar|n}} worker vertices ({{mvar|S}}) and {{mvar|n}} job vertices ({{mvar|T}}), and the edges ({{mvar|E}}) each have a cost <math>c(i,j)</math>. We want to find a [[perfect matching]] with a minimum total cost.
+
+==The algorithm in terms of bipartite graphs==
+Let us call a function <math>y: (S\cup T) \to \mathbb{R}</math> a '''potential''' if <math>y(i)+y(j) \leq c(i, j)</math> for each <math>i \in S, j \in T</math>. 
+
+The ''value'' of potential {{mvar|y}} is the sum of the potential over all vertices: 
+
+:<math>\sum_{v\in S\cup T} y(v)</math>.
+
+The cost of each perfect matching is at least the value of each potential. This can be seen by first noticing that the total cost of the matching is the sum of costs of all edges it contains. The cost of each edge is at least the sum of potentials of its endpoints. Since the matching is perfect, each vertex is an endpoint of exactly one edge. Hence, the total cost is at least the total potential.
+
+The Hungarian method finds a perfect matching and a potential such that the matching cost equals the potential value. This proves that both of them are optimal. In fact, the Hungarian method finds a perfect matching of '''tight edges''': an edge <math>ij</math> is called tight for a potential {{mvar|y}} if <math>y(i)+y(j) = c(i, j)</math>. Let us denote the [[Glossary of graph theory#Subgraphs|subgraph]] of '''tight''' edges by <math>G_y</math>. The cost of a perfect matching in <math>G_y</math> (if there is one) equals the value of {{mvar|y}}.
+
+During the algorithm we maintain a potential  {{mvar|y}} and an [[Glossary of graph theory#orientation|orientation]] of <math>G_y</math> (denoted by <math>\overrightarrow{G_y}</math>) which has the property that the edges oriented from {{mvar|T}} to {{mvar|S}} form a matching {{mvar|M}}. Initially, {{mvar|y}} is 0 everywhere, and all edges are oriented from {{mvar|S}} to {{mvar|T}} (so {{mvar|M}} is empty). In each step, either we modify {{mvar|y}} so that its value increases, or modify the orientation to obtain a matching with more edges. We maintain the invariant that all the edges of {{mvar|M}} are tight.  We are done if {{mvar|M}} is a perfect matching.
+
+In a general step, let <math>R_S \subseteq S</math> and <math>R_T \subseteq T</math> be the vertices not covered by {{mvar|M}} (so <math>R_S</math> consists of the vertices in {{mvar|S}} with no incoming edge and <math>R_T</math> consists of the vertices in {{mvar|T}} with no outgoing edge). Let {{mvar|Z}} be the set of vertices reachable in <math>\overrightarrow{G_y}</math> from <math>R_S</math> by a directed path. This can be computed by [[breadth-first search]].
+
+If <math>R_T \cap Z</math> is nonempty, then reverse the orientation of all edges along a directed path in <math>\overrightarrow{G_y}</math> from <math>R_S</math> to <math>R_T</math>. Thus the size of the corresponding matching increases by 1.
+
+If <math>R_T \cap Z</math> is empty, then let
+
+:<math>\Delta := \min \{c(i,j)-y(i)-y(j): i \in Z \cap S, j \in T \setminus Z\}.</math>
+
+{{math|&Delta;}} is well defined because at least one such edge <math>ij</math> must exist whenever the matching is not yet of maximum possible size (see the following section); it is positive because there are no tight edges between <math>Z \cap S</math> and <math>T \setminus Z</math>. Increase {{mvar|y}} by {{math|&Delta;}} on the vertices of <math>Z \cap S</math> and decrease {{mvar|y}} by {{math|&Delta;}} on the vertices of <math>Z \cap T</math>. The resulting {{mvar|y}} is still a potential, and although the graph <math>G_y</math> changes, it still contains {{mvar|M}} (see the next subsections). We orient the new edges from {{mvar|S}} to {{mvar|T}}. By the definition of {{math|&Delta;}} the set {{mvar|Z}} of vertices reachable from <math>R_S</math> increases (note that the number of tight edges does not necessarily increase). If the vertex added to <math>Z \cap T</math> is unmatched (that is, it is also in  <math>R_T</math>), then at the next iteration the graph will have an augmenting path. 
+
+We repeat these steps until {{mvar|M}} is a perfect matching, in which case it gives a minimum cost assignment. The running time of this version of the method is <math>O(n^4)</math>: {{mvar|M}} is augmented {{mvar|n}} times, and in a phase where {{mvar|M}} is unchanged, there are at most {{mvar|n}} potential changes (since {{mvar|Z}} increases every time). The time sufficient for a potential change is <math>O(n^2)</math>.
+
+===Proof that the algorithm makes progress===
+We must show that as long as the matching is not of maximum possible size, the algorithm is always able to make progress — that is, to either increase the number of matched edges, or tighten at least one edge. It suffices to show that at least one of the following holds at every step:
+
+* {{mvar|M}} is of maximum possible size.
+* <math>G_y</math> contains an augmenting path.
+* {{mvar|G}} contains a '''loose-tailed path''': a path from some vertex in <math>R_S</math> to a vertex in <math>T \setminus Z</math> that consists of any number (possibly zero) of tight edges followed by a single loose edge. The trailing loose edge of a loose-tailed path is thus from <math>Z \cap S</math>, guaranteeing that {{math|&Delta;}} is well defined.
+
+If {{mvar|M}} is of maximum possible size, we are of course finished. Otherwise, by [[Berge's lemma]], there must exist an augmenting path {{mvar|P}} with respect to {{mvar|M}} in the underlying graph {{mvar|G}}. However, this path may not exist in <math>G_y</math>: Although every even-numbered edge in {{mvar|P}} is tight by the definition of {{mvar|M}}, odd-numbered edges may be loose and thus absent from <math>G_y</math>. One endpoint of {{mvar|P}} is in <math>R_S</math>, the other in <math>R_T</math>; w.l.o.g., suppose it begins in <math>R_S</math>. If every edge on {{mvar|P}} is tight, then it remains an augmenting path in <math>G_y</math> and we are done. Otherwise, let <math>uv</math> be the first loose edge on {{mvar|P}}. If <math>v \notin Z</math> then we have found a loose-tailed path and we are done. Otherwise, {{mvar|v}} is reachable from some other path {{mvar|Q}} of tight edges from a vertex in <math>R_S</math>. Let <math>P_v</math> be the subpath of {{mvar|P}} beginning at {{mvar|v}} and continuing to the end, and let <math>P'</math> be the path formed by traveling along {{mvar|Q}} until a vertex on <math>P_v</math> is reached, and then continuing to the end of <math>P_v</math>. Observe that <math>P'</math> is an augmenting path in {{mvar|G}} with at least one fewer loose edge than {{mvar|P}}. {{mvar|P}} can be replaced with <math>P'</math> and this reasoning process iterated (formally, using induction on the number of loose edges) until either an augmenting path in <math>G_y</math> or a loose-tailed path in {{mvar|G}} is found.
+
+===Proof that adjusting the potential ''y'' leaves ''M'' unchanged===
+To show that every edge in {{mvar|M}} remains after adjusting {{mvar|y}}, it suffices to show that for an arbitrary edge in {{mvar|M}}, either both of its endpoints, or neither of them, are in {{mvar|Z}}. To this end let <math>vu</math> be an edge in {{mvar|M}} from {{mvar|T}} to {{mvar|S}}. It is easy to see that if {{mvar|v}} is in {{mvar|Z}} then {{mvar|u}} must be too, since every edge in {{mvar|M}} is tight. Now suppose, toward contradiction, that <math>u \in Z</math> but <math>v \notin Z</math>. {{mvar|u}} itself cannot be in <math>R_S</math> because it is the endpoint of a matched edge, so there must be some directed path of tight edges from a vertex in <math>R_S</math> to {{mvar|u}}. This path must avoid {{mvar|v}}, since that is by assumption not in {{mvar|Z}}, so the vertex immediately preceding {{mvar|u}} in this path is some other vertex <math>v' \in T</math>. <math>v'u</math> is a tight edge from {{mvar|T}} to {{mvar|S}} and is thus in {{mvar|M}}. But then {{mvar|M}} contains two edges that share the vertex {{mvar|u}}, contradicting the fact that {{mvar|M}} is a matching. Thus every edge in {{mvar|M}} has either both endpoints or neither endpoint in {{mvar|Z}}.
+
+===Proof that {{mvar|y}} remains a potential===
+To show that {{mvar|y}} remains a potential after being adjusted, it suffices to show that no edge has its total potential increased beyond its cost. This is already established for edges in {{mvar|M}} by the preceding paragraph, so consider an arbitrary edge {{mvar|uv}} from {{mvar|S}} to {{mvar|T}}. If <math>y(u)</math> is increased by {{math|&Delta;}}, then either <math>v \in Z \cap T</math>, in which case <math>y(v)</math> is decreased by {{math|&Delta;}}, leaving the total potential of the edge unchanged, or <math>v \in T \setminus Z</math>, in which case the definition of {{math|&Delta;}} guarantees that <math>y(u)+y(v)+\Delta \leq c(u,v)</math>. Thus {{mvar|y}} remains a potential.
+
+==The algorithm in ''O''(''n''<sup>3</sup>) time==
+
+Suppose there are <math>J</math> jobs and <math>W</math> workers (<math>J\le W</math>). We describe how to compute for each prefix of jobs the minimum total cost to assign each of these jobs to distinct workers. Specifically, we add the <math>j</math>th job and update the total cost in time <math>O(jW)</math>, yielding an overall time complexity of <math>O\left(\sum_{j=1}^JjW\right)=O(J^2W)</math>. Note that this is better than <math>O(W^3)</math> when the number of jobs is small relative to the number of workers.
+
+===Adding the j-th job in ''O''(''jW'') time===
+
+We use the same notation as the previous section, though we modify their definitions as necessary. Let <math>S_j</math> denote the set of the first <math>j</math> jobs and <math>T</math> denote the set of all workers. 
+
+Before the <math>j</math>th step of the algorithm, we assume that we have a matching on <math>S_{j-1}\cup T</math> that matches all jobs in <math>S_{j-1}</math> and potentials <math>y</math> satisfying the following condition: the matching is tight with respect to the potentials, and the potentials of all unmatched workers are zero, and the potentials of all matched workers are non-positive. Note that such potentials certify the optimality of the matching.
+
+During the <math>j</math>th step, we add the <math>j</math>th job to <math>S_{j-1}</math> to form <math>S_j</math> and initialize <math>Z=\{j\}</math>. At all times, every vertex in <math>Z</math> will be reachable from the <math>j</math>th job in <math>G_y</math>. While <math>Z</math> does not contain a worker that has not been assigned a job, let 
+:<math>\Delta := \min\{c(j, w)-y(j)-y(w):j\in Z\cap S_j, w\in T\setminus Z\}</math>
+and <math>w_{\text{next}}</math> denote any <math>w</math> at which the minimum is attained. After adjusting the potentials in the way described in the previous section, there is now a tight edge from <math>Z</math> to <math>w_{\text{next}}</math>.
+
+* If <math>w_{\text{next}}</math> is unmatched, then we have an [[Matching_(graph_theory)#Definitions|augmenting path]] in the subgraph of tight edges from <math>j</math> to <math>w_{\text{next}}</math>. After toggling the matching along this path, we have now matched the first <math>j</math> jobs, and this procedure terminates.
+* Otherwise, we add <math>w_{\text{next} }</math> and the job matched with it to <math>Z</math>.
+
+Adjusting potentials takes <math>O(W)</math> time. Recomputing <math>\Delta</math> and <math>w_{\text{next}}</math> after changing the potentials and <math>Z</math> also can be done in <math>O(W)</math> time. Case 1 can occur at most <math>j-1</math> times before case 2 occurs and the procedure terminates, yielding the overall time complexity of <math>O(jW)</math>.
+
+===Implementation in C++===
+
+For convenience of implementation, the code below adds an additional worker <math>w_{W}</math> such that <math>y(w_{W})</math> stores the negation of the sum of all <math>\Delta</math> computed so far. After the <math>j</math>th job is added and the matching updated, the cost of the current matching equals the sum of all <math>\Delta</math> computed so far, or <math>-y(w_{W})</math>.
+
+This code is adapted from e-maxx :: algo.<ref>{{cite web
+	| url = http://e-maxx.ru/algo/assignment_hungary#6
+	| title = Hungarian Algorithm for Solving the Assignment Problem
+	| author = <!--Not stated-->
+	| date = August 23, 2012
+	| website = e-maxx :: algo
+	| access-date = May 13, 2023
+}}</ref>
+
+<syntaxhighlight lang="cpp">
+/**
+ * Solution to https://open.kattis.com/problems/cordonbleu using Hungarian
+ * algorithm.
+ */
+import std;
+
+using std::integral;
+using std::istream;
+using std::numeric_limits;
+using std::pair;
+using std::stringstream;
+using std::string_view;
+using std::vector;
+
+constexpr string_view SAMPLE_INPUT = R"(
+2 2
+1 0
+0 -1
+-1 1
+2 -1
+0 0)";
+
+/**
+ * @brief Performs the Hungarian algorithm.
+ *
+ * Given J jobs and W workers (J <= W), computes the minimum cost to assign each
+ * prefix of jobs to distinct workers.
+ *
+ * @tparam T a type large enough to represent integers on the order of J *
+ * max(|C|)
+ * @param C a matrix of dimensions JxW such that C[j][w] = cost to assign j-th
+ * job to w-th worker (possibly negative)
+ *
+ * @return a vector of length J, with the j-th entry equaling the minimum cost
+ * to assign the first j + 1 jobs to distinct workers
+ */
+template <integral T> 
+vector<T> hungarian(const vector<vector<T>>& C) {
+    auto lessThan = []<integral T>(T& a, const T& b) -> bool { 
+        return b < a ? a = b, true : false; 
+    }
+    const int J = static_cast<int>(C.size());
+    const int W = static_cast<int>(C[0].size());
+    contract_assert(J <= W);
+    // job[w] = job assigned to w-th worker, or -1 if no job assigned
+    // note: a W-th worker was added for convenience
+    vector<int> job(W + 1, -1);
+    vector<T> ys(J); 
+    vector<T> yt(W + 1);  // potentials
+    // -yt[W] will equal the sum of all deltas
+    vector<T> answers;
+    const T inf = numeric_limits<T>::max();
+    for (int jCur = 0; jCur < J; ++jCur) {
+        // assign jCur-th job
+        int wCur = W;
+        job[wCur] = jCur;
+        // min reduced cost over edges from Z to worker w
+        vector<T> minTo(W + 1, inf);
+        vector<int> prev(W + 1, -1); // previous worker on alternating path
+        vector<bool> inZ(W + 1); // whether worker is in Z
+        while (job[wCur] != -1) {
+            // runs at most jCur + 1 times
+            inZ[wCur] = true;
+            const int j = job[wCur];
+            T delta = inf;
+            int wNext;
+            for (int w = 0; w < W; ++w) {
+                if (!inZ[w]) {
+                    if (ckmin(minTo[w], C[j][w] - ys[j] - yt[w])) {
+                        prev[w] = wCur;
+                    }
+                    if (ckmin(delta, minTo[w])) {
+                        wNext = w;
+                    }
+                }
+            }
+            // delta will always be nonnegative,
+            // except possibly during the first time this loop runs
+            // if any entries of C[jCur] are negative
+            for (int w = 0; w <= W; ++w) {
+                if (inZ[w]) {
+                    ys[job[w]] += delta;
+                    yt[w] -= delta;
+                } else {
+                    minTo[w] -= delta;
+                }
+            }
+            wCur = wNext;
+        }
+        // update assignments along alternating path
+        for (int w; wCur != W; wCur = w) {
+            job[wCur] = job[w = prev[wCur]];
+        }
+        answers.push_back(-yt[W]);
+    }
+    return answers;
+}
+
+/**
+ * @brief solves https://open.kattis.com/problems/cordonbleu
+ */
+int cordonBleu(istream& is) {
+    int N;
+    int M;
+    is >> N >> M;
+    vector<pair<int, int>> B(N);
+    vector<pair<int, int>> C(M);
+    vector<pair<int, int>> bottles(N);
+    vector<pair<int, int>> couriers(M);
+    for (auto& [a, b]: bottles) {
+        is >> a >> b;
+    }
+    for (auto& [c, d]: couriers) {
+        is >> a >> d;
+    }
+    pair<int, int> rest;
+    std::cin >> rest.first >> rest.second;
+    vector<vector<int>> costs(N, vector<int>(N + M - 1));
+    auto dist = [&](const pair<int, int>& x, const pair<int, int>& y) -> int {
+        return std::abs(x.first - y.first) + std::abs(x.second - y.second);
+    };
+    for (int b = 0; b < N; ++b) {
+        for (int c = 0; c < M; ++c) { // courier -> bottle -> restaurant
+            costs[b][c] = dist(couriers[c], bottles[b]) + dist(bottles[b], rest);
+        }
+        for (int c = 0; c < N - 1; ++c) { // restaurant -> bottle -> restaurant
+            costs[b][c + M] = 2 * dist(bottles[b], rest);
+        }
+    }
+    return hungarian(costs).back();
+}
+
+/**
+ * @brief Entry point into the program.
+ *
+ * @return The return code of the program.
+ */
+int main() {
+    stringstream sampleInput1(SAMPLE_INPUT);
+
+    std::println(stderr, "{}", cordonBleu(sampleInput1)); // 5
+    std::println("{}", cordonBleu(std::cin));
+}
+// https://godbolt.org/z/Wen35833G
+</syntaxhighlight>
+
+==Connection to successive shortest paths==
+
+The Hungarian algorithm can be seen to be equivalent to the successive shortest path algorithm for minimum cost flow,<ref>{{cite web
+	| url = https://cp-algorithms.com/graph/min_cost_flow.html
+	| title = Minimum-cost flow - Successive shortest path algorithm
+	| author = Jacob Kogler
+	| date = December 20, 2022
+	| website = Algorithms for Competitive Programming
+	| access-date = May 14, 2023
+}}</ref><ref>{{cite web
+	| url = https://cp-algorithms.com/graph/Assignment-problem-min-flow.html
+	| title = Solving assignment problem using min-cost-flow
+	| author = <!--Not stated-->
+	| date = July 17, 2022
+	| website = Algorithms for Competitive Programming
+	| access-date = May 14, 2023
+}}</ref> where the reweighting technique from [[Johnson's algorithm]] is used to find the shortest paths.
+The implementation from the previous section is rewritten below in such a way as to emphasize this 
+connection; it can be checked that the potentials <math>h</math> for workers <math>0\dots W-1</math> are equal to the potentials <math>y</math> from the previous solution up to a constant offset. When the graph is sparse (there are only <math>M</math> allowed job, worker pairs), it is possible
+to optimize this algorithm to run in <math>O(JM+J^2\log W)</math> time by using a [[Fibonacci heap]] to determine 
+<math>w_{\text{next}}</math> instead of iterating over all <math>W</math> workers to find the one with minimum distance (alluded to [[Assignment_problem#Balanced_assignment|here]]).
+
+<syntaxhighlight lang="cpp">
+template <typename T> 
+vector<T> hungarian(const vector<vector<T>>& C) {
+    auto lessThan = []<integral T>(T& a, const T& b) -> bool { 
+        return b < a ? a = b, true : false; 
+    }
+    const int J = static_cast<int>(C.size()); 
+    const int W = static_cast<int>(C[0].size());
+    contract_assert(J <= W);
+    // job[w] = job assigned to w-th worker, or -1 if no job assigned
+    // note: a W-th worker was added for convenience
+    vector<int> job(W + 1, -1);
+    vector<T> h(W); // Johnson potentials
+    vector<T> answers;
+    T ansCur = 0;
+    const T inf = numeric_limits<T>::max();
+    // assign jCur-th job using Dijkstra with potentials
+    for (int jCur = 0; jCur < J; ++jCur) {
+        int wCur = W; // unvisited worker with minimum distance
+        job[wCur] = jCur;
+        vector<T> dist(W + 1, inf); // Johnson-reduced distances
+        dist[W] = 0;
+        vector<bool> vis(W + 1); // whether visited yet
+        vector<int> prev(W + 1, -1); // previous worker on shortest path
+        while (job[wCur] != -1) { // Dijkstra step: pop min worker from heap
+            T minDist = inf;
+            vis[wCur] = true;
+            int wNext = -1; // next unvisited worker with minimum distance
+            // consider extending shortest path by wCur -> job[wCur] -> w
+            for (int w = 0; w < W; ++w) {
+                if (!vis[w]) {
+                    // sum of reduced edge weights wCur -> job[wCur] -> w
+                    T edge = C[job[wCur]][w] - h[w];
+                    if (wCur != W) {
+                        edge -= C[job[wCur]][wCur] - h[wCur];
+                        contract_assert(edge >= 0); // consequence of Johnson potentials
+                    }
+                    if (lessThan(dist[w], dist[wCur] + edge)) {
+                        prev[w] = wCur;
+                    }
+                    if (lessThan(minDist, dist[w])) {
+                        wNext = w;
+                    }
+                }
+            }
+            wCur = wNext;
+        }
+        for (int w = 0; w < W; ++w) { // update potentials
+            lessThan(dist[w], dist[wCur]);
+            h[w] += dist[w];
+        }
+        ansCur += h[wCur];
+        for (int w; wCur != W; wCur = w) {
+            job[wCur] = job[w = prev[wCur]];
+        }
+        answers.push_back(ansCur);
+    }
+    return answers;
+}
+</syntaxhighlight>
+
+==Matrix interpretation==
+
+This variant of the algorithm follows the formulation given by Flood,<ref name="flood">{{cite journal | last=Flood | first=Merrill M. | title=The Traveling-Salesman Problem | journal=Operations Research | volume=4 | issue=1 | date=1956 | issn=0030-364X | doi=10.1287/opre.4.1.61 | pages=61–75 | bibcode=1956OpRes...4...61F }}</ref> and later described more explicitly by Munkres, who proved it runs in <math>\mathcal{O}(n^4)</math> time.<ref name="munkres"/> Instead of keeping track of the potentials of the vertices, the algorithm operates only on a matrix:
+
+:<math>a_{ij}:=c(i,j)-y(i)-y(j)</math>
+
+where <math>c(i,j)</math> is the original cost matrix and <math>y(i), y(j)</math> are the potentials from the graph interpretation. Changing the potentials corresponds to adding or subtracting from rows or columns of this matrix. The algorithm starts with <math>a_{ij} = c(i, j)</math>. As such, it can be viewed as taking the original cost matrix and modifying it.
+
+Given {{mvar|n}} workers and tasks, the problem is written in the form of an {{mvar|n}}×{{mvar|n}} cost matrix
+
+:{{aligned table|cols=4|class=wikitable
+| a<sub>1</sub> | a<sub>2</sub> | a<sub>3</sub> | a<sub>4</sub>
+| b<sub>1</sub> | b<sub>2</sub> | b<sub>3</sub> | b<sub>4</sub>
+| c<sub>1</sub> | c<sub>2</sub> | c<sub>3</sub> | c<sub>4</sub>
+| d<sub>1</sub> | d<sub>2</sub> | d<sub>3</sub> | d<sub>4</sub>}}
+
+where a, b, c and d are workers who have to perform tasks 1, 2, 3 and 4. a<sub>1</sub>, a<sub>2</sub>, a<sub>3</sub>, and a<sub>4</sub> denote the penalties incurred when worker "a" does task 1, 2, 3, and 4 respectively.
+
+The problem is equivalent to assigning each worker a unique task such that the total penalty is minimized. Note that each task can only be worked on by one worker.
+
+===Step 1===
+
+'''For each row, its minimum element is subtracted from every element in that row.''' This causes all elements to have nonnegative values. Therefore, an assignment with a total penalty of 0 is by definition a minimum assignment.
+
+This also leads to at least one zero in each row. As such, a naive [[greedy algorithm]] can attempt to assign all workers a task with a penalty of zero. This is illustrated below.
+
+:{{aligned table|cols=4|class=wikitable
+| 0 | a<sub>2</sub> | a<sub>3</sub> | a<sub>4</sub>
+| b<sub>1</sub> | b<sub>2</sub> | b<sub>3</sub> | 0
+| c<sub>1</sub> | 0 | c<sub>3</sub> | c<sub>4</sub>
+| d<sub>1</sub> | d<sub>2</sub> | 0 | d<sub>4</sub>}}
+
+The zeros above would be the assigned tasks.
+
+Worst-case there are {{mvar|n}}! combinations to try, since multiple zeroes can appear in a row if multiple elements are the minimum. So at some point this naive algorithm should be short circuited.
+
+===Step 2===
+
+Sometimes it may turn out that the matrix at this stage cannot be used for assigning, as is the case for the matrix below.
+
+:{{aligned table|cols=4|class=wikitable
+| 0 | a<sub>2</sub> | 0 | a<sub>4</sub>
+| b<sub>1</sub> | 0 | b<sub>3</sub> | 0
+| 0 | c<sub>2</sub> | c<sub>3</sub> | c<sub>4</sub>
+| 0 | d<sub>2</sub> | d<sub>3</sub> | d<sub>4</sub>}}
+
+To overcome this, we repeat the above procedure for all columns (i.e. '''the minimum element in each column is subtracted from all the elements in that column''') and then check if an assignment with penalty 0 is possible.
+
+In most situations this will give the result, but if it is still not possible then we need to keep going.
+
+===Step 3===
+
+'''All zeros in the matrix must be covered by marking as few rows and/or columns as possible.''' Steps 3 and 4 form ''one way'' to accomplish this.
+
+For each row, try to assign an arbitrary zero. Assigned tasks are represented by starring a zero. Note that assignments can't be in the same row or column.
+* We assign the first zero of Row 1. The second zero of Row 1 can't be assigned.
+* We assign the first zero of Row 2. The second zero of Row 2 can't be assigned.
+* Zeros on Row 3 and Row 4 can't be assigned, because they are on the same column as the zero assigned on Row 1.
+
+We could end with another assignment if we choose another ordering of the rows and columns.
+
+:{{aligned table|cols=4|class=wikitable
+| 0* | a<sub>2</sub> | 0 | a<sub>4</sub>
+| b<sub>1</sub> | 0* | b<sub>3</sub> | 0
+| 0 | c<sub>2</sub> | c<sub>3</sub> | c<sub>4</sub>
+| 0 | d<sub>2</sub> | d<sub>3</sub> | d<sub>4</sub>}}
+
+===Step 4===
+
+Cover all columns containing a (starred) zero.
+
+:{|class="wikitable" style="text-align:center"
+|- style="background: white"
+|&times; ||&times; || || ||
+|-
+|style="background:lightgrey"| 0*||style="background:lightgrey"|a<sub>2</sub>|| 0 ||a<sub>4</sub>
+|style="background: white"|
+|-
+|style="background:lightgrey"|b<sub>1</sub>||style="background:lightgrey"| 0*||b<sub>3</sub>|| 0 
+|style="background: white"|
+|-
+|style="background:lightgrey"| 0 ||style="background:lightgrey"|c<sub>2</sub>||c<sub>3</sub>||c<sub>4</sub>
+|style="background: white"|
+|-
+|style="background:lightgrey"| 0 ||style="background:lightgrey"|d<sub>2</sub>||d<sub>3</sub>||d<sub>4</sub>
+|}
+
+Find a non-covered zero and prime it (mark it with a [[Prime (symbol)|prime symbol]]). If no such zero can be found, meaning all zeroes are covered, skip to step 5.
+
+* If the zero is on the same row as a starred zero, cover the corresponding row, and uncover the column of the starred zero.
+* Then, GOTO "Find a non-covered zero and prime it."
+** Here, the second zero of Row 1 is uncovered. Because there is another zero starred on Row 1, we cover Row 1 and uncover Column 1.
+** Then, the second zero of Row 2 is uncovered. We cover Row 2 and uncover Column 2.
+
+:{|class="wikitable" style="text-align:center"
+|- style="background: white"
+|| ||&times; || || ||
+|- style="background:lightgrey"
+| 0*||a<sub>2</sub>|| 0'||a<sub>4</sub>
+|style="background: white"|&times;
+|-
+|b<sub>1</sub>||style="background:lightgrey"| 0*||b<sub>3</sub>|| 0 
+|style="background: white"|
+|-
+|| 0 ||style="background:lightgrey"|c<sub>2</sub>||c<sub>3</sub>||c<sub>4</sub>
+|style="background: white"|
+|-
+|| 0 ||style="background:lightgrey"|d<sub>2</sub>||d<sub>3</sub>||d<sub>4</sub>
+|style="background: white"|
+|}
+
+:{|class="wikitable" style="text-align:center"
+|- style="background: white"
+|| || || || ||
+|- style="background:lightgrey"
+| 0*||a<sub>2</sub>|| 0'||a<sub>4</sub>
+|style="background: white"|&times;
+|- style="background:lightgrey"
+|b<sub>1</sub>|| 0*||b<sub>3</sub>|| 0'
+|style="background: white"|&times;
+|-
+|| 0 ||c<sub>2</sub>||c<sub>3</sub>||c<sub>4</sub>
+|style="background: white"|
+|-
+|| 0 ||d<sub>2</sub>||d<sub>3</sub>||d<sub>4</sub>
+|style="background: white"|
+|}
+
+* Else the non-covered zero has no assigned zero on its row. We make a path starting from the zero by performing the following steps:
+*# Substep 1: Find a starred zero on the corresponding column. If there is one, go to Substep 2, else, stop.
+*# Substep 2: Find a primed zero on the corresponding row (there should always be one). Go to Substep 1.
+
+The zero on Row 3 is uncovered. We add to the path the first zero of Row 1, then the second zero of Row 1, then we are done.
+:{|class="wikitable" style="text-align:center"
+|- style="background: white"
+|| || || || ||
+|- style="background:lightgrey"
+| <span style="color:red">0*</span> ||a<sub>2</sub>|| <span style="color:red">0'</span>  ||a<sub>4</sub>
+|style="background: white"|&times;
+|- style="background:lightgrey"
+|b<sub>1</sub>|| 0*||b<sub>3</sub>|| 0'
+|style="background: white"|&times;
+|-
+|| <span style="color:red">0'</span>   ||c<sub>2</sub>||c<sub>3</sub>||c<sub>4</sub>
+|style="background: white"|
+|-
+|| 0 ||d<sub>2</sub>||d<sub>3</sub>||d<sub>4</sub>
+|style="background: white"|
+|}
+
+*(Else branch continued) For all zeros encountered during the path, star primed zeros and unstar starred zeros.
+**As the path begins and ends by a primed zero when swapping starred zeros, we have assigned one more zero.
+:{|class="wikitable" style="text-align:center"
+|- 
+| 0 ||a<sub>2</sub>|| 0*||a<sub>4</sub>
+|- 
+|b<sub>1</sub>|| 0*||b<sub>3</sub>|| 0
+|-
+|| 0*||c<sub>2</sub>||c<sub>3</sub>||c<sub>4</sub>
+|-
+|| 0 ||d<sub>2</sub>||d<sub>3</sub>||d<sub>4</sub>
+|}
+
+*(Else branch continued) Unprime all primed zeroes and uncover all lines.
+* Repeat the previous steps (continue looping until the above "skip to step 5" is reached).
+** We cover columns 1, 2 and 3. The second zero on Row 2 is uncovered, so we cover Row 2 and uncover Column 2:
+:{|class="wikitable" style="text-align:center"
+|- style="background: white"
+||&times; || ||&times; || ||
+|- 
+|style="background:lightgrey"| 0 ||a<sub>2</sub>||style="background:lightgrey"| 0*||a<sub>4</sub>
+|style="background: white"|
+|- style="background:lightgrey"
+|b<sub>1</sub>|| 0*||b<sub>3</sub>|| 0'
+|style="background: white"|&times;
+|-
+|style="background:lightgrey"| 0*||c<sub>2</sub>||style="background:lightgrey"|c<sub>3</sub>||c<sub>4</sub>
+|style="background: white"|
+|-
+|style="background:lightgrey"| 0 ||d<sub>2</sub>||style="background:lightgrey"|d<sub>3</sub>||d<sub>4</sub>
+|style="background: white"|
+|}
+All zeros are now covered with a minimal number of rows and columns.
+
+The aforementioned detailed description is ''just one way'' to draw the minimum number of lines to cover all the 0s. Other methods work as well.
+
+===Step 5===
+
+If the number of starred zeros is {{mvar|n}} (or in the general case <math>min(n,m)</math>, where {{mvar|n}} is the number of people and {{mvar|m}} is the number of jobs), the algorithm terminates. See the [[#Result|Result]] subsection below on how to interpret the results.
+
+Otherwise, find the lowest uncovered value. Subtract this from every uncovered element and add it to every element covered by two lines. Go back to step 4.
+
+This is equivalent to subtracting a number from all rows which are not covered and adding the same number to all columns which are covered. These operations do not change optimal assignments.
+
+===Result===
+
+If following this specific version of the algorithm, the starred zeros form the minimum assignment.
+
+From Kőnig's theorem,<ref>[[K%C5%91nig%27s theorem (graph theory)]] Konig's theorem</ref> the minimum number of lines (minimum vertex cover<ref>[[Vertex cover]] minimum vertex cover</ref>) will be {{mvar|n}} (the size of maximum matching<ref>[[Matching (graph theory)]] matching</ref>). Thus, when {{mvar|n}}  lines are required, minimum cost assignment can be found by looking at only zeroes in the matrix.
+
+== Applications ==
+The Hungarian algorithm is often used to solve classic [[Assignment problem|assignment problems]] that involve matching the elements of two sets in a one-to-one relationship, such as tasks to agents or resources. For example, the problem may require assigning jobs to either workers or machines. Extensions of the classic problem (e.g., [[Multidimensional assignment problem|multidimensional assignment problems]], or problems introducing different constraints) may require other methods<ref>{{Cite journal |last=Pentico |first=David W. |date=January 2007 |title=Assignment problems: A golden anniversary survey |url=https://linkinghub.elsevier.com/retrieve/pii/S0377221705007137 |journal=European Journal of Operational Research |language=en |volume=176 |issue=2 |pages=774–793 |doi=10.1016/j.ejor.2005.09.014 |url-access=subscription}}</ref>.
+
+Another example is found in [[Video tracking|object tracking]], an area of [[computer vision]]. Object tracking requires detecting objects in video footage and associating detections across successive frames (for example, to preserve identity or avoid double-counting). In this context, a tracking algorithm may formulate the association between new object detections and existing tracks as an assignment problem, which can be solved by the Hungarian algorithm<ref>{{cite arXiv |last1=Zhang |first1=Yifu |title=ByteTrack: Multi-Object Tracking by Associating Every Detection Box |date=2022-04-07 |eprint=2110.06864 |last2=Sun |first2=Peize |last3=Jiang |first3=Yi |last4=Yu |first4=Dongdong |last5=Weng |first5=Fucheng |last6=Yuan |first6=Zehuan |last7=Luo |first7=Ping |last8=Liu |first8=Wenyu |last9=Wang |first9=Xinggang |class=cs.CV }}</ref>.
+
+==Bibliography==
+* R.E. Burkard, M. Dell'Amico, S. Martello: ''Assignment Problems'' (Revised reprint). SIAM, Philadelphia (PA.) 2012. {{ISBN|978-1-61197-222-1}}
+* M. Fischetti, "Lezioni di Ricerca Operativa", Edizioni Libreria Progetto Padova, Italia, 1995.
+* [[Ravindra K. Ahuja|R. Ahuja]], [[Thomas L. Magnanti|T. Magnanti]], [[James B. Orlin|J. Orlin]], "Network Flows", Prentice Hall, 1993.
+* S. Martello, "Jeno Egerváry: from the origins of the Hungarian algorithm to satellite communication". Central European Journal of Operational Research 18, 47–58, 2010
+
+==References==
+{{Reflist}}
+
+==Further reading==
+* {{cite book |last1=Cormen |first1=Thomas |last2=Leiserson |first2=Charles |last3=Rivest |first3=Ronald |last4=Stein |first4=Clifford |title=Introduction to Algorithms |isbn=978-0-262-04630-5 |pages=723–739 |edition=4th |chapter=25.3: The Hungarian algorithm for the assignment problem |date=5 April 2022 |publisher=MIT Press }}
+
+==External links==
+* Bruff, Derek, [https://web.archive.org/web/20120105112913/http://www.math.harvard.edu/archive/20_spring_05/handouts/assignment_overheads.pdf The Assignment Problem and the Hungarian Method] (matrix formalism).
+* Mordecai J. Golin, [http://www.cse.ust.hk/~golin/COMP572/Notes/Matching.pdf Bipartite Matching and the Hungarian Method] (bigraph formalism), Course Notes, [[Hong Kong University of Science and Technology]].
+*[https://brilliant.org/wiki/hungarian-matching Hungarian maximum matching algorithm] (both formalisms), in Brilliant website.
+* [[R. A. Pilgrim]], ''[https://www.researchgate.net/publication/290437481_Tutorial_on_Implementation_of_Munkres'_Assignment_Algorithm Munkres' Assignment Algorithm. Modified for Rectangular Matrices]'', Course notes, [[Murray State University]].
+* [[Mike Dawes]], ''[https://web.archive.org/web/20060812030313/http://www.math.uwo.ca/~mdawes/courses/344/kuhn-munkres.pdf The Optimal Assignment Problem]'', Course notes, [[University of Western Ontario]].
+* [http://www.cs.elte.hu/egres/tr/egres-04-14.pdf On Kuhn's Hungarian Method – A tribute from Hungary], [[András Frank]], Egervary Research Group, Pazmany P. setany 1/C, H1117, Budapest, Hungary.
+* Lecture: [https://www.youtube.com/watch?v=BUGIhEecipE Fundamentals of Operations Research - Assignment Problem - Hungarian Algorithm], Prof. G. Srinivasan, Department of Management Studies, IIT Madras.
+* Extension: [http://www.roboticsproceedings.org/rss06/p16.html Assignment sensitivity analysis (with O(n^4) time complexity)], Liu, Shell.
+* [http://www.hungarianalgorithm.com/solve.php Solve any Assignment Problem online], provides a step by step explanation of the Hungarian Algorithm.
+
+=== Implementations ===
+Note that not all of these satisfy the <math>O(n^3)</math> time complexity, even if they claim so. Some may contain errors, implement the slower <math>O(n^4)</math> algorithm, or have other inefficiencies. In the worst case, a code example linked from Wikipedia could later be modified to include exploit code. Verification and benchmarking is necessary when using such code examples from unknown authors.
+* [https://sourceforge.net/projects/tas/ Lua and Python versions of R.A. Pilgrim's code (claiming <math>O(n^3)</math> time complexity)]
+* [https://github.com/Jonah-Heyl/Hungarian-algorithm/blob/main/HungarianAlgorithminJulia.ipynb Julia implementation]
+* [https://github.com/maandree/hungarian-algorithm-n3/blob/master/hungarian.c C implementation claiming <math>O(n^3)</math> time complexity]
+* [https://github.com/KevinStern/software-and-algorithms/blob/master/src/main/java/blogspot/software_and_algorithms/stern_library/optimization/HungarianAlgorithm.java Java implementation claiming <math>O(n^3)</math> time complexity]
+* [http://software.clapper.org/munkres/ Python implementation]
+* [https://github.com/evansenter/gene/blob/f515fd73cb9d6a22b4d4b146d70b6c2ec6a5125b/objects/extensions/hungarian.rb Ruby implementation with unit tests]
+* [https://github.com/antifriz/hungarian-algorithm-n3 C# implementation claiming <math>O(n^3)</math> time complexity]
+* [http://www.fantascienza.net/leonardo/so/hungarian.d D implementation with unit tests (port of a Java version claiming <math>O(n^3)</math>)] {{Webarchive|url=https://web.archive.org/web/20191230174110/http://www.fantascienza.net/leonardo/so/hungarian.d |date=30 December 2019 }}
+* [http://www.ifors.ms.unimelb.edu.au/tutorial/hungarian/welcome_frame.html Online interactive implementation]<!--Please note that this implements a variant of the algorithm as described above. -->
+* [http://www.netlib.org/utk/lsi/pcwLSI/text/node220.html Serial and parallel implementations.]
+* [http://www.mathworks.com/matlabcentral/fileexchange/loadFile.do?objectId=6543 Matlab and C] {{Webarchive|url=https://web.archive.org/web/20080503063209/http://www.mathworks.com/matlabcentral/fileexchange/loadFile.do?objectId=6543 |date=3 May 2008 }}
+* [https://metacpan.org/module/Algorithm::Munkres Perl implementation]
+* [https://github.com/saebyn/munkres-cpp C++ implementation]
+* [http://dlib.net/optimization.html#max_cost_assignment C++ implementation claiming <math>O(n^3)</math> time complexity] (BSD style open source licensed)
+* [http://www.mathworks.com/matlabcentral/fileexchange/20652-hungarian-algorithm-for-linear-assignment-problems--v2-3- MATLAB implementation]
+* [https://launchpad.net/lib-bipartite-match C implementation]
+* [https://github.com/Gerjo/esoteric/blob/master/Hungarian.js JavaScript implementation with unit tests (port of a Java version claiming <math>O(n^3)</math> time complexity)]
+* [https://cran.r-project.org/web/packages/clue/ Clue R package proposes an implementation, solve_LSAP]
+* [https://github.com/addaleax/munkres-js Node.js implementation on GitHub]
+* [https://docs.scipy.org/doc/scipy-0.18.1/reference/generated/scipy.optimize.linear_sum_assignment.html Python implementation in scipy package]
+
+{{Authority control}}
+
+{{Use dmy dates|date=April 2020}}
+
+{{DEFAULTSORT:Hungarian Algorithm}}
+[[Category:Matching (graph theory)]]
+[[Category:Combinatorial optimization]]

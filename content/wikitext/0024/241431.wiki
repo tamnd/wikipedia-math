@@ -1,0 +1,98 @@
+<!-- wikipedia: en
+     page: 241431
+     title: Chirp Z-transform
+     revision: 1363905973
+     timestamp: 2026-07-13T06:05:43Z
+     history: https://en.wikipedia.org/w/index.php?curid=241431&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1363905973 -->
+{{Short description|Mathematical algorithm}}
+{{refimprove|date=January 2013}}
+The '''chirp Z-transform''' ('''CZT''') is a generalization of the [[discrete Fourier transform]] (DFT).  While the DFT samples the [[z-transform|Z plane]] at uniformly-spaced points along the [[unit circle]], the chirp Z-transform samples along spiral arcs in the Z-plane, corresponding to straight lines in the [[S plane]].<ref name=Shilling>[https://krex.k-state.edu/dspace/bitstream/handle/2097/7844/LD2668R41972S43.pdf A study of the Chirp Z-transform and its applications] - Shilling, Steve Alan</ref><ref>{{Cite web|url=http://www.mathworks.com/help/signal/ref/czt.html|title=Chirp Z-transform - MATLAB czt|website=www.mathworks.com|access-date=2016-09-22}}</ref>  The DFT, real DFT, and zoom DFT can be calculated as special cases of the CZT.
+
+Specifically, the chirp Z transform calculates the Z transform at a finite number of points z<sub>k</sub> along a [[logarithmic spiral]] contour, defined as:<ref name=Shilling/><ref>{{Cite web|url=http://prod.sandia.gov/techlib/access-control.cgi/2005/057084.pdf|title=Chirp Z-Transform Spectral Zoom Optimization with MATLAB®|last=Martin|first=Grant D.|date=November 2005|website=|access-date=}}</ref>
+
+:<math>X_k = \sum_{n=0}^{N-1} x(n) z_{k}^{-n} </math>
+
+:<math>z_k = A\cdot W^{-k}, k=0,1,\dots,M-1</math>
+
+where ''A'' is the complex starting point, ''W'' is the complex ratio between points, and ''M'' is the number of points to calculate.
+
+Like the DFT, the chirp Z-transform can be computed in O(''n'' log ''n'') operations where <math display=“inline”>n = \max(M, N)</math>.
+An O(''N'' log ''N'') algorithm for the inverse chirp Z-transform (ICZT) was described in 2003,<ref>{{Cite thesis |type=PhD |last=Bostan |first=Alin |date=2003 |title=Algorithmique efficace pour des operations de base en Calcul formel |publisher=Ecole polytechnique |url=https://specfun.inria.fr/bostan/these/These.pdf}}</ref><ref>{{Cite journal|last=Bostan|first=Alin|last2=Schost|first2=Éric|date=2005|title=Polynomial evaluation and interpolation on special sets of points|journal=Journal of Complexity|language=en|volume=21|issue=4|pages=420–446|doi=10.1016/j.jco.2004.09.009|doi-access=}}</ref> and in 2019.<ref>[https://scitechdaily.com/engineers-solve-50-year-old-puzzle-in-signal-processing-inverse-chirp-z-transform/ Engineers Solve 50-Year-Old Puzzle in Signal Processing – Inverse Chirp Z-Transform], By IOWA STATE UNIVERSITY OCTOBER 10, 2019</ref>
+
+==Bluestein's algorithm==
+
+'''Bluestein's algorithm'''<ref name="bluestein">{{Cite journal|last=Bluestein|first=L.|date=1970-12-01|title=A linear filtering approach to the computation of discrete Fourier transform|journal=IEEE Transactions on Audio and Electroacoustics|volume=18|issue=4|pages=451–455|doi=10.1109/TAU.1970.1162132|issn=0018-9278}}</ref><ref>{{cite web|url=http://www.dsprelated.com/dspbooks/mdft/Bluestein_s_FFT_Algorithm.html |title=Bluestein's FFT Algorithm |publisher=DSPRelated.com}}</ref> expresses the CZT as a [[convolution]] and implements it efficiently using [[fast Fourier transform|FFT]]/IFFT.
+
+As the DFT is a special case of the CZT, this allows the efficient calculation of [[discrete Fourier transform]] (DFT) of arbitrary sizes, including [[prime number|prime]] sizes.  (The other algorithm for FFTs of prime sizes, [[Rader's FFT algorithm|Rader's algorithm]], also works by rewriting the DFT as a convolution.) It was conceived in 1968 by [[Leo Bluestein]].<ref name="bluestein" /> Bluestein's algorithm can be used to compute more general transforms than the DFT, based on the (unilateral) [[z-transform]] (Rabiner ''et al.'', 1969).
+
+Recall that the DFT is defined by the formula
+
+:<math> X_k = \sum_{n=0}^{N-1} x_n e^{-\frac{2\pi i}{N} nk }
+\qquad
+k = 0,\dots,N-1. </math>
+
+If we replace the product ''nk'' in the exponent by the identity
+
+:<math>n k = \frac{-(k-n)^2}{2} + \frac{n^2}{2} + \frac{k^2}{2}</math>
+
+we thus obtain:
+
+:<math> X_k = e^{-\frac{\pi i}{N} k^2 } \sum_{n=0}^{N-1} \left( x_n e^{-\frac{\pi i}{N} n^2 } \right) e^{\frac{\pi i}{N} (k-n)^2 }
+\qquad
+k = 0,\dots,N-1. </math>
+
+This summation is precisely a  convolution of the two sequences ''a''<sub>''n''</sub> and ''b''<sub>''n''</sub> defined by:
+
+:<math>a_n = x_n e^{-\frac{\pi i}{N} n^2 }</math>
+
+:<math>b_n = e^{\frac{\pi i}{N} n^2 },</math>
+
+with the output of the convolution multiplied by ''N'' phase factors ''b''<sub>''k''</sub><sup>*</sup>. That is:
+
+:<math>X_k = b_k^* \left(\sum_{n=0}^{N-1} a_n b_{k-n}\right) \qquad k = 0,\dots,N-1. </math>
+
+This convolution, in turn, can be performed with a pair of FFTs (plus the pre-computed FFT of complex [[chirp]] ''b''<sub>''n''</sub>) via the [[convolution theorem]].  The key point is that these FFTs are not of the same length ''N'': such a convolution can be computed exactly from FFTs only by zero-padding it to a length greater than or equal to 2''N''&ndash;1. In particular, one can pad to a [[power of two]] or some other [[smooth number|highly composite]] size, for which the FFT can be efficiently performed by e.g. the [[Cooley–Tukey FFT algorithm|Cooley–Tukey algorithm]] in O(''N'' log ''N'') time.  Thus, Bluestein's algorithm provides an O(''N'' log ''N'') way to compute prime-size DFTs, albeit several times slower than the Cooley–Tukey algorithm for composite sizes.<ref name=":0">{{Cite journal |last=Rabiner |first=L. |last2=Schafer |first2=R. |last3=Rader |first3=C. |date=June 1969 |title=The chirp z-transform algorithm |url=http://ieeexplore.ieee.org/document/1162034/ |journal=IEEE Transactions on Audio and Electroacoustics |language=en |volume=17 |issue=2 |pages=86–92 |doi=10.1109/TAU.1969.1162034 |issn=0018-9278|url-access=subscription }}</ref>
+
+The use of zero-padding for the convolution in Bluestein's algorithm deserves some additional comment. Suppose we zero-pad to a length ''M'' &ge; 2''N''&ndash;1. This means that ''a''<sub>''n''</sub> is extended to an array ''A''<sub>''n''</sub> of length ''M'', where ''A''<sub>''n''</sub> = ''a''<sub>''n''</sub> for 0 &le; ''n'' &lt; ''N'' and ''A''<sub>''n''</sub> = 0 otherwise&mdash;the usual meaning of "zero-padding".  However, because of the ''b''<sub>''k''&ndash;''n''</sub> term in the convolution, both positive and ''negative'' values of ''n'' are required for ''b''<sub>''n''</sub> (noting that ''b''<sub>&ndash;''n''</sub> = ''b''<sub>''n''</sub>). The periodic boundaries implied by the DFT of the zero-padded array mean that &ndash;''n'' is equivalent to ''M''&ndash;''n''. Thus, ''b''<sub>''n''</sub> is extended to an array ''B''<sub>''n''</sub> of length ''M'', where ''B''<sub>0</sub> = ''b''<sub>0</sub>, ''B''<sub>''n''</sub> = ''B''<sub>''M''&ndash;''n''</sub> = ''b''<sub>''n''</sub> for 0 &lt; ''n'' &lt; ''N'', and ''B''<sub>''n''</sub> = 0 otherwise.<ref name=":0" />  ''A'' and ''B'' are then FFTed, multiplied pointwise, and inverse FFTed to obtain the  convolution of ''a'' and ''b'', according to the usual convolution theorem.<ref name=":0" />
+
+Let us also be more precise about what type of convolution is required in Bluestein's algorithm for the DFT.  If the sequence ''b''<sub>''n''</sub> were periodic in ''n'' with period ''N'', then it would be a cyclic convolution of length ''N'', and the zero-padding would be for computational convenience only.  However, this is not generally the case:
+
+:<math>b_{n+N} = e^{\frac{\pi i}{N} (n+N)^2 } = b_n \left[ e^{\frac{\pi i}{N} (2Nn+N^2) } \right] = (-1)^N b_n .</math>
+
+Therefore, for ''N'' [[even and odd numbers|even]] the convolution is cyclic, but in this case ''N'' is [[composite number|composite]] and one would normally use a more efficient FFT algorithm such as Cooley–Tukey.  For ''N'' odd, however, then ''b''<sub>''n''</sub> is [[antiperiodic function|antiperiodic]] and we technically have a [[negacyclic convolution]] of length ''N''.   Such distinctions disappear when one zero-pads ''a''<sub>''n''</sub> to a length of at least 2''N''&minus;1 as described above, however.  It is perhaps easiest, therefore, to think of it as a subset of the outputs of a simple linear convolution (i.e. no conceptual "extensions" of the data, periodic or otherwise).<ref name=":0" />
+
+==  z-transforms ==
+
+Bluestein's algorithm can also be used to compute a more general transform based on the (unilateral) [[z-transform]] (Rabiner ''et al.'', 1969)<ref name=":0" />.  In particular, it can compute any transform of the form:
+
+:<math> X_k = \sum_{n=0}^{N-1} x_n z^{nk}
+\qquad
+k = 0,\dots,M-1, </math>
+
+for an ''arbitrary'' [[complex number]] ''z'' and for ''differing'' numbers ''N'' and ''M'' of inputs and outputs.  Given Bluestein's algorithm<ref name=":0" />, such a transform can be used, for example, to obtain a more finely spaced interpolation of some portion of the spectrum (although the frequency resolution is still limited by the total sampling time, similar to a Zoom FFT), enhance arbitrary poles in transfer-function analyses, etc.
+
+The algorithm was dubbed the ''chirp'' z-transform algorithm because, for the Fourier-transform case (|''z''| = 1), the sequence ''b''<sub>''n''</sub> from above is a complex sinusoid of linearly increasing frequency, which is called a (linear) [[chirp]] in [[radar]] systems.<ref name=":0" />
+
+==See also==
+*[[Fractional Fourier transform]]
+
+==References==
+{{reflist}}
+
+===General===
+* Leo I. Bluestein, "A linear filtering approach to the computation of the discrete Fourier transform," ''Northeast Electronics Research and Engineering Meeting Record'' '''10''', 218-219 (1968).
+* Lawrence R. Rabiner, Ronald W. Schafer, and Charles M. Rader, "[https://web.archive.org/web/20130618204835/http://www3.alcatel-lucent.com/bstj/vol48-1969/articles/bstj48-5-1249.pdf The chirp z-transform algorithm and its application]," ''Bell Syst. Tech. J.'' '''48''', 1249-1292 (1969).  Also published in: Rabiner, Shafer, and Rader, "[https://web.archive.org/web/20150220065735/http://cronos.rutgers.edu/~lrr/Reprints/015_czt.pdf The chirp z-transform algorithm]," ''IEEE Trans. Audio Electroacoustics'' '''17''' (2), 86&ndash;92 (1969).
+* D. H. Bailey and P. N. Swarztrauber, "The fractional Fourier transform and applications," ''[[SIAM Review]]'' '''33''', 389-404 (1991).  (Note that this terminology for the z-transform is nonstandard: a [[fractional Fourier transform]] conventionally refers to an entirely different, continuous transform.)
+* [[Lawrence Rabiner]], "The chirp z-transform algorithm&mdash;a lesson in serendipity," ''IEEE Signal Processing Magazine'' '''21''', 118-119 (March 2004).  (Historical commentary.)
+* Vladimir Sukhoy and Alexander Stoytchev: [https://www.nature.com/articles/s41598-019-50234-9.pdf "Generalizing the inverse FFT off the unit circle"], (Oct 2019). # Open access.
+* Vladimir Sukhoy and Alexander Stoytchev: [https://www.nature.com/articles/s41598-020-60878-7.pdf "Numerical error analysis of the ICZT algorithm for chirp contours on the unit circle"], Sci Rep 10, 4852 (2020).
+
+==External links==
+* [http://www.embedded.com/design/configurable-systems/4006427/A-DSP-algorithm-for-frequency-analysis A DSP algorithm for frequency analysis] - the Chirp-Z Transform (CZT)
+* [https://www.news.iastate.edu/news/2020/03/25/iczt2 Solving a 50-year-old puzzle in signal processing, part two]
+
+[[Category:Fourier analysis]]
+[[Category:Time–frequency analysis]]
+[[Category:Integral transforms]]

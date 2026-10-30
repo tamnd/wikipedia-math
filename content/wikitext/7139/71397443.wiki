@@ -1,0 +1,105 @@
+<!-- wikipedia: en
+     page: 71397443
+     title: Minimal residual method
+     revision: 1363650201
+     timestamp: 2026-07-11T13:28:55Z
+     history: https://en.wikipedia.org/w/index.php?curid=71397443&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1363650201 -->
+{{Short description|Computational method}}
+[[File:Minres_illustration_de.svg|thumb|A comparison of the norm of error and residual in the [[Conjugate gradient method|CG method]] (blue) and the MINRES method (green). The matrix used comes from a 2D [[Boundary value problem|boundary-value problem]].]]
+The '''Minimal Residual Method''' or '''MINRES''' is a [[Krylov subspace method]] for the iterative solution of symmetric [[System of linear equations|linear equation systems]]. It was proposed by mathematicians [[Christopher Conway Paige]] and [[Michael Alan Saunders]] in 1975.<ref name=PS>{{Cite journal |title=Solution of sparse indefinite systems of linear equations |author=Christopher C. Paige, Michael A. Saunders |date=1975 |url=https://doi.org/10.1137/0712047 |journal=SIAM Journal on Numerical Analysis |volume=12 |issue=4|pages=617–629 |doi=10.1137/0712047 |url-access=subscription }}</ref>
+
+In contrast to the popular [[Conjugate gradient method|CG method]], the MINRES method does not assume that the [[Matrix (mathematics)|matrix]] is [[positive semidefinite matrix|positive semidefinite]], only the [[Symmetric matrix|symmetry]] of the matrix is mandatory.
+
+== GMRES vs. MINRES ==
+
+The [[GMRES]] method is essentially a generalization of MINRES for arbitrary matrices. Both minimize the 2-norm of the residual and do the same calculations in exact arithmetic when the matrix is symmetric. MINRES is a short-recurrence method with a constant memory requirement, whereas GMRES requires storing the whole Krylov space, so its memory requirement is roughly proportional to the number of iterations. On the other hand, GMRES tends to suffer less from loss of orthogonality.<ref name=PS/><ref>{{cite thesis |first=M. Naoufal |last=Nifa |title=Efficient solvers for constrained optimization in parameter identification problems|date=24 November 2017 | type=Doctoral Thesis|url=https://www.theses.fr/2017SACLC066.pdf|pages=51–52|publisher=Université Paris Saclay (COmUE) }}</ref>
+
+== Properties of the MINRES method ==
+The MINRES method iteratively calculates an approximate solution of a linear system of equations of the form
+<math display="block">Ax = b,</math>
+where <math>A\in\mathbb{R}^{n\times n}</math> is a [[symmetric matrix]] and <math>b\in\mathbb{R}^n</math> a [[Vector space|vector]].
+
+For this, the norm of the residual <math>r(x) := b - Ax</math> in a <math>k</math>-dimensional [[Krylov subspace]]
+<math display="block">V_k = x_0 + \operatorname{span}\{r_0, Ar_0\ldots,A^{k-1}r_0\}</math>
+is minimized. Here <math>x_0\in\mathbb{R}^n</math> is an initial value (often zero) and <math>r_0 := r(x_0)</math>.
+
+More precisely, we define the approximate solutions <math>x_k</math> through
+<math display="block">x_k := \mathrm{argmin}_{x\in V_k} \|r(x)\|,</math>
+where <math>\|\cdot\|</math> is the standard [[Euclidean norm]] on <math>\mathbb{R}^n</math>.
+
+Because of the symmetry of <math>A</math>, unlike in the [[Generalized minimal residual method|GMRES method]], it is possible to carry out this minimization process recursively, storing only two previous steps (short recurrence). This saves memory.
+
+== MINRES algorithm ==
+Note: The MINRES method is more complicated than the algebraically equivalent Conjugate Residual method. The [[Conjugate residual method|Conjugate Residual]] (CR) method was therefore produced below as a substitute. It differs from MINRES is that in MINRES, the columns of a basis of the Krylov space (denoted below by <math>p_k</math>) can be orthogonalized, whereas in CR their images (below labeled with <math>s_k</math>) can be orthogonalized via the Lanczos recursion. There are more efficient and preconditioned variants with fewer AXPYs. Compare with the article.
+
+First you choose <math>x_0\in\mathbb{R}^n</math> arbitrary and compute
+<math display="block">\begin{align}
+r_0 &= b - A x_0 \\
+p_0 &= r_0 \\
+s_0 &= A p_0
+\end{align}</math>
+
+Then we iterate for <math>k=1,2,\dots</math> in the following steps:
+{{unordered list
+| Compute <math>x_k,r_k</math> through
+<math display="block">\alpha_{k-1} = \frac{ \langle r_{k-1}, s_{k-1} \rangle}{ \langle s_{k-1}, s_{k-1} \rangle } </math>
+<math display="block"> x_k = x_{k-1} + \alpha_{k-1} p_{k-1} </math>
+<math display="block"> r_k = r_{k-1} - \alpha_{k-1} s_{k-1} </math>
+if <math>\|r_k\|</math> is smaller than a specified tolerance, the algorithm is interrupted with the approximate solution <math>x_k</math>. Otherwise, a new descent direction <math>p_k</math> is calculated through
+<math display="block">p_k \leftarrow s_{k-1}</math>
+<math display="block">s_k \leftarrow As_{k-1}</math>
+| for <math>l=1,2</math> (the step <math>l=2</math> is not carried out in the first iteration step) calculate:
+<math display="block">\beta_{k,l} = \frac{\langle s_k, s_{k-l} \rangle}{ \langle s_{k-l}, s_{k-l} \rangle}</math>
+<math display="block">p_k \leftarrow p_k - \beta_{k,l} p_{k-l}</math>
+<math display="block">s_k \leftarrow s_k - \beta_{k,l} s_{k-l}</math>
+}}
+
+== Convergence rate of the MINRES method ==
+In the case of positive definite matrices, the convergence rate of the MINRES method can be estimated in a way similar to that of the CG method.<ref>{{Cite book |title=Numerical Methods for Two-phase Incompressible Flows |publisher=Springer | author=Sven Gross, Arnold Reusken |date=6 May 2011 |location=section 5.2 |isbn=978-3-642-19685-0}}</ref> In contrast to the CG method, however, the estimation does not apply to the errors of the iterates, but to the residual. The following applies:
+
+<math display="block">\|r_k\| \le 2\left(\frac{\sqrt{\kappa(A)}-1}{\sqrt{\kappa(A)}+1}\right)^k\|r_{0}\|,</math>
+
+where <math>\kappa(A)</math> is the [[condition number]] of matrix <math>A</math>. Because <math>A</math> is normal, we have
+<math display="block">\kappa(A) = \frac{\left|\lambda_\text{max}(A)\right|}{\left|\lambda_\text{min}(A)\right|},</math>
+where <math>\lambda_\text{max}(A)</math> and <math>\lambda_\text{min}(A) </math> are maximal and minimal [[Eigenvalue|eigenvalues]] of <math>A</math>, respectively.
+
+== Implementation in GNU Octave / MATLAB ==
+<syntaxhighlight lang="matlab" line="1">
+function [x, r] = minres(A, b, x0, maxit, tol)
+  x = x0;
+  r = b - A * x0;
+  p0 = r;
+  s0 = A * p0;
+  p1 = p0;
+  s1 = s0;
+  for iter = 1:maxit
+    p2 = p1; p1 = p0;
+    s2 = s1; s1 = s0;
+    alpha = r'*s1 / (s1'*s1);
+    x = x + alpha * p1;
+    r = r - alpha * s1;
+    if (r'*r < tol^2)
+      break
+    end
+    p0 = s1;
+    s0 = A * s1;
+    beta1 = s0'*s1 / (s1'*s1);
+    p0 = p0 - beta1 * p1;
+    s0 = s0 - beta1 * s1;
+    if iter > 1
+      beta2 = s0'*s2 / (s2'*s2);
+      p0 = p0 - beta2 * p2;
+      s0 = s0 - beta2 * s2;
+    end
+  end
+end
+</syntaxhighlight>
+
+== References ==
+<references />
+
+== External links ==
+* [https://mathworld.wolfram.com/MinimalResidualMethod.html Minimal Residual Method], Wolfram MathWorld, Jul 26, 2022.
+[[Category:Numerical linear algebra]]

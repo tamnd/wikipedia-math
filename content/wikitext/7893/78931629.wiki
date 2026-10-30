@@ -1,0 +1,128 @@
+<!-- wikipedia: en
+     page: 78931629
+     title: SPHINCS+
+     revision: 1368289873
+     timestamp: 2026-08-08T05:10:18Z
+     history: https://en.wikipedia.org/w/index.php?curid=78931629&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1368289873 -->
+{{Short description|Post-quantum digital signature scheme}}
+{{Infobox encryption method
+| name           = SPHINCS<sup>+</sup>
+| designers      = Jean-Philippe Aumasson, [[Daniel J. Bernstein]], Ward Beullens, Christoph Dobraunig, Maria Eichlseder, Scott Fluhrer, Stefan-Lukas Gazdag, Andreas Hülsing, Panos Kampanakis, Stefan Kölbl, [[Tanja Lange]], Martin M. Lauridsen, Florian Mendel, Ruben Niederhagen, Christian Rechberger, Joost Rijneveld, Peter Schwabe, Bas Westerbaan
+| publish date   = {{Start date and age|2017|11|30}}
+| derived from   = SPHINCS
+| security claim = 2<sup>64</sup> signatures before the work needed to forge a signature is less than the required security level
+| structure      = [[Hash-based cryptography]]
+}}
+'''SPHINCS<sup>+</sup>''' is a [[Post-quantum cryptography|post quantum]] [[digital signature scheme]] that is based on [[cryptographic hash function]]s. As a part of the [[NIST Post-Quantum Cryptography Standardization]] process, a version of the scheme was elected by the [[NIST]] to be the basis of the Stateless Hash-based Digital Signature Algorithm ('''SLH-DSA''') and was standardized as [[Federal Information Processing Standards|FIPS]] 205.<ref name="auto">{{cite report | title=Stateless hash-based digital signature standard | publisher=National Institute of Standards and Technology (U.S.) | publication-place=Washington, D.C. | date=August 13, 2024 | doi=10.6028/nist.fips.205 | page=| doi-access=free }}</ref>
+
+==Design==
+SPHINCS<sup>+</sup> is based on a one-time signature scheme called WOTS<sup>+</sup> (a modified version of the Winternitz one-time signature scheme), a few-time signature scheme called FORS (Forest of Random Subsets) and [[Merkle trees]].<ref name="breaking">{{cite web | title=Breaking Category Five SPHINCS+ with SHA-256 | url=https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=935143 | access-date=May 12, 2025}}</ref>
+
+When signing, the message is signed with a FORS key. The FORS key is signed with a WOTS<sup>+</sup> key that is a leaf of a merkle tree. The root of the tree is then signed with another WOTS<sup>+</sup> key that is itself a leaf of another tree. That tree's root is again signed with a WOTS<sup>+</sup>. The number of layers of trees is a parameter that is specified as part of the algorithm. This "tree of trees" is called a hypertree. The root of the top tree is the public key. The signature consists of the FORS key and its signature, the WOTS<sup>+</sup> keys with their signatures and inclusion proofs for the merkle tree and a random value called ''R'' that was used to generate the path in the hypertree.<ref name="breaking" />
+
+In order to verify a signature, the verifier first verifies the first WOTS<sup>+</sup> key's inclusion proof against the public key and then verifies the key's signature of the next root. Then, they check the next WOTS<sup>+</sup> key's inclusion proof against the new root. This goes on until the last WOTS<sup>+</sup> key is reached, which is then used to verify the FORS key. That key is then used to actually verify the message's signature.<ref name="breaking" />
+
+All WOTS<sup>+</sup> keys and FORS keys are generated deterministically from the private key. During signing, the signer generates a random bit string called ''R'' and hashes it together with the message. Parts of the resulting hash are used to select the path through the hypertree while the rest is signed with the FORS key.<ref name="breaking" />
+
+==Security==
+SPHINCS<sup>+</sup> has been called a "conservative" choice by NIST since its security solely relies on the [[Preimage attack|preimage]] and [[Collision attack|collision]] resistance of the underlying hash function.<ref>{{cite web | title=Recovering the tight security proof of SPHINCS+ | url=https://eprint.iacr.org/2022/346.pdf | access-date=June 29, 2025}}</ref><ref>{{cite web | title=A Tight Security Proof for SPHINCS+, Formally Verified | website=PQShield | date=January 30, 2025 | url=https://pqshield.com/publications/a-tight-security-proof-for-sphincs-formally-verified/ | access-date=June 30, 2025}}</ref>
+
+A theoretical forgery attack for specific SHA256 instances has been described that requires a large amount of legitimate signatures and an infeasible amount of computation. It relies on the [[Merkle–Damgård construction|Merkle–Damgård structure]] of SHA256{{efn|SHAKE256 instances are unaffected as they rely on the [[sponge construction]]<ref>{{cite web | title=Keccak Team | website=Keccak Team | url=https://keccak.team/sponge_duplex.html | access-date=October 24, 2025}}</ref>}} and reduces each security claim by 40 bits. The authors of the attack believe that it doesn't "call the general soundness of the SPHINCS<sup>+</sup> design into question" and mitigations have been proposed.<ref name="breaking" />
+
+==History==
+SPHINCS<sup>+</sup> is based on the SPHINCS scheme, which was presented at [[EUROCRYPT]] 2015.<ref name="sphincs">{{cite web | title=SPHINCS: Introduction | website=SPHINCS | date=July 18, 2013 | url=https://sphincs.cr.yp.to/ | access-date=June 29, 2025}}</ref>
+
+SPHINCS features a larger 1kB public and private key size and a 41kB signature size.<ref name="sphincs" />
+
+SPHINCS<sup>+</sup> was first released in 2017<ref>{{cite web | title=SPHINCS+ Submission to the NIST post-quantum project | url=https://sphincs.org/data/sphincs+-specification.pdf | access-date=June 29, 2025}}</ref> since SPHINCS suffers from a vulnerability called "multi-target attacks in hash-based signatures", which was addressed by a 2016 paper. Furthermore, it doesn't have verifiable index selection (the path through the trees), which enables another kind of multi-target attack. SPHINCS<sup>+</sup> was designed to address all these issues and also decrease the key and signature sizes using tree-less WOTS<sup>+</sup> key compression, the addition of the ''R'' parameter during signing and the replacement of the few-time signature scheme with FORS.<ref>{{cite web | title=SPHINCS+ – The smaller SPHINCS | website=Andreas Hülsing | date=December 4, 2017 | url=https://huelsing.net/wordpress/?p=558 | access-date=June 29, 2025}}</ref><ref>{{cite web | title=Mitigating Multi-Target Attacks in Hash-based Signatures | url=https://eprint.iacr.org/2015/1256.pdf | access-date=June 29, 2025}}</ref>
+
+SPHINCS<sup>+</sup> was standardized as SLH-DSA by [[NIST]] in August 2024 in the [[Federal Information Processing Standards|FIPS]] 205 standard,<ref name="auto" /> making it one of the two NIST standardized post-quantum signature schemes with the other one being [[ML-DSA]].<ref>{{cite web | last=Valenta | first=Luke | last2=Gonçalves | first2=Vânia | last3=Westerbaan | first3=Bas | last4=Rosenberg | first4=Michael | last5=Kipp | first5=Kevin | last6=Dincer | first6=Renan | last7=Araya | first7=Felipe Astroza | last8=Galicer | first8=Mari | last9=Meunier | first9=Thibault | title=NIST's first post-quantum standards | website=The Cloudflare Blog | date=August 20, 2024 | url=https://blog.cloudflare.com/nists-first-post-quantum-standards/ | access-date=June 29, 2025}}</ref><ref>{{cite web | title=SPHINCS+ | website=Open Quantum Safe | date=June 10, 2022 | url=https://openquantumsafe.org/liboqs/algorithms/sig/sphincs.html | access-date=June 29, 2025}}</ref><ref>{{cite web | last=Boutin | first=Chad | title=NIST Releases First 3 Finalized Post-Quantum Encryption Standards | website=NIST | date=August 13, 2024 | url=https://www.nist.gov/news-events/news/2024/08/nist-releases-first-3-finalized-post-quantum-encryption-standards | access-date=June 29, 2025}}</ref>
+
+==Instances==
+SLH-DSA specifies the following instances based on the hash function ([[SHA256]] or [[SHAKE256]]), the type (f for faster signing time and s for shorter signature) and security level (e.g. 128 means that forging signatures is as hard as breaking [[AES-128]]):<ref name="auto" /><ref>{{cite web | title=Security (Evaluation Criteria) | website=CSRC | date=January 3, 2017 | url=https://csrc.nist.gov/projects/post-quantum-cryptography/post-quantum-cryptography-standardization/evaluation-criteria/security-(evaluation-criteria) | access-date=June 29, 2025}}</ref>
+
+{| class="wikitable"
+|-
+! Name !! Security level !! Type !! Hash function !! Public key size (Bytes) !! Private key size (Bytes) !! Signature size (Bytes)
+|-
+| SPHINCS+-SHA2-128s
+|rowspan="4" | 1{{efn|Signature forgery should be as hard as a successful key search on [[AES-128]] or a [[SHA256]] collision}}
+|rowspan="2" | small
+| [[SHA256]]
+|rowspan="4" | 32
+|rowspan="4" | 64
+|rowspan="2" | 7856
+|-
+| SPHINCS+-SHAKE-128s
+| [[SHAKE256]]
+|-
+| SPHINCS+-SHA2-128f
+|rowspan="2" | fast
+| [[SHA256]]
+|rowspan="2" | 17088
+|-
+| SPHINCS+-SHAKE-128f
+| [[SHAKE256]]
+|-
+| SPHINCS+-SHA2-192s
+|rowspan="4" | 3{{efn|Signature forgery should be as hard as a successful key search on [[AES-192]] or a [[SHA384]] collision}}
+|rowspan="2" | small
+| [[SHA256]]
+|rowspan="4" | 48
+|rowspan="4" | 96
+|rowspan="2" | 16224
+|-
+| SPHINCS+-SHAKE-192s
+| [[SHAKE256]]
+|-
+| SPHINCS+-SHA2-192f
+|rowspan="2" | fast
+| [[SHA256]]
+|rowspan="2" | 35664
+|-
+| SPHINCS+-SHAKE-192f
+| [[SHAKE256]]
+|-
+| SPHINCS+-SHA2-256s
+|rowspan="4" | 5{{efn|Signature forgery should be as hard as a successful key search on [[AES-256]]}}
+|rowspan="2" | small
+| [[SHA256]]
+|rowspan="4" | 64
+|rowspan="4" | 128
+|rowspan="2" | 29792
+|-
+| SPHINCS+-SHAKE-256s
+| [[SHAKE256]]
+|-
+| SPHINCS+-SHA2-256f
+|rowspan="2" | fast
+| [[SHA256]]
+|rowspan="2" | 49856
+|-
+| SPHINCS+-SHAKE-256f
+| [[SHAKE256]]
+|-
+|}
+
+==Implementations==
+* [[Botan (programming library)|Botan]]<ref>{{cite web | title=randombit/botan: Cryptography Toolkit | website=GitHub | date=March 6, 2013 | url=https://github.com/randombit/botan | access-date=June 29, 2025}}</ref>
+* [[Bouncy Castle (cryptography)|Bouncy Castle]]<ref>{{cite web | title=PQC and Lightweight Cryptography Updates | website=Bouncycastle | date=January 24, 2025 | url=https://www.bouncycastle.org/resources/pqc-and-lightweight-cryptography-updates-bouncy-castle-1-80-java/ | access-date=June 29, 2025}}</ref>
+* [https://github.com/RustCrypto/signatures RustCrypto], written by [[Trail of Bits]]<ref>{{cite web | last=Hess | first=Tjaden | title=We wrote the code, and the code won | website=The Trail of Bits Blog | date=August 15, 2024 | url=https://blog.trailofbits.com/2024/08/15/we-wrote-the-code-and-the-code-won/ | access-date=June 29, 2025}}</ref>
+* {{ill|Open Quantum Safe|de}}<ref>{{cite web | title=open-quantum-safe/liboqs: C library for prototyping and experimenting with quantum-resistant cryptography | website=GitHub | date=August 12, 2016 | url=https://github.com/open-quantum-safe/liboqs?tab=readme-ov-file#supported-algorithms | access-date=June 29, 2025}}</ref>
+
+==External links==
+* {{Official website}}
+
+==References==
+{{notelist}}
+{{Reflist}}
+
+{{Cryptography public-key}}
+
+{{DISPLAYTITLE:SPHINCS<sup>+</sup>}}
+[[Category:Post-quantum cryptography]]
+[[Category:Public-key cryptography]]
+[[Category:Hash-based cryptography]]
+[[Category:Digital signature schemes]]

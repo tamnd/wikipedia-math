@@ -1,0 +1,123 @@
+<!-- wikipedia: en
+     page: 59458
+     title: ElGamal encryption
+     revision: 1373205550
+     timestamp: 2026-09-04T15:36:30Z
+     history: https://en.wikipedia.org/w/index.php?curid=59458&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373205550 -->
+{{Short description|Public-key cryptosystem}}
+{{Redirect|ElGamal|signature algorithm|ElGamal signature scheme}}
+
+In [[cryptography]], the '''ElGamal encryption system''' is a [[public-key encryption]] algorithm based on the [[Diffie–Hellman key exchange]]. It was described by [[Taher Elgamal]] in 1985.<ref>{{cite journal |author=Taher ElGamal |title=A Public-Key Cryptosystem and a Signature Scheme Based on Discrete Logarithms |journal=IEEE Transactions on Information Theory |volume=31 |issue=4 |year=1985 |pages=469–472 |doi=10.1109/TIT.1985.1057074 |url=https://caislab.kaist.ac.kr/lecture/2010/spring/cs548/basic/B02.pdf|s2cid=2973271 }} (conference version appeared in [[CRYPTO]]'84, pp. 10–18)</ref> ElGamal encryption is used in the free [[GNU Privacy Guard]] software, recent versions of [[Pretty Good Privacy|PGP]], and other [[cryptosystem]]s. The [[Digital Signature Algorithm]] (DSA) is a variant of the [[ElGamal signature scheme]], which should not be confused with ElGamal encryption.
+
+ElGamal encryption can be defined over any [[cyclic group]] <math>G</math>, like [[multiplicative group of integers modulo n|multiplicative group of integers modulo&nbsp;''n'']] if and only if ''n'' is 1, 2, 4, ''p''<sup>''k''</sup> or 2''p''<sup>''k''</sup>, where ''p'' is an odd prime and {{nowrap|''k'' > 0}}. Its security depends upon the difficulty of the [[Decisional_Diffie–Hellman_assumption|Decisional Diffie Hellman Problem]] in <math>G</math>.
+
+== Algorithm   ==
+The algorithm first performs Diffie–Hellman key agreement to establish a shared secret <math>s</math>, then uses this as a [[one-time pad]] for encrypting the message. ElGamal encryption is performed in three phases: the key generation, the encryption, and the decryption. The first is purely key exchange, whereas the latter two mix key exchange computations with message computations.
+
+=== Key generation ===
+The first party, Alice, generates a key pair as follows:
+
+* Generate an efficient description of a [[cyclic group]] <math>G\,</math> of [[order (group theory)|order]] <math>q\,</math> with [[generating set of a group|generator]] <math>g</math>.  Let <math>e</math> represent the identity element of <math>G</math>.
+*: It is not necessary to come up with a group and generator for each new key. Indeed, one may expect a specific implementation of ElGamal to be hardcoded to use a specific group, or a group from a specific suite. The choice of group is mostly about choosing the size of the keys used.
+* Choose an integer <math>x</math> randomly from <math>\{1, \ldots, q-1\}</math>.
+* Compute <math>h := g^x</math>.
+* The [[public key]] consists of the values <math>(G,q,g,h)</math>. Alice publishes this public key and retains <math>x</math> as her private key, which must be kept secret.
+
+=== Encryption ===
+A second party, Bob, encrypts a message <math>M</math> to Alice under her public key <math>(G,q,g,h)</math> as follows:
+
+* Map the message <math>M</math> to an element <math>m</math> of <math>G</math> using a reversible mapping function.
+* Choose an integer <math>y</math> randomly from <math>\{1, \ldots, q-1\}</math>.
+* Compute <math>s := h^y</math>. This is called the ''shared secret''.
+* Compute <math>c_1 := g^y</math>.
+* Compute <math>c_2 := m \cdot s</math>.
+* Bob sends the ciphertext <math>(c_1,c_2)</math> to Alice.
+
+Note that if one knows both the ciphertext <math>(c_1,c_2)</math> and the plaintext <math>m</math>, one can easily find the shared secret <math>s</math>, since <math>c_2 \cdot m^{-1} = s</math>. Therefore, a new <math>y</math> and hence a new <math>s</math> is generated for every message to improve security. For this reason, <math>y</math> is also called an [[ephemeral key]].
+
+=== Decryption ===
+Alice decrypts a ciphertext <math>(c_1, c_2)</math> with her private key <math>x</math> as follows:
+* Compute <math>s := c_1^x</math>. Since <math>c_1 = g^y</math>, <math>c_1^x = g^{xy} = h^y</math>, and thus it is the same shared secret that was used by Bob in encryption.
+* Compute <math>s^{-1}</math>, the inverse of <math>s</math> in the group <math>G</math>. This can be computed in one of several ways. If <math>G</math> is a subgroup of a multiplicative group of integers modulo&nbsp;<math>n</math>, where <math>n</math> is prime, the [[modular multiplicative inverse]] can be computed using the [[Modular multiplicative inverse#Extended Euclidean algorithm|extended Euclidean algorithm]]. An alternative is to compute <math>s^{-1}</math> as <math>c_1^{q-x}</math>. This is the inverse of <math>s</math> because of [[Lagrange's theorem (group theory)|Lagrange's theorem]], since <math>s \cdot c_1^{q-x} = g^{xy} \cdot g^{(q-x)y} = (g^{q})^y = e^y = e</math>.
+* Compute <math>m := c_2 \cdot s^{-1}</math>. This calculation produces the original message <math>m</math>, because <math> c_2 = m \cdot s</math>; hence <math>c_2 \cdot s^{-1} = (m \cdot s) \cdot s^{-1} = m \cdot e = m</math>.
+* Map <math>m</math> back to the plaintext message <math>M</math>.
+
+=== Practical use ===
+
+Like most public key systems, the ElGamal cryptosystem is usually used as part of a [[hybrid cryptosystem]], where the message itself is encrypted using a symmetric cryptosystem, and ElGamal is then used to encrypt only the symmetric key. This is because asymmetric cryptosystems like ElGamal are usually slower than symmetric ones for the same [[level of security]], so it is faster to encrypt the message, which can be arbitrarily large, with a symmetric cipher, and then use ElGamal only to encrypt the symmetric key, which usually is quite small compared to the size of the message.
+
+== Security ==
+
+The security of the ElGamal scheme depends on the properties of the underlying group <math>G</math> as well as any padding scheme used on the messages. If the [[computational Diffie–Hellman assumption]] (CDH) holds in the underlying cyclic group <math>G</math>, then the encryption function is [[one-way function|one-way]].<ref name=cryptutor>{{cite web
+| url=https://crypto.cs.uiuc.edu/wiki/index.php/Elgamal_encryption_scheme
+| title=Elgamal encryption scheme
+| author= Mike Rosulek
+| date=2008-12-13
+| publisher=[[University of Illinois at Urbana-Champaign]]
+| archive-url=https://web.archive.org/web/20160722005050/https://crypto.cs.uiuc.edu/wiki/index.php/Elgamal_encryption_scheme
+| archive-date=2016-07-22
+}}</ref>
+
+If the [[decisional Diffie–Hellman assumption]] (DDH) holds in <math>G</math>, then
+ElGamal achieves [[semantic security]].<ref name=cryptutor/><ref>{{cite book
+| first1=Yiannis
+| last1=Tsiounis
+| first2=Moti
+| last2=Yung
+| title=Public Key Cryptography
+| chapter=On the security of ElGamal based encryption
+| date=2006-05-24
+| pages=117–134
+| volume=1431
+| doi=10.1007/BFb0054019
+| isbn=978-3-540-69105-1
+| series=Lecture Notes in Computer Science
+}}
+</ref> Semantic security is not implied by the computational Diffie–Hellman assumption alone. See [[Decisional Diffie–Hellman assumption]] for a discussion of groups where the assumption is believed to hold.
+
+ElGamal encryption is unconditionally [[malleability (cryptography)|malleable]], and therefore is not secure under [[chosen ciphertext attack]]. For example, given an encryption <math>(c_1, c_2)</math> of some (possibly unknown) message <math>m</math>, one can easily construct a valid encryption <math>(c_1, 2 c_2)</math> of the message <math>2m</math>.
+
+To achieve chosen-ciphertext security, the scheme must be further modified, or an appropriate padding scheme must be used. Depending on the modification, the DDH assumption may or may not be necessary.
+
+Other schemes related to ElGamal which achieve security against chosen ciphertext attacks have also been proposed. The [[Cramer–Shoup cryptosystem]] is secure under chosen ciphertext attack assuming DDH holds for <math>G</math>. Its proof does not use the [[random oracle model]]. Another proposed scheme is [[Integrated Encryption Scheme|DHIES]],<ref name=DHIES>{{cite book
+| first1=Michel
+| last1=Abdalla
+| first2=Mihir
+| last2=Bellare
+| first3=Phillip
+| last3=Rogaway
+| title=Topics in Cryptology — CT-RSA 2001
+| chapter=The Oracle Diffie-Hellman Assumptions and an Analysis of DHIES
+| date=2001-01-01
+| series=Lecture Notes in Computer Science
+| volume=2020
+| pages=143–158
+| doi=10.1007/3-540-45353-9_12
+| isbn=978-3-540-41898-6
+| chapter-url=https://link.springer.com/chapter/10.1007/3-540-45353-9_12}}</ref> whose proof requires an assumption that is stronger than the DDH assumption.
+
+== Efficiency ==
+
+ElGamal encryption is [[probabilistic encryption|probabilistic]], meaning that a single [[plaintext]] can be encrypted to many possible ciphertexts, with the consequence that a general ElGamal encryption produces a 1:2 expansion in size from plaintext to ciphertext.
+
+Encryption under ElGamal requires two [[exponentiation]]s; however, these exponentiations are independent of the message and can be computed ahead of time if needed. Decryption requires one exponentiation and one computation of a group inverse, which can, however, be easily combined into just one exponentiation.
+
+== See also ==
+* [[Taher Elgamal]], designer of this and other cryptosystems
+* [[ElGamal signature scheme]]
+* [[Homomorphic encryption]]
+
+== Further reading ==
+
+* {{cite book |author1=A. J. Menezes |author2=P. C. van Oorschot |author3=S. A. Vanstone |publisher=CRC Press |chapter-url=https://cacr.uwaterloo.ca/hac/about/chap8.pdf |title=Handbook of Applied Cryptography |chapter=Chapter 8.4 ElGamal public-key encryption}}
+* {{cite book |author=Dan Boneh |title=Algorithmic Number Theory |chapter=The Decision Diffie-Hellman problem |series=Lecture Notes in Computer Science |year=1998 |volume=1423 |pages=48–63 |doi=10.1007/BFb0054851 |url=https://crypto.stanford.edu/~dabo/abstracts/DDH.html |isbn=978-3-540-64657-0 |author-link=Dan Boneh}}
+
+== References ==
+{{reflist}}
+
+{{Cryptography navbox | public-key}}
+
+{{DEFAULTSORT:Elgamal Encryption}}
+[[Category:Public-key encryption schemes]]

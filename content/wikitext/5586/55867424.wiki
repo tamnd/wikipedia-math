@@ -1,0 +1,180 @@
+<!-- wikipedia: en
+     page: 55867424
+     title: Residual neural network
+     revision: 1376104589
+     timestamp: 2026-09-22T02:54:43Z
+     history: https://en.wikipedia.org/w/index.php?curid=55867424&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1376104589 -->
+{{Short description|Type of artificial neural network}}
+{{redirect|ResNet}}
+[[File:ResBlock.png|thumb|right|A residual block in a deep residual network. Here, the residual connection skips two layers.]]
+
+A '''residual neural network''' (also referred to as a '''residual network''' or '''ResNet''')<ref name="resnet">{{Cite conference |last1=He |first1=Kaiming |author-link=Kaiming He |last2=Zhang |first2=Xiangyu |last3=Ren |first3=Shaoqing |last4=Sun |first4=Jian |year=2016 |title=Deep Residual Learning for Image Recognition |url=https://openaccess.thecvf.com/content_cvpr_2016/papers/He_Deep_Residual_Learning_CVPR_2016_paper.pdf |conference=[[Conference on Computer Vision and Pattern Recognition]] |arxiv=1512.03385 |doi=10.1109/CVPR.2016.90}}</ref> is a [[deep learning]] architecture in which the layers learn residual functions with reference to the layer inputs. It was developed in 2015 for [[image recognition]], and won the [[ImageNet]] Large Scale Visual Recognition Challenge ([https://image-net.org/challenges/LSVRC/ ILSVRC]) of that year.<ref name="ilsvrc2015">{{Cite web |title=ILSVRC2015 Results |url=https://image-net.org/challenges/LSVRC/2015/results.php |website=image-net.org}}</ref><ref name="imagenet">{{Cite conference |last1=Deng |first1=Jia |last2=Dong |first2=Wei |last3=Socher |first3=Richard |last4=Li |first4=Li-Jia |last5=Li |first5=Kai |last6=Li |first6=Fei-Fei |author-link6=Fei-Fei Li |year=2009 |title=ImageNet: A large-scale hierarchical image database |conference=[[Conference on Computer Vision and Pattern Recognition]] |doi=10.1109/CVPR.2009.5206848}}</ref>
+
+As a point of terminology, "residual connection" refers to the specific architectural motif of {{awrap|<math>x \mapsto f(x) + x</math>}}, where <math>f</math> is an arbitrary neural network module. The motif had been used previously (see [[Residual neural network#History|§History]] for details). However, the publication of ResNet made it widely popular for [[Feedforward neural network|feedforward networks]], appearing in neural networks that are seemingly unrelated to ResNet.
+
+The residual connection stabilizes the training and convergence of deep neural networks with hundreds of layers, and is a common motif in deep neural networks, such as [[Transformer (deep learning architecture)|transformer]] models (e.g., [[BERT (language model)|BERT]], and [[Generative pre-trained transformer|GPT]] models such as [[ChatGPT]]), the [[AlphaGo Zero]] system, the [[AlphaStar (software)|AlphaStar]] system, and the [[AlphaFold]] system.
+
+== Mathematics ==
+
+=== Residual connection ===
+
+In a multilayer neural network model, consider a (non-residual) subnetwork with a certain number of stacked layers (e.g., 2 or 3). Let <math>H(x; \alpha)</math> denote the subnetwork, where <math>x</math> is the input and <math>\alpha</math> is the set of parameters. Suppose <math>H^*</math> is the desired optimal output of this subnetwork. Residual learning simply adds <math>x</math> directly to the output, such that the optimal learned output now becomes <math>H^* - x</math>, which is interpreted as a "residual" with respect to <math>x</math>.
+
+The operation of "adding <math>x</math>" is implemented via a "skip connection" that performs an identity mapping to connect the input of the subnetwork with its output. This connection is referred to as a "residual connection" in later work.
+
+Let <math>F(x; \alpha) = H(x; a) + x</math>. The function <math>F</math> is often represented by matrix multiplication interlaced with [[activation function]]s and normalization operations (e.g., [[batch normalization]] or [[Normalization (machine learning)#Layer normalization|layer normalization]]). As a whole, one of these subnetworks is referred to as a "residual block".<ref name="resnet" /> A deep residual network is constructed by simply stacking these blocks.
+
+[[Long short-term memory]] (LSTM) has a memory mechanism that serves as a residual connection.<ref name="lstm1997">{{Cite journal |author=Sepp Hochreiter |author-link=Sepp Hochreiter |author2=Jürgen Schmidhuber |author2-link=Jürgen Schmidhuber |year=1997 |title=Long short-term memory |url=https://www.researchgate.net/publication/13853244 |journal=[[Neural Computation (journal)|Neural Computation]] |volume=9 |issue=8 |pages=1735–1780 |doi=10.1162/neco.1997.9.8.1735 |pmid=9377276 |s2cid=1915014}}</ref> In an LSTM without a forget [[Gating mechanism|gate]], an input <math>x_t</math> is processed by a function <math>F</math> and added to a memory cell <math>c_t</math>, resulting in <math>c_{t+1} = c_t + F(x_t)</math>. An LSTM with a forget gate essentially functions as a [[highway network]].
+
+To stabilize the [[variance]] of the layers' inputs, it is recommended to replace the residual connections <math>x + f(x)</math> with <math>x/L + f(x)</math>, where <math>L</math> is the total number of residual layers.<ref>{{Cite conference |last1=Hanin |first1=Boris |last2=Rolnick |first2=David |date=2018 |title=How to Start Training: The Effect of Initialization and Architecture |url=https://proceedings.neurips.cc/paper_files/paper/2018/file/d81f9c1be2e08964bf9f24b15f0e4900-Paper.pdf |conference=[[Conference on Neural Information Processing Systems]] |publisher=Curran Associates, Inc. |volume=31 |arxiv=1803.01719}}</ref>
+
+=== Projection connection ===
+
+If the function <math>F</math> is of type <math>F: \R^n \to \R^m</math> where <math>n \neq m</math>, then <math>F(x) + x</math> is undefined. To handle this special case, a projection connection is used:
+
+<math display="block">y = F(x) + P(x)</math>
+
+where <math>P</math> is typically a linear projection, defined by <math>P(x) = Mx</math> where <math>M</math> is a <math>m \times n</math> matrix. The matrix is trained via [[backpropagation]], as is any other parameter of the model.
+
+=== Signal propagation ===
+
+The introduction of identity mappings facilitates signal propagation in both forward and backward paths.<ref name="resnetv2">{{cite conference |url=https://link.springer.com/content/pdf/10.1007/978-3-319-46493-0_38.pdf |arxiv=1603.05027 |title=Identity Mappings in Deep Residual Networks |last1=He |first1=Kaiming |author-link1=Kaiming He |last2=Zhang |first2=Xiangyu |last3=Ren |first3=Shaoqing |last4=Sun |first4=Jian | year=2016 |conference=[[European Conference on Computer Vision]] |doi=10.1007/978-3-319-46493-0_38 }}</ref>
+
+==== Forward propagation ====
+
+If the output of the <math>\ell</math>-th residual block is the input to the <math>(\ell+1)</math>-th residual block (assuming no activation function between blocks), then the <math>(\ell+1)</math>-th input is:
+
+<math display="block">x_{\ell+1} = F(x_{\ell}) + x_{\ell}</math>
+
+Applying this formulation recursively, e.g.:
+
+<math display="block">
+\begin{align} x_{\ell+2} & = F(x_{\ell+1}) + x_{\ell+1} \\
+& = F(x_{\ell+1}) + F(x_{\ell}) + x_{\ell}
+\end{align}
+</math>
+
+yields the general relationship:
+
+<math display="block">x_{L} = x_{\ell} + \sum_{i=\ell}^{L-1} F(x_{i})</math>
+
+where <math display="inline">L</math> is the index of a residual block and <math display="inline">\ell</math> is the index of some earlier block. This formulation suggests that there is always a signal that is directly sent from a shallower block <math display="inline">\ell</math> to a deeper block <math display="inline">L</math>.
+
+==== Backward propagation ====
+
+The residual learning formulation provides the added benefit of mitigating the [[vanishing gradient problem]] to some extent. However, it is crucial to acknowledge that the vanishing gradient issue is not the root cause of the degradation problem, which is tackled through the use of normalization. To observe the effect of residual blocks on backpropagation, consider the partial derivative of a [[Loss functions for classification|loss function]] <math>\mathcal{E}</math> with respect to some residual block input <math>x_{\ell}</math>. Using the equation above from forward propagation for a later residual block <math>L>\ell</math>:<ref name="resnetv2"/>
+
+<math display="block">
+\begin{align} \frac{\partial \mathcal{E} }{\partial x_{\ell} }
+& = \frac{\partial \mathcal{E} }{\partial x_{L} }\frac{\partial x_{L} }{\partial x_{\ell} } \\
+& = \frac{\partial \mathcal{E} }{\partial x_{L} } \left( 1 + \frac{\partial }{\partial x_{\ell} } \sum_{i=\ell}^{L-1} F(x_{i}) \right) \\
+& = \frac{\partial \mathcal{E} }{\partial x_{L} }  + \frac{\partial \mathcal{E} }{\partial x_{L} } \frac{\partial }{\partial x_{\ell} } \sum_{i=\ell}^{L-1} F(x_{i})
+\end{align}</math>
+
+This formulation suggests that the gradient computation of a shallower layer, <math display="inline">\frac{\partial \mathcal{E} }{\partial x_{\ell} }</math>, always has a later term <math display="inline">\frac{\partial \mathcal{E} }{\partial x_{L} }</math> that is directly added. Even if the gradients of the <math>F(x_{i})</math> terms are small, the total gradient <math display="inline">\frac{\partial \mathcal{E} }{\partial x_{\ell} }</math> resists vanishing due to the added term <math display="inline">\frac{\partial \mathcal{E} }{\partial x_{L} }</math>.
+
+== Variants of residual blocks ==
+
+[[File:ResBlockVariants.png|thumb|right|Two variants of convolutional Residual Blocks.<ref name="resnet" /> '''Left''': a ''basic block'' that has two 3x3 convolutional layers. '''Right''': a ''bottleneck block'' that has a 1x1 convolutional layer for dimension reduction, a 3x3 convolutional layer, and another 1x1 convolutional layer for dimension restoration.]]
+
+=== Basic block ===
+
+A ''basic block'' is the simplest building block studied in the original ResNet.<ref name="resnet" /> This block consists of two sequential 3x3 [[Convolutional neural network|convolutional]] layers and a residual connection. The input and output dimensions of both layers are equal.
+[[File:ResNet_block.svg|thumb|Block diagram of ResNet (2015). It shows a ResNet block with and without the 1x1 convolution. The 1x1 convolution (with stride) can be used to change the shape of the array, which is necessary for residual connection through an upsampling/downsampling layer.]]
+
+=== Bottleneck block ===
+
+A ''bottleneck block''<ref name="resnet" /> consists of three sequential convolutional layers and a residual connection. The first layer in this block is a 1×1 convolution for dimension reduction (e.g., to 1/2 of the input dimension); the second layer performs a 3×3 convolution; the last layer is another 1×1 convolution for dimension restoration. The models of ResNet-50, ResNet-101, and ResNet-152 are all based on bottleneck blocks.<ref name="resnet" />
+
+=== Pre-activation block ===
+
+The ''pre-activation residual block''<ref name="resnetv2" /> applies activation functions before applying the residual function <math>F</math>. Formally, the computation of a pre-activation residual block can be written as:
+
+<math display="block">x_{\ell+1} = F(\phi(x_{\ell})) + x_{\ell}</math>
+
+where <math>\phi</math> can be any activation (e.g. [[ReLU]]) or normalization (e.g. [[LayerNorm]]) operation. This design reduces the number of non-identity mappings between residual blocks, and allows an identity mapping directly from the input to the output. This design was used to train models with 200 to over 1000 layers, and was found to consistently outperform variants where the residual path is not an identity function. The pre-activation ResNet with 200 layers took 3 weeks to train for [[ImageNet]] on 8 [[Graphics processing unit|GPUs]] in 2016.<ref name="resnetv2" />
+
+Since [[GPT-2]], [[Transformer (deep learning architecture)|transformer]] blocks have been mostly implemented as pre-activation blocks. This is often referred to as "pre-normalization" in the literature of transformer models.<ref name="gpt2paper">{{cite web
+ |url          = https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf
+ |title        = Language models are unsupervised multitask learners
+ |last1        = Radford
+ |first1       = Alec
+ |last2        = Wu
+ |first2       = Jeffrey
+ |last3        = Child
+ |first3       = Rewon
+ |last4        = Luan
+ |first4       = David
+ |last5        = Amodei
+ |first5       = Dario
+ |last6        = Sutskever
+ |first6       = Ilya
+ |date         = 14 February 2019
+ |access-date  = 19 December 2020
+ |archive-date = 6 February 2021
+ |archive-url  = https://web.archive.org/web/20210206183945/https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf
+ |url-status   = live
+}}</ref>
+[[File:Resnet-18_architecture.svg|thumb|614x614px|The original Resnet-18 architecture. Up to 152 layers were trained in the original publication (as "ResNet-152").<ref name=":1" />]]
+
+== Applications ==
+Originally, ResNet was designed for [[computer vision]].<ref name="resnet" /><ref name=":1" /><ref name="inceptionv42">{{cite conference |arxiv=1602.07261 |doi=10.1609/aaai.v31i1.11231 |conference=[[AAAI Conference on Artificial Intelligence]] |first1=Christian |last1=Szegedy |first2=Sergey |last2=Ioffe |url=https://cdn.aaai.org/ojs/11231/11231-13-14759-1-2-20201228.pdf |title=Inception-v4, Inception-ResNet and the impact of residual connections on learning |first3=Vincent |last3=Vanhoucke |first4=Alex |last4=Alemi |year=2017}}</ref>[[File:Transformer, full architecture.png|thumb|The Transformer architecture includes residual connections.]]
+All transformer architectures include residual connections. Indeed, very deep transformers cannot be trained without them.<ref name="lose_rank">{{Cite conference |last1=Dong |first1=Yihe |last2=Cordonnier |first2=Jean-Baptiste |last3=Loukas |first3=Andreas |year=2021 |title=Attention is not all you need: pure attention loses rank doubly exponentially with depth |url=https://proceedings.mlr.press/v139/dong21a/dong21a.pdf |conference=[[International Conference on Machine Learning]] |publisher=PMLR |pages=2793–2803 |arxiv=2103.03404}}</ref>
+
+The original ResNet paper made no claim on being inspired by biological systems. However, later research has related ResNet to biologically-plausible algorithms.<ref name="liao2016">
+{{cite arXiv |last1=Liao |first1=Qianli |last2=Poggio |first2=Tomaso |date=2016 |title=Bridging the Gaps Between Residual Learning, Recurrent Neural Networks and Visual Cortex |eprint=1604.03640 |class=cs.LG}}</ref><ref name="xiao2018">
+{{cite conference |last1=Xiao |first1=Will |last2=Chen |first2=Honglin |last3=Liao |first3=Qianli |last4=Poggio |first4=Tomaso |date=2019 |title=Biologically-Plausible Learning Algorithms Can Scale to Large Datasets |conference=[[International Conference on Learning Representations]] |arxiv=1811.03567}}</ref>
+
+A study published in [[Science (journal)|''Science'']] in 2023<ref name="Winding2023">{{Cite journal |last1=Winding |first1=Michael |last2=Pedigo |first2=Benjamin |last3=Barnes |first3=Christopher |last4=Patsolic |first4=Heather |last5=Park |first5=Youngser |last6=Kazimiers |first6=Tom |last7=Fushiki |first7=Akira |last8=Andrade |first8=Ingrid |last9=Khandelwal |first9=Avinash |last10=Valdes-Aleman |first10=Javier |last11=Li |first11=Feng |last12=Randel |first12=Nadine |last13=Barsotti |first13=Elizabeth |last14=Correia |first14=Ana |last15=Fetter |first15=Fetter |date=10 Mar 2023 |title=The connectome of an insect brain |journal=Science |volume=379 |issue=6636 |article-number=eadd9330 |biorxiv=10.1101/2022.11.28.516756v1 |doi=10.1126/science.add9330 |pmc=7614541 |pmid=36893230 |s2cid=254070919 |last16=Hartenstein |first16=Volker |last17=Priebe |first17=Carey |last18=Vogelstein |first18=Joshua |author19-link=Albert Cardona |last19=Cardona |first19=Albert |last20=Zlatic |first20=Marta}}</ref> disclosed the complete [[connectome]] of an insect brain (specifically that of a fruit fly larva). This study discovered "multilayer shortcuts" that resemble the skip connections in artificial neural networks, including ResNets.
+
+== History ==
+
+=== Previous work ===
+Residual connections were noticed in [[neuroanatomy]], such as [[Rafael Lorente de Nó|Lorente de No]] (1938).<ref>{{Cite journal |last=De N |first=Rafael Lorente |date=1938-05-01 |title=Analysis of the Activity of the Chains of Internuncial Neurons |url=https://www.physiology.org/doi/10.1152/jn.1938.1.3.207 |journal=Journal of Neurophysiology |language=en |volume=1 |issue=3 |pages=207–244 |doi=10.1152/jn.1938.1.3.207 |issn=0022-3077|url-access=subscription }}</ref>{{Pg|location=Fig 3}} [[Warren Sturgis McCulloch|McCulloch]] and [[Walter Pitts|Pitts]] (1943) proposed artificial neural networks and considered those with residual connections.<ref>{{Cite journal |last1=McCulloch |first1=Warren S. |last2=Pitts |first2=Walter |date=1943-12-01 |title=A logical calculus of the ideas immanent in nervous activity |url=https://link.springer.com/article/10.1007/BF02478259 |journal=The Bulletin of Mathematical Biophysics |language=en |volume=5 |issue=4 |pages=115–133 |doi=10.1007/BF02478259 |issn=1522-9602|url-access=subscription }}</ref>{{Pg|location=Fig 1.h}}
+
+In 1961, [[Frank Rosenblatt]] described a three-layer [[multilayer perceptron]] (MLP) model with skip connections.<ref name="mlpbook">
+{{cite book
+	| last = Rosenblatt
+	| first = Frank 
+	| date = 1961
+	| title = Principles of neurodynamics. perceptrons and the theory of brain mechanisms 
+	| url = https://safari.ethz.ch/digitaltechnik/spring2018/lib/exe/fetch.php?media=neurodynamics1962rosenblatt.pdf#page=327
+    | location = 
+	| publisher = 
+	| page = 
+	| isbn = 
+}}</ref>{{Pg|page=313|location=Chapter 15}} The model was referred to as a "cross-coupled system", and the skip connections were forms of cross-coupled connections.
+
+During the late 1980s, "skip-layer" connections were sometimes used in neural networks. Examples include:<ref>Rumelhart, David E., Geoffrey E. Hinton, and Ronald J. Williams. "Learning internal representations by error propagation", ''Parallel Distributed Processing''. Vol. 1. 1986.</ref><ref name="massbook">{{cite book |last1=Venables |first1=W. N. |url=https://books.google.com/books?id=ayDvAAAAMAAJ |title=Modern Applied Statistics with S-Plus |last2=Ripley |first2=Brain D. |date=1994 |publisher=Springer |isbn=978-3-540-94350-1 |location= |pages=261–262}}</ref> Lang and Witbrock (1988)<ref name="skip1988">{{Cite journal |last1=Lang |first1=Kevin| last2=Witbrock |first2=Michael|year=1988 |title=Learning to tell two spirals apart |url=https://gwern.net/doc/ai/nn/fully-connected/1988-lang.pdf |journal=Proceedings of the 1988 Connectionist Models Summer School |pages=52–59}}</ref> trained a fully connected feedforward network where each layer skip-connects to all subsequent layers, like the later DenseNet (2016). In this work, the residual connection was the form {{awrap|<math>x \mapsto F(x) + P(x)</math>,}} where <math>P</math> is a randomly-initialized projection connection. They termed it a "short-cut connection". An early neural language model used residual connections and named them "direct connections".<ref>{{Cite journal |last1=Bengio |first1=Yoshua |author-link1=Yoshua Bengio |last2=Ducharme |first2=Réjean |last3=Vincent |first3=Pascal |last4=Jauvin |first4=Christian |date=2003 |title=A Neural Probabilistic Language Model |url=https://www.jmlr.org/papers/v3/bengio03a.html |journal=Journal of Machine Learning Research |volume=3 |issue=Feb |pages=1137–1155 |issn=1533-7928}}</ref>[[File:LSTM_3.svg|right|thumb|300x300px|The long short-term memory (LSTM) cell can process data sequentially and keep its hidden state through time. The cell state <math>c_t</math> can function as a generalized residual connection.]]
+
+=== Degradation problem ===
+[[Sepp Hochreiter]] discovered the [[vanishing gradient problem]] in 1991<ref name="hochreiter1991">{{cite thesis |url=https://www.bioinf.jku.at/publications/older/3804.pdf |degree=diploma |first=Sepp |last=Hochreiter |title=Untersuchungen zu dynamischen neuronalen Netzen |publisher=[[Technical University of Munich]], Institute of Computer Science, advisor: J. Schmidhuber |year=1991}}</ref> and argued that it explained why the then-prevalent forms of [[recurrent neural network]]s did not work for long sequences. He and [[Jürgen Schmidhuber|Schmidhuber]] later designed the LSTM architecture to solve this problem,<ref name="lstm1997" /><ref name="lstm2000">{{Cite journal |author=Felix A. Gers |author2=Jürgen Schmidhuber |author3=Fred Cummins |year=2000 |title=Learning to Forget: Continual Prediction with LSTM |journal=[[Neural Computation (journal)|Neural Computation]] |volume=12 |issue=10 |pages=2451–2471 |citeseerx=10.1.1.55.5709 |doi=10.1162/089976600300015015 |pmid=11032042 |s2cid=11598600}}</ref> which has a "cell state" <math>c_t</math> that can function as a generalized residual connection. The [[highway network]] (2015)<ref name="highway2015may">{{cite arXiv |eprint=1505.00387 |class=cs.LG |first1=Rupesh Kumar |last1=Srivastava |first2=Klaus |last2=Greff |title=Highway Networks |date=3 May 2015 |last3=Schmidhuber |first3=Jürgen}}</ref><ref name="highway2015july">{{cite conference |conference=[[Conference on Neural Information Processing Systems]] |arxiv=1507.06228 |first1=Rupesh Kumar |last1=Srivastava |first2=Klaus |last2=Greff |url=https://proceedings.neurips.cc/paper/2015/file/215a71a12769b056c3c32e7299f1c5ed-Paper.pdf |title=Training Very Deep Networks |year=2015 |last3=Schmidhuber |first3=Jürgen}}</ref> applied the idea of an LSTM [[Recurrent neural network|unfolded in time]] to [[feedforward neural network]]s, resulting in the highway network. ResNet is equivalent to an open-gated highway network.
+[[File:Recurrent_neural_network_unfold.svg|thumb|Standard (left) and unfolded (right) basic recurrent neural network]]
+During the early days of deep learning, there were attempts to train increasingly deep models. Notable examples included the [[AlexNet]] (2012), which had 8 layers, and the [[VGGNet|VGG-19]] (2014), which had 19 layers.<ref name="simonyan2015very">{{cite arXiv |last1=Simonyan |first1=Karen |title=Very Deep Convolutional Networks for Large-Scale Image Recognition |date=2015-04-10 |eprint=1409.1556 |last2=Zisserman |first2=Andrew|class=cs.CV }}</ref> However, stacking too many layers led to a steep reduction in [[Training, validation, and test data sets|training]] accuracy,<ref name="prelu">{{cite conference |doi=10.1109/ICCV.2015.123 |arxiv=1502.01852 |conference=[[International Conference on Computer Vision]] |first1=Kaiming |last1=He |author-link1=Kaiming He |first2=Xiangyu |last2=Zhang |url=https://openaccess.thecvf.com/content_iccv_2015/papers/He_Delving_Deep_into_ICCV_2015_paper.pdf |title=Delving Deep into Rectifiers: Surpassing Human-Level Performance on ImageNet Classification |last3=Ren |first3=Shaoqing |last4=Sun |first4=Jian |year=2015}}</ref> known as the "degradation" problem.<ref name="resnet" /> In theory, adding additional layers to deepen a network should not result in a higher training [[Loss functions for classification|loss]], but this is what happened with [[VGGNet]].<ref name="resnet" /> If the extra layers can be set as [[identity mapping]]s, however, then the deeper network would represent the same function as its shallower counterpart. There is some evidence that the optimizer is not able to approach identity mappings for the parameterized layers, and the benefit of residual connections was to allow identity mappings by default.<ref name="resnetv2"/>
+
+In 2014, the state of the art was training deep neural networks with 20 to 30 layers.<ref name="simonyan2015very"/> The research team for ResNet attempted to train deeper ones by empirically testing various methods for training deeper networks, until they came upon the ResNet architecture.<ref>{{Cite web |last=Linn |first=Allison |date=2015-12-10 |title=Microsoft researchers win ImageNet computer vision challenge |url=https://blogs.microsoft.com/ai/microsoft-researchers-win-imagenet-computer-vision-challenge/ |access-date=2024-06-29 |website=The AI Blog |language=en-US |url-status=dead  |archive-url=https://web.archive.org/web/20180129230620/https://blogs.microsoft.com/ai/microsoft-researchers-win-imagenet-computer-vision-challenge/ |archive-date=2018-01-29 }}</ref>
+
+=== Subsequent work ===
+'''Wide Residual Network''' (2016) found that using more channels and fewer layers than the original ResNet improves performance and GPU-computational efficiency, and that a block with two 3×3 convolutions is superior to other configurations of convolution blocks.<ref>{{cite arXiv |eprint=1605.07146 |class=cs.CV |first1=Sergey |last1=Zagoruyko |first2=Nikos |last2=Komodakis |title=Wide Residual Networks |date=2016-05-23}}</ref>
+
+'''DenseNet''' (2016)<ref>{{Cite conference |last1=Huang |first1=Gao |last2=Liu |first2=Zhuang |last3=van der Maaten |first3=Laurens |last4=Weinberger |first4=Kilian |year=2017 |url=https://openaccess.thecvf.com/content_cvpr_2017/papers/Huang_Densely_Connected_Convolutional_CVPR_2017_paper.pdf |title=Densely Connected Convolutional Networks |conference=[[Conference on Computer Vision and Pattern Recognition]] |doi=10.1109/CVPR.2017.243 |arxiv=1608.06993}}</ref> connects the output of each layer to the input to each subsequent layer:
+
+<math display="block">x_{\ell+1} = F(x_1, x_2, \dots, x_{\ell-1}, x_{\ell})</math>
+
+'''Stochastic depth'''<ref>{{Cite conference |conference=[[European Conference on Computer Vision]] |last1=Huang |first1=Gao |last2=Sun |first2=Yu |last3=Liu |first3=Zhuang |last4=Weinberger |first4=Kilian |year=2016 |url=https://link.springer.com/content/pdf/10.1007/978-3-319-46493-0_39.pdf |title=Deep Networks with Stochastic Depth |doi=10.1007/978-3-319-46493-0_39 |arxiv=1603.09382}}</ref> is a [[Regularization (mathematics)|regularization]] method that randomly drops a subset of layers and lets the signal propagate through the identity skip connections. Also known as ''DropPath'', this regularizes training for deep models, such as [[Vision transformer|vision transformers]].<ref>{{Cite conference |last1=Lee |first1=Youngwan |last2=Kim |first2=Jonghee |last3=Willette |first3=Jeffrey |last4=Hwang |first4=Sung Ju |year=2022 |title=MPViT: Multi-Path Vision Transformer for Dense Prediction |url=https://openaccess.thecvf.com/content/CVPR2022/papers/Lee_MPViT_Multi-Path_Vision_Transformer_for_Dense_Prediction_CVPR_2022_paper.pdf |conference=[[Conference on Computer Vision and Pattern Recognition]] |language=en |pages=7287–7296 |doi=10.1109/CVPR52688.2022.00714 |arxiv=2112.11010 }}</ref>[[File:ResNext_block.svg|thumb|ResNeXt block diagram]]
+
+'''ResNeXt''' (2017) combines the [[Inception (deep learning architecture)|Inception module]] with ResNet.<ref>{{Cite conference |last1=Xie |first1=Saining |last2=Girshick |first2=Ross |last3=Dollar |first3=Piotr |last4=Tu |first4=Zhuowen |last5=He |first5=Kaiming |author-link5=Kaiming He |year=2017 |title=Aggregated Residual Transformations for Deep Neural Networks |url=https://openaccess.thecvf.com/content_cvpr_2017/papers/Xie_Aggregated_Residual_Transformations_CVPR_2017_paper.pdf |conference=[[Conference on Computer Vision and Pattern Recognition]] |pages=1492–1500 |arxiv=1611.05431 |doi=10.1109/CVPR.2017.634}}</ref><ref name=":1">{{Cite book |last1=Zhang |first1=Aston |title=Dive into deep learning |last2=Lipton |first2=Zachary |last3=Li |first3=Mu |last4=Smola |first4=Alexander J. |date=2024 |publisher=Cambridge University Press |isbn=978-1-009-38943-3 |location=Cambridge New York Port Melbourne New Delhi Singapore |chapter=8.6. Residual Networks (ResNet) and ResNeXt |chapter-url=https://d2l.ai/chapter_convolutional-modern/resnet.html}}</ref>
+
+'''Squeeze-and-Excitation Networks''' (2018) added squeeze-and-excitation (SE) modules to ResNet.<ref>{{Cite conference |last1=Hu |first1=Jie |last2=Shen |first2=Li |last3=Sun |first3=Gang |date=2018 |title=Squeeze-and-Excitation Networks |url=https://openaccess.thecvf.com/content_cvpr_2018/papers/Hu_Squeeze-and-Excitation_Networks_CVPR_2018_paper.pdf |conference=[[Conference on Computer Vision and Pattern Recognition]] |pages=7132–7141 |doi=10.1109/CVPR.2018.00745 |arxiv=1709.01507}}</ref> An SE module is applied after a convolution, and takes a tensor of shape <math>\R^{H \times W \times C}</math> (height, width, channels) as input. Each channel is averaged, resulting in a vector of shape <math>\R^C</math>. This is then passed through a [[multilayer perceptron]] (with an architecture such as ''linear-ReLU-linear-sigmoid'') before it is multiplied with the original tensor. It won the [[ILSVRC]] in 2017.<ref>{{cite conference |last1=Jie |first1=Hu |date=2017 |title=Squeeze-and-Excitation Networks |url=https://image-net.org/static_files/files/SENet.pdf |conference=Beyond ImageNet Large Scale Visual Recognition Challenge, Workshop at CVPR 2017 |type=Presentation |location=}}</ref>
+
+{{clear}}
+
+== References ==
+<references />
+
+{{Artificial intelligence navbox}}
+
+[[Category:Neural network architectures]]
+[[Category:Deep learning]]

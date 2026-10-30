@@ -1,0 +1,164 @@
+<!-- wikipedia: en
+     page: 41061790
+     title: Certificate Transparency
+     revision: 1371327400
+     timestamp: 2026-08-25T22:45:56Z
+     history: https://en.wikipedia.org/w/index.php?curid=41061790&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1371327400 -->
+{{Short description|System of public logs of digital certificates}}
+{{Technical|date=August 2023}}
+
+'''Certificate Transparency''' ('''CT''') is an [[Internet security]] [[Internet Standard|standard]] for monitoring and auditing the issuance of [[digital certificates]].<ref name="rfc6962">{{Cite IETF |title=Certificate Transparency|rfc=6962|date=June 2013}}</ref> When an internet user interacts with a website, a trusted third party is needed for assurance that the website is legitimate and that the website's encryption key is valid. This third party, called a [[certificate authority]] (CA), will issue a certificate for the website that the user's browser can validate. The security of encrypted internet traffic depends on the trust that certificates are only given out by the certificate authority and that the certificate authority has not been compromised.
+
+Certificate Transparency makes public all issued certificates in the form of a [[distributed ledger]], giving website owners and auditors the ability to detect and expose inappropriately issued certificates.
+
+Work on Certificate Transparency first began in 2011 after the certificate authority [[DigiNotar]] became compromised and started issuing malicious certificates. Google engineers submitted a draft to the [[Internet Engineering Task Force]] (IETF) in 2012. This effort resulted in IETF {{IETF RFC|6962}}, a standard defining a system of public [[log file|logs]] to record all certificates issued by publicly trusted [[certificate authorities]], allowing efficient identification of mistakenly or maliciously issued certificates.<ref name="Solomon, Cloudflare, 2019">{{Cite web | url = https://blog.cloudflare.com/introducing-certificate-transparency-monitoring/ | title = Introducing Certificate Transparency Monitoring | access-date = 9 August 2019 | first = Ben | last = Solomon | date = 8 August 2019 | website = [[Cloudflare]] | quote = Ah, Certificate Transparency (CT). CT solves the problem I just described by making all certificates public and easy to audit. When CAs issue certificates, they must submit certificates to at least two “public logs.” This means that collectively, the logs carry important data about all trusted certificates on the Internet. | archive-url = https://web.archive.org/web/20190808221646/https://blog.cloudflare.com/introducing-certificate-transparency-monitoring/ | archive-date = 8 August 2019 | df = dmy-all }}</ref>
+
+==Technical overview==
+The certificate transparency system consists of a system of [[append-only]] certificate logs. Logs are operated by many parties, including [[Web browser|browser]] vendors and [[certificate authorities]].<ref name="scheitle2018">{{Cite book|last1=Scheitle|first1=Quirin|last2=Gasser|first2=Oliver|last3=Nolte|first3=Theodor|last4=Amann|first4=Johanna|last5=Brent|first5=Lexi|last6=Carle|first6=Georg|last7=Holz|first7=Ralph|last8=Schmidt|first8=Thomas C.|last9=Wählisch|first9=Matthias|title=Proceedings of the Internet Measurement Conference 2018 |chapter=The Rise of Certificate Transparency and Its Implications on the Internet Ecosystem |date=2018-10-31|language=en|location=Boston MA USA|publisher=ACM|pages=343–349|doi=10.1145/3278532.3278562|isbn=978-1-4503-5619-0|s2cid=52814744 |doi-access=free}}</ref> Certificates that support certificate transparency must include one or more ''signed certificate timestamps'' (SCTs), which is a promise from a log operator to include the certificate in their log within a ''maximum merge delay'' (MMD).<ref name="howctworks">{{Cite web|title=How CT Works : Certificate Transparency|url=https://certificate.transparency.dev/howctworks/|access-date=2022-02-25|website=certificate.transparency.dev|archive-date=2022-02-25|archive-url=https://web.archive.org/web/20220225233202/https://certificate.transparency.dev/howctworks/|url-status=live}}</ref><ref name="scheitle2018" /> At some point within the maximum merge delay, the log operator adds the certificate to their log. Each entry in a log references the hash of a previous one, forming a [[Merkle tree]]. The ''signed tree head'' (STH) references the current root of the [[Merkle tree]].
+
+===Logging procedure===
+Although anyone can submit a certificate to a CT log, this task is commonly carried out by a CA as follows:<ref name="howctworks" /><ref name="le-ctlog">{{Cite web|title=Certificate Transparency (CT) Logs|date=25 September 2023 |url=https://letsencrypt.org/docs/ct-logs/|publisher=Let's Encrypt|access-date=2024-01-04|archive-date=2024-01-04|archive-url=https://web.archive.org/web/20240104055331/https://letsencrypt.org/docs/ct-logs/|url-status=live}}</ref>
+
+# An applicant, "The natural person or Legal Entity that applies for (or seeks renewal of) a Certificate",<ref name="cab-baseline">{{cite web|url=https://cabforum.org/wp-content/uploads/CA-Browser-Forum-BR-v2.0.1.pdf|title=Baseline Requirements for the Issuance and Management of Publicly-Trusted Certificates|publisher=CA/B Forum|access-date=4 January 2024|archive-date=4 January 2024|archive-url=https://web.archive.org/web/20240104220954/https://cabforum.org/wp-content/uploads/CA-Browser-Forum-BR-v2.0.1.pdf|url-status=live}}</ref> requests a certificate from a CA.
+# The CA issues a special ''precertificate'', a certificate which carries a poison extension signaling that it should not be accepted by user agents.
+# The CA sends the precertificate to logs.
+# Logs return corresponding SCTs to the CA.
+# The CA attaches SCTs collected from logs as an [[X.509]] extension to the final certificate and provides it to the applicant.
+
+Finally, the CA may decide to log the final certificate as well. Let's Encrypt E1 CA, for example, logs both precertificates and final certificates (see CA [https://crt.sh/?caid=183283 crt.sh profile page] under 'issued certificates' section), whereas Google GTS CA 2A1 does not (see [https://crt.sh/?caid=180750 crt.sh profile page]).
+
+===Mandatory certificate transparency===
+Some browsers require [[Transport Layer Security]] (TLS) certificates to have proof of being logged with certificate transparency,<ref>{{Cite web|last=Call|first=Ashley|date=2015-06-03|title=Certificate Transparency: FAQs {{!}} DigiCert Blog|url=https://www.digicert.com/dc/blog/certificate-transparency-faqs/|access-date=2021-04-13|website=DigiCert|language=en-US|archive-date=2022-05-20|archive-url=https://web.archive.org/web/20220520141427/https://www.digicert.com/dc/blog/certificate-transparency-faqs/|url-status=dead}}</ref><ref name=":0" /> either through SCTs embedded into the certificate, an extension during the TLS handshake, or through [[OCSP]]:
+
+{| class="wikitable sortable"
+|+
+|-
+! Browser
+! Current SCT requirements
+! Current OCSP/TLS extension requirements
+|-
+! [[Google Chrome|Chrome]]/[[Chromium (web browser)|Chromium]]
+| {{yes|
+* One SCT from a currently approved log
+* Duration ≤ 180 days: 2 SCTs from once-approved logs
+* Duration > 180 days: 3 SCTs from once-approved logs<ref>This applies for certificates issued on or after 15 April 2022. For older certificates, other criteria apply.</ref><ref>{{Cite web|title=Chrome Certificate Transparency Policy|url=https://googlechrome.github.io/CertificateTransparency/ct_policy.html|access-date=2022-02-26|website=CertificateTransparency|language=en-US|archive-date=2022-02-20|archive-url=https://web.archive.org/web/20220220222826/https://googlechrome.github.io/CertificateTransparency/ct_policy.html|url-status=live}}</ref>}}
+| {{yes|
+* 1 SCT from a current Google log
+* 1 SCT from a current non-Google log
+}}
+|-
+! [[Firefox]]
+| {{yes|
+* desktop: 2 SCTs from once-approved logs, since v135<ref name="MDN">
+{{Cite web|title=Certificate Transparency - Web security {{!}} MDN|url=https://developer.mozilla.org/en-US/docs/Web/Security/Certificate_Transparency|access-date=2025-02-24|website=developer.mozilla.org|date=27 January 2025 |language=en-US}}
+</ref><ref>
+{{Cite web |title=Certificate Transparency is now enforced in Firefox on desktop platforms starting with version 135 |url=https://groups.google.com/a/mozilla.org/g/dev-security-policy/c/OagRKpVirsA/m/Q4c89XG-EAAJ?pli=1 |access-date=2025-02-24 |website=dev-security-policy@mozilla.org}}
+</ref> (released 2025-02-04)
+* Firefox for Android: 2 SCTs from once-approved logs, since v145<ref name="MDN"/> (released 2025-11-11)
+}}
+| {{yes|Two SCTs from currently approved logs}}
+|-
+! [[Safari (web browser)|Safari]]
+| {{yes|
+* One SCT from a currently approved log
+* Duration ≤ 180 days: 2 SCTs from once-approved logs
+* Duration > 180 days: 3 SCTs from once-approved logs<ref>{{Cite web|title=Apple's Certificate Transparency policy|url=https://support.apple.com/en-ca/HT205280|access-date=2022-02-26|website=Apple Support|date=5 March 2021|language=en|archive-date=2022-02-26|archive-url=https://web.archive.org/web/20220226003617/https://support.apple.com/en-ca/HT205280|url-status=live}}</ref>}}
+| {{yes|Two SCTs from currently approved logs}}
+|}
+*NOTE: Apple platforms that use system libraries for TLS enforce CT for free on '''any''' TLS connection (not just Safari).<ref>{{cite web |title=Apple Support |url=https://support.apple.com/en-us/103214 |website=Apple Support |access-date=2025-05-06 |date=2024-11-12}}</ref>
+
+===Log sharding===
+
+Due to the large quantities of certificates issued with the Web [[Public key infrastructure|PKI]], certificate transparency logs can grow to contain many certificates. This large quantity of certificates can cause strain on logs. Temporal sharding is a method to reduce the strain on logs by sharding a log into multiple logs, and having each shard only accept precertificates and certificates with an expiration date in a particular time period (usually a calendar year).<ref name="chrome-policy"/><ref>{{Cite book |last1=Tomescu |first1=Alin |last2=Bhupatiraju |first2=Vivek |last3=Papadopoulos |first3=Dimitrios |last4=Papamanthou |first4=Charalampos |last5=Triandopoulos |first5=Nikos |last6=Devadas |first6=Srinivas |title=Proceedings of the 2019 ACM SIGSAC Conference on Computer and Communications Security |chapter=Transparency Logs via Append-Only Authenticated Dictionaries |date=2019-11-06 |language=en |location=London United Kingdom |publisher=ACM |pages=1299–1316 |doi=10.1145/3319535.3345652 |isbn=978-1-4503-6747-9|s2cid=52034337 |doi-access=free }}</ref><ref>{{Cite web |title=Scaling CT Logs: Temporal Sharding {{!}} DigiCert.com |url=https://www.digicert.com/blog/scaling-certificate-transparency-logs-temporal-sharding |access-date=2022-02-26 |website=www.digicert.com |language=en-US |archive-date=2022-02-26 |archive-url=https://web.archive.org/web/20220226194718/https://www.digicert.com/blog/scaling-certificate-transparency-logs-temporal-sharding |url-status=live }}</ref> [[Cloudflare]]'s Nimbus series of logs was the first to use temporal sharding.
+
+==Background==
+===Advantages===
+One of the problems with digital certificate management is that fraudulent certificates take a long time to be spotted, reported and [[certificate revocation|revoked]]. An issued certificate not logged using Certificate Transparency may never be spotted at all. The main advantage with Certificate Transparency is the ability for cyber security teams to defend companies and organisations by monitoring for suspicious domains registering certificates. The new certificates for these suspicious domains may have similar names to other legitimate domains and are designed to be used to support malicious activities such as phishing attacks. Certificate Transparency puts cyber security teams in control and enables them to issue domain take down orders for suspicious domains and allows them to apply cyber security controls on web proxies and email gateways for immediate protection.<ref>{{Cite web |url=https://www.itsecuritylocksmith.co.uk/certificate-transparency/ |title=Certificate transparency and how cybersecurity teams can use it? |date=4 June 2024 |access-date=2025-01-10 |archive-date=2025-01-10 |archive-url=https://web.archive.org/web/20250110142444/https://www.itsecuritylocksmith.co.uk/certificate-transparency/ |url-status=live }}</ref>
+
+===Side Effects===
+Domain names that are used on internal networks and have certificates issued by certificate authorities become publicly searchable as their certificates are added to CT logs.
+
+===Certificate Transparency logs===
+Certificate Transparency depends on verifiable Certificate Transparency logs.  A log appends new certificates to an ever-growing [[Merkle tree|Merkle hash tree]].<ref name="rfc9162"/>{{rp |at=§4}} To be seen as behaving correctly, a log must:
+* Verify that each submitted certificate or precertificate has a valid signature chain leading back to a trusted root certificate authority certificate.
+* Refuse to publish certificates without this valid signature chain.
+* Store the entire verification chain from the newly accepted certificate back to the root certificate.
+* Present this chain for auditing upon request.
+
+A log may accept certificates that are not yet fully valid and certificates that have expired.
+
+===Certificate Transparency monitors and auditors===
+There are two primary categories of monitors: log integrity monitors (also referred to as log verifiers or log auditors)<ref name="rfc9162" />{{rp |at=§8.3}} and tracking monitors.<ref>{{cite web |title=Monitors – Certificate Transparency |url=https://certificate.transparency.dev/monitors/ |website=Certificate Transparency |access-date=2025-05-07 |date=2024}}</ref> Some companies offering monitoring services collect data from all logs and provide paid services for domain tracking. For example, a domain owner can register for Cloudflare's services, which globally monitor all logs and send email updates whenever a certificate is issued for their domain,<ref>{{cite web |title=Certificate Transparency Monitoring |url=https://developers.cloudflare.com/ssl/edge-certificates/additional-options/certificate-transparency-monitoring/ |website=Cloudflare Developers |access-date=2025-05-07 |date=2024}}</ref> allowing them control over all certificates issued.
+
+Large organizations can maintain their own monitors, which continuously scan for new certificate issued for their domains. If a [[certificate authority]] (CA) attempts to issue a "bad" certificate for one of these domains (intentionally or unintentionally), the monitor will quickly detect it. Two popular APIs for research and tracking are [[Sectigo]]'s crt.sh<ref>{{cite web |title=Sectigo's monitor |url=https://crt.sh/ |website=crt.sh |access-date=28 April 2025}}</ref> and Cloudflare MerkleTown.<ref>{{cite web |title=Cloudflare's Monitor |url=https://ct.cloudflare.com/ |website=Cloudflare |access-date=2025-05-01 |date=2024}}</ref> These tools facilitate the monitoring of certificate issuance and help organizations stay on top of the security of their domains.
+
+While there is an additional consideration of monitoring the monitors themselves, the likelihood of a significant impact on system performance or security due to misbehavior of a single monitor is low.{{cn|date=May 2026}} This is because there are numerous log monitors, providing a layered approach to security and minimizing the risk of a single point of failure.
+
+===Certificate Transparency log programs===
+Apple<ref>{{Cite web|title=Apple's Certificate Transparency log program.|url=https://support.apple.com/en-us/HT209255|access-date=2021-10-14|website=apple.com|date=28 January 2019|archive-date=2021-10-27|archive-url=https://web.archive.org/web/20211027183407/https://support.apple.com/en-us/HT209255|url-status=live}}</ref> and Google<ref name="chrome-policy">{{Cite web|title=Chrome CT Log Policy.|url=https://googlechrome.github.io/CertificateTransparency/log_policy.html|access-date=2021-10-14|website=googlechrome.github.io|archive-date=2021-10-26|archive-url=https://web.archive.org/web/20211026232013/https://googlechrome.github.io/CertificateTransparency/log_policy.html|url-status=live}}</ref> have separate log programs with distinct policies and lists of trusted logs.
+
+===Root stores of Certificate Transparency logs===
+Certificate Transparency logs maintain their own root stores and only accept certificates that chain back to the trusted roots.<ref name="rfc9162"/> A number of misbehaving logs have been publishing inconsistent root stores in the past.<ref>{{cite book|author1=Korzhitskii, Nikita|author2=Carlsson, Niklas|title=Characterizing the root landscape of Certificate Transparency logs|publication-place=In proceedings of 2020 IFIP Networking Conference (Networking)|year=2020 |arxiv=2001.04319 }}</ref>
+
+==Static CT API==
+A new structure for logs is based on dividing the Merkle Tree into tiles. This structure is expected to be faster, easier to operate, and to provide much smaller merge delays (the current Maximum Merge Delay is 24 hours).<ref>{{cite web |title=Sunlight: A New Merkle Tree Log Structure |url=https://sunlight.dev/ |website=Sunlight |author=Filippo Valsorda |access-date=2025-05-07 |date=2024 |publisher=FilNet Labs}}</ref> Chrome has updated its Certificate Transparency (CT) policy to accept SCTs from the new static-CT-API logs only if an SCT from an RFC 6962 log is also present, and it intends to complete the migration to static-CT-API CT logs by the end of 2025.<ref>{{cite web |title=Chrome CT Policy Update – Migration to Static-CT-API Logs |url=https://groups.google.com/a/chromium.org/g/ct-policy/c/HBFZHG0TCsY/m/HAaVRK6MAAAJ?pli=1 |website=Chromium CT Policy Group |author=Ryan Sleevi |date=2024-02-14 |access-date=2025-05-07}}</ref>
+
+==History==
+[[File:Signed Certificate Transparency on Firefox 89 screenshot.png|thumb|An example of Certificate Transparency entry on Firefox 89]]
+In 2011, a reseller of the certificate authority [[Comodo Group|Comodo]] was attacked and the certificate authority [[DigiNotar]] was [[Certificate authority compromise|compromised]],<ref>{{Cite news|last=Bright|first=Peter|date=August 30, 2011|title=Another fraudulent certificate raises the same old questions about certificate authorities|language=en-us|work=[[Ars Technica]]|url=https://arstechnica.com/information-technology/2011/08/earlier-this-year-an-iranian/|access-date=2018-02-10|archive-date=2018-02-10|archive-url=https://web.archive.org/web/20180210180047/https://arstechnica.com/information-technology/2011/08/earlier-this-year-an-iranian/|url-status=live}}</ref> demonstrating existing flaws in the certificate authority ecosystem and prompting work on various mechanisms to prevent or monitor unauthorized certificate issuance. [[Google]] employees [[Ben Laurie]], Adam Langley and Emilia Kasper began work on an [[Open-source software|open source]] [[software framework|framework]] for detecting mis-issued certificates the same year. In 2012, they submitted the first draft of the standard to [[IETF]] under the code-name "Sunlight".<ref>{{Cite journal |last1=Laurie |first1=Ben |last2=Langley |first2=Adam |last3=Kasper |first3=Emilia |date=2012-09-12 |title=Certificate Transparency (draft-laurie-pki-sunlight) |url=https://datatracker.ietf.org/doc/draft-laurie-pki-sunlight/00/ |access-date=2023-05-28 |website=ietf.org |publisher=[[Internet Engineering Task Force|IETF]] |archive-date=2023-05-29 |archive-url=https://web.archive.org/web/20230529002411/https://datatracker.ietf.org/doc/draft-laurie-pki-sunlight/00/ |url-status=live }}</ref>
+
+In March 2013, Google launched its first certificate transparency log.<ref name="knownlogs">{{cite web |url=http://www.certificate-transparency.org/known-logs |title=Known Logs - Certificate Transparency |website=certificate-transparency.org |access-date=2015-12-31 |archive-date=2016-12-16 |archive-url=https://web.archive.org/web/20161216085124/http://www.certificate-transparency.org/known-logs |url-status=live }}</ref>
+
+In June 2013, {{IETF RFC|6962}} "Certificate Transparency" was published, based on the 2012 draft.
+
+In September 2013, [[DigiCert]] became the first [[certificate authority]] to implement Certificate Transparency.<ref>{{cite web |url=https://www.darkreading.com/risk/digicert-announces-certificate-transparency-support/d/d-id/1140538 |title=DigiCert Announces Certificate Transparency Support |work=Dark Reading |date=2013-09-24 |accessdate=2018-10-31 |archive-date=2018-11-01 |archive-url=https://web.archive.org/web/20181101055222/https://www.darkreading.com/risk/digicert-announces-certificate-transparency-support/d/d-id/1140538 |url-status=live }}</ref>
+
+In 2015, [[Google Chrome]] began requiring Certificate Transparency for newly issued [[Extended Validation Certificate]]s.<ref>{{cite web |url=https://blog.digicert.com/certificate-transparency-required-ev-certificates-show-green-address-bar-chrome/ |title=Certificate Transparency Required for EV Certificates to Show Green Address Bar in Chrome |date=December 5, 2014 |last=Woodfield |first=Meggie |work=DigiCert Blog |publisher=[[DigiCert]] |access-date=December 31, 2015 |archive-date=October 13, 2016 |archive-url=https://web.archive.org/web/20161013173422/https://blog.digicert.com/certificate-transparency-required-ev-certificates-show-green-address-bar-chrome/ |url-status=live }}</ref><ref>{{cite mailing list|url=https://cabforum.org/pipermail/public/2014-February/002840.html |title=Updated Certificate Transparency + Extended Validation plan |date=February 4, 2014 |last=Laurie|first=Ben |mailing-list=public@cabforum.org
+|archive-url=https://web.archive.org/web/20140330191951/https://cabforum.org/pipermail/public/2014-February/002840.html |archive-date=2014-03-30 |url-status=live}}</ref> It began requiring Certificate Transparency for all certificates newly issued by [[NortonLifeLock|Symantec]] from June 1, 2016, after they were found to have issued 187 certificates without the domain owners' knowledge.<ref>{{cite web |url=https://knowledge.symantec.com/support/ssl-certificates-support/index?page=content&actp=CROSSLINK&id=INFO3663 |title=Symantec Certificate Transparency (CT) for certificates issued before June 1, 2016 |date=June 9, 2016 |work=Symantec Knowledge Center |publisher=[[NortonLifeLock|Symantec]] |access-date=September 22, 2016 |archive-url=https://web.archive.org/web/20161005230125/https://knowledge.symantec.com/support/ssl-certificates-support/index?page=content&actp=CROSSLINK&id=INFO3663 |archive-date=October 5, 2016 |url-status=dead }}</ref><ref>{{cite web |url=https://security.googleblog.com/2015/10/sustaining-digital-certificate-security.html |title=Sustaining Digital Certificate Security |date=October 28, 2015 |work=Google Security Blog |last=Sleevi |first=Ryan |access-date=September 22, 2016 |archive-date=December 7, 2016 |archive-url=https://web.archive.org/web/20161207170146/https://security.googleblog.com/2015/10/sustaining-digital-certificate-security.html |url-status=live }}</ref> Since April 2018, this requirement has been extended to all certificates.<ref name=":0">{{cite web |last1=O'Brien |first1=Devon |title=Certificate Transparency Enforcement in Google Chrome |url=https://groups.google.com/a/chromium.org/forum/#!msg/ct-policy/wHILiYf31DE/iMFmpMEkAQAJ |publisher=Google Groups |accessdate=18 December 2019 |date=7 February 2018 |archive-date=23 May 2013 |archive-url=https://web.archive.org/web/20130523081122/http://groups.google.com/a/chromium.org/group/chromium-os-dev/browse_thread/thread/337cca9a0da59ad6/9354a38894da5df5#!msg/ct-policy/wHILiYf31DE/iMFmpMEkAQAJ |url-status=live }}</ref>
+
+On March 23, 2018, [[Cloudflare]] announced its own CT log named ''Nimbus''.<ref name = "sullivan, Cloudflare, 2018" >{{Cite web|url=https://blog.cloudflare.com/introducing-certificate-transparency-and-nimbus/| title=Introducing Certificate Transparency and Nimbus| access-date=9 August 2019| first=Nick| last=Sullivan| date=23 March 2018| website=cloudflare.com| archive-url=https://web.archive.org/web/20180323160208/https://blog.cloudflare.com/introducing-certificate-transparency-and-nimbus/ |archive-date=23 March 2018| url-status=live| df=dmy-all}}</ref>
+
+In May 2019, [[certificate authority]] [[Let's Encrypt]] launched its own CT log called Oak. Since February 2020, it is included in approved log lists and is usable by all publicly trusted certificate authorities.<ref>{{Cite web|title=Introducing Oak, a Free and Open Certificate Transparency Log - Let's Encrypt|url=https://letsencrypt.org/2019/05/15/introducing-oak-ct-log.html|access-date=2021-04-13|website=letsencrypt.org|date=15 May 2019 |archive-date=2021-04-13|archive-url=https://web.archive.org/web/20210413175631/https://letsencrypt.org/2019/05/15/introducing-oak-ct-log.html|url-status=live}}</ref>
+
+In December 2021, {{IETF RFC|9162}} "Certificate Transparency Version 2.0" was published.<ref name="rfc9162">{{Cite IETF |title=Certificate Transparency Version 2.0|rfc=9162 |date=December 2021}}</ref> Version 2.0 includes major changes to the required structure of the log certificate, as well as support for [[Ed25519]] as a signature algorithm of SCTs and support for including certificate inclusion proofs with the SCT. However, it has not seen industry adoption and is considered [[dead on arrival]].<ref name="McPherrin, Matthew, 2024">{{Cite web|url=https://community.letsencrypt.org/t/certificate-transparency-versions-and-status-of-ctv2/218492/4 | title = Certificate Transparency versions and status of CTv2 | access-date = 12 March 2025 | first = Matthew | last = McPherrin | date = May 2024 | website = [[Let's Encrypt]] | quote = I don’t believe there are any implementations of ct v2, and nobody runs any logs. Let’s Encrypt has no plans to run ctv2 logs. Sunlight is an evolution based on v1. It does seem like ctv2 is DOA.|archive-url=https://web.archive.org/web/20250312145813/https://community.letsencrypt.org/t/certificate-transparency-versions-and-status-of-ctv2/218492/4|archive-date=12 March 2025|url-status=live}}</ref>
+
+In February 2022, Google published an update to their CT policy,<ref>{{Cite web|title=Google CT Policy Update|url=https://groups.google.com/a/chromium.org/g/ct-policy/c/507lPdbbwSk|access-date=2022-02-14|website=Google Groups|archive-date=2022-02-10|archive-url=https://web.archive.org/web/20220210235435/https://groups.google.com/a/chromium.org/g/ct-policy/c/507lPdbbwSk|url-status=live}}</ref> which removes the requirement for certificates to include a SCT from their own CT log service, matching all the requirements for certificates to those previously published by Apple.<ref>{{Cite web|title=Apple's Certificate Transparency Policy|url=https://support.apple.com/en-us/HT205280|access-date=2022-02-14|website=support.apple.com|date=5 March 2021|archive-date=2022-02-14|archive-url=https://web.archive.org/web/20220214150730/https://support.apple.com/en-us/HT205280|url-status=live}}</ref>
+
+In February 2025, [[Mozilla Firefox]] desktop version 135 began requiring Certificate Transparency for all certificates issued by a certificate authority in Mozilla's Root CA Program.<ref>{{Cite web |author=Mozilla |url=https://www.mozilla.org/en-US/firefox/135.0/releasenotes/ |title=Firefox 135.0, See All New Features, Updates and Fixes |website=Mozilla.org |accessdate=2025-02-05 |quote=Firefox now enforces certificate transparency, requiring web servers to provide sufficient proof that their certificates were publicly disclosed before they will be trusted. This only affects servers using certificates issued by a certificate authority in Mozilla's Root CA Program.}}</ref><ref>{{Cite web |date=2025-11-29 |title=Certificate Transparency - Security {{!}} MDN |url=https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Certificate_Transparency |access-date=2026-01-05 |website=MDN Web Docs |language=en-US}}</ref>
+
+== Signature algorithms ==
+In Certificate Transparency Version 2.0, a log must use one of the algorithms in the IANA registry "Signature Algorithms".<ref name="rfc9162" />{{rp |at=10.2.2}}<ref>{{Cite web |title=Signature Algorithms |url=https://www.iana.org/assignments/trans/trans.xhtml#trans-signature-algorithms |access-date=2023-05-28 |website=Public Notary Transparency |publisher=[[Internet Assigned Numbers Authority|IANA]]}}</ref>
+
+== Tools for inspecting CT logs ==
+
+* [https://search.censys.io/ Censys Search] by [[Censys]]
+* [https://www.certkit.io/tools/ct-logs/ CertKit]
+* [https://certobserver.com/ct-search CertObserver]
+* [https://radar.cloudflare.com/certificate-transparency Cloudflare Radar Certificate Transparency] by [[Cloudflare]]
+* [https://crt.sh/ crt.sh] by [[Sectigo]]
+* [https://ctlogs.dev/ ctlogs.dev Certificate Transparency Search]
+* [https://bgp.he.net/certs Hurricane Electric BGP Toolkit] by [[Hurricane Electric]]
+* [https://www.merklemap.com/ Merklemap]
+* [https://sslmate.com/ct_search_api/ Cert Spotter API by sslmate]
+
+==See also==
+* [[Key Transparency]]
+
+==References==
+<references />
+
+==External links==
+* {{Official website|https://www.certificate-transparency.org/}}
+* {{IETF RFC|9162}} Certificate Transparency Version 2.0 (which obsoleted previous {{IETF RFC|6962}})
+* [https://crt.sh/ crt.sh], a Certificate Transparency Log search engine
+* [https://transparencyreport.google.com/https/certificates Google Certificate Transparency Report]
+* [https://developers.facebook.com/tools/ct/ Certificate Transparency Monitoring by Meta]
+* [https://no-sct.badssl.com/ CT test on badssl.com]
+
+{{SSL/TLS}}
+
+[[Category:Public key infrastructure]]
+[[Category:Internet security]]
+[[Category:Transport Layer Security]]

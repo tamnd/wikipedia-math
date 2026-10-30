@@ -1,0 +1,252 @@
+<!-- wikipedia: en
+     page: 53777
+     title: Ford–Fulkerson algorithm
+     revision: 1355553573
+     timestamp: 2026-05-22T14:59:37Z
+     history: https://en.wikipedia.org/w/index.php?curid=53777&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1355553573 -->
+{{Use American English|date = April 2019}}
+{{Short description|Algorithm to compute the maximum flow in a network}}
+The '''Ford–Fulkerson method''' or '''Ford–Fulkerson algorithm''' ('''FFA''') is a [[greedy algorithm]] that computes the [[maximum flow problem|maximum flow]] in a [[flow network]]. It is sometimes called a "method" instead of an "algorithm" as the approach to finding augmenting paths in a residual graph is not fully specified<ref>{{Cite book|title = Electronic Design Automation: Synthesis, Verification, and Test|url = https://archive.org/details/electronicdesign00wang|url-access = limited|last = Laung-Terng Wang, Yao-Wen Chang, Kwang-Ting (Tim) Cheng|publisher = Morgan Kaufmann|year = 2009|isbn = 978-0080922003|pages = [https://archive.org/details/electronicdesign00wang/page/n240 204]}}</ref> or it is specified in several implementations with different running times.<ref>{{Cite book|title = Introduction to Algorithms|url = https://archive.org/details/introductiontoal00corm_805|url-access = limited|author1=Thomas H. Cormen |author2=Charles E. Leiserson |author3=Ronald L. Rivest |author4=Clifford Stein |publisher = MIT Press|year = 2009|isbn = 978-0262258104|pages = [https://archive.org/details/introductiontoal00corm_805/page/n734 714]}}</ref> It was published in 1956 by [[L. R. Ford Jr.]] and [[D. R. Fulkerson]].<ref>{{Cite journal | last1 = Ford | first1 = L. R. | author-link1 = L. R. Ford Jr.| last2 = Fulkerson | first2 = D. R. | author-link2 = D. R. Fulkerson| doi = 10.4153/CJM-1956-045-5 | title = Maximal flow through a network | journal = [[Canadian Journal of Mathematics]]| volume = 8 | pages = 399–404 | year = 1956 | s2cid = 16109790 | url = http://www.cs.yale.edu/homes/lans/readings/routing/ford-max_flow-1956.pdf }}</ref> The name "Ford&ndash;Fulkerson" is often also used for the [[Edmonds–Karp algorithm]], which is a fully defined implementation of the Ford&ndash;Fulkerson method.
+
+The idea behind the algorithm is as follows: as long as there is a path from the source (start node) to the sink (end node), with available capacity on all edges in the path, we send flow along one of the paths. Then we find another path, and so on. A path with available capacity is called an [[augmenting path]].
+
+==Algorithm==
+Let <math>G(V,E)</math> be a graph, and for each edge from {{mvar|u}} to {{mvar|v}}, let <math>c(u,v)</math> be the capacity and <math>f(u,v)</math> be the flow. We want to find the maximum flow from the source {{mvar|s}} to the sink {{mvar|t}}. After every step in the algorithm the following is maintained:
+
+{| class="wikitable plainrowheaders"
+! scope=row | Capacity constraints
+| <math>\forall (u, v) \in E: \ f(u,v) \le c(u,v)</math> || The flow along an edge cannot exceed its capacity.
+|-
+! scope=row | Skew symmetry
+| <math>\forall (u, v) \in E: \ f(u,v) = - f(v,u)</math> || The net flow from {{mvar|u}} to {{mvar|v}} must be the opposite of the net flow from {{mvar|v}} to {{mvar|u}} (see example).
+|-
+! scope=row | Flow conservation 
+| <math style="vertical-align:-125%;">\forall u \in V: u \neq s \text{ and } u \neq t \Rightarrow \sum_{w \in V} f(u,w) = 0</math> || The net flow to a node is zero, except for the source, which "produces" flow, and the sink, which "consumes" flow.
+|-
+! scope=row | Value(f)
+| <math>\sum_{(s,u) \in E} f(s, u) = \sum_{(v,t) \in E} f(v, t)</math> || The flow leaving from {{mvar|s}} must be equal to the flow arriving at {{mvar|t}}.
+|-
+|}
+
+This means that the flow through the network is a ''legal flow'' after each round in the algorithm. We define the '''residual network''' <math>G_f(V,E_f)</math> to be the network with capacity <math>c_f(u,v) = c(u,v) - f(u,v)</math> and no flow. Notice that it can happen that a flow from {{mvar|v}} to {{mvar|u}} is allowed in the residual
+network, though disallowed in the original network: if <math>f(u,v)>0</math> and <math>c(v,u)=0</math> then <math>c_f(v,u)=c(v,u)-f(v,u)=f(u,v)>0</math>.
+
+{{Algorithm-begin|name=Ford&ndash;Fulkerson}}
+:'''Inputs'''  Given a Network <math>G = (V,E)</math> with flow capacity {{mvar|c}}, a source node {{mvar|s}}, and a sink node {{mvar|t}}
+:'''Output''' Compute a flow {{mvar|f}} from {{mvar|s}} to {{mvar|t}} of maximum value
+:# <math>f(u,v) \leftarrow 0</math> for all edges <math>(u,v)</math>
+:# While there is a path {{mvar|p}} from {{mvar|s}} to {{mvar|t}} in <math>G_f</math>, such that <math>c_f(u,v) > 0</math> for all edges <math>(u,v) \in p</math>:
+:## Find <math>c_f(p) = \min\{c_f(u,v) : (u,v) \in p\}</math>
+:## For each edge <math>(u,v) \in p</math>
+:### <math>f(u,v) \leftarrow f(u,v) + c_f(p)</math> (''Send flow along the path'')
+:### <math>f(v,u) \leftarrow f(v,u) - c_f(p)</math> (''The flow might be "returned" later'')
+{{Algorithm-end}}
+
+The path in step 2 can be found with, for example, [[breadth-first search]] (BFS) or [[depth-first search]] in <math>G_f(V,E_f)</math>. The former is known as the [[Edmonds–Karp algorithm]].
+
+When no more paths in step 2 can be found, {{mvar|s}} will not be able to reach {{mvar|t}} in the residual
+network. If {{mvar|S}} is the set of nodes reachable by {{mvar|s}} in the residual network, then the total
+capacity in the original network of edges from {{mvar|S}} to the remainder of {{mvar|V}} is on the one hand
+equal to the total flow we found from {{mvar|s}} to {{mvar|t}},
+and on the other hand serves as an upper bound for all such flows.
+This proves that the flow we found is maximal. See also [[Max-flow min-cut theorem|Max-flow Min-cut theorem]].
+
+If the graph <math>G(V,E)</math> has multiple sources and sinks, we act as follows:
+Suppose that <math>T=\{t\mid t \text{ is a sink}\}</math> and <math>S=\{s\mid s \text{ is a source}\}</math>. Add a new source <math> s^*</math> with an edge <math>(s^*,s)</math> from <math>s^* </math> to every node <math> s\in S </math>, with capacity <math>c(s^*,s)=d_s=\sum_{(s,u)\in E}c(s,u)</math>. And add a new sink <math> t^*</math> with an edge <math>(t, t^*)</math> from every node <math> t\in T </math> to <math>t^* </math>, with capacity <math>c(t, t^*)=d_t=\sum_{(v,t)\in E}c(v,t)</math>. Then apply the Ford&ndash;Fulkerson algorithm.
+
+
+Also, if a node {{mvar|u}} has capacity constraint <math>d_u</math>, we replace this node with two nodes <math>u_{\mathrm{in}},u_{\mathrm{out}}</math>, and an edge <math> (u_{\mathrm{in}},u_{\mathrm{out}}) </math>, with capacity <math>c(u_{\mathrm{in}},u_{\mathrm{out}})=d_u</math>. We can then apply the Ford&ndash;Fulkerson algorithm.
+
+==Complexity==
+By adding the flow augmenting path to the flow already established in the graph, the maximum flow will be reached when no more flow augmenting paths can be found in the graph.  However, there is no certainty that this situation will ever be reached, so the best that can be guaranteed is that the answer will be correct if the algorithm terminates.  In the case that the algorithm does not terminate, the flow might not converge towards the maximum flow.  However, this situation only occurs with irrational flow values.<ref>{{Cite CiteSeerX|citeseerx=10.1.1.295.9049|title=Ford-Fulkerson Max Flow Labeling Algorithm|year=1998}}</ref>  When the capacities are integers, the runtime of Ford–Fulkerson is bounded by <math>O(E f)</math> (see [[big O notation]]), where <math>E</math> is the number of edges in the graph and <math>f</math> is the maximum flow in the graph.  This is because each augmenting path can be found in <math>O(E)</math> time and increases the flow by an integer amount of at least <math>1</math>, with the upper bound <math>f</math>.
+
+A variation of the Ford&ndash;Fulkerson algorithm with guaranteed termination and a runtime independent of the maximum flow value is the [[Edmonds–Karp algorithm]], which runs in <math>O(VE^2)</math> time.
+
+==Integer flow example==
+
+The following example shows the first steps of Ford–Fulkerson in a flow network with 4 nodes, source <math>A</math> and sink <math>D</math>. This example shows the worst-case behaviour of the algorithm. In each step, only a flow of <math>1</math> is sent across the network. If breadth-first-search were used instead, only two steps would be needed.
+
+{| class="wikitable skin-invert-image"
+|- style="text-align:center"
+! Step
+! Flow network
+|-
+|Initial flow network.
+| [[Image:Ford-Fulkerson example 0.svg|300px]]
+|-
+| Flow is sent along the augmenting path <math>A,B,C,D</math>. Here, the bottleneck is the <math>B</math>–<math>C</math> edge, so only one unit of flow is possible. 
+| [[Image:Ford-Fulkerson example 1.svg|300px]]
+|-
+| Here, one unit of flow is sent along the augmenting path <math>A,C,B,D</math>. In this case, flow is "pushed back" from <math>C</math> to <math>B</math>. The flow into <math>C</math> that originally came from <math>B</math> now comes from <math>A</math>, and <math>B</math> is now free to send flow to <math>D</math> directly. As a result, the <math>B</math>–<math>C</math> edge is left with zero flow, but the overall flow increases by one.
+| [[Image:Ford-Fulkerson example 2.svg|300px]]
+|-
+| colspan="2" |1998 intermediate steps are omitted here.
+|-
+|The final flow network, with a total flow of 2000 units.
+| [[Image:Ford-Fulkerson example final.svg|300px]]
+|}
+
+==Non-terminating example==
+
+[[File:Ford-Fulkerson forever.svg|class=skin-invert]]
+
+Consider the flow network shown on the right, with source <math>s</math>, sink <math>t</math>, capacities of edges <math>e_1 = 1</math>, <math>e_2 = r=(\sqrt{5}-1)/2</math> and <math>e_3 = 1</math>, and the capacity of all other edges some integer <math>M \ge 2</math>. The constant <math>r</math> was chosen so, that <math>r^2 = 1 - r</math>. We use augmenting paths according to the following table, where <math>p_1 = \{ s, v_4, v_3, v_2, v_1, t \}</math>, <math>p_2 = \{ s, v_2, v_3, v_4, t \}</math> and <math>p_3 = \{ s, v_1, v_2, v_3, t \}</math>.
+
+{| class="wikitable" style="text-align: center"
+! rowspan=2 | Step !! rowspan=2 | Augmenting path !! rowspan=2 | Sent flow !! colspan=3 | Residual capacities
+|-
+! <math>e_1</math> !! <math>e_2</math> !! <math>e_3</math>
+|-
+| 0 || || || <math>r^0=1</math> || <math>r</math> || <math>1</math>
+|-
+| 1 || <math>\{ s, v_2, v_3, t \}</math> || <math>1</math> || <math>r^0</math> || <math>r^1</math> || <math>0</math>
+|-
+| 2 || <math>p_1</math> || <math>r^1</math> || <math>r^0 - r^1 = r^2</math>|| <math>0</math> || <math>r^1</math>
+|-
+| 3 || <math>p_2</math> || <math>r^1</math> || <math>r^2</math> || <math>r^1</math> || <math>0</math>
+|-
+| 4 || <math>p_1</math> || <math>r^2</math> || <math>0</math> || <math>r^1 - r^2 = r^3</math>|| <math>r^2</math>
+|-
+| 5 || <math>p_3</math> || <math>r^2</math> || <math>r^2</math> || <math>r^3</math> || <math>0</math>
+|}
+
+Note that after step 1 as well as after step 5, the residual capacities of edges <math>e_1</math>, <math>e_2</math> and <math>e_3</math> are in the form <math>r^n</math>, <math>r^{n+1}</math> and <math>0</math>, respectively, for some <math>n \in \mathbb{N}</math>. This means that we can use augmenting paths <math>p_1</math>, <math>p_2</math>, <math>p_1</math> and <math>p_3</math> infinitely many times and residual capacities of these edges will always be in the same form. Total flow in the network after step 5 is <math>1 + 2(r^1 + r^2)</math>. If we continue to use augmenting paths as above, the total flow converges to <math>\textstyle 1 + 2\sum_{i=1}^\infty r^i = 3 + 2r</math>.  However, note that there is a flow of value <math>2M + 1</math>, by sending <math>M</math> units of flow along <math>sv_1t</math>, 1 unit of flow along <math>sv_2v_3t</math>, and <math>M</math> units of flow along <math>sv_4t</math>. Therefore, the algorithm never terminates and the flow does not converge to the maximum flow.<ref>{{cite journal| title = The smallest networks on which the Ford–Fulkerson maximum flow procedure may fail to terminate | first = Uri | last = Zwick|author-link=Uri Zwick | journal = [[Theoretical Computer Science (journal)|Theoretical Computer Science]] | volume = 148 | issue = 1 | date = 21 August 1995 | pages = 165–170 | doi = 10.1016/0304-3975(95)00022-O| doi-access = free }}</ref>
+
+Another non-terminating example based on the [[Euclidean algorithm]] is given by {{harvtxt|Backman|Huynh|2018}}, where they also show that the worst case running-time of the Ford-Fulkerson algorithm on a network <math>G(V,E)</math> in [[ordinal numbers]] is <math> \omega^{\Theta(|E|)}</math>.
+
+{{Clear}}
+
+==Python implementation of the Edmonds–Karp algorithm==
+  
+<syntaxhighlight lang="python" line="1">
+import collections
+
+
+class Graph:
+    """
+    This class represents a directed graph using
+    adjacency matrix representation.
+    """
+
+    def __init__(self, graph):
+        self.graph = graph  # residual graph
+        self.row = len(graph)
+
+    def bfs(self, s, t, parent):
+        """
+        Returns true if there is a path from
+        source 's' to sink 't' in residual graph.
+        Also fills parent[] to store the path.
+        """
+
+        # Mark all the vertices as not visited
+        visited = [False] * self.row
+
+        # Create a queue for BFS
+        queue = collections.deque()
+
+        # Mark the source node as visited and enqueue it
+        queue.append(s)
+        visited[s] = True
+
+        # Standard BFS loop
+        while queue:
+            u = queue.popleft()
+
+            # Get all adjacent vertices of the dequeued vertex u
+            # If an adjacent has not been visited, then mark it
+            # visited and enqueue it
+            for ind, val in enumerate(self.graph[u]):
+                if (visited[ind] == False) and (val > 0):
+                    queue.append(ind)
+                    visited[ind] = True
+                    parent[ind] = u
+
+        # If we reached sink in BFS starting from source, then return
+        # true, else false
+        return visited[t]
+
+    # Returns the maximum flow from s to t in the given graph
+    def edmonds_karp(self, source, sink):
+        # This array is filled by BFS and to store path
+        parent = [-1] * self.row
+
+        max_flow = 0  # There is no flow initially
+
+        # Augment the flow while there is path from source to sink
+        while self.bfs(source, sink, parent):
+            # Find minimum residual capacity of the edges along the
+            # path filled by BFS. Or we can say find the maximum flow
+            # through the path found.
+            path_flow = float("Inf")
+            s = sink
+            while s != source:
+                path_flow = min(path_flow, self.graph[parent[s]][s])
+                s = parent[s]
+
+            # Add path flow to overall flow
+            max_flow += path_flow
+
+            # update residual capacities of the edges and reverse edges
+            # along the path
+            v = sink
+            while v != source:
+                u = parent[v]
+                self.graph[u][v] -= path_flow
+                self.graph[v][u] += path_flow
+                v = parent[v]
+
+        return max_flow
+</syntaxhighlight>
+
+== See also ==
+
+* [[Berge's theorem]]
+* [[Approximate max-flow min-cut theorem]]
+* [[Turn restriction routing]]
+* [[Dinic's algorithm]]
+
+== Notes ==
+{{Reflist}}
+
+== References ==
+* {{cite book
+ | first1 = Thomas H.
+ | last1 = Cormen
+ | author-link1 = Thomas H. Cormen
+ | first2 = Charles E.
+ | last2 = Leiserson
+ | author-link2 = Charles E. Leiserson
+ | first3 = Ronald L.
+ | last3 = Rivest
+ | author-link3 = Ronald L. Rivest
+ | first4 = Clifford
+ | last4 = Stein
+ | author-link4 = Clifford Stein
+ | title = [[Introduction to Algorithms]]
+ | edition = Second
+ | publisher = MIT Press and McGraw&ndash;Hill
+ | year = 2001 
+ | isbn = 0-262-03293-7
+ | chapter = Section 26.2: The Ford&ndash;Fulkerson method
+ | pages = 651&ndash;664
+}}
+* {{cite book |author1=George T. Heineman |author2=Gary Pollice |author3=Stanley Selkow | title= Algorithms in a Nutshell | publisher=[[Oreilly Media]] | year=2008 | chapter=Chapter 8:Network Flow Algorithms | pages = 226–250 | isbn=978-0-596-51624-6 }}
+* {{cite book |author1=Jon Kleinberg  | author-link1 =Jon Kleinberg|author2=Éva Tardos| author-link2 = Éva Tardos|title=Algorithm Design |publisher=Pearson Education |year=2006 |chapter=Chapter 7:Extensions to the Maximum-Flow Problem |pages=[https://archive.org/details/algorithmdesign0000klei/page/378 378–384] |isbn=0-321-29535-8 |chapter-url=https://archive.org/details/algorithmdesign0000klei/page/378 }}
+* {{cite book |author=Samuel Gutekunst |title= ENGRI 1101 |publisher= Cornell University | year=2019 }}
+*{{cite journal |last1=Backman |first1=Spencer |last2=Huynh |first2=Tony |title=Transfinite Ford–Fulkerson on a finite network |journal=Computability |year=2018 |volume=7 |issue=4 |pages=341–347 |doi=10.3233/COM-180082|arxiv=1504.04363 |s2cid=15497138 }}
+
+==External links==
+* [https://www.w3schools.com/dsa/dsa_algo_graphs_fordfulkerson.php A tutorial explaining the Ford–Fulkerson method to solve the max-flow problem]
+* [http://www.cs.pitt.edu/~kirk/cs1501/animations/Network.html Another Java animation]
+* [https://rrusin.blogspot.com/2011/03/implementing-graph-editor-in-javafx.html Java Web Start application]
+
+{{Commons category-inline}}
+
+{{DEFAULTSORT:Ford-Fulkerson Algorithm}}
+[[Category:Articles with example pseudocode]]
+[[Category:Articles with example Python (programming language) code]]
+[[Category:Graph algorithms]]
+[[Category:Network flow problem]]

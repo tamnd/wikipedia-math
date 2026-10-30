@@ -1,0 +1,233 @@
+<!-- wikipedia: en
+     page: 23095212
+     title: FMA instruction set
+     revision: 1369716263
+     timestamp: 2026-08-16T18:06:23Z
+     history: https://en.wikipedia.org/w/index.php?curid=23095212&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1369716263 -->
+{{Short description|Extension to the x86 instruction set}}
+{{wikibooks|X86 Assembly/AVX, AVX2, FMA3, FMA4}}
+The '''FMA instruction set''' is an extension to the 128- and 256-bit [[Streaming SIMD Extensions]] instructions in the [[x86]] [[microprocessor]] [[instruction set]] to perform [[fused multiply–add]] (FMA) operations.<ref name=prime95>{{cite web|last=Woltmann|first=George (Prime95)|title=Intel AVX and GIMPS|url=http://www.mersenneforum.org/showthread.php?t=14335&highlight=fused+multiply+add|work=mersenneforum.org|publisher=Great Internet Mersenne Prime Search (GIMPS) project|access-date=27 July 2011|quote="FMA3 and FMA4 are not instruction sets, they are individual instructions -- fused multiply add. They could be quite useful depending on how Intel and AMD implement them"|archive-date=27 September 2011|archive-url=https://web.archive.org/web/20110927013636/http://www.mersenneforum.org/showthread.php?t=14335&highlight=fused+multiply+add|url-status=live}}</ref> There are two variants:
+* '''FMA4''' is supported in [[AMD]] processors starting with the [[Bulldozer (microarchitecture)|Bulldozer]] architecture. FMA4 was performed in hardware before FMA3 was. Support for FMA4 has been removed since [[Zen 1]].<ref name=":0" />
+* '''FMA3''' is supported in AMD processors starting with the [[Piledriver (microarchitecture)|Piledriver]] architecture and [[Intel Corporation|Intel]] starting with [[Haswell (microarchitecture)|Haswell processors]] and [[Broadwell (microarchitecture)|Broadwell processors]] since 2014.
+
+==Instructions==
+FMA3 and FMA4 instructions have almost identical functionality, but are not compatible. Both contain [[fused multiply–add]] (FMA) instructions for [[floating-point]] scalar and [[Single instruction, multiple data|SIMD]] operations, but FMA3 instructions have three operands, while FMA4 ones have four. The FMA operation has the form ''d'' = round(''a'' · ''b'' + ''c''), where the round function performs a [[rounding]] to allow the result to fit within the destination register if there are too many significant bits to fit within the destination.
+
+The four-operand form (FMA4) allows ''a'', ''b'', ''c'' and ''d'' to be four different registers, while the three-operand form (FMA3) requires that ''d'' be the same register as ''a'', ''b'' or ''c''. The three-operand form makes the code shorter and the hardware implementation slightly simpler, while the four-operand form provides more programming flexibility.
+
+See [[XOP instruction set#Compatibility issues|XOP instruction set]] for more discussion of compatibility issues between Intel and AMD.
+
+==FMA3 instruction set==
+
+===CPUs with FMA3===
+<!-- Warning! This is an article about the x86 architecture. So processors with another architecture must not be listed. -->
+* AMD
+** [[Piledriver (microarchitecture)|Piledriver]] (2012) and newer microarchitectures<ref>{{cite web|last=Maffeo|first=Robin|title=AMD and the Visual Studio 11 Beta|url=http://developer.amd.com/community/blog/2012/03/01/amd-and-the-visual-studio-11-beta/|publisher=AMD|date=March 1, 2012|archive-url=https://archive.today/20131109140742/http://developer.amd.com/community/blog/2012/03/01/amd-and-the-visual-studio-11-beta/|archive-date=November 9, 2013|url-status=dead|access-date=2018-11-07}}</ref>
+*** 2nd gen [[AMD Accelerated Processing Unit|APU]]s, "Trinity" (32nm), May 15, 2012
+*** 2nd gen "Bulldozer" (bdver2) with Piledriver cores, October 23, 2012
+* Intel
+** [[Haswell (microarchitecture)|Haswell]] (2013) and newer processors, except [[Pentium]]s and [[Celeron]]s<ref>{{cite web |title=CPU-Z - ID : y5z6gq |url=https://valid.x86.fr/cache/screenshot/y5z6gq.png |access-date=2022-05-01 |archive-date=2022-12-07 |archive-url=https://web.archive.org/web/20221207191743/https://valid.x86.fr/cache/screenshot/y5z6gq.png |url-status=live }}</ref><ref>{{cite web |title=CPU-Z - ID : kr2mlx |url=https://valid.x86.fr/cache/screenshot/kr2mlx.png |access-date=2022-05-01 |archive-date=2022-12-06 |archive-url=https://web.archive.org/web/20221206050627/https://valid.x86.fr/cache/screenshot/kr2mlx.png |url-status=live }}</ref>
+
+===Excerpt from FMA3===
+Supported commands include 
+{| class="wikitable"
+! Mnemonic            !! Operation                                     !! Mnemonic                      !! Operation                                     
+|-
+| VFM'''ADD'''        || <code>result = + a · b + c</code> || rowspan="2" | VFM'''ADDSUB''' || rowspan="2" | <code>result = a · b + c</code>  for i = 1, 3, ...<br /> <code>result = a · b − c</code>  for i = 0, 2, ...
+|-
+| VF'''N'''M'''ADD''' || <code>result = − a · b + c</code>
+|-
+| VFM'''SUB'''        || <code>result = + a · b − c</code> || rowspan="2" | VFM'''SUBADD''' || rowspan="2" | <code>result = a · b − c</code>  for i = 1, 3, ...<br /> <code>result = a · b + c</code>  for i = 0, 2, ...
+|-
+| VF'''N'''M'''SUB''' || <code>result = − a · b − c</code>
+|}
+;Note: 
+* VF'''N'''M'''ADD''' is <code>result = − a · b + c</code>, not <code>result = − (a · b + c)</code>.
+* VF'''N'''M'''SUB''' generates a −0 when all inputs are zero.
+
+Explicit order of operands is included in the mnemonic using numbers "132", "213", and "231":
+
+{| class="wikitable"
+! Postfix<br />1 !! Operation !! possible<br />memory operand !! overwrites
+|-
+|style="text-align:center;"| '''132''' || <code>a = a · c + b</code> || <code>c</code> (factor) || <code>a</code> (other factor)
+|-
+|style="text-align:center;"| '''213''' || <code>a = b · a + c</code> || <code>c</code> (summand)|| <code>a</code> (factor)
+|-
+|style="text-align:center;"| '''231''' || <code>a = b · c + a</code> || <code>c</code> (factor) || <code>a</code> (summand)
+|}
+
+as well as operand format (packed or scalar) and size (single or double). 	
+
+{| class="wikitable"
+! Postfix<br />2 !! precision !! size      !! Postfix<br />2 !! precision !! size
+|-
+| S'''S'''     || rowspan="4" | Single    || {{0|00× }}32 bit    || S'''D'''      || rowspan="4" | Double || {{0|0× }}64 bit
+|-
+| P'''S'''x    || {{0}}4× 32 bit || P'''D'''x    || 2× 64 bit
+|-
+| P'''S'''y    || {{0}}8× 32 bit || P'''D'''y    || 4× 64 bit
+|-
+| P'''S'''z    || 16× 32 bit || P'''D'''z    || 8× 64 bit
+|}
+
+This results in
+
+{| class="wikitable"
+|-
+! Encoding
+! Mnemonic
+! Operands
+! Operation
+|-
+|<code>VEX.256.66.0F38.W1 98 /r</code>
+|VFMADD'''132'''PD'''y'''
+|rowspan="2"|ymm, ymm, ymm/m256
+|rowspan="6"|<code>a = a · c + b</code>
+|-
+|<code>VEX.256.66.0F38.W0 98 /r</code>
+|VFMADD'''132'''PS'''y'''
+|-
+|<code>VEX.128.66.0F38.W1 98 /r</code>
+|VFMADD'''132'''PD'''x'''
+|rowspan="2"|xmm, xmm, xmm/m128
+|-
+|<code>VEX.128.66.0F38.W0 98 /r</code>
+|VFMADD'''132'''PS'''x'''
+|-
+|<code>VEX.LIG.66.0F38.W1 99 /r</code>
+|VFMADD'''132'''SD
+|xmm, xmm, xmm/m64
+|-
+|<code>VEX.LIG.66.0F38.W0 99 /r</code>
+|VFMADD'''132'''SS
+|xmm, xmm, xmm/m32
+|-
+|<code>VEX.256.66.0F38.W1 A8 /r</code>
+|VFMADD'''213'''PD'''y'''
+|rowspan="2"|ymm, ymm, ymm/m256
+|rowspan="6"|<code>a = b · a + c</code>
+|-
+|<code>VEX.256.66.0F38.W0 A8 /r</code>
+|VFMADD'''213'''PS'''y'''
+|-
+|<code>VEX.128.66.0F38.W1 A8 /r</code>
+|VFMADD'''213'''PD'''x'''
+|rowspan="2"|xmm, xmm, xmm/m128
+|-
+|<code>VEX.128.66.0F38.W0 A8 /r</code>
+|VFMADD'''213'''PS'''x'''
+|-
+|<code>VEX.LIG.66.0F38.W1 A9 /r</code>
+|VFMADD'''213'''SD
+|xmm, xmm, xmm/m64
+|-
+|<code>VEX.LIG.66.0F38.W0 A9 /r</code>
+|VFMADD'''213'''SS
+|xmm, xmm, xmm/m32
+|-
+|<code>VEX.256.66.0F38.W1 B8 /r</code>
+|VFMADD'''231'''PD'''y'''
+|rowspan="2"|ymm, ymm, ymm/m256
+|rowspan="6"|<code>a = b · c + a</code>
+|-
+|<code>VEX.256.66.0F38.W0 B8 /r</code>
+|VFMADD'''231'''PS'''y'''
+|-
+|<code>VEX.128.66.0F38.W1 B8 /r</code>
+|VFMADD'''231'''PD'''x'''
+|rowspan="2"|xmm, xmm, xmm/m128
+|-
+|<code>VEX.128.66.0F38.W0 B8 /r</code>
+|VFMADD'''231'''PS'''x'''
+|-
+|<code>VEX.LIG.66.0F38.W1 B9 /r</code>
+|VFMADD'''231'''SD
+|xmm, xmm, xmm/m64
+|-
+|<code>VEX.LIG.66.0F38.W0 B9 /r</code>
+|VFMADD'''231'''SS
+|xmm, xmm, xmm/m32
+|}
+
+==FMA4 instruction set==
+
+===CPUs with FMA4===
+<!-- Warning! This is an article about the x86 architecture. So processors with another architecture must not be listed. -->
+* AMD
+** "Heavy Equipment" processors 
+*** [[Bulldozer (microarchitecture)|Bulldozer-based]] processors, October 12, 2011<ref>{{cite web | url=http://support.amd.com/TechDocs/43479.pdf | title=AMD64 Architecture Programmer's Manual Volume 6: 128-Bit and 256-Bit XOP, FMA4 and CVT16 Instructions | date=May 1, 2009 | publisher=[[AMD]] | access-date=October 24, 2014 | archive-date=August 21, 2018 | archive-url=https://web.archive.org/web/20180821100801/https://support.amd.com/techdocs/43479.pdf | url-status=live }}</ref>
+*** [[Piledriver (microarchitecture)|Piledriver-based]] processors<ref>{{cite web | url=http://developer.amd.com/wordpress/media/2012/10/New-Bulldozer-and-Piledriver-Instructions.pdf | title=New "Bulldozer" and "Piledriver" Instructions A step forward for high performance software development | date=October 2012 | publisher=[[AMD]] | access-date=2013-07-25 | archive-date=2013-01-07 | archive-url=https://web.archive.org/web/20130107154617/http://developer.amd.com/wordpress/media/2012/10/New-Bulldozer-and-Piledriver-Instructions.pdf | url-status=live }}</ref>
+*** [[Steamroller (microarchitecture)|Steamroller-based]] processors 
+*** [[Excavator (microarchitecture)|Excavator-based]] processors (including "v2")
+** [[Zen (microarchitecture)|Zen]]: WikiChip's testing shows FMA4 still appears to work (under the conditions of the tests) despite not being officially supported and not even reported by CPUID. This has also been confirmed by Agner Fog.<ref>{{Cite web|url=https://www.agner.org/optimize/blog/read.php?i=838|title=Agner's CPU blog - Test results for AMD Ryzen|date=2017-05-02|access-date=2022-03-14|archive-date=2022-04-18|archive-url=https://web.archive.org/web/20220418173356/https://www.agner.org/optimize/blog/read.php?i=838|url-status=live}}</ref> But other tests gave wrong results.<ref name=zen-fma4-wrong/> AMD Official Web Site FMA4 Support Note ZEN CPUs = AMD ThreadRipper 1900x, R7 Pro 1800, 1700, R5 Pro 1600, 1500, R3 Pro 1300, 1200, R3 2200G, R5 2400G.<ref>{{cite web  | url=https://products.amd.com/en-us/search/cpu#Default=%7B%22k%22%3A%22%22%2C%22r%22%3A%5B%7B%22n%22%3A%22FMAOWSCHCS%22%2C%22t%22%3A%5B%22%5C%22%C7%82%C7%82464d4134%5C%22%22%5D%2C%22o%22%3A%22OR%22%2C%22k%22%3Afalse%2C%22m%22%3A%7B%22%5C%22%C7%82%C7%82464d4134%5C%22%22%3A%22FMA4%22%7D%7D%5D%7D  | title=www.amd.com, FMA4 support model list  | access-date=2018-02-09  | archive-date=2018-02-09  | archive-url=https://web.archive.org/web/20180209182505/https://products.amd.com/en-us/search/cpu#Default=%7B%22k%22%3A%22%22%2C%22r%22%3A%5B%7B%22n%22%3A%22FMAOWSCHCS%22%2C%22t%22%3A%5B%22%5C%22%C7%82%C7%82464d4134%5C%22%22%5D%2C%22o%22%3A%22OR%22%2C%22k%22%3Afalse%2C%22m%22%3A%7B%22%5C%22%C7%82%C7%82464d4134%5C%22%22%3A%22FMA4%22%7D%7D%5D%7D  | url-status=live  }}</ref><ref>{{cite web  | url=https://products.amd.com/en-us/search/APU/AMD-Ryzen%E2%84%A2-Processors/AMD-Ryzen%E2%84%A2-5-Processor-with-Radeon%E2%84%A2-Vega-Graphics/AMD-Ryzen%E2%84%A2-5-2400G/243  | title=www.amd.com, FMA4 support model list  | access-date=2018-02-09  | archive-date=2018-02-08  | archive-url=https://web.archive.org/web/20180208134912/http://products.amd.com/en-us/search/APU/AMD-Ryzen%E2%84%A2-Processors/AMD-Ryzen%E2%84%A2-5-Processor-with-Radeon%E2%84%A2-Vega-Graphics/AMD-Ryzen%E2%84%A2-5-2400G/243  | url-status=live  }}</ref><ref>{{cite web  | url=https://products.amd.com/en-us/search/APU/AMD-Ryzen%E2%84%A2-Processors/AMD-Ryzen%E2%84%A2-3-Processor-with-Radeon%E2%84%A2-Vega-Graphics/AMD-Ryzen%E2%84%A2-3-2200G/244  | title=www.amd.com, FMA4 support model list  | access-date=2018-02-09  | archive-date=2018-01-25  | archive-url=https://web.archive.org/web/20180125090552/http://products.amd.com/en-us/search/APU/AMD-Ryzen%E2%84%A2-Processors/AMD-Ryzen%E2%84%A2-3-Processor-with-Radeon%E2%84%A2-Vega-Graphics/AMD-Ryzen%E2%84%A2-3-2200G/244  | url-status=live  }}</ref>
+* Intel
+** Intel has not released CPUs with support for FMA4.
+
+===Excerpt from FMA4===
+{| class="wikitable"
+|-
+! Mnemonic (AT&T)
+! Operands
+! Operation
+|-
+|VFMADDPDx
+|xmm, xmm, xmm/m128, xmm/m128
+| rowspan=6 | a = b·c + d
+|-
+|VFMADDPDy
+|ymm, ymm, ymm/m256, ymm/m256
+|-
+|VFMADDPSx
+|xmm, xmm, xmm/m128, xmm/m128
+|-
+|VFMADDPSy
+|ymm, ymm, ymm/m256, ymm/m256
+|-
+|VFMADDSD
+|xmm, xmm, xmm/m64, xmm/m64
+|-
+|VFMADDSS
+|xmm, xmm, xmm/m32, xmm/m32
+|}
+
+==History==
+The incompatibility between Intel's FMA3 and AMD's FMA4 is due to both companies changing plans without coordinating coding details with each other. AMD changed their plans from FMA3 to FMA4 while Intel changed their plans from FMA4 to FMA3 almost at the same time. The history can be summarized as follows:
+* '''August 2007:''' [[AMD]] announces the [[SSE5]] instruction set, which includes 3-operand FMA instructions. A new coding scheme (DREX) is introduced for allowing instructions to have three operands.<ref>{{cite web|url=http://developer.amd.com/SSE5 |title=128-Bit SSE5 Instruction Set |publisher=[[AMD]] Developer Central |access-date=2008-01-28 |archive-url=https://web.archive.org/web/20080115163416/http://developer.amd.com/SSE5 |archive-date=2008-01-15 |url-status=dead }}</ref>
+* '''April 2008:''' [[Intel]] announces their [[Advanced Vector Extensions|AVX]] and FMA instruction sets, including 4-operand FMA instructions. The coding of these instructions uses the new [[VEX prefix|VEX]] coding scheme,<ref>{{cite web | url=http://softwarecommunity.intel.com/isn/downloads/intelavx/Intel-AVX-Programming-Reference-31943302.pdf | title=Intel Advanced Vector Extensions Programming Reference | publisher=[[Intel]] | access-date=2008-04-05 | archive-date=2011-08-07 | archive-url=https://web.archive.org/web/20110807135414/http://software.intel.com/file/17976/ | url-status=dead }}</ref> which is more flexible than AMD's DREX scheme.
+* '''December 2008:''' Intel changes the specification for their FMA instructions from 4-operand to 3-operand instructions. The VEX coding scheme is still used.<ref>{{cite web | url=http://software.intel.com/en-us/avx/ | title=Intel Advanced Vector Extensions Programming Reference | publisher=[[Intel]] | access-date=2009-05-06 | archive-date=2009-03-12 | archive-url=https://web.archive.org/web/20090312093000/http://software.intel.com/en-us/avx/ | url-status=live }}</ref>
+* '''May 2009:''' AMD changes the specification of their FMA instructions from the 3-operand DREX form to the 4-operand VEX form, compatible with the April 2008 Intel specification rather than the December 2008 Intel specification.<ref>{{cite web | url=http://blogs.amd.com/developer/2009/05/06/striking-a-balance/ | title=Striking a balance | date=May 6, 2009 | publisher=Dave Christie, AMD Developer blogs | archive-url=https://archive.today/20120708101459/http://blogs.amd.com/developer/2009/05/06/striking-a-balance/ | archive-date=July 8, 2012 | url-status=dead | access-date=2018-11-07}}</ref>
+* '''October 2011:''' AMD [[Bulldozer (microarchitecture)|Bulldozer]] processor supports FMA4.<ref name="developer.amd.com">{{cite web|title=New Bulldozer and Piledriver Instructions|url=http://developer.amd.com/wordpress/media/2012/10/New-Bulldozer-and-Piledriver-Instructions.pdf|publisher=AMD|access-date=25 July 2013|archive-date=7 January 2013|archive-url=https://web.archive.org/web/20130107154617/http://developer.amd.com/wordpress/media/2012/10/New-Bulldozer-and-Piledriver-Instructions.pdf|url-status=live}}</ref>
+* '''January 2012:''' AMD announces FMA3 support in future processors codenamed Trinity and Vishera; they are based on the [[Piledriver (microarchitecture)|Piledriver]] architecture.<ref>{{cite web|title=Software Optimization Guide for AMD Family 15h Processors|url=http://support.amd.com/us/Processor_TechDocs/47414_15h_sw_opt_guide.pdf|publisher=AMD|access-date=19 April 2012|archive-date=11 May 2012|archive-url=https://web.archive.org/web/20120511070125/http://support.amd.com/us/Processor_TechDocs/47414_15h_sw_opt_guide.pdf|url-status=live}}</ref>
+* '''May 2012:''' AMD Piledriver processor supports both FMA3 and FMA4.<ref name="developer.amd.com"/>
+* '''June 2013:''' Intel [[Haswell (microarchitecture)|Haswell]] processor supports FMA3.<ref>{{cite web|title=Intel Architecture Instruction Set Extensions Programming Reference|url=http://software.intel.com/sites/default/files/319433-015.pdf|publisher=Intel|access-date=25 July 2013|archive-date=29 September 2013|archive-url=https://web.archive.org/web/20130929035331/http://download-software.intel.com/sites/default/files/319433-015.pdf|url-status=live}}</ref>
+* '''February 2017:''' The first generation of AMD [[AMD Ryzen|Ryzen]] processors officially supports FMA3, but not FMA4 according to the [[CPUID]] instruction.<ref name=":0">{{cite web | url=http://www.agner.org/optimize/microarchitecture.pdf | title=The microarchitecture of Intel, AMD and VIA CPUs An optimization guide for assembly programmers and compiler makers | access-date=2017-05-02 | archive-date=2017-03-28 | archive-url=https://web.archive.org/web/20170328065929/http://agner.org/optimize/microarchitecture.pdf | url-status=live }}</ref> There has been confusion regarding whether FMA4 was implemented or not on this processor due to errata in the initial patch to the [[GNU Binutils]] package that has since been rectified.<ref>{{Cite web |last=Gopalasubramanian |first=Ganesh |url=https://sourceware.org/ml/binutils/2015-03/msg00078.html |title=[PATCH] add znver1 processor. |date=2015-03-10 |access-date=2022-05-01 |archive-date=2016-03-04 |archive-url=https://web.archive.org/web/20160304033017/https://sourceware.org/ml/binutils/2015-03/msg00078.html |url-status=live }}</ref><ref>{{Cite web |last=Pawar |first=Amit |url=https://sourceware.org/ml/binutils/2015-08/msg00039.html |title=[PATCH] Remove CpuFMA4 from Znver1 CPU Flags |date=2015-08-07 |access-date=2022-05-01 |archive-date=2016-03-07 |archive-url=https://web.archive.org/web/20160307134059/https://sourceware.org/ml/binutils/2015-08/msg00039.html |url-status=live }}</ref> One unconfirmed report of wrong results<ref name=zen-fma4-wrong>{{cite web|url=https://www.reddit.com/r/Amd/comments/68s4bj/ryzen_has_undocumented_support_for_fma4/dh0y353/|title=Discussion – Ryzen has undocumented support for FMA4|access-date=2017-05-10|archive-date=2020-07-29|archive-url=https://web.archive.org/web/20200729195102/https://www.reddit.com/r/Amd/comments/68s4bj/ryzen_has_undocumented_support_for_fma4/dh0y353/|url-status=live}}</ref> led to some doubt, but Mysticial (Alexander Yee, developer of y-cruncher) debunked it:<ref name=zen-fma4-fud>{{cite web|url=https://stackoverflow.com/questions/57055756/arbitrary-position-2-input-shuffling-using-sse|title=Stack Overflow comment by Mysticial|date=2019-07-16|access-date=2023-09-01|archive-date=2019-08-22|archive-url=https://web.archive.org/web/20190822063407/https://stackoverflow.com/questions/57055756/arbitrary-position-2-input-shuffling-using-sse|url-status=bot: unknown}}</ref> FMA4 worked for bit-exact bignum calculations on his Zen 1 system for years, and the one report on Reddit never had any followup investigation to rule out mistakes in the testing software before being widely repeated.  The initial Ryzen CPUs could be crashed by a particular sequence of FMA3 instructions, but updated CPU microcode fixes the problem.<ref>{{cite web|url=https://www.techpowerup.com/231536/amd-ryzen-machine-crashes-to-a-sequence-of-fma3-instructions|title=AMD Ryzen Machine Crashes to a Sequence of FMA3 Instructions|date=16 March 2017|access-date=2017-09-10|archive-date=2017-09-10|archive-url=https://web.archive.org/web/20170910125709/https://www.techpowerup.com/231536/amd-ryzen-machine-crashes-to-a-sequence-of-fma3-instructions|url-status=live}}</ref>
+* '''July 2019:'''  AMD [[Zen 2]] and later Ryzen processors don't support FMA4 at all.<ref name=zen2-no-fma4>{{cite web|url=https://stackoverflow.com/questions/57055756/arbitrary-position-2-input-shuffling-using-sse#comment100648429_57057094|title=Stack Overflow comment by Mysticial|date=2019-07-16|access-date=2023-09-01|archive-date=2019-08-22|archive-url=https://web.archive.org/web/20190822063407/https://stackoverflow.com/questions/57055756/arbitrary-position-2-input-shuffling-using-sse#comment100648429_57057094|url-status=live}}</ref>  They continue to support FMA3.  Only Zen 1 and Zen+ have unofficial FMA4 support.
+
+==Compiler and assembler support==
+Different compilers provide different levels of support for FMA:
+* [[GNU Compiler Collection|GCC]] supports FMA4 with -mfma4 since version 4.5.0<ref name="theinquirer">{{cite web|url=http://www.theinquirer.net/inquirer/news/2124866/amd-bulldozer-fma4-xop-instructions-supported-gcc|archive-url=https://web.archive.org/web/20111117001441/http://www.theinquirer.net/inquirer/news/2124866/amd-bulldozer-fma4-xop-instructions-supported-gcc|url-status=unfit|archive-date=November 17, 2011| title=AMD Bulldozer only FMA4 and XOP instructions are supported by GCC Intel still mute|work=The Inquirer|first=Lawrence |last=Latif|date=Nov 14, 2011}}</ref> and FMA3 with -mfma since version 4.7.0.
+* [[Microsoft Visual C++]] 2010 SP1 supports FMA4 instructions.<ref name="msdn">{{cite web|url=http://msdn.microsoft.com/en-us/library/vstudio/gg445134(v=vs.100).aspx|title=FMA4 Intrinsics Added for Visual Studio 2010 SP1|date=4 February 2013 }}</ref>
+* [[Microsoft Visual C++]] 2012 supports FMA3 instructions (if the processor also supports AVX2 instruction set extension).
+* [[Microsoft Visual C++]] since VC 2013
+* [[PathScale]] supports FMA4 with -mfma.<ref name="pathscale">{{cite web|url=http://www.pathscale.com/node/272|title=EKOPath man doc|access-date=2013-07-24|archive-url=https://web.archive.org/web/20160623224118/http://www.pathscale.com/node/272|archive-date=2016-06-23|url-status=dead}}</ref>
+* [[LLVM]] 3.1 adds FMA4 support,<ref name="llvm">{{cite web|url=http://llvm.org/releases/3.1/docs/ReleaseNotes.html|title=LLVM 3.1 Release Notes|access-date=2014-11-24|archive-date=2014-10-01|archive-url=https://web.archive.org/web/20141001113302/http://llvm.org/releases/3.1/docs/ReleaseNotes.html|url-status=live}}</ref> along with preliminary FMA3 support.<ref name="llvmfma3">{{cite web|url=http://llvm.org/viewvc/llvm-project?view=revision&revision=155618|title=Enable detection of AVX and AVX2 support through CPUID|date=2012-04-26|work=LLVM|access-date=2017-02-06|archive-date=2014-07-26|archive-url=https://web.archive.org/web/20140726230517/http://llvm.org/viewvc/llvm-project?view=revision&revision=155618|url-status=dead}}</ref>
+* [[Open64]] 5.0 adds "limited support".
+* [[Intel Fortran Compiler|Intel compilers]] support only FMA3 instructions.<ref name="theinquirer" />
+* [[Netwide Assembler|NASM]] supports FMA3 instructions since version 2.03 and FMA4 instructions since 2.06.
+* [[FASM]] supports both FMA3 and FMA4 instructions.
+
+==References==
+{{Reflist|2}}
+
+{{AMD technology}}
+{{Intel technology}}
+{{Multimedia extensions|state=uncollapsed}}
+
+{{DEFAULTSORT:Fma Instruction Set}}
+[[Category:X86 instructions]]
+[[Category:SIMD computing]]
+[[Category:AMD technologies]]
+[[Category:Instruction set extensions]]

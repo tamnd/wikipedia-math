@@ -1,0 +1,105 @@
+<!-- wikipedia: en
+     page: 8449246
+     title: Adaptive step size
+     revision: 1352746961
+     timestamp: 2026-05-06T01:28:42Z
+     history: https://en.wikipedia.org/w/index.php?curid=8449246&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1352746961 -->
+{{Short description|Method in mathematics and numerical analysis}}
+{{refimprove|date=October 2012}}
+
+[[File:Periodic 3-body RKF Integration.gif|thumb|This shows the computational time in real time used during a [[3-body problem|3-body]] simulation evolved with the Runge-Kutta-Fehlberg method. Most of the computer time is spent when the bodies pass close by and are susceptible to [[numerical error]].]]
+In [[mathematics]] and [[numerical analysis]],  an '''adaptive step size''' is used in some methods for the [[numerical methods for ordinary differential equations|numerical solution of ordinary differential equations]] (including the special case of [[numerical integration]]) in order to control the errors of the method and to ensure [[numerical stability|stability properties]] such as [[A-stability]]. 
+Using an adaptive stepsize is of particular importance when there is a large variation in the size of the derivative. 
+For example, when modeling the motion of a satellite about the earth as a standard [[Kepler orbit]], a fixed time-stepping method such as the [[Euler method]] may be sufficient. 
+However things are more difficult if one wishes to model the motion of a spacecraft taking into account both the Earth and the Moon as in the [[Three-body problem]]. 
+There, scenarios emerge where one can take large time steps when the spacecraft is far from the Earth and Moon, but if the spacecraft gets close to colliding with one of the planetary bodies, then small time steps are needed.  [[Romberg's method]] and [[Runge–Kutta–Fehlberg method|Runge–Kutta–Fehlberg]] are examples of a numerical integration methods which use an adaptive stepsize.
+
+==Example==
+For simplicity, the following example uses the simplest integration method, the [[Euler method]]; in practice, higher-order methods such as [[Runge–Kutta]] methods are preferred due to their superior convergence and stability properties.
+
+Consider the [[initial value problem]]
+:  <math> y'(t) = f(t,y(t)), \qquad y(a)=y_a </math>
+where ''y'' and ''f'' may denote vectors (in which case this equation represents a system of coupled ODEs in several variables).
+
+We are given the function ''f''(''t'',''y'') and the initial conditions (''a'', ''y''<sub>''a''</sub>), and we are interested in finding the solution at ''t''&nbsp;=&nbsp;''b''. Let ''y''(''b'') denote the exact solution at ''b'', and let ''y<sub>b</sub>'' denote the solution that we compute. We write <math>y_b + \varepsilon = y(b)</math>, where <math>\varepsilon</math> is the error in the numerical solution.
+
+For a sequence (''t''<sub>''n''</sub>) of values of ''t'', with ''t''<sub>''n''</sub> = ''a'' + ''nh'', the Euler method gives approximations to the corresponding values of ''y''(''t''<sub>''n''</sub>) as
+: <math>y_{n+1}^{(0)}=y_n+hf(t_n,y_n)</math>
+The local [[truncation error]] of this approximation is defined by
+:  <math>\tau_{n+1}^{(0)}=y(t_{n+1}) - y_{n+1}^{(0)}</math>
+and by [[Taylor's theorem]], it can be shown that (provided ''f'' is sufficiently smooth) the local truncation error is proportional to the square of the step size:
+:  <math>\tau_{n+1}^{(0)}=ch^2</math>
+where ''c'' is some constant of proportionality.
+
+We have marked this solution and its error with a <math>(0)</math>.
+
+The value of ''c'' is not known to us. Let us now apply Euler's method again with a different step size to generate a second approximation to ''y''(''t''<sub>''n''+1</sub>). We get a second solution, which we label with a <math>(1)</math>. 
+Take the new step size to be one half of the original step size, and apply two steps of Euler's method. This second solution is presumably more accurate. Since we have to apply Euler's method twice, the local error is (in the worst case) twice the original error.
+:  <math>y_{n+\frac{1}{2}}=y_n+\frac{h}{2}f(t_n,y_n)</math>
+:  <math>y_{n+1}^{(1)}=y_{n+\frac{1}{2}}+\frac{h}{2}f(t_{n+\frac{1}{2}},y_{n+\frac{1}{2}})</math>
+:  <math>\tau_{n+1}^{(1)}=c\left(\frac{h}{2}\right)^2+c\left(\frac{h}{2}\right)^2=2c\left(\frac{h}{2}\right)^2=\frac{1}{2}ch^2=\frac{1}{2}\tau_{n+1}^{(0)}</math>
+:  <math>y_{n+1}^{(1)} + \tau_{n+1}^{(1)}=y(t+h)</math>
+
+Here, we assume error factor <math>c</math> is constant over the interval <math>[t, t+h]</math>. In reality its rate of change is proportional to <math>y^{(3)}(t)</math>. Subtracting solutions gives the error estimate:
+
+:  <math> y_{n+1}^{(1)}-y_{n+1}^{(0)} = \tau_{n+1}^{(1)} </math>
+
+This local error estimate is third order accurate.
+
+The local error estimate can be used to decide how stepsize <math>h</math> should be modified to achieve the desired accuracy. For example, if a local tolerance of <math>\text{tol}</math> is allowed, we could let ''h'' evolve like:
+
+:  <math> h \rightarrow 0.9 \times h \times \min \left(\max \left( \left(\frac{\text{tol}}{2\left|\tau_{n+1}^{(1)}\right|}\right)^{1/2}, 0.3\right) ,2\right) </math>
+
+The <math>0.9</math> is a safety factor to ensure success on the next try. The minimum and maximum are to prevent extreme changes from the previous stepsize. This should, in principle give an error of about <math>0.9 \times \text{tol}</math> in the next try. If <math>|\tau_{n+1}^{(1)}| < \text{tol}</math>, we consider the step successful, and the error estimate is used to improve the solution:
+
+: <math> y_{n+1}^{(2)} = y_{n+1}^{(1)} + \tau_{n+1}^{(1)} </math>
+
+This solution is actually '''third order''' accurate in the local scope (second order in the global scope), but since there is no error estimate for it, this doesn't help in reducing the number of steps. This technique is called [[Richardson extrapolation]].
+
+Beginning with an initial stepsize of <math>h=b-a</math>, this theory facilitates our controllable integration of the ODE from point <math>a</math> to <math>b</math>, using an optimal number of steps given a local error tolerance. A drawback is that the step size may become prohibitively small, especially when using the low-order [[Euler method]].
+
+Similar methods can be developed for higher order methods, such as the 4th-order Runge–Kutta method. Also, a global error tolerance can be achieved by scaling the local error to global scope.
+
+==Embedded error estimates==
+
+Adaptive stepsize methods that use a so-called 'embedded' error estimate include the [[Bogacki-Shampine method|Bogacki–Shampine]], [[Runge–Kutta–Fehlberg method|Runge–Kutta–Fehlberg]], [[Cash–Karp method|Cash–Karp]] and [[Dormand–Prince method|Dormand–Prince]] methods. These methods are considered to be more computationally efficient, but have lower accuracy in their error estimates.
+
+To illustrate the ideas of embedded method, consider the following scheme which update <math>y_n</math>:
+:  <math>y_{n+1}=y_n + h_n \psi(t_n,y_n,h_n)</math>
+:  <math>t_{n+1}=t_n + h_n</math>
+The next step <math>h_n</math> is predicted from the previous information <math>h_n=g(t_n,y_n, h_{n-1})</math>.
+
+For embedded RK method, computation of <math>\psi</math> includes a lower order RK method <math>\tilde{\psi}</math>. The error
+then can be simply written as
+:  <math> \textrm{err}_n(h) = \tilde{y}_{n+1} - y_{n+1} = h(\tilde{\psi}(t_n, y_n, h_n) - \psi(t_n, y_n, h_n))</math>
+
+<math> \textrm{err}_n</math> is the unnormalized error. To normalize it, we compare it against a user-defined tolerance, which
+consists of the absolute tolerance and relative tolerance:
+: <math> \textrm{tol}_n = \textrm{Atol} + \textrm{Rtol} \cdot \max(|y_n|, |y_{n-1}|)</math>
+: <math> E_n = \textrm{norm}(\textrm{err}_n / \textrm{tol}_n)</math>
+Then we compare the normalized error <math>E_n</math> against 1 to get the predicted <math>h_n</math>:
+: <math> h_n = h_{n-1} (1/E_n)^{1/(q+1)}</math>
+The parameter ''q'' is the order corresponding to the RK method <math>\tilde{\psi}</math>, which has lower order.
+The above prediction formula is plausible in a sense that it enlarges the step if the estimated local error is smaller than the
+tolerance and it shrinks the step otherwise.
+
+The description given above is simplified compared to the procedures used in the stepsize control for explicit RK solvers. A more detailed treatment
+can be found in Hairer's textbook.<ref name="hairer">E. Hairer, S. P. Norsett G. Wanner, “Solving Ordinary Differential Equations I: Nonstiff Problems”, Sec. II.</ref> The ODE solver in many programming languages uses this procedure as the default strategy for adaptive stepsize control, which adds other engineering parameters to make the system more stable.
+
+== See also ==
+*[[Adaptive quadrature]]
+*[[Adaptive numerical differentiation]]
+
+== References ==
+{{Reflist}}
+
+== Further reading ==
+
+*William H. Press, Saul A. Teukolsky, William T. Vetterling, Brian P. Flannery, ''Numerical Recipes in C'', Second Edition, CAMBRIDGE UNIVERSITY PRESS, 1992. {{ISBN|0-521-43108-5}}
+*Kendall E. Atkinson, ''Numerical Analysis'', Second Edition, John Wiley & Sons, 1989. {{ISBN|0-471-62489-6}}
+
+{{DEFAULTSORT:Adaptive Stepsize}}
+[[Category:Numerical differential equations]]
+[[Category:Numerical analysis]]

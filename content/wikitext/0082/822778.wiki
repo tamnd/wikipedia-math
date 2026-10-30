@@ -1,0 +1,329 @@
+<!-- wikipedia: en
+     page: 822778
+     title: Baum–Welch algorithm
+     revision: 1331711611
+     timestamp: 2026-01-07T20:10:26Z
+     history: https://en.wikipedia.org/w/index.php?curid=822778&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1331711611 -->
+{{Short description|Algorithm in mathematics}}
+In [[electrical engineering]], [[statistical computing]] and [[bioinformatics]], the '''Baum–Welch algorithm''' is a special case of the [[expectation–maximization algorithm]] used to find the unknown parameters of a [[hidden Markov model]] (HMM). It makes use of the [[forward-backward algorithm]] to compute the statistics for the expectation step. The Baum–Welch algorithm, the primary method for inference in hidden Markov models, is numerically unstable due to its recursive calculation of joint probabilities. As the number of variables grows, these joint probabilities become increasingly small, leading to the forward recursions rapidly approaching values below machine precision.<ref>{{Cite web |title=Scaling Factors for Hidden Markov Models |url=https://gregorygundersen.com/blog/2022/08/13/hmm-scaling-factors/ |access-date=2024-10-19 |website=gregorygundersen.com}}</ref>
+
+==History==
+The Baum–Welch algorithm was named after its inventors [[Leonard E. Baum]] and [[Lloyd R. Welch]]. The algorithm and the Hidden Markov models were first described in a series of articles by Baum and his peers at the [[Institute for Defense Analyses#Center for Communications and Computing|IDA Center for Communications Research, Princeton]] in the late 1960s and early 1970s.<ref>{{cite web |last=Rabiner |first=Lawrence |title=First Hand: The Hidden Markov Model |url=http://www.ieeeghn.org/wiki/index.php/First-Hand:The_Hidden_Markov_Model |publisher=IEEE Global History Network |access-date=2 October 2013 }}</ref> One of the first major applications of HMMs was to the field of [[speech processing]].<ref>{{cite journal |last1=Jelinek |first1=Frederick |last2=Bahl |first2=Lalit R. |last3=Mercer |first3=Robert L. |title=Design of a linguistic statistical decoder for the recognition of continuous speech |journal=IEEE Transactions on Information Theory |date=May 1975 |volume=21 |issue=3 |pages=250–6 |doi=10.1109/tit.1975.1055384 }}</ref> In the 1980s, HMMs were emerging as a useful tool in the analysis of biological systems and information, and in particular [[genomics|genetic information]].<ref>{{cite journal |last1=Bishop |first1=Martin J. |last2=Thompson |first2=Elizabeth A. |title=Maximum likelihood alignment of DNA sequences |journal=Journal of Molecular Biology |date=20 July 1986 |volume=190 |issue=2 |pages=159–65 |doi=10.1016/0022-2836(86)90289-5 |pmid=3641921 }}</ref> They have since become an important tool in the probabilistic modeling of genomic sequences.<ref name="Durbin1998">{{cite book |first=Richard |last=Durbin |title=Biological Sequence Analysis: Probabilistic Models of Proteins and Nucleic Acids |url=https://books.google.com/books?id=R5P2GlJvigQC |date=23 April 1998 |publisher=Cambridge University Press |isbn=978-0-521-62041-3 }}</ref>
+
+==Description==
+A [[hidden Markov model]] describes the joint probability of a collection of "[[Latent variable|hidden]]" and observed discrete random variables.  It relies on the assumption that the ''i''-th hidden variable given the (''i'' − 1)-th hidden variable is independent of previous hidden variables, and the current observation variables depend only on the current hidden state.
+
+The Baum–Welch algorithm uses the well known EM algorithm to find the [[maximum likelihood]] estimate of the parameters of a hidden Markov model given a set of observed feature vectors.
+
+Let <math>X_t</math> be a discrete hidden [[random variable]] with <math>N</math> possible values (i.e. We assume there are <math>N</math> states in total). We assume the <math>P(X_t\mid X_{t-1})</math> is independent of time <math>t</math>, which leads to the definition of the time-independent stochastic transition matrix
+:<math>A=\{a_{ij}\}=P(X_t=j\mid X_{t-1}=i).</math>
+The initial state distribution (i.e. when <math>t=1</math>) is given by
+:<math>\pi_i=P(X_1 = i).</math>
+The observation variables <math>Y_t</math> can take one of <math>K</math> possible values. We also assume the observation given the "hidden" state is time independent. The probability of a certain observation <math>y_i</math> at time <math>t</math> for state <math>X_t = j</math> is given by
+:<math>b_j(y_i)=P(Y_t=y_i\mid X_t=j).</math>
+Taking into account all the possible values of <math>Y_t</math> and <math>X_t</math>, we obtain the <math>N \times K</math> matrix <math>B=\{b_j(y_i)\}</math> where <math>b_j</math> belongs to all the possible states and <math>y_i</math> belongs to all the observations.
+
+An observation sequence is given by <math>Y= (Y_1=y_1,Y_2=y_2,\ldots,Y_T=y_T)</math>.
+
+Thus we can describe a hidden Markov chain by <math>\theta = (A,B,\pi)</math>. The Baum–Welch algorithm finds a local maximum for <math>\theta^* = \operatorname{arg\,max}_\theta P(Y\mid\theta)</math> (i.e. the HMM parameters <math>\theta</math> that maximize the probability of the observation).<ref>{{cite book |last=Bilmes |first=Jeff A. |title=A Gentle Tutorial of the EM Algorithm and its Application to Parameter Estimation for Gaussian Mixture and Hidden Markov Models |year=1998 |publisher=International Computer Science Institute |location=Berkeley, CA |pages=7–13 }}</ref>
+
+===Algorithm===
+Set <math>\theta = (A, B, \pi)</math> with random initial conditions. They can also be set using prior information about the parameters if it is available; this can speed up the algorithm and also steer it toward the desired local maximum.
+
+====Forward procedure====
+Let <math>\alpha_i(t)=P(Y_1=y_1,\ldots,Y_t=y_t,X_t=i\mid\theta)</math>, the probability of seeing the observations <math>y_1,y_2,\ldots,y_t</math> and being in state <math>i</math> at time <math>t</math>. This is found recursively:
+#<math>\alpha_i(1)=\pi_i b_i(y_1),</math>
+#<math>\alpha_i(t+1)=b_i(y_{t+1}) \sum_{j=1}^N \alpha_j(t) a_{ji}.</math>
+
+Since this series converges exponentially to zero, the algorithm will numerically underflow for longer sequences.<ref>{{cite web|url=https://www.ece.ucsb.edu/Faculty/Rabiner/ece259/Reprints/tutorial%20on%20hmm%20and%20applications.pdf|title=A Tutorial on Hidden Markov Models and Selected Applications in Speech recognition|last=Rabiner|first=Lawrence|date=February 1989|publisher=Proceedings of the IEEE|access-date=29 November 2019}}</ref> However, this can be avoided in a slightly modified algorithm by scaling <math>\alpha</math> in the forward and <math>\beta</math> in the backward procedure below.
+
+====Backward procedure====
+Let <math>\beta_i(t)=P(Y_{t+1}=y_{t+1},\ldots,Y_T=y_{T}\mid X_t=i,\theta)</math> that is the probability of the ending partial sequence <math>y_{t+1},\ldots,y_T</math> given starting state <math>i</math> at time <math>t</math>. We calculate <math>\beta_i(t)</math> as,
+# <math>\beta_i(T)=1,</math>
+# <math>\beta_i(t)=\sum_{j=1}^N \beta_j(t+1) a_{ij} b_j(y_{t+1}).</math>
+
+====Update====
+We can now calculate the temporary variables, according to [[Bayes' theorem]]:
+:<math>\gamma_i(t)=P(X_t=i\mid Y,\theta) = \frac{P(X_t=i,Y\mid\theta)}{P(Y\mid\theta)} = \frac{\alpha_i(t)\beta_i(t)}{\sum_{j=1}^N \alpha_j(t)\beta_j(t)},</math>
+which is the probability of being in state <math>i</math> at time <math>t</math> given the observed sequence <math>Y</math> and the parameters <math>\theta</math>
+:<math>\xi_{ij}(t)=P(X_t=i,X_{t+1}=j\mid Y,\theta) = \frac{P(X_t=i,X_{t+1}=j,Y\mid\theta)}{P(Y\mid\theta)} = \frac{\alpha_i(t) a_{ij} \beta_j(t+1) b_j(y_{t+1})}{\sum_{k=1}^N \sum_{w=1}^N \alpha_k(t) a_{kw} \beta_w(t+1) b_w(y_{t+1}) }, </math>
+which is the probability of being in state <math>i</math> and <math>j</math> at times <math>t</math> and <math>t+1</math> respectively given the observed sequence <math>Y</math> and parameters <math>\theta</math>.
+
+The denominators of <math>\gamma_i(t)</math> and <math>\xi_{ij}(t)</math> are the same ; they represent the probability of making the observation <math>Y</math> given the parameters <math>\theta</math>.
+
+The parameters of the  hidden Markov model <math>\theta</math> can now be updated:
+*<math>\pi_i^* = \gamma_i(1),</math>
+which is the expected frequency spent in state <math>i</math> at time <math>1</math>.
+*<math>a_{ij}^*=\frac{\sum^{T-1}_{t=1}\xi_{ij}(t)}{\sum^{T-1}_{t=1}\gamma_i(t)},</math>
+which is the expected number of transitions from state ''i'' to state ''j'' compared to the expected total number of transitions starting in state ''i'', including from state ''i'' to itself. The number of transitions starting in state ''i'' is equivalent to the number of times state ''i'' is observed in the sequence from ''t''&nbsp;=&nbsp;1 to ''t''&nbsp;=&nbsp;''T''&nbsp;−&nbsp;1.
+*<math>b_i^*(v_k)=\frac{\sum^T_{t=1} 1_{y_t=v_k} \gamma_i(t)}{\sum^T_{t=1} \gamma_i(t)},</math>
+where
+:<math>
+1_{y_t=v_k}=
+\begin{cases}
+1 & \text{if } y_t=v_k,\\
+0 & \text{otherwise}
+\end{cases}
+</math>
+is an [[indicator function]], and <math>b_i^*(v_k)</math> is the expected number of times the output observations have been equal to <math>v_k</math> while in state <math>i</math> over the expected total number of times in state <math>i</math>.
+
+These steps are now repeated iteratively until a desired level of convergence.
+
+'''Note:''' It is possible to over-fit a particular [[data set]]. That is, <math>P(Y\mid\theta_\text{final}) > P(Y \mid \theta_\text{true}) </math>. The algorithm also does '''not''' guarantee a global maximum.
+
+====Multiple sequences====
+
+The algorithm described thus far assumes a single observed sequence <math>Y = y_1, \ldots, y_T</math>. However, in many situations, there are several sequences observed: <math>Y_1, \ldots, Y_R</math>. In this case, the information from all of the observed sequences must be used in the update of the parameters <math>A</math>, <math>\pi</math>, and <math>b</math>. Assuming that you have computed <math>\gamma_{ir}(t)</math> and <math>\xi_{ijr}(t)</math> for each sequence <math>y_{1,r},\ldots,y_{N_r,r}</math>, the parameters can now be updated:
+*<math>\pi_i^* = \frac{\sum_{r=1}^{R}\gamma_{ir}(1)}{R}</math>
+*<math>a_{ij}^*=\frac{\sum_{r=1}^{R} \sum^{T-1}_{t=1}\xi_{ijr}(t)}{\sum_{r=1}^{R} \sum^{T-1}_{t=1}\gamma_{ir}(t)},</math>
+*<math>b_i^*(v_k)=\frac{\sum_{r=1}^{R} \sum^T_{t=1} 1_{y_{tr}=v_k} \gamma_{ir}(t)}{\sum_{r=1}^{R} \sum^T_{t=1} \gamma_{ir}(t)},</math>
+where
+:<math>
+1_{y_{tr}=v_k}=
+\begin{cases}
+1 & \text{if } y_{t,r}=v_k,\\
+0 & \text{otherwise}
+\end{cases}
+</math>
+is an indicator function
+
+==Example==
+Suppose we have a chicken from which we collect eggs at noon every day. Now whether or not the chicken has laid eggs for collection depends on some unknown factors that are hidden. We can however (for simplicity) assume that the chicken is always in one of two states that influence whether the chicken lays eggs, and that this state only depends on the state on the previous day. Now we don't know the state at the initial starting point, we don't know the transition probabilities between the two states and we don't know the probability that the chicken lays an egg given a particular state.<ref>{{cite web |title=Baum-Welch and HMM applications |url=http://www.biostat.jhsph.edu/bstcourse/bio638/notes/HMMs_BaumWelch.pdf |publisher=Johns Hopkins Bloomberg School of Public Health |archive-url=https://web.archive.org/web/20210414224816/http://www.biostat.jhsph.edu/bstcourse/bio638/notes/HMMs_BaumWelch.pdf |access-date=11 October 2019 |archive-date=2021-04-14 }}</ref><ref>{{cite web |last=Frazzoli |first=Emilio |title=Intro to Hidden Markov Models: the Baum-Welch Algorithm |url=http://ocw.mit.edu/courses/aeronautics-and-astronautics/16-410-principles-of-autonomy-and-decision-making-fall-2010/lecture-notes/MIT16_410F10_lec21.pdf |publisher=Aeronautics and Astronautics, Massachusetts Institute of Technology |access-date=2 October 2013 }}</ref> To start we first guess the transition and emission matrices.
+
+{| border="0" style="background:transparent; margin: 1em auto 1em auto;"
+|-valign="bottom"
+|
+{| class="wikitable"
+|+Transition
+|-
+! !! State 1 !! State 2
+|-
+! State 1
+|0.5 || 0.5
+|-
+! State 2
+|0.3 || 0.7
+|}
+||
+{| class="wikitable"
+|+ Emission
+|-
+! !! No Eggs !! Eggs
+|-
+! State 1
+|0.3 || 0.7
+|-
+! State 2
+|0.8 || 0.2
+|}
+||
+{| class="wikitable"
+|+ Initial
+|-
+! State 1
+|0.2
+|-
+! State 2
+|0.8
+|}
+|}
+We then take a set of observations (E = eggs, N = no eggs): N, N, N, N, N, E, E, N, N, N
+
+This gives us a set of observed transitions between days: NN, NN, NN, NN, NE, EE, EN, NN, NN
+
+The next step is to estimate a new transition matrix. For example, the probability of the sequence NN and the state being {{tmath|S_1}} then {{tmath|S_2}} is given by the following,
+<math>P(S_1) \cdot P(N|S_1) \cdot P(S_1 \rightarrow S_2) \cdot P(N|S_2).</math>
+{| class="wikitable" style="margin: 1em auto 1em auto;"
+|-
+! Observed sequence !! Highest probability of observing that sequence if state is {{tmath|S_1}} then {{tmath|S_2}} !! colspan=2 | Highest Probability of observing that sequence
+|-
+| NN || 0.024 = 0.2 &times; 0.3 &times; 0.5 &times; 0.8 || 0.3584 || {{tmath|S_2}},{{tmath|S_2}}
+|-
+| NN || 0.024 = 0.2 &times; 0.3 &times; 0.5 &times; 0.8 || 0.3584 || {{tmath|S_2}},{{tmath|S_2}}
+|-
+| NN || 0.024 = 0.2 &times; 0.3 &times; 0.5 &times; 0.8 || 0.3584 || {{tmath|S_2}},{{tmath|S_2}}
+|-
+| NN || 0.024 = 0.2 &times; 0.3 &times; 0.5 &times; 0.8 || 0.3584 || {{tmath|S_2}},{{tmath|S_2}}
+|-
+| NE || 0.006 = 0.2 &times; 0.3 &times; 0.5 &times; 0.2 || 0.1344 || {{tmath|S_2}},{{tmath|S_1}}
+|-
+| EE || 0.014 = 0.2 &times; 0.7 &times; 0.5 &times; 0.2 || 0.0490 || {{tmath|S_1}},{{tmath|S_1}}
+|-
+| EN || 0.056 = 0.2 &times; 0.7 &times; 0.5 &times; 0.8 || 0.0896 || {{tmath|S_2}},{{tmath|S_2}}
+|-
+| NN || 0.024 = 0.2 &times; 0.3 &times; 0.5 &times; 0.8 || 0.3584 || {{tmath|S_2}},{{tmath|S_2}}
+|-
+| NN || 0.024 = 0.2 &times; 0.3 &times; 0.5 &times; 0.8 || 0.3584 || {{tmath|S_2}},{{tmath|S_2}}
+|-
+! Total
+| 0.22 || 2.4234 ||
+|}
+
+Thus the new estimate for the {{tmath|S_1}} to {{tmath|S_2}} transition is now <math>\frac{0.22}{2.4234}=0.0908</math> (referred to as "Pseudo probabilities" in the following tables). We then calculate the {{tmath|S_2}} to {{tmath|S_1}}, {{tmath|S_2}} to {{tmath|S_2}} and {{tmath|S_1}} to {{tmath|S_1}} transition probabilities and normalize each row of the transition matrix so that the probabilities of transitions from a given starting state sum to 1. This gives us the updated transition matrix:
+
+{| border="0" style="background:transparent; margin: 1em auto 1em auto;"
+|-valign="bottom"
+|
+{| class="wikitable"
+|+Old Transition Matrix
+|-
+! !! State 1 !! State 2
+|-
+! State 1
+|0.5 || 0.5
+|-
+! State 2
+|0.3 || 0.7
+|}
+||
+{| class="wikitable"
+|+New Transition Matrix (Pseudo Probabilities)
+|-
+! !! State 1 !! State 2
+|-
+! State 1
+|0.0598 || 0.0908
+|-
+! State 2
+|0.2179 || 0.9705
+|}
+||
+{| class="wikitable"
+|+New Transition Matrix (After Normalization)
+|-
+! !! State 1 !! State 2
+|-
+! State 1
+|0.3973 || 0.6027
+|-
+! State 2
+|0.1833 || 0.8167
+|}
+|}
+
+Next, we want to estimate a new emission matrix,
+{| class="wikitable" style="margin: 1em auto 1em auto;"
+|-
+! Observed Sequence !! colspan=2 | Highest probability of observing that sequence<br/> if E is assumed to come from {{tmath|S_1}} !! colspan=2 |Highest Probability of observing that sequence
+|-
+| NE || 0.1344 || {{tmath|S_2}},{{tmath|S_1}} || 0.1344 || {{tmath|S_2}},{{tmath|S_1}}
+|-
+| EE || 0.0490 || {{tmath|S_1}},{{tmath|S_1}} || 0.0490 || {{tmath|S_1}},{{tmath|S_1}}
+|-
+| EN || 0.0560 || {{tmath|S_1}},{{tmath|S_2}} || 0.0896 ||{{tmath|S_2}},{{tmath|S_2}}
+|-
+! Total
+| 0.2394 || || 0.2730 ||
+|}
+
+The new estimate for the E coming from {{tmath|S_1}} emission is now <math>\frac{0.2394}{0.2730}=0.8769</math>.
+
+This allows us to calculate the emission matrix as described above in the algorithm, by adding up the probabilities for the respective observed sequences. We then repeat for if N came from {{tmath|S_1}} and for if N and E came from {{tmath|S_2}} and normalize.
+
+{| border="0" style="background:transparent; margin: 1em auto 1em auto;"
+|-valign="bottom"
+|
+{| class="wikitable"
+|+Old Emission Matrix
+|-
+! !! No Eggs !! Eggs
+|-
+! State 1
+|0.3 || 0.7
+|-
+! State 2
+|0.8 || 0.2
+|}
+||
+{| class="wikitable"
+|+New Emission Matrix (Estimates)
+|-
+! !! No Eggs !! Eggs
+|-
+! State 1
+|0.0404 || 0.8769
+|-
+! State 2
+|1.0000 || 0.7385
+|}
+||
+{| class="wikitable"
+|+New Emission Matrix (After Normalization)
+|-
+! !! No Eggs !! Eggs
+|-
+! State 1
+|0.0441 || 0.9559
+|-
+! State 2
+|0.5752 || 0.4248
+|}
+|}
+
+To estimate the initial probabilities we assume all sequences start with the hidden state {{tmath|S_1}} and calculate the highest probability and then repeat for {{tmath|S_2}}. Again we then normalize to give an updated initial vector.
+
+Finally we repeat these steps until the resulting probabilities converge satisfactorily.
+
+==Applications==
+
+===Speech recognition===
+Hidden Markov Models were first applied to speech recognition by [[James K. Baker]] in 1975.<ref>{{Cite journal |last1=Baker |first1=James K. |author-link1=James K. Baker |doi=10.1109/TASSP.1975.1162650 |title=The DRAGON system—An overview |journal=IEEE Transactions on Acoustics, Speech, and Signal Processing |volume=23 |pages=24–29 |year=1975 }}</ref> Continuous speech recognition occurs by the following steps, modeled by a HMM. Feature analysis is first undertaken on temporal and/or spectral features of the speech signal. This produces an observation vector. The feature is then compared to all sequences of the speech recognition units. These units could be [[phonemes]], syllables, or whole-word units. A lexicon decoding system is applied to constrain the paths investigated, so only words in the system's lexicon (word dictionary) are investigated. Similar to the lexicon decoding, the system path is further constrained by the rules of grammar and syntax. Finally, semantic analysis is applied and the system outputs the recognized utterance. A limitation of many HMM applications to speech recognition is that the current state only depends on the state at the previous time-step, which is unrealistic for speech as dependencies are often several time-steps in duration.<ref>{{cite journal |last=Rabiner |first=Lawrence |title=A Tutorial on Hidden Markov Models and Selected Applications in Speech Recognition |journal=Proceedings of the IEEE |date=February 1989 |volume=77 |issue=2 |pages=257–286 |doi=10.1109/5.18626 |citeseerx=10.1.1.381.3454 |s2cid=13618539 }}</ref> The Baum–Welch algorithm also has extensive applications in solving HMMs used in the field of [[speech synthesis]].<ref>{{cite journal |last1=Tokuda |first1=Keiichi |first2=Takayoshi |last2=Yoshimura |first3=Takashi |last3=Masuko |first4=Takao |last4=Kobayashi |first5=Tadashi |last5=Kitamura |title=Speech Parameter Generation Algorithms for HMM-Based Speech Synthesis |journal=IEEE International Conference on Acoustics, Speech, and Signal Processing |year=2000 |volume=3 }}</ref>
+
+===Cryptanalysis===
+The Baum–Welch algorithm is often used to estimate the parameters of HMMs in deciphering hidden or noisy information and consequently is often used in [[cryptanalysis]]. In data security an observer would like to extract information from a data stream without knowing all the parameters of the transmission. This can involve [[reverse engineering]] a [[Coding theory|channel encoder]].<ref>{{cite journal |last1=Dingel |first1=Janis |first2=Joachim |last2=Hagenauer |title=Parameter Estimation of a Convolutional Encoder from Noisy Observations |journal=IEEE International Symposium on Information Theory |date=24 June 2007 }}</ref> HMMs and as a consequence the Baum–Welch algorithm have also been used to identify spoken phrases in encrypted VoIP calls.<ref>{{cite journal |last1=Wright |first1=Charles |first2=Lucas |last2=Ballard |first3=Scott |last3=Coull |first4=Fabian |last4=Monrose |first5=Gerald |last5=Masson |title=Spot me if you can: Uncovering spoken phrases in encrypted VoIP conversations |journal=IEEE International Symposium on Security and Privacy |year=2008 }}</ref> In addition HMM cryptanalysis is an important tool for automated investigations of cache-timing data. It allows for the automatic discovery of critical algorithm state, for example key values.<ref>{{cite book |last1=Brumley |first1=Bob |first2=Risto |last2=Hakala |title=Advances in Cryptology – ASIACRYPT 2009 |chapter=Cache-Timing Template Attacks |year=2009 |volume=5912 |pages=667–684 |doi=10.1007/978-3-642-10366-7_39 |series=Lecture Notes in Computer Science |isbn=978-3-642-10365-0 }}</ref>
+
+===Applications in bioinformatics===
+
+====Finding genes====
+
+=====Prokaryotic=====
+The [[GLIMMER]] (Gene Locator and Interpolated Markov ModelER) software was an early [[locus (genetics)|gene-finding]] program used for the identification of coding regions in [[prokaryotic]] DNA.<ref name="GLIMMER paper">{{cite journal |last1=Salzberg |first1=Steven |first2=Arthur L. |last2=Delcher |first3=Simon |last3=Kasif |first4=Owen |last4=White |title=Microbial gene identification using interpolated Markov Models |journal=Nucleic Acids Research |year=1998 |volume=26 |issue=2 |pages=544–548 |doi=10.1093/nar/26.2.544 |pmid=9421513 |pmc=147303 }}</ref><ref name="GLIMMER web">{{cite web |title=Glimmer: Microbial Gene-Finding System |url=http://ccb.jhu.edu/software/glimmer/index.shtml |publisher=Johns Hopkins University - Center for Computational Biology }}</ref> GLIMMER uses Interpolated Markov Models (IMMs) to identify the [[exon|coding regions]] and distinguish them from the [[introns|noncoding DNA]]. The latest release (GLIMMER3) has been shown to have increased [[specificity (statistics)|specificity]] and accuracy compared with its predecessors with regard to predicting translation initiation sites, demonstrating an average 99% accuracy in locating 3' locations compared to confirmed genes in prokaryotes.<ref>{{cite journal |last1=Delcher |first1=Arthur |first2=Kirsten A. |last2=Bratke |first3=Edwin C. |last3=Powers |first4=Steven L. |last4=Salzberg |title=Identifying bacterial genes and endosymbiont DNA with Glimmer |journal=Bioinformatics |year=2007 |volume=23 |issue=6 |pages=673–679 |doi=10.1093/bioinformatics/btm009 |pmid=17237039 |pmc=2387122 }}</ref>
+
+=====Eukaryotic=====
+The [[GENSCAN]] webserver is a gene locator capable of analyzing [[eukaryotic]] sequences up to one million [[base-pairs]] (1 Mbp) long.<ref>{{cite web |last=Burge |first=Christopher |title=The GENSCAN Web Server at MIT |url=http://genes.mit.edu/GENSCAN.html |access-date=2 October 2013 |archive-url=https://web.archive.org/web/20130906115338/http://genes.mit.edu/GENSCAN.html |archive-date=6 September 2013 |url-status=dead }}</ref> GENSCAN utilizes a general inhomogeneous, three periodic, fifth order Markov model of DNA coding regions. Additionally, this model accounts for differences in gene density and structure (such as intron lengths) that occur in different [[Isochore (genetics)|isochores]]. While most integrated gene-finding software (at the time of GENSCANs release) assumed input sequences contained exactly one gene, GENSCAN solves a general case where partial, complete, or multiple genes (or even no gene at all) is present.<ref>{{cite journal |last1=Burge |first1=Chris |first2=Samuel |last2=Karlin |title=Prediction of Complete Gene Structures in Human Genomic DNA |journal=Journal of Molecular Biology |year=1997 |volume=268 |pages=78–94 |doi=10.1006/jmbi.1997.0951 |pmid=9149143 |issue=1 |citeseerx=10.1.1.115.3107 }}</ref> GENSCAN was shown to exactly predict exon location with 90% accuracy with 80% specificity compared to an annotated database.<ref>{{cite journal |last1=Burge |first1=Christopher |first2=Samuel |last2=Karlin |title=Finding the Genes in Genomic DNA |journal=Current Opinion in Structural Biology |year=1998 |volume=8 |issue=3 |pages=346–354 |doi=10.1016/s0959-440x(98)80069-9 |pmid=9666331 |doi-access=free }}</ref>
+
+====Copy-number variation detection====
+[[Copy-number variation]]s (CNVs) are an abundant form of genome structure variation in humans. A discrete-valued bivariate HMM (dbHMM) was used assigning chromosomal regions to seven distinct states: unaffected regions, deletions, duplications and four transition states.  Solving this model using Baum-Welch demonstrated the ability to predict the location of CNV breakpoint to approximately 300 bp from [[DNA microarray|micro-array experiments]].<ref>{{cite journal |last1=Korbel |first1=Jan |author-link=Jan O. Korbel |first2=Alexander |last2=Urban |first3=Fabien |last3=Grubert |first4=Jiang |last4=Du |first5=Thomas |last5=Royce |first6=Peter |last6=Starr |first7=Guoneng |last7=Zhong |first8=Beverly |last8=Emanuel |first9=Sherman |last9=Weissman |first10=Michael |last10=Snyder |first11=Marg |last11=Gerstein |title=Systematic prediction and validation of breakpoints associated with copy-number variations in the human genome |journal=Proceedings of the National Academy of Sciences of the United States of America |date=12 June 2007 |volume=104 |issue=24 |pages=10110–5 |doi=10.1073/pnas.0703834104 |pmid=17551006 |pmc=1891248 |bibcode=2007PNAS..10410110K |doi-access=free }}</ref> This magnitude of resolution enables more precise correlations between different CNVs and [[structural variations|across populations]] than previously possible, allowing the study of CNV population frequencies. It also demonstrated a [[Mendelian inheritance|direct inheritance pattern for a particular CNV]].
+
+==Implementations==
+*[http://accord-framework.net/docs/html/T_Accord_Statistics_Models_Markov_HiddenMarkovModel.htm Accord.NET] in [[C Sharp (programming language)|C#]]
+*[http://ghmm.org/ ghmm] C library with [[Python (programming language)|Python]] bindings that supports both discrete and continuous emissions.
+*[https://github.com/hmmlearn/hmmlearn hmmlearn] [[Python (programming language)|Python]] library that implements Baum-Welch on various discrete-time [[Hidden Markov model | HMMs]]
+*[https://github.com/Rapfff/jajapy Jajapy] [[Python (programming language)|Python]] library that implements Baum-Welch on various kind of Markov Models ([[Hidden Markov model | HMM]], [[Markov chain | MC]], [[Markov decision process|MDP]], [[Continuous-time Markov chain| CTMC]]).
+*[https://github.com/gdalle/HiddenMarkovModels.jl HiddenMarkovModels.jl] package for [[Julia (programming language)|Julia]].
+*HMMFit function in the [https://cran.r-project.org/src/contrib/Archive/RHmm/ RHmm] package for [[R (programming language)|R]].
+*[http://www.mathworks.com.au/help/stats/hmmtrain.html?searchHighlight=baum-welch hmmtrain] in [[MATLAB]]
+*[https://docs.rs/bio/0.39.0/bio/stats/hmm/index.html rustbio] in [[Rust (programming_language)|Rust]]
+
+==See also==
+* [[Viterbi algorithm]]
+* [[Hidden Markov model]]
+* [[EM algorithm]]
+* [[Maximum likelihood]]
+* [[Speech recognition]]
+* [[Bioinformatics]]
+* [[Cryptanalysis]]
+
+==References==
+{{Reflist|30em}}
+
+==External links==
+* A comprehensive review of HMM methods and software in bioinformatics –  [https://web.archive.org/web/20110304083408/http://bioinformatics.oxfordjournals.org/content/14/9/755.full.pdf Profile Hidden Markov Models]
+* Early HMM publications by Baum:
+** [https://web.archive.org/web/20131005001241/http://projecteuclid.org/DPubS?verb=Display&version=1.0&service=UI&handle=euclid.aoms%2F1177697196&page=record A Maximization Technique Occurring in the Statistical Analysis of Probabilistic Functions of Markov Chains]
+** [https://web.archive.org/web/20131004233805/http://projecteuclid.org/DPubS?verb=Display&version=1.0&service=UI&handle=euclid.bams%2F1183528841&page=record An inequality with applications to statistical estimation for probabilistic functions of Markov processes and to a model for ecology]
+** [https://web.archive.org/web/20131004233211/http://projecteuclid.org/DPubS?verb=Display&version=1.0&service=UI&handle=euclid.aoms%2F1177699147&page=record Statistical Inference for Probabilistic Functions of Finite State Markov Chains]
+* The Shannon Lecture by Welch, which speaks to how the algorithm can be implemented efficiently:
+** [https://web.archive.org/web/20200705143647/http://backup.itsoc.org/publications/nltr/it_dec_03final.pdf Hidden Markov Models and the Baum–Welch Algorithm], IEEE Information Theory Society Newsletter, Dec. 2003.
+* An alternative to the Baum–Welch algorithm, the Viterbi Path Counting algorithm:
+** Davis, Richard I. A.; Lovell, Brian C.; [http://dl.acm.org/citation.cfm?id=1011682.1011688 "Comparing and evaluating HMM ensemble training algorithms using train and test and condition number criteria"], Pattern Analysis and Applications, vol. 6, no. 4, pp.&nbsp;327–336, 2003.
+* [http://www.cs.jhu.edu/~jason/papers/#eisner-2002-tnlp An Interactive Spreadsheet for Teaching the Forward-Backward Algorithm] (spreadsheet and article with step-by-step walkthrough)
+* [http://pandamatak.com/people/anand/771/html/node26.html Formal derivation of the Baum–Welch algorithm] {{Webarchive|url=https://web.archive.org/web/20120228202329/http://pandamatak.com/people/anand/771/html/node26.html |date=2012-02-28 }}
+* [http://www.kanungo.com/software/software.html#umdhmm Implementation of the Baum–Welch algorithm]
+
+{{DEFAULTSORT:Baum-Welch algorithm}}
+[[Category:Randomized algorithms]]
+[[Category:Bioinformatics algorithms]]
+[[Category:Markov models]]

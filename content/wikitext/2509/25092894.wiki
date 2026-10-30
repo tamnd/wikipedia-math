@@ -1,0 +1,91 @@
+<!-- wikipedia: en
+     page: 25092894
+     title: Projection pursuit regression
+     revision: 1312573551
+     timestamp: 2025-09-21T12:40:49Z
+     history: https://en.wikipedia.org/w/index.php?curid=25092894&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1312573551 -->
+{{Short description|Method for nonparametric multiple regression}}
+{{no footnotes|date=November 2010}}
+
+In [[statistics]], '''projection pursuit regression (PPR)''' is a [[statistical model]] developed by [[Jerome H. Friedman]] and [[Werner Stuetzle]] that extends [[additive model]]s. This model adapts the additive models in that it first projects the [[data matrix (multivariate statistics)|data matrix]] of [[explanatory variable]]s in the optimal direction before applying smoothing functions to these explanatory variables.
+
+== Model overview ==
+The model consists of [[linear combination]]s of [[ridge function]]s: non-linear transformations of linear combinations of the explanatory variables. The basic model takes the form
+
+:<math>y_i=\beta_0 + \sum_{j=1}^r f_j (\beta_j^{\mathrm{T}}x_i) + \varepsilon_i ,</math>
+
+where ''x<sub>i</sub>'' is a 1 × ''p'' row of the [[design matrix]] containing the explanatory variables for example ''i'', ''y<sub>i</sub>'' is a 1 × 1 prediction, {''&beta;<sub>j</sub>''} is a collection of ''r'' vectors (each a unit vector of length ''p'') which contain the unknown parameters, {''f<sub>j</sub>''} is a collection of ''r'' initially unknown smooth functions that map from <math>\mathbb{R} \rarr \mathbb{R}</math>, and ''r'' is a hyperparameter. Good values for ''r'' can be determined through [[cross-validation (statistics)|cross-validation]] or a forward stage-wise strategy which stops when the model fit cannot be significantly improved. As ''r'' approaches infinity and with an appropriate set of functions {''f<sub>j</sub>''}, the PPR model is a [[universal estimator]], as it can approximate any continuous function in <math>\mathbb{R}^{p}</math>.
+
+== Model estimation ==
+For a given set of data <math>\{(y_i ,x_i )\}_{i=1}^{n}</math>, the goal is to minimize the error function
+
+:<math>S=\sum_{i=1}^n \left[ y_i - \sum_{j=1}^r f_j (\beta_j^{\mathrm{T}} x_i) \right]^2</math>
+
+over the functions <math>f_j</math> and vectors <math>\beta_j</math>. No method exists for solving over all variables at once, but it can be solved via [[alternating optimization]]. First, consider each <math>(f_j, \beta_j)</math> pair individually: Let all other parameters be fixed, and find a "residual", the variance of the output not accounted for by those other parameters, given by
+
+:<math>r_i = y_i - \sum_{l \ne j} f_l (\beta_l^{\mathrm{T}} x_i)</math>
+
+The task of minimizing the [[error function]] now reduces to solving
+
+:<math>\min_{f_j, \beta_j} S'= \min_{f_j, \beta_j} \sum_{i=1}^n \left[ r_i - f_j(\beta_j^{\mathrm{T}} x_i) \right]^2</math>
+
+for each ''j'' in turn. Typically new <math>(f_j, \beta_j)</math> pairs are added to the model in a forward stage-wise fashion.
+
+<blockquote>Aside: Previously fitted pairs can be readjusted after new fit-pairs are determined by an algorithm known as [[Backfitting algorithm|backfitting]], which entails reconsidering a previous pair, recalculating the residual given how other pairs have changed, refitting to account for that new information, and then cycling through all fit-pairs this way until parameters converge. This process typically results in a model that performs better with fewer fit-pairs, though it takes longer to train, and it is usually possible to achieve the same performance by skipping backfitting and simply adding more fits to the model (increasing ''r'').</blockquote>
+
+Solving the simplified error function to determine an <math>(f_j, \beta_j)</math> pair can be done with alternating optimization, where first a random <math>\beta_j</math> is used to project <math>X</math> in to 1D space, and then the optimal <math>f_j</math> is found to describe the relationship between that projection and the residuals via your favorite scatter plot regression method. Then if <math>f_j</math> is held constant, assuming <math>f_j</math> is once differentiable, the optimal updated weights <math>\beta_j</math> can be found via the [[Gauss–Newton algorithm|Gauss–Newton method]]&mdash;a [[quasi-Newton method]] in which the part of the Hessian involving the second derivative is discarded. To derive this, first [[Taylor series|Taylor expand]] <math>f_j(\beta_j^{T}x_i) \approx f_j(\beta_{j,old}^{T}x_i) + \dot{f_j}(\beta_{j,old}^{T}x_i)(\beta_j^{T}x_i - \beta_{j,old}^{T}x_i)</math>, then plug the expansion back in to the simplified error function <math>S'</math> and do some algebraic manipulation to put it in the form
+
+:<math> \min_{\beta_j} S' \approx \min_{\beta_j} \sum_{i=1}^n \underbrace{\dot{f_j}(\beta_{j,old}^{T}x_i)^2}_w \Bigg[\bigg(\underbrace{\beta_{j,old}^{T}x_i + \frac{r_i - f_j(\beta_{j,old}^{T}x_i)}{\dot{f_j}(\beta_{j,old}^{T}x_i)}}_{\hat{b}}\bigg) - \beta_j^{T}x_i \Bigg]^2</math>
+
+This is a [[weighted least squares]] problem. If we solve for all weights <math>w</math> and put them in a diagonal matrix <math>W</math>, stack all the new targets <math>\hat{b}</math> in to a vector, and use the full data matrix <math>X</math> instead of a single example <math>x_i</math>, then the optimal <math>\beta_j</math> is given by the closed-form
+
+:<math>\underset{\beta_j}{\operatorname{arg\,min}} \Big\|\vec{\hat{b}} - X\beta_j \Big\|_{W}^2 = (X^{\mathrm{T}} WX)^{-1} X^{\mathrm{T}} W \vec{\hat{b}}</math>
+
+Use this updated <math>\beta_j</math> to find a new projection of <math>X</math> and refit <math>f_j</math> to the new scatter plot. Then use that new <math>f_j</math> to update <math>\beta_j</math> by resolving the above, and continue this alternating process until <math>(f_j, \beta_j)</math> converges.
+
+It has been shown that the convergence rate, the bias and the variance are affected by the estimation of  <math>\beta_j</math> and <math>f_j</math>.
+
+== Discussion ==
+The PPR model takes the form of a basic additive model but with the additional <math>\beta_j</math> component, so each <math>f_j</math> fits a scatter plot of <math>\beta_j^{T}X^T</math> vs the ''residual'' (unexplained variance) during training rather than using the raw inputs themselves. This constrains the problem of finding each <math>f_j</math> to low dimension, making it solvable with common least squares or spline fitting methods and sidestepping the [[curse of dimensionality]] during training. Because <math>f_j</math> is taken of a projection of <math>X</math>, the result looks like a "ridge" orthogonal to the projection dimension, so <math>\{f_j\}</math> are often called "ridge functions". The directions <math>\beta_j</math> are chosen to optimize the fit of their corresponding ridge functions.
+
+Note that because PPR attempts to fit projections of the data, it can be difficult to interpret the fitted model as a whole, because each input variable has been accounted for in a complex and multifaceted way. This can make the model more useful for prediction than for understanding the data, though visualizing individual ridge functions and considering which projections the model is discovering can yield some insight.
+
+== Advantages of PPR estimation ==
+*It uses univariate regression functions instead of their multivariate form, thus effectively dealing with the [[curse of dimensionality]]
+*Univariate regression allows for simple and efficient estimation
+*Relative to [[generalized additive model]]s, PPR can estimate a much richer class of functions
+*Unlike local averaging methods (such as [[k-nearest neighbors]]), PPR can ignore variables with low explanatory power.
+
+== Disadvantages of PPR estimation ==
+*PPR requires examining an M-dimensional parameter space in order to estimate <math>\beta_j</math>.
+*One must select the smoothing parameter for <math>f_j</math>.
+*The model is often difficult to interpret
+
+== Extensions of PPR ==
+*Alternate smoothers, such as the radial function, harmonic function and additive function, have been suggested and their performances vary depending on the data sets used.
+*Alternate optimization criteria have been used as well, such as standard absolute deviations and [[mean absolute deviation]]s.
+*[[Ordinary least squares]] can be used to simplify calculations as often the data does not have strong non-linearities.
+*Sliced Inverse Regression (SIR) has been used to choose the direction vectors for PPR.
+*Generalized PPR combines regular PPR with iteratively reweighted least squares (IRLS) and a [[link function]] to estimate binary data.
+
+== PPR vs neural networks (NN) ==
+Both projection pursuit regression and fully connected [[neural networks]] with a single hidden layer project the input vector onto a one-dimensional hyperplane and then apply a nonlinear transformation of the input variables that are then added in a linear fashion. Thus both follow the same steps to overcome the curse of dimensionality. The main difference is that the functions <math>f_j </math>  being fitted in PPR can be different for each combination of input variables and are estimated one at a time and then updated with the weights, whereas in NN these are all specified upfront and estimated simultaneously.
+
+Thus, in PPR estimation the transformations of variables in PPR are data driven whereas in a single-layer neural network these transformations are fixed.
+
+==See also==
+*[[Projection pursuit]]
+
+== References ==
+<!--- See [[Wikipedia:Footnotes]] on how to create references using <ref></ref> tags which will then appear here automatically -->
+{{Reflist}}
+*Friedman, J.H. and Stuetzle, W. (1981) [http://inspirehep.net/record/152302/files/slac-pub-2466.pdf Projection Pursuit Regression]. Journal of the American Statistical Association, 76, 817–823.
+*Hand, D., [[Heikki Mannila|Mannila, H.]] and Smyth, P, (2001) Principles of Data Mining. MIT Press. {{ISBN|0-262-08290-X}}
+*Hall, P. (1988) Estimating the direction in which a data set is the most interesting, Probab. Theory Related Fields, 80, 51–77.
+*Hastie, T. J., Tibshirani, R. J. and Friedman, J.H. (2009). [https://web.archive.org/web/20150126123924/http://statweb.stanford.edu/~tibs/ElemStatLearn/ The Elements of Statistical Learning: Data Mining, Inference and Prediction]. Springer. {{ISBN|978-0-387-84857-0}}
+*Klinke, S. and Grassmann, J. (2000) 'Projection Pursuit Regression' in Smoothing and Regression: Approaches, Computation and Application. Ed. Schimek, M.G.. Wiley Interscience.
+*Lingjarde, O. C. and Liestol, K. (1998) [https://www.researchgate.net/profile/Ole_Lingjaerde/publication/262216996_Generalized_projection_pursuit_regression/links/545b9d500cf249070a7a7815/Generalized-projection-pursuit-regression Generalized Projection Pursuit Regression]. SIAM Journal of Scientific Computing, 20, 844–857.
+
+[[Category:Regression analysis]]

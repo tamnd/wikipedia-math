@@ -1,0 +1,263 @@
+<!-- wikipedia: en
+     page: 24277294
+     title: Blossom algorithm
+     revision: 1356000132
+     timestamp: 2026-05-25T04:37:36Z
+     history: https://en.wikipedia.org/w/index.php?curid=24277294&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1356000132 -->
+{{short description|Algorithm for finding max graph matchings}}
+
+In [[graph theory]], the '''blossom algorithm''' is an [[algorithm]] for constructing [[maximum matching]]s on [[Graph (discrete mathematics)|graph]]s. The algorithm was developed by [[Jack Edmonds]] in 1961,<ref name = "glimpse">{{Citation
+ | last = Edmonds
+ | first = Jack 
+ | contribution = A glimpse of heaven
+ | year = 1991
+ | title = History of Mathematical Programming --- A Collection of Personal Reminiscences
+ | editor = J.K. Lenstra |editor2=A.H.G. Rinnooy Kan |editor3=A. Schrijver
+ | pages = 32–54
+ | publisher = CWI, Amsterdam and North-Holland, Amsterdam
+}}</ref> and published in 1965.<ref name = "algorithm">
+{{cite journal
+  | doi = 10.4153/CJM-1965-045-4
+  | author = Edmonds, Jack
+  | title = Paths, trees, and flowers
+  | journal = Can. J. Math.
+  | volume = 17
+  | year = 1965
+  | pages = 449–467
+| doi-access = free
+  }}</ref> Given a general [[Graph (discrete mathematics)|graph]] {{math|1=''G'' = (''V'', ''E'')}}, the algorithm finds a matching {{mvar|M}} such that each vertex in {{mvar|V}} is incident with at most one edge in {{mvar|M}} and {{math|{{abs|''M''}}}} is maximized. The matching is constructed by iteratively improving an initial empty matching along augmenting paths in the graph. Unlike [[bipartite graph|bipartite]] matching, the key new idea is that an odd-length cycle in the graph (blossom) is contracted to a single vertex, with the search continuing iteratively in the contracted graph.
+
+The algorithm runs in time {{math|[[Big O notation|''O'']]({{abs|''E''}}{{abs|''V''}}{{sup|2}})}}, where {{math|{{abs|''E''}}}} is the number of [[edge (graph)|edges]] of the graph and {{math|{{abs|''V''}}}} is its number of [[vertex (graph)|vertices]]. A better running time of <math>O( |E| \sqrt{ |V| } )</math> for the same task can be achieved with the more complicated algorithm of Micali and Vazirani.<ref name = "micali">{{cite conference
+  | author1 = Micali, Silvio
+  | author2 = Vazirani, Vijay
+  | title = An O(V<sup>1/2</sup>E) algorithm for finding maximum matching in general graphs
+  | conference = 21st Annual Symposium on Foundations of Computer Science
+  | year = 1980
+  | publisher = IEEE Computer Society Press, New York
+  | pages = 17&ndash;27
+}}</ref>
+
+A major reason that the blossom algorithm is important is that it gave the first proof that a maximum-size matching could be found using a polynomial amount of computation time. Another reason is that it led to a [[linear programming]] polyhedral description of the matching [[polytope]], yielding an algorithm for min-''weight'' matching.<ref name = "weighted">
+{{cite journal
+  | author = Edmonds, Jack
+  | title = Maximum matching and a polyhedron with 0,1-vertices
+  | journal = Journal of Research of the National Bureau of Standards Section B
+  | volume = 69
+  | year = 1965
+  | pages = 125&ndash;130
+| doi = 10.6028/jres.069B.013
+ | doi-access = free
+  }}</ref> 
+As elaborated by [[Alexander Schrijver]], further significance of the result comes from the fact that this was the first polytope whose proof of integrality "does not simply follow just from [[total unimodularity]], and its description was a breakthrough in [[polyhedral combinatorics]]."<ref>{{Cite book|url=https://www.springer.com/us/book/9783540443896|title=Combinatorial Optimization: Polyhedra and Efficiency|last=Schrijver|first=Alexander|date=2003|publisher=Springer-Verlag|isbn=9783540443896|series=Algorithms and Combinatorics|location=Berlin Heidelberg|language=en}}</ref>
+
+==Augmenting paths==
+
+Given {{math|1=''G'' = (''V'', ''E'')}} and a matching {{mvar|M}} of {{mvar|G}}, a vertex {{mvar|v}} is '''exposed''' if no edge of {{mvar|M}} is incident with {{mvar|v}}. A path in {{mvar|G}} is an '''alternating path''', if its edges are alternately not in {{mvar|M}} and in {{mvar|M}} (or in {{mvar|M}} and not in {{mvar|M}}). An '''augmenting path''' {{mvar|P}} is an alternating path that starts and ends at two distinct exposed vertices. Note that the number of unmatched edges in an augmenting path is greater by one than the number of matched edges, and hence the total number of edges in an augmenting path is odd. A '''matching augmentation''' along an augmenting path {{mvar|P}} is the operation of replacing {{mvar|M}} with a new matching 
+:<math>M_1 = M \oplus P = ( M \setminus P ) \cup ( P \setminus M )</math>.
+
+[[File:Edmonds augmenting path.svg|500px|alt=Augmentation along a path]]
+
+By [[Berge's lemma]], matching {{mvar|M}} is maximum if and only if there is no {{mvar|M}}-augmenting path in {{mvar|G}}.<ref name = "matching book">{{cite book
+  | author1 = Lovász, László
+  | authorlink1 = László Lovász
+  | author2 = Plummer, Michael | author2-link = Michael D. Plummer
+  | title = Matching Theory
+  | publisher = Akadémiai Kiadó
+  | year = 1986
+  | isbn = 963-05-4168-8
+}}</ref><ref name="karp notes">{{citation
+  | author = Karp, Richard
+  | contribution = Edmonds's Non-Bipartite Matching Algorithm
+  | title = Course Notes. U. C. Berkeley
+  | url = http://www.cs.berkeley.edu/~karp/greatalgo/lecture05.pdf
+  | url-status = dead
+  | archiveurl = https://web.archive.org/web/20081230183603/http://www.cs.berkeley.edu/~karp/greatalgo/lecture05.pdf
+  | archivedate = 2008-12-30
+  }}</ref> Hence, either a matching is maximum, or it can be augmented. Thus, starting from an initial matching, we can compute a maximum matching by augmenting the current matching with augmenting paths as long as we can find them, and return whenever no augmenting paths are left. We can formalize the algorithm as follows:
+
+    INPUT:  Graph ''G'', initial matching ''M'' on ''G''
+    OUTPUT: maximum matching ''M*'' on ''G''
+ A1 '''function''' ''find_maximum_matching''(''G'', ''M'') : ''M*''
+ A2     ''P'' ← ''find_augmenting_path''(''G'', ''M'')
+ A3     '''if''' ''P'' is non-empty '''then'''
+ A4         '''return''' ''find_maximum_matching''(''G'', augment ''M'' along ''P'')
+ A5     '''else'''
+ A6         '''return''' M
+ A7     '''end if'''
+ A8 '''end function'''
+
+We still have to describe how augmenting paths can be found efficiently. The subroutine to find them uses blossoms and contractions.
+
+==Blossoms and contractions==
+
+Given {{math|1=''G'' = (''V'', ''E'')}} and a matching {{mvar|M}} of {{mvar|G}}, a ''[[blossom (graph theory)|blossom]]'' {{mvar|B}} is a cycle in {{mvar|G}} consisting of {{math|2''k'' + 1}} edges of which exactly {{mvar|k}} belong to {{mvar|M}}, and where one of the vertices {{mvar|v}} of the cycle (the ''base'') is such that there exists an alternating path of even length (the ''stem'') from {{mvar|v}} to an exposed vertex {{mvar|w}}.
+
+'''''Finding Blossoms:'''''
+* Traverse the graph starting from an exposed vertex.
+* Starting from that vertex, label it as an outer vertex {{mvar|'''o'''}}.
+* Alternate the labeling between vertices being inner {{mvar|'''i'''}}  and outer {{mvar|'''o'''}} such that no two adjacent vertices have the same label.
+* If we end up with two adjacent vertices labeled as outer {{mvar|'''o'''}}  then we have an odd-length cycle and hence a blossom.
+
+Define the '''contracted graph'''  {{mvar|G'}} as the graph obtained from {{mvar|G}} by [[edge contraction|contracting]] every edge of {{mvar|B}}, and define the '''contracted matching''' {{mvar|M'}} as the matching of {{mvar|G'}} corresponding to {{mvar|M}}.
+
+[[File:Edmonds blossom.svg|500px|alt=Example of a blossom]]
+
+{{mvar|G'}} has an {{mvar|M'}}-augmenting path [[if and only if]] {{mvar|G}} has an {{mvar|M}}-augmenting path, and that any {{mvar|M'}}-augmenting path {{mvar|P'}} in {{mvar|G'}} can be '''lifted''' to an {{mvar|M}}-augmenting path in {{mvar|G}} by undoing the contraction by {{mvar|B}} so that the segment of {{mvar|P'}} (if any) traversing through {{mvar|v{{sub|B}}}} is replaced by an appropriate segment traversing through {{mvar|B}}.<ref name = "tarjan notes">{{citation
+  | author = Tarjan, Robert
+  | contribution = Sketchy Notes on Edmonds' Incredible Shrinking Blossom Algorithm for General Matching
+  | title = Course Notes, Department of Computer Science, Princeton University
+  | url = https://www.cs.dartmouth.edu/~ac/Teach/CS105-Winter05/Handouts/tarjan-blossom.pdf
+}}</ref> In more detail:
+
+* if {{mvar|P'}} traverses through a segment {{math|''u'' → ''v{{sub|B}}'' → ''w''}} in {{mvar|G'}}, then this segment is replaced with the segment {{math|''u'' → ( ''u''' → … → ''w' '' ) → ''w''}} in {{mvar|G}}, where blossom vertices {{mvar|u'}} and {{mvar|w'}} and the side of {{mvar|B}}, {{math|( ''u' '' → … → ''w' '' )}}, going from {{mvar|u'}} to {{mvar|w'}} are chosen to ensure that the new path is still alternating ({{mvar|u'}} is exposed with respect to <math>M \cap B</math>, <math>\{ w', w \} \in E \setminus M</math>).
+
+[[File:Edmonds lifting path.svg|500px|alt=Path lifting when {{mvar|P'}} traverses through {{mvar|v{{sub|B}}}}, two cases depending on the direction we need to choose to reach {{mvar|v{{sub|B}}}}]]
+
+* if {{mvar|P'}} has an endpoint {{mvar|v{{sub|B}}}}, then the path segment {{math|''u'' → ''v{{sub|B}}''}} in {{mvar|G'}} is replaced with the segment {{math|''u'' → ( ''u' '' → … → ''v' '' )}} in {{mvar|G}}, where blossom vertices {{mvar|u'}} and {{mvar|v'}} and the side of {{mvar|B}}, {{math|( ''u' '' → … → ''v' '' )}}, going from {{mvar|u'}} to {{mvar|v'}} are chosen to ensure that the path is alternating ({{mvar|v'}} is exposed, <math>\{ u', u \} \in E \setminus M</math>).
+
+[[File:Edmonds lifting end point.svg|500px|alt=Path lifting when {{mvar|P'}} ends at {{mvar|v{{sub|B}}}}, two cases depending on the direction we need to choose to reach {{mvar|v{{sub|B}}}}]]
+
+Thus blossoms can be contracted and search performed in the contracted graphs. This reduction is at the heart of Edmonds' algorithm.
+
+==Finding an augmenting path==
+
+The search for an augmenting path uses an auxiliary data structure consisting of a [[forest (graph theory)|forest]] {{mvar|F}} whose individual trees correspond to specific portions of the graph {{mvar|G}}. In fact, the forest {{mvar|F}} is the same that would be used to find maximum matchings in [[bipartite graph]]s (without need for shrinking blossoms).
+In each iteration the algorithm either (1) finds an augmenting path, (2) finds a blossom and recurses onto the corresponding contracted graph, or (3) concludes there are no augmenting paths. The auxiliary structure is built by an incremental procedure discussed next.<ref name = "tarjan notes"/>
+
+The construction procedure considers vertices {{mvar|v}} and edges {{mvar|e}} in {{mvar|G}} and incrementally updates {{mvar|F}} as appropriate. If {{mvar|v}} is in a tree {{mvar|T}} of the forest, we let ''{{code|root(v)}}'' denote the root of {{mvar|T}}. If both {{mvar|u}} and {{mvar|v}} are in the same tree {{mvar|T}} in {{mvar|F}}, we let ''{{code|distance(u,v)}}'' denote the length of the unique path from {{mvar|u}} to {{mvar|v}} in {{mvar|T}}.
+
+     INPUT:  Graph ''G'', matching ''M'' on ''G''
+     OUTPUT: augmenting path ''P'' in ''G'' or empty path if none found
+ B01 '''function''' ''find_augmenting_path''(''G'', ''M'') : ''P''
+ B02    ''F'' ← empty forest
+ B03    unmark all vertices and edges in ''G'', mark all edges of ''M''
+ B05    '''for each''' exposed vertex ''v'' '''do'''
+ B06        create a singleton tree { ''v'' } and add the tree to ''F''
+ B07    '''end for'''
+ B08    '''while''' there is an unmarked vertex ''v'' in ''F'' with ''distance(v, root(v))'' even '''do'''
+ B09        '''while''' there exists an unmarked edge ''e'' = { ''v'', ''w'' } '''do'''
+ B10            '''if''' ''w'' is not in ''F'' '''then'''
+                    // ''w'' is matched, so add ''e'' and ''w'''s matched edge to ''F''
+ B11                ''x'' ← vertex matched to ''w'' in ''M''
+ B12                add edges { ''v'', ''w'' } and { ''w'', ''x'' } to the tree of ''v''
+ B13            '''else'''
+ B14                '''if''' ''distance(w, root(w))'' is odd '''then'''
+                        // Do nothing.
+ B15                '''else'''
+ B16                    '''if''' ''root(v)'' ≠ ''root(w)'' '''then'''
+                            // Report an augmenting path in F <math>\cup</math> { ''e'' }.
+ B17                        ''P'' ← path (''root''(''v'') → ... → ''v'') → (''w'' → ... → ''root''(''w''))
+ B18                        '''return''' ''P''
+ B19                    '''else'''
+                            // Contract a blossom in ''G'' and look for the path in the contracted graph.
+ B20                        ''B'' ← blossom formed by ''e'' and edges on the path ''v'' → ''w'' in ''T''
+ B21                        ''G’, M’'' ← contract ''G'' and ''M'' by ''B''
+ B22                        ''P’'' ← ''find_augmenting_path''(''G’'', ''M’'')
+ B23                        ''P'' ← lift ''P’'' to ''G''
+ B24                        '''return''' ''P''
+ B25                    '''end if'''
+ B26                '''end if'''
+ B27            '''end if'''
+ B28            mark edge ''e''
+ B29        '''end while'''
+ B30        mark vertex ''v''
+ B31    '''end while'''
+ B32    '''return''' empty path
+ B33 '''end function'''
+
+===Examples===
+The following four figures illustrate the execution of the algorithm. Dashed lines indicate edges that are currently not present in the forest. First, the algorithm processes an out-of-forest edge that causes the expansion of the current forest (lines B10 &ndash; B12).
+
+[[File:forest expansion.png|400px|alt=Forest expansion on line B10]]
+
+Next, it detects a blossom and contracts the graph (lines B20 &ndash; B21).
+
+[[File:blossom contraction.png|400px|alt=Blossom contraction on line B21]]
+
+Finally, it locates an augmenting path {{mvar|P′}} in the contracted graph (line B22) and lifts it to the original graph (line B23). Note that the ability of the algorithm to contract blossoms is crucial here; the algorithm cannot find {{mvar|P}} in the original graph directly because only out-of-forest edges between vertices at even distances from the roots are considered on line B17 of the algorithm.
+
+[[File:path detection.png|400px|alt=Detection of augmenting path {{mvar|P′}} in {{mvar|G′}} on line B17]]
+
+[[File:path lifting.png|400px|alt=Lifting of {{mvar|P′}} to corresponding augmenting path in {{mvar|G}} on line B25]]
+
+===Analysis===
+
+The forest {{mvar|F}} constructed by the {{code|find_augmenting_path()}} function is an alternating forest.<ref name = "kenyon report">{{citation
+  | author1 = Kenyon, Claire
+  | author2 = Lovász, László
+  | authorlink2 = László Lovász
+  | contribution = Algorithmic Discrete Mathematics
+  | title = Technical Report CS-TR-251-90, Department of Computer Science, Princeton University
+}}</ref>
+* a tree {{mvar|T}} in {{mvar|G}} is an '''alternating tree''' with respect to {{mvar|M}}, if
+** {{mvar|T}} contains exactly one exposed vertex {{mvar|r}} called the tree root
+** every vertex at an odd distance from the root has exactly two incident edges in {{mvar|T}}, and
+** all paths from {{mvar|r}} to leaves in {{mvar|T}} have even lengths, their odd edges are not in {{mvar|M}} and their even edges are in {{mvar|M}}.
+* a forest {{mvar|F}} in {{mvar|G}} is an '''alternating forest''' with respect to {{mvar|M}}, if
+** its connected components are alternating trees, and
+** every exposed vertex in {{mvar|G}} is a root of an alternating tree in {{mvar|F}}.
+
+Each iteration of the loop starting at line B09 either adds to a tree {{mvar|T}} in {{mvar|F}} (line B10) or finds an augmenting path (line B17) or finds a blossom (line B20). It is easy to see that the running time is <math>O( |E||V|^2)</math>.
+
+==Parallelization==
+The Blossom algorithm is difficult to parallelize for several reasons. First, blossom contraction and lifting recursively change the graph structure, creating sequential dependencies between different stages of the search. Second, a standard search iteration usually finds only one augmenting path, increasing the matching size by one at a time and requiring many iterations on large graphs. Third, the algorithm maintains dynamic structures, including alternating trees and contracted graphs, that are repeatedly updated during execution. In a parallel implementation, these updates may require synchronization and can introduce data races. These factors have made efficient parallel implementations of the Blossom algorithm highly challenging.<ref name="schwing2024">{{cite conference
+  | author1 = Schwing, Gregory
+  | author2 = Grosu, Daniel
+  | author3 = Schwiebert, Loren
+  | title = Shared-Memory Parallel Edmonds Blossom Algorithm for Maximum Cardinality Matching in General Graphs
+  | conference = 2024 IEEE International Parallel and Distributed Processing Symposium Workshops (IPDPSW)
+  | year = 2024
+  | publisher = IEEE
+  | pages = 530&ndash;539
+  | doi = 10.1109/IPDPSW63119.2024.00107
+| pmc = 11308447
+  }}</ref><ref name="shoemaker2016">{{cite web
+  | author1 = Shoemaker, Amy
+  | author2 = Vare, Sagar
+  | title = Edmonds’ Blossom Algorithm
+  | year = 2016
+  | url = https://stanford.edu/~rezab/classes/cme323/S16/projects_reports/shoemaker_vare.pdf
+  | access-date = 2025-01-03
+}}</ref>
+
+[https://github.com/Davis-Fan/X-Blossom X-Blossom]<ref name="xblossom2025">{{cite journal
+  | author1 = Fan, Dayi
+  | author2 = Lee, Rubao
+  | author3 = Zhang, Xiaodong
+  | title = X-Blossom: Massive Parallelization of Graph Maximum Matching
+  | journal = Proceedings of the VLDB Endowment
+  | volume = 18
+  | issue = 10
+  | pages = 3339&ndash;3353
+  | year = 2025
+  | doi = 10.14778/3748191.3748199
+  |url=https://www.vldb.org/pvldb/vol18/p3339-fan.pdf
+}}</ref> provides an effective parallel solution for computing maximum matchings in general graphs and directly addresses these challenges. It first introduces a new recursion-free Blossom algorithm. In the traditional algorithm, a blossom is contracted during the search and later lifted when an augmenting path is found. By contrast, the recursion-free algorithm eliminates this contraction-and-lifting process. The key observation is that, when constructing an augmenting path, preserving the full recursive contraction history is unnecessary. The essential information is the appropriate even-length path through the blossom structure. Thus, instead of contracting a blossom and later expanding it, the recursion-free algorithm records the even-length path from each relevant vertex on a blossom cycle to the base of the blossom<ref name="xblossom2025"></ref>. When an augmenting path passes through the blossom, the recorded path is used to reconstruct the corresponding path in the original graph, as shown in the figure below. This representation preserves the effect of blossom handling while keeping the graph structure static during the search.
+
+<br />
+[[File:Execution Pattern of Recursion-Free Blossom Algorithm in X-Blossom.png|center|750px|Execution Pattern of Recursion-Free Blossom Algorithm in X-Blossom]]
+<br />
+
+This recursion-free variant exposes a critical opportunity for massive parallelization. Since the graph is not recursively modified by contraction and lifting, multiple valid vertices in the current search forest can be examined concurrently. X-Blossom uses this property to identify multiple vertex-disjoint augmenting paths in a single search iteration, allowing the matching size to increase by more than one per iteration.
+
+In its implementation, X-Blossom further replaces alternating-tree structures with a path table. This table records even-length paths for vertices, regardless of whether they belong to a blossom. As a result, the algorithm avoids repeatedly constructing and deconstructing alternating trees and contracted graphs. This reduces path-tracing overhead and makes the algorithm more suitable for parallel execution. Experiments reported in the X-Blossom study showed that its recursion-free design significantly improves the sequential performance, and its parallel version achieves speedups and scalability on multicore platforms across both real-world and synthetic datasets<ref name="xblossom2025"></ref>.
+
+==Bipartite matching==
+
+When {{mvar|G}} is [[bipartite graph|bipartite]], there are no odd cycles in {{mvar|G}}. In that case, blossoms will never be found and one can simply remove lines B20 &ndash; B24 of the algorithm. The algorithm thus reduces to the standard algorithm to construct maximum [[cardinality]] matchings in bipartite graphs<ref name = "karp notes"/> where we repeatedly search for an augmenting path by a simple [[graph traversal]]: this is for instance the case of the [[Ford–Fulkerson algorithm]].
+
+==Weighted matching==
+
+The matching problem can be generalized by assigning weights to edges in {{mvar|G}} and asking for a matching of maximum total weight: this is known as the [[maximum weight matching]] problem. This problem can be solved by a combinatorial algorithm that uses the unweighted blossom algorithm as a subroutine. Efficient, polynomial-time algorithms for this problem are available in several software libraries, including [[NetworkX]], [[Library of Efficient Data types and Algorithms|LEDA]], and the [[LEMON (C++ library)|LEMON]] graph library.
+
+==References==
+<references/>
+
+== External links ==
+
+* [https://github.com/Davis-Fan/X-Blossom X-Blossom]
+
+[[Category:Graph algorithms]]
+[[Category:Matching (graph theory)]]

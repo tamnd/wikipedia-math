@@ -1,0 +1,138 @@
+<!-- wikipedia: en
+     page: 1161746
+     title: Ciphertext stealing
+     revision: 1322634752
+     timestamp: 2025-11-17T08:20:40Z
+     history: https://en.wikipedia.org/w/index.php?curid=1161746&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1322634752 -->
+{{Short description|Cryptographic algorithm}}
+{{No footnotes|date=April 2009}}
+In [[cryptography]], '''ciphertext stealing''' ('''CTS''') is a general method of using a [[block cipher mode of operation]] that allows for processing of messages that are not evenly divisible into blocks without resulting in any expansion of the [[ciphertext]], at the cost of slightly increased complexity.
+
+==General characteristics==
+Ciphertext stealing is a technique for encrypting [[plaintext]] using a block cipher, without [[Padding (cryptography)|padding]] the message to a multiple of the block size, so the ciphertext is the same size as the plaintext.
+
+It does this by altering processing of the last two blocks of the message.  The processing of all but the last two blocks is unchanged, but a portion of the ''second''-to-last block's ciphertext is "stolen" to pad the last plaintext block.  The padded final block is then encrypted as usual.
+
+The final ciphertext, for the last two blocks, consists of the partial penultimate block (with the "stolen" portion omitted) plus the full final block, which are the same size as the original plaintext.
+
+Decryption requires decrypting the final block first, then restoring the stolen ciphertext to the penultimate block, which can
+then be decrypted as usual.
+
+In principle any block-oriented [[block cipher mode of operation]] can be used, but stream-cipher-like modes can already be applied to messages of arbitrary length without padding, so they do not benefit from this technique.  The common [[block cipher mode of operation|modes of operation]] that are coupled with ciphertext stealing are [[Block cipher mode of operation#ECB|Electronic Codebook]] (ECB) and [[Block cipher mode of operation#CBC|Cipher Block Chaining]] (CBC).
+
+Ciphertext stealing for ECB mode requires the plaintext to be longer than one [[block size (cryptography)|block]].  A possible [[workaround]] is to use a stream cipher-like [[block cipher mode of operation]] when the plaintext length is one [[Block size (cryptography)|block]] or less, such as the CTR, CFB or OFB modes.
+
+Ciphertext stealing for [[Cipher block chaining|CBC]] mode doesn't necessarily require the plaintext to be longer than one [[block size (cryptography)|block]]. In the case where the plaintext is one block long or less, the [[Initialization vector]] (IV) can act as the prior block of ciphertext.  In this case a modified IV must be sent to the receiver.  This may not be possible in situations where the IV can not be freely chosen by the sender when the ciphertext is sent (e.g., when the IV is a derived or pre-established value), and in this case ciphertext stealing for CBC mode can only occur in plaintexts longer than one block.
+
+To implement CTS encryption or decryption for data of unknown length, the implementation must delay processing (and buffer) the two most recent blocks of data, so that they can be properly processed at the end of the data stream.
+
+==Ciphertext format==
+There are several different ways to arrange the ciphertext for transmission.  The ciphertext bits are the same in all cases, just transmitted in a different order, so the choice has no security implications; it is purely one of implementation convenience.
+
+The numbering here is taken from Dworkin, who describes them all.  The third is the most popular, and described by [[Joan Daemen|Daemen]] and [[Bruce Schneier|Schneier]]; Meyer describes a related, but incompatible scheme (with respect to bit ordering and key use).<!-- More details requested; is it CS1 or CS2?-->
+
+===CS1===
+Arguably the most obvious way to arrange the ciphertext is to transmit the truncated penultimate block, followed by the full final block.  This is not convenient for the receiver for two reasons:
+# The receiver must decrypt the final block first in any case, and
+# This results in the final block not being [[Data structure alignment|aligned]] on a natural boundary, complicating hardware implementations.
+
+This does have the advantage that, if the final plaintext block happens to be a multiple of the block size, the ciphertext is identical to that of the original mode of operation without ciphertext stealing.
+
+===CS2===
+It is often more convenient to swap the final two ciphertext blocks, so the ciphertext ends with the full final block, followed by the truncated penultimate block.  This results in naturally aligned ciphertext blocks.
+
+In order to maintain compatibility with the non-stealing modes, option CS2 performs this swap only if the amount of stolen ciphertext is non-zero, i.e. the original message was not a multiple of the block size.
+
+This maintains natural alignment, and compatibility with the non-stealing modes, but requires treating the cases of aligned and unaligned message size differently.
+
+===CS3===
+The most popular alternative swaps the final two ciphertext blocks unconditionally.  This is the ordering used in the descriptions below.
+
+==Ciphertext stealing mode description==
+In order to encrypt or decrypt data, use the standard [[block cipher mode of operation]] on all but the last two blocks of data.
+
+The following steps describe how to handle the last two blocks of the plaintext, called ''P''<sub>''n''−1</sub> and ''P''<sub>''n''</sub>, where the length of ''P''<sub>''n''−1</sub> equals the block size of the cipher in bits, ''B''; the length of the last block, ''P''<sub>''n''</sub>, is ''M'' bits; and ''K'' is the key that is in use.  ''M'' can range from 1 to ''B'', inclusive, so ''P''<sub>''n''</sub> could possibly be a complete block.  The CBC mode description also makes use of the ciphertext block just previous to the blocks concerned, ''C''<sub>''n''−2</sub>, which may in fact be the IV if the plaintext fits within two blocks.
+
+For this description, the following functions and operators are used:
+* Head (data, ''a''): returns the first ''a'' bits of the 'data' string.
+* Tail (data, ''a''): returns the last ''a'' bits of the 'data' string.
+* Encrypt (''K'', data): use the underlying block cipher in encrypt mode on the 'data' string using the key ''K''.
+* Decrypt (''K'', data): use the underlying block cipher in decrypt mode on the 'data' string using the key ''K''.
+* [[XOR]]: Bitwise Exclusive-OR.  Equivalent to bitwise addition without use of a carry bit.
+* ||: Concatenation operator.  Combine the strings on either side of the operator.
+* 0<sup>''a''</sup>: a string of ''a'' 0 bits.
+
+===ECB ciphertext stealing===
+Ciphertext stealing in ECB mode introduces an inter-block dependency within the last two blocks, resulting in altered error propagation behavior for the last two blocks.
+
+====ECB encryption steps (see figure) ====
+[[Image:CTS ECB Encryption.png|frame|right|ECB Encryption Steps for CTS]]
+# ''E''<sub>''n''−1</sub> = Encrypt (''K'', ''P''<sub>''n''−1</sub>).  Encrypt ''P''<sub>''n''−1</sub> to create ''E''<sub>''n''−1</sub>.   This is equivalent to the behavior of standard ECB mode.
+# ''C''<sub>''n''</sub> = Head (''E''<sub>''n''−1</sub>, ''M''). Select the first ''M'' bits of ''E''<sub>''n''−1</sub> to create ''C''<sub>''n''</sub>.  The final ciphertext block, ''C''<sub>''n''</sub>, is composed of the leading ''M'' bits of the second-to-last ciphertext block.  In all cases, the last two blocks are sent in a different order than the corresponding plaintext blocks.
+# ''D''<sub>''n''</sub> = ''P''<sub>''n''</sub> || Tail (''E''<sub>''n''−1</sub>, ''B''−''M'').  Pad ''P''<sub>''n''</sub> with the low order bits from ''E''<sub>''n''−1</sub>.
+# ''C''<sub>''n''−1</sub> = Encrypt (''K'', ''D''<sub>''n''</sub>).  Encrypt ''D''<sub>''n''</sub> to create ''C''<sub>''n''−1</sub>.  For the first ''M'' bits, this is equivalent to what would happen in ECB mode (other than the ciphertext ordering).  For the last ''B''−''M'' bits, this is the second time that these data have been encrypted under this key (It was already encrypted in the production of ''E''<sub>''n''−1</sub> in step 2).
+
+====ECB decryption steps====
+# ''D''<sub>''n''</sub> = Decrypt (''K'', ''C''<sub>''n''−1</sub>).  Decrypt ''C''<sub>''n''−1</sub> to create ''D''<sub>''n''</sub>.  This undoes step 4 of the encryption process.
+# ''E''<sub>''n''−1</sub> = ''C''<sub>''n''</sub> || Tail (''D''<sub>''n''</sub>, ''B''−''M'').  Pad ''C''<sub>''n''</sub> with the extracted ciphertext in the tail end of ''D''<sub>''n''</sub> (placed there in step 3 of the ECB encryption process).
+# ''P''<sub>''n''</sub> = Head (''D''<sub>''n''</sub>, ''M'').  Select the first ''M'' bits of ''D''<sub>''n''</sub> to create ''P''<sub>''n''</sub>.  As described in step 3 of the ECB encryption process, the first ''M'' bits of ''D''<sub>''n''</sub> contain ''P''<sub>''n''</sub>.  We queue this last (possibly partial) block for eventual output.
+# ''P''<sub>''n''−1</sub> = Decrypt (''K'', ''E''<sub>''n''−1</sub>).  Decrypt ''E''<sub>''n''−1</sub> to create ''P''<sub>''n''−1</sub>.  This reverses encryption step 1.
+
+====ECB ciphertext stealing error propagation====
+A bit error in the transmission of ''C''<sub>''n''−1</sub> would result in the block-wide corruption of both ''P''<sub>''n''−1</sub> and ''P''<sub>''n''</sub>.
+A bit error in the transmission of ''C''<sub>''n''</sub> would result in the block-wide corruption of ''P''<sub>''n''−1</sub>.  This is a significant change from ECB's error propagation behavior.
+
+===CBC ciphertext stealing===
+In CBC, there is already interaction between processing of different adjacent blocks, so CTS has less conceptual impact in this mode.  Error propagation is affected.
+
+====CBC encryption steps====
+# ''X''<sub>''n''−1</sub> = ''P''<sub>''n''−1</sub> XOR ''C''<sub>''n''−2</sub>.  Exclusive-OR ''P''<sub>''n''−1</sub> with the previous ciphertext block, ''C''<sub>''n''−2</sub>, to create ''X''<sub>''n''−1</sub>.  This is equivalent to the behavior of standard CBC mode.
+# ''E''<sub>''n''−1</sub> = Encrypt (''K'', ''X''<sub>''n''−1</sub>).  Encrypt ''X''<sub>''n''−1</sub> to create ''E''<sub>''n''−1</sub>.   This is equivalent to the behavior of standard CBC mode.
+# ''C''<sub>''n''</sub> = Head (''E''<sub>''n''−1</sub>, ''M''). Select the first ''M'' bits of ''E''<sub>''n''−1</sub> to create ''C''<sub>''n''</sub>.  The final ciphertext block, ''C''<sub>''n''</sub>, is composed of the leading ''M'' bits of the second-to-last ciphertext block.  In all cases, the last two blocks are sent in a different order than the corresponding plaintext blocks.
+# ''P'' = ''P''<sub>''n''</sub> || 0<sup>''B''−''M''</sup>.  Pad ''P''<sub>''n''</sub> with zeros at the end to create ''P'' of length ''B''.  The zero padding in this step is important for step 5.
+# ''D''<sub>''n''</sub> = ''E''<sub>''n''−1</sub> XOR ''P''.  Exclusive-OR ''E''<sub>''n''−1</sub> with ''P'' to create ''D''<sub>''n''</sub>.  For the first ''M'' bits of the block, this is equivalent to CBC mode; the first ''M'' bits of the previous block's ciphertext, ''E''<sub>''n''−1</sub>, are XORed with the ''M'' bits of  plaintext of the last plaintext block.  The zero padding of ''P'' in step 4 was important, because it makes the XOR operation's effect on the last ''B''−''M'' bits equivalent to copying the last ''B''−''M'' bits of ''E''<sub>''n''−1</sub> to the end of ''D''<sub>''n''</sub>.  These are the same bits that were  stripped off of ''E''<sub>''n''−1</sub> in step 3 when ''C''<sub>''n''</sub> was created.
+# ''C''<sub>''n''−1</sub> = Encrypt (''K'', ''D''<sub>''n''</sub>).  Encrypt ''D''<sub>''n''</sub> to create ''C''<sub>''n''−1</sub>.  For the first ''M'' bits, this is equivalent to what would happen in CBC mode (other than the ciphertext ordering).  For the last ''B''−''M'' bits, this is the second time that these data have been encrypted under this key (It was already encrypted in the production of ''E''<sub>''n''−1</sub> in step 2).
+
+====CBC decryption steps====
+# ''D''<sub>''n''</sub> = Decrypt (''K'', ''C''<sub>''n''−1</sub>).  Decrypt ''C''<sub>''n''−1</sub> to create ''D''<sub>''n''</sub>.  This undoes step 6 of the encryption process.
+# ''C'' = ''C''<sub>''n''</sub> || 0<sup>''B''−''M''</sup>.  Pad ''C''<sub>''n''</sub> with zeros at the end to create a block ''C'' of length ''B''.  We are padding ''C''<sub>''n''</sub> with zeros to help in step 3.
+# ''X''<sub>''n''</sub> = ''D''<sub>''n''</sub> XOR ''C''.  Exclusive-OR ''D''<sub>''n''</sub> with ''C'' to create ''X''<sub>''n''</sub>.  Looking at the first ''M'' bits, this step has the result of XORing ''C''<sub>''n''</sub> (the first ''M'' bits of the encryption process' ''E''<sub>''n''−1</sub>) with the (now decrypted) ''P''<sub>''n''</sub> XOR Head (''E''<sub>''n''−1</sub>, ''M'') (see steps 4-5 of the encryption process).  In other words, we have CBC decrypted the first ''M'' bits of ''P''<sub>''n''</sub>.  Looking at the last ''B''−''M'' bits, this recovers the last ''B''−''M'' bits of ''E''<sub>''n''−1</sub>.
+# ''P''<sub>''n''</sub> = Head (''X''<sub>''n''</sub>, ''M'').  Select the first ''M'' bits of ''X''<sub>''n''</sub> to create ''P''<sub>''n''</sub>.  As described in step 3, the first ''M'' bits of ''X''<sub>''n''</sub> contain ''P''<sub>''n''</sub>.  We queue this last (possibly partial) block for eventual output.
+# ''E''<sub>''n''−1</sub> = ''C''<sub>''n''</sub> || Tail (''X''<sub>''n''</sub>, ''B''−''M'').  Append the tail (''B''−''M'') bits of ''X''<sub>''n''</sub> to ''C''<sub>''n''</sub> to create ''E''<sub>''n''−1</sub>.  As described in step 3, ''E''<sub>''n''−1</sub> is composed of  all of ''C''<sub>''n''</sub> (which is ''M'' bits long) appended with the last ''B''−''M'' bits of ''X''<sub>''n''</sub>.  We reassemble ''E''<sub>''n''−1</sub> (which is the same ''E''<sub>''n''−1</sub> seen in the encryption process) for processing in step 6.
+# ''X''<sub>''n''−1</sub> = Decrypt (''K'', ''E''<sub>''n''−1</sub>).  Decrypt ''E''<sub>''n''−1</sub> to create ''X''<sub>''n''−1</sub>.  This reverses encryption step 2.  ''X''<sub>''n''−1</sub> is the same as in the encryption process.
+# ''P''<sub>''n''−1</sub> = ''X''<sub>''n''−1</sub> XOR ''C''<sub>''n''−2</sub>.  Exclusive-OR ''X''<sub>''n''−1</sub> with the previous ciphertext block, ''C''<sub>''n''−2</sub>, to create ''P''<sub>''n''−1</sub>.  Finally, we reverse the XOR step from step 1 of the encryption process.
+
+====CBC implementation notes====
+For CBC ciphertext stealing, there is a clever (but opaque) method of implementing the described ciphertext stealing process using a standard CBC interface.  Using this method imposes a performance penalty in the decryption stage of one extra block decryption operation over what would be necessary using a dedicated implementation.
+
+=====CBC ciphertext stealing encryption using a standard CBC interface=====
+# Pad the last partial plaintext block with 0.
+# Encrypt the whole padded plaintext using the standard CBC mode.
+# Swap the last two ciphertext blocks.
+# Truncate the ciphertext to the length of the original plaintext.
+[[Image:CipherText Stealing (CTS) on CBC, encryption mode.svg|center|CipherText Stealing (CTS) on CBC, encryption mode]]
+
+=====CBC ciphertext stealing decryption using a standard CBC interface=====
+# ''D''<sub>''n''</sub> = Decrypt (''K'', ''C''<sub>''n''−1</sub>).  Decrypt the second-to-last ciphertext block using ECB mode.
+# ''C''<sub>''n''</sub> = ''C''<sub>''n''</sub> || Tail (''D''<sub>''n''</sub>, ''B''−''M'').  Pad the ciphertext to the nearest multiple of the block size using the last ''B''−''M'' bits of block cipher decryption of the second-to-last ciphertext block.
+# Swap the last two ciphertext blocks.
+# Decrypt the (modified) ciphertext using the standard CBC mode.
+# Truncate the plaintext to the length of the original ciphertext.
+[[Image:CipherText Stealing (CTS) on CBC, decryption mode.svg|center|CipherText Stealing (CTS) on CBC, decryption mode]]
+
+====CBC ciphertext stealing error propagation====
+A bit error in the transmission of ''C''<sub>''n''−1</sub> would result in the block-wide corruption of both ''P''<sub>''n''−1</sub> and ''P''<sub>''n''</sub>.
+A bit error in the transmission of ''C''<sub>''n''</sub> would result in a corresponding bit error in ''P''<sub>''n''</sub>, and in the block-wide corruption of ''P''<sub>''n''−1</sub>.
+
+==References==
+* {{Cite thesis |first=Joan |last=Daemen |authorlink=Joan Daemen |url=http://www.cosic.esat.kuleuven.be/publications/thesis-6.pdf |title=Cipher and Hash Function Design, Strategies Based on Linear and Differential Cryptanalysis |year=1995 |type=Ph.D. thesis |publisher=Katholieke Universiteit Leuven |section=2.5.1 and 2.5.2}}
+* {{Cite book |last=Schneier |first=Bruce |title=Applied Cryptography |edition=2nd |year=1995 |publisher=John Wiley & Sons, Inc. |isbn=978-0-471-12845-8 |pages=191, 195}}
+* {{Cite book |last1=Meyer |first1=Carl H. |last2=Matyas |first2=Stephen M. |year=1982 |title=Cryptography: A New Dimension in Computer Data Security |publisher=John Wiley & Sons, Inc. |pages=77&ndash;85 |isbn=978-0-471-04892-3}}
+* {{Cite IETF |rfc=2040 |author1=R. Baldwin |author2=R. Rivest |title=The RC5, RC5-CBC, RC5-CBC-Pad, and RC5-CTS Algorithms |date=October 1996}}
+* {{Citation |mode=cs1 |publisher=US National Institute of Standards and Technology (NIST) |title=Recommendation for Block Cipher Modes of Operation: Three Variants of Ciphertext Stealing for CBC Mode |first=Morris |last=Dworkin |url=http://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38a-add.pdf |id=Addendum to NIST Special Pub 800-38A |date=October 2011}}
+
+{{Cryptography navbox|block}}
+
+[[Category:Cryptographic algorithms]]

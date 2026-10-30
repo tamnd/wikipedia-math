@@ -1,0 +1,167 @@
+<!-- wikipedia: en
+     page: 19985542
+     title: Catastrophic cancellation
+     revision: 1315755989
+     timestamp: 2025-10-08T13:20:32Z
+     history: https://en.wikipedia.org/w/index.php?curid=19985542&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1315755989 -->
+{{Short description|Loss of precision in numerical analysis}}
+In [[numerical analysis]], '''catastrophic cancellation'''<ref name="handbook">{{cite book |last1=Muller |first1=Jean-Michel |last2=Brunie |first2=Nicolas |last3=de Dinechin |first3=Florent |last4=Jeannerod |first4=Claude-Pierre |last5=Joldes |first5=Mioara |last6=Lefèvre |first6=Vincent |last7=Melquiond |first7=Guillaume |last8=Revol |first8=Nathalie |author8-link=Nathalie Revol|last9=Torres |first9=Serge |title=Handbook of Floating-Point Arithmetic |date=2018 |publisher=Birkhäuser |location=Gewerbestrasse 11, 6330 Cham, Switzerland |isbn=978-3-319-76525-9 |page=102 |doi=10.1007/978-3-319-76526-6 |edition=2nd |url=https://doi.org/10.1007/978-3-319-76526-6}}</ref><ref name="goldberg">{{cite journal |last1=Goldberg |first1=David |title=What every computer scientist should know about floating-point arithmetic |journal=ACM Computing Surveys |date=March 1991 |volume=23 |issue=1 |pages=5–48 |doi=10.1145/103162.103163 |url=https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html |accessdate=2020-09-17 |publisher=Association for Computing Machinery |location=New York, NY, United States |s2cid=222008826 |issn=0360-0300}}</ref> is the phenomenon that subtracting good approximations to two nearby numbers may yield a very bad approximation to the difference of the original numbers.
+
+For example, if there are two [[Wall stud|studs]], one <math>L_1 = 253.51\,\text{cm}</math> long and the other <math>L_2 = 252.49\,\text{cm}</math> long, and they are measured with a ruler that is good only to the centimeter, then the approximations could come out to be <math>\tilde L_1 = 254\,\text{cm}</math> and <math>\tilde L_2 = 252\,\text{cm}</math>.
+These may be good approximations, in [[relative error]], to the true lengths: the approximations are in error by less than 0.2% of the true lengths, <math>|L_1 - \tilde L_1|/|L_1| < 0.2\%</math>.
+
+However, if the ''approximate'' lengths are subtracted, the difference will be <math>\tilde L_1 - \tilde L_2 = 254\,\text{cm} - 252\,\text{cm} = 2\,\text{cm}</math>, even though the true difference between the lengths is <math>L_1 - L_2 = 253.51\,\text{cm} - 252.49\,\text{cm} = 1.02\,\text{cm}</math>.
+The difference of the approximations, <math>2\,\text{cm}</math>, is in error by almost 100% of the magnitude of the difference of the 
+true values, <math>1.02\,\text{cm}</math>.
+
+Catastrophic cancellation is not affected by how large the inputs are&mdash;it applies just as much to large and small inputs.
+It depends only on how large the ''difference'' is, and on the ''error'' of the inputs.
+Exactly the same error would arise by subtracting <math>52\,\text{cm}</math> from <math>54\,\text{cm}</math> as approximations to <math>52.49\,\text{cm}</math> and <math>53.51\,\text{cm}</math>, or by subtracting <math>2.00052\,\text{km}</math> from <math>2.00054\,\text{km}</math> as approximations to <math>2.0005249\,\text{km}</math> and <math>2.0005351\,\text{km}</math>.
+
+Catastrophic cancellation may happen even if the difference is computed exactly, as in the example above&mdash;it is not a property of any particular kind of arithmetic like [[floating-point arithmetic]]; rather, it is inherent to subtraction, when the ''inputs'' are approximations themselves.  Indeed, in floating-point arithmetic, when the inputs are close enough, the floating-point difference is computed exactly, by the [[Sterbenz lemma]]&mdash;there is no [[Round-off error|rounding error]] introduced by the floating-point subtraction operation.
+
+== Formal analysis ==
+Formally, catastrophic cancellation happens because subtraction is [[ill-conditioned]] at nearby inputs: even if approximations <math>\tilde x = x (1 + \delta_x)</math> and <math>\tilde y = y (1 + \delta_y)</math> have small [[relative error|relative errors]] <math>|\delta_x| = |x - \tilde x|/|x|</math> and <math>|\delta_y| = |y - \tilde y|/|y|</math> from true values <math>x</math> and <math>y</math>, respectively, the relative error of the difference <math>\tilde x - \tilde y</math> of the approximations from the difference <math>x - y</math> of the true values is inversely proportional to the difference of the true values:
+
+<math display="block">
+\begin{align}
+  \tilde x - \tilde y
+  &= x (1 + \delta_x) - y (1 + \delta_y)
+   = x - y + x \delta_x - y \delta_y \\
+  &= x - y + (x - y) \frac{x \delta_x - y \delta_y}{x - y} \\
+  &= (x - y) \biggr(1 + \frac{x \delta_x - y \delta_y}{x - y}\biggr).
+\end{align}
+</math>
+
+Thus, the relative error of the exact difference <math>\tilde x - \tilde y</math> of the approximations from the difference <math>x - y</math> of the true values is
+
+<math display="block">
+\left|\frac{x \delta_x - y \delta_y}{x - y}\right|.
+</math>
+
+which can be arbitrarily large if the true values <math>x</math> and <math>y</math> are close.
+
+== In numerical algorithms ==
+Subtracting nearby numbers in floating-point arithmetic does not always cause catastrophic cancellation, or even any error&mdash;by the [[Sterbenz lemma]], if the numbers are close enough the floating-point difference is exact.
+But cancellation may ''amplify'' errors in the inputs that arose from rounding in other floating-point arithmetic.
+
+=== Example: Difference of squares ===
+Given numbers <math>x</math> and <math>y</math>, the naive attempt to compute the mathematical function
+<math>x^2 - y^2</math>
+by the floating-point arithmetic
+<math>\operatorname{fl}(\operatorname{fl}(x^2) - \operatorname{fl}(y^2))</math>
+is subject to catastrophic cancellation when <math>x</math> and <math>y</math> are close in magnitude, because the subtraction can expose the rounding errors in the squaring.
+The alternative factoring
+<math>(x + y) (x - y)</math>,
+evaluated by the floating-point arithmetic
+<math>\operatorname{fl}(\operatorname{fl}(x + y) \cdot \operatorname{fl}(x - y))</math>,
+avoids catastrophic cancellation because it avoids introducing rounding error leading into the subtraction.<ref name="goldberg"/>
+
+For example, if
+<math>x = 1 + 2^{-29} \approx 1.0000000018626451</math>
+and
+<math>y = 1 + 2^{-30} \approx 1.0000000009313226</math>,
+then the true value of the difference
+<math>x^2 - y^2</math>
+is
+<math>2^{-29} \cdot (1 + 2^{-30} + 2^{-31}) \approx 1.8626451518330422 \times 10^{-9}</math>.
+In [[Double-precision floating-point format|IEEE 754 binary64]] arithmetic, evaluating the alternative factoring
+<math>(x + y) (x - y)</math>
+gives the correct result exactly (with no rounding), but evaluating the naive expression
+<math>x^2 - y^2</math>
+gives the floating-point number
+<math>2^{-29} = 1.8626451\underline{4923095703125} \times 10^{-9}</math>,
+of which less than half the digits are correct and the other (underlined) digits reflect the missing terms <math>2^{-59} + 2^{-60}</math>, lost due to rounding when calculating the intermediate squared values.
+
+=== Example: Complex arcsine ===
+When computing the [[Inverse trigonometric functions#Extension to complex plane|complex arcsine]] function, one may be tempted to use the logarithmic formula directly:
+
+<math display="block">
+\arcsin(z) = i \log \bigl(\sqrt{1 - z^2} - i z\bigr).
+</math>
+
+However, suppose <math>z = i y</math> for <math>y \ll -1</math>.
+Then <math>\sqrt{1 - z^2} \approx -y</math> and <math>i z = -y</math>; call the difference between them <math>\varepsilon</math>&mdash;a very small difference, nearly zero.
+If <math>\sqrt{1 - z^2}</math> is evaluated in floating-point arithmetic giving
+
+<math display="block">
+\operatorname{fl}\Bigl(\sqrt{\operatorname{fl}(1 - \operatorname{fl}(z^2))}\Bigr)
+= \sqrt{1 - z^2}(1 + \delta)
+</math>
+
+with any error <math>\delta \ne 0</math>, where <math>\operatorname{fl}(\cdots)</math> denotes floating-point rounding, then computing the difference
+
+<math display="block">
+\sqrt{1 - z^2}(1 + \delta) - i z
+</math>
+
+of two nearby numbers, both very close to <math>-y</math>, may amplify the error <math>\delta</math> in one input by a factor of <math>1/\varepsilon</math>&mdash;a very large factor because <math>\varepsilon</math> was nearly zero.
+This may make the final error very large even if the error <math>\delta</math> in computing <math>\sqrt{1 - z^2}</math> is very small.
+
+For instance, let <math>z = -1234567 i</math>.
+The true value of <math>\arcsin(z)</math> is approximately <math>-14.71937803983977i</math>.
+But using the naive logarithmic formula in [[Double-precision floating-point format|IEEE 754 binary64]] arithmetic&mdash;which computes <math>1 - z^2</math> exactly, and incurs only a single rounding error of <math>|\delta| < 2^{-53}</math> in <math>\sqrt{1 - z^2}</math>&mdash;may give the floating-point number nearest to <math>-14.719\underline{644263563968}i</math>, with only five out of sixteen digits correct and the remainder (underlined) all incorrect.
+
+In the above case of <math>z = i y</math> for <math>y \ll -1</math>, using the identity <math>\arcsin(z) = -\arcsin(-z)</math> avoids cancellation because <math display=inline>\sqrt{1 - (-z)^2} = \sqrt{1 - z^2} \approx -y</math> but <math>i (-z) = -i z = y</math>, so the subtraction is effectively addition with the same sign which does not cancel.
+
+=== Example: Radix conversion ===
+
+Numerical constants in software programs are often written in decimal, such as in the C fragment <syntaxhighlight lang="C" inline>double x = 1.000000000000001;</syntaxhighlight> to declare and initialize an IEEE 754 binary64 variable named <code>x</code>.
+However, <math>1.000000000000001</math> is not a binary64 floating-point number; the nearest one, which <code>x</code> will be initialized to in this fragment, is <math>1.0000000000000011102230246251565404236316680908203125 = 1 + 5\cdot 2^{-52}</math>.
+Although the radix conversion from decimal floating-point to binary floating-point only incurs a small relative error, catastrophic cancellation may amplify it into a much larger one:
+
+<syntaxhighlight lang="C">
+double x = 1.000000000000001;  // rounded to 1 + 5*2^{-52}
+double y = 1.000000000000002;  // rounded to 1 + 9*2^{-52}
+double z = y - x;              // difference is exactly 4*2^{-52}
+</syntaxhighlight>
+
+The difference <math>1.000000000000002 - 1.000000000000001</math> is <math>0.000000000000001 = 1.0\times 10^{-15}</math>.
+The relative errors of <code>x</code> from <math>1.000000000000001</math> and of <code>y</code> from <math>1.000000000000002</math> are both below <math>10^{-15} = 0.0000000000001\%</math>, and the floating-point subtraction <code>y - x</code> is computed exactly by the Sterbenz lemma.
+
+But even though the inputs are good approximations, and even though the subtraction is computed exactly, the difference of the ''approximations'' <math>\tilde y - \tilde x = (1 + 9\cdot 2^{-52}) - (1 + 5\cdot 2^{-52}) = 4\cdot 2^{-52} \approx 8.88\times 10^{-16}</math> has a relative error of over <math>11\%</math> from the difference <math>1.0\times 10^{-15}</math> of the original values as written in decimal: catastrophic cancellation amplified a tiny error in radix conversion into a large error in the output.
+
+=== Benign cancellation ===
+
+Cancellation is sometimes useful and desirable in numerical algorithms.
+For example, the [[2Sum|2Sum and Fast2Sum]] algorithms both rely on such cancellation after a rounding error in order to exactly compute what the error was in a floating-point addition operation as a floating-point number itself.
+
+The function
+<math>\log(1 + x)</math>,
+if evaluated naively at points
+<math>0 < x \lll 1</math>,
+will lose most of the digits of <math>x</math> in rounding
+<math>\operatorname{fl}(1 + x)</math>.
+However, the function
+<math>\log(1 + x)</math>
+itself is [[well-conditioned]] at inputs near <math>0</math>.
+Rewriting it as
+<math display="block">
+\log(1 + x) = x \frac{\log(1 + x)}{(1 + x) - 1}
+</math>
+exploits cancellation in
+<math>\hat x := \operatorname{fl}(1 + x) - 1</math>
+to avoid the error from
+<math>\log(1 + x)</math>
+evaluated directly.<ref name="goldberg"/>
+This works because the cancellation in the numerator
+<math>\log(\operatorname{fl}(1 + x)) = \hat x + O(\hat x^2)</math>
+and the cancellation in the denominator
+<math>\hat x = \operatorname{fl}(1 + x) - 1</math>
+counteract each other; the function
+<math>\mu(\xi) = \log(1 + \xi)/\xi</math>
+is well-enough conditioned near zero that
+<math>\mu(\hat x)</math>
+gives a good approximation to
+<math>\mu(x)</math>,
+and thus
+<math>x\cdot \mu(\hat x)</math>
+gives a good approximation to
+<math>x\cdot \mu(x) = \log(1 + x)</math>.
+
+== References ==
+{{reflist}}
+
+[[Category:Numerical analysis]]

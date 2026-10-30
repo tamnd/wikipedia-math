@@ -1,0 +1,191 @@
+<!-- wikipedia: en
+     page: 3395256
+     title: Disk encryption theory
+     revision: 1375131790
+     timestamp: 2026-09-16T01:20:08Z
+     history: https://en.wikipedia.org/w/index.php?curid=3395256&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375131790 -->
+{{Short description|None}}
+'''Disk encryption''' is a special case of [[data at rest]] protection when the storage medium is a sector-addressable device (e.g., a hard disk). This article presents cryptographic aspects of the problem. For an overview, see [[disk encryption]]. For discussion of different software packages and hardware devices devoted to this problem, see [[disk encryption software]] and [[Hardware-based full disk encryption|disk encryption hardware]].
+
+==Problem definition==
+{{unreferenced section|date=January 2024}}<!-- Does seem to represent the understanding of the problem circa 2010, but ideally we add sources and update stuff (e.g. part regarding stream cipher: we have length-preserving modes now) -->
+Disk encryption methods aim to provide three distinct properties:
+# The data on the disk should remain [[confidentiality|confidential]].
+# [[Data retrieval]] and storage should both be fast operations, no matter where on the disk the data is stored.
+# The encryption method should not waste disk space (i.e., the amount of storage used for encrypted data should not be significantly larger than the size of [[plaintext]]).
+
+The first property requires defining an [[adversary (cryptography)|adversary]] from whom the data is being kept confidential. The strongest adversaries studied in the field of disk encryption have these abilities:
+# they can read the raw contents of the disk at any time;
+# they can request the disk to encrypt and store arbitrary files of their choosing;
+# and they can modify unused sectors on the disk and then request their decryption.
+A method provides good confidentiality if the only information such an adversary can determine over time is whether the data in a sector has or has not changed since the last time they looked.
+
+The second property requires dividing the disk into several ''sectors'', usually 512 bytes ({{val|4096}} bits) long, which are encrypted and decrypted independently of each other. In turn, if the data is to stay confidential, the encryption method must be ''tweakable''; no two sectors should be processed in exactly the same way. Otherwise, the adversary could decrypt any sector of the disk by copying it to an unused sector of the disk and requesting its decryption. Whereas a purpose of a usual block cipher <math>E_K</math> is to mimic a random permutation for any secret key <math>K</math>, the purpose of ''tweakable'' encryption <math>E_K^T</math> is to mimic a random permutation for any secret key <math>K</math> and any known tweak <math>T</math>.
+
+The third property is generally non-controversial. However, it indirectly prohibits the use of [[stream ciphers]], since stream ciphers require, for their security, that the same initial state not be used twice (which would be the case if a sector is updated with different data); thus this would require an encryption method to store separate initial states for every sector on disk—seemingly a waste of space. The alternative, a [[block cipher]], is limited to a certain block size (usually 128 or 256 bits). Because of this, disk encryption chiefly studies [[Block cipher mode of operation|chaining modes]], which expand the encryption block length to cover a whole [[disk sector]]. The considerations already listed make several well-known chaining modes unsuitable: [[Electronic codebook|ECB mode]], which cannot be tweaked, and modes that turn block ciphers into stream ciphers, such as the [[Counter mode|CTR mode]].
+
+These three properties do not provide any assurance of disk integrity; that is, they don't tell you whether an adversary has been modifying your ciphertext. In part, this is because an absolute assurance of disk integrity is impossible: no matter what, an adversary could always revert the entire disk to a prior state, circumventing any such checks. If some non-absolute level of disk integrity is desired, it can be achieved within the encrypted disk on a file-by-file basis using [[message authentication codes]].
+
+=== When taking additional space is acceptable ===
+Although it used to be commonly accepted that disk encryption should be length-preserving, some additional features do justify the use of extra space. One example is [[authenticated encryption]], which takes extra space in exchange for guaranteeing the integrity of the sector. One application of this guarantee would be to prevent an attacker from triggering kernel bugs by breaking the filesystem.<ref>{{cite web |last1=Poettering |first1=Lennart |url=https://0pointer.net/blog/authenticated-boot-and-disk-encryption-on-linux.html|title=The Strange State of Authenticated Boot and Disk Encryption on Generic Linux Distributions |website=0pointer.net}}</ref> 
+
+=== Narrow and wide block ===
+Disk encryption methods are also distinguished into "narrow-block" and "wide-block" methods. For a sector-sized plaintext, narrow-block method encrypts it in multiple blocks, while a wide-block methods does it in just one. Narrow-block methods such as LRW, XES, and XTS allow an attacker to exploit the block granularity to perform [[traffic analysis]] and replay.<ref name=ptacek-xts/> A wide-block cipher ideally makes the entire ciphertext unrecognizable for a change anywhere in the plaintext.<ref name=deck>{{cite conference|conference=The Third NIST Workshop on Block Cipher Modes of Operation 2023|author1=Aldo Gunsing|author2=Joan Daemen|author3= Bart Mennink |title=Deck-Based Wide Block Cipher Modes |url=https://csrc.nist.gov/csrc/media/Presentations/2023/deck-based-wide-block-cipher-modes/images-media/sess-3-mennink-bcm-workshop-2023.pdf}}</ref>
+
+==Block cipher-based modes==
+Like most encryption schemes, block cipher-based disk encryption makes use of ''modes of operation'', which allow encrypting larger amounts of data than the ciphers' block-size (typically 128 bits). Modes are therefore rules on how to repeatedly apply the ciphers' single-block operations.
+
+===<span class="anchor" id="CBC"></span>Cipher-block chaining (CBC)===
+{{Main|Cipher-block chaining}}
+
+''Cipher-block chaining'' (CBC) is a common chaining mode in which the previous block's ciphertext is [[exclusive or|xored]] with the current block's plaintext before encryption:
+: <math>C_i = E_K(C_{i-1} \oplus P_i).</math>
+
+Since there isn't a "previous block's ciphertext" for the first block, an [[initialization vector]] (IV) must be used as <math>C_{-1}</math>. This, in turn, makes CBC tweakable in some ways.
+
+CBC suffers from some problems. For example, ''if'' the IVs are predictable, then an adversary may leave a "watermark" on the disk, i.e., store a specially created file or combination of files identifiable even after encryption. The exact method of constructing the watermark depends on the exact function providing the IVs, but the general recipe is to create two encrypted sectors with identical first blocks <math>b_1</math> and <math>b_2</math>; these two are then related to each other by <math>b_1 \oplus IV_1 = b_2 \oplus IV_2</math>. Thus the encryption of <math>b_1</math> is identical to the encryption of <math>b_2</math>, leaving a watermark on the disk. The exact pattern of "same-different-same-different" on disk can then be altered to make the watermark unique to a given file.
+
+To protect against the watermarking attack, a cipher or a hash function is used to generate the IVs from the key and the current sector number, so that an adversary cannot predict the IVs. In particular, the [[#Encrypted_salt-sector_initialization_vector_.28ESSIV.29|ESSIV]] approach uses a block cipher in CTR mode to generate the IVs.
+
+====<span class="anchor" id="ESSIV"></span>Encrypted salt-sector initialization vector (ESSIV)====
+ESSIV is a method for generating [[initialization vector]]s for [[Block cipher|block encryption]] to use in disk encryption.  The usual methods for generating IVs are predictable sequences of numbers based on, for example, time stamp or sector number, and permit certain attacks such as a [[watermarking attack]].  ESSIV prevents such attacks by generating IVs from a combination of the sector number SN with the hash of the key. It is the combination with the key in form of a [[Cryptographic hash function|hash]] that makes the IV unpredictable.<ref>{{cite magazine|last1=Fruhwirth|first1=Clemens|last2=Schuster|first2=Markus|title=Secret Messages: Hard disk encryption with DM-Crypt, LUKS, and cryptsetup|url=https://www.linux-magazine.com/content/download/62715/485838/file/Hard_Disk_Encryption_DM-Crypt_LUKS_cryptsetup.pdf|date=December 2005|issue=61|pages=65–71|magazine=[[Linux Magazine]]|access-date=22 August 2024}}</ref><ref>{{cite web |last1=Fruhwirth |first1=Clemens |title=New Methods in Hard Disk Encryption |url=https://clemens.endorphin.org/nmihde/nmihde-A4-ds.pdf |publisher=[[Vienna University of Technology]] |access-date=22 August 2024 |date=18 July 2005}}</ref>
+: <math>IV(\textrm{SN}) = E_s(\text{SN}),\ \text{where}\ s = \text{hash}(K).</math>
+
+ESSIV was designed by Clemens Fruhwirth and has been integrated into the [[Linux kernel]] since version 2.6.10, though a similar scheme has been used to generate IVs for OpenBSD's swap encryption since 2000.<ref>{{cite conference |last1=Provos |first1=Niels |title=Encrypting Virtual Memory |conference=[[USENIX|9th USENIX Security Symposium]] |location=Denver, Colorado|year=2000 |url=http://www.usenix.org/events/sec2000/full_papers/provos/provos.pdf}}</ref>
+
+ESSIV is supported as an option by the [[dm-crypt]]<ref>{{cite web|url=https://gitlab.com/cryptsetup/cryptsetup/wikis/DMCrypt#iv-generators|accessdate=April 5, 2015|title=DMCrypt dm-crypt: Linux kernel device-mapper crypto target |author=Milan Broz|website=gitlab.com}}</ref> and [[FreeOTFE]] disk encryption systems.
+
+====Malleability attack====
+While CBC (with or without ESSIV) ensures confidentiality, it does not ensure integrity of the encrypted data. If the plaintext is known to the adversary, it is possible to change every second plaintext block to a value chosen by the attacker, while the blocks in between are changed to random values. This can be used for practical attacks on disk encryption in CBC or CBC-ESSIV mode.<ref>{{cite web|author=Jakob Lell|title=Practical malleability attack against CBC-encrypted LUKS partitions|url=http://www.jakoblell.com/blog/2013/12/22/practical-malleability-attack-against-cbc-encrypted-luks-partitions/ | date=2013-12-22}}</ref>
+
+===<span class="anchor" id="LRW"></span>Liskov, Rivest, and Wagner (LRW)===
+The tweakable narrow-block encryption (LRW)<ref>Latest SISWG and IEEE P1619 drafts and meeting information are on the P1619 home page [http://siswg.net/].</ref> is an instantiation of the mode of operations introduced by Liskov, Rivest, and Wagner<ref>M. Liskov, R. Rivest, and D. Wagner. ''Tweakable block ciphers'' [http://theory.lcs.mit.edu/~rivest/LiskovRivestWagner-TweakableBlockCiphers.pdf] {{Webarchive|url=https://web.archive.org/web/20081205020006/http://theory.lcs.mit.edu/~rivest/LiskovRivestWagner-TweakableBlockCiphers.pdf|date=2008-12-05}}, CRYPTO '02 (LNCS, volume 2442), 2002.</ref> (see Theorem 2). This mode uses two keys: <math>K</math> is the key for the block cipher and <math>F</math> is an additional key of the same size as block. For example, for AES with a 256-bit key, <math>K</math> is a 256-bit number and <math>F</math> is a 128-bit number. Encrypting block <math>P</math> with logical index (tweak) <math>I</math> uses the following formula:
+:<math>\begin{align}
+  X &= F \otimes I,\\
+  C &= E_K(P \oplus X) \oplus X.
+\end{align}</math>
+
+Here multiplication <math>\otimes</math> and addition <math>\oplus</math> are performed in the [[Finite field arithmetic|finite field]] (<math>\text{GF}\left(2^{128}\right)</math> for AES). With some precomputation, only a single multiplication per sector is required (note that addition in a binary finite field is a simple bitwise addition, also known as xor): <math>F \otimes I = F \otimes (I_0 \oplus \delta) = F \otimes I_0 \oplus F \otimes \delta</math>, where <math>F \otimes \delta</math> are precomputed for all possible values of <math>\delta</math>. This mode of operation needs only a single encryption per block and protects against all the above attacks except a minor leak: if the user changes a single plaintext block in a sector then only a single ciphertext block changes. (Note that this is not the same leak the ECB mode has: with LRW mode equal plaintexts in different positions are encrypted to different ciphertexts.)
+
+Some [[IEEE P1619#LRW issue|security concerns exist with LRW]], and this mode of operation has now been replaced by XTS.
+
+LRW is employed by [[BestCrypt]] and supported as an option for [[dm-crypt]] and [[FreeOTFE]] disk encryption systems.
+
+===Xor–encrypt–xor (XEX)===
+{{Main|Xor–encrypt–xor}}
+Another tweakable encryption mode, XEX ([[xor–encrypt–xor]]), was designed by Rogaway<ref name="rogaway_xex" /> to allow efficient processing of consecutive blocks (with respect to the cipher used) within one data unit (e.g., a disk sector). The tweak is represented as a combination of the sector address and index of the block within the sector (the original XEX mode proposed by Rogaway<ref name="rogaway_xex" /> allows several indices). The ciphertext, <math>C</math>, is obtained using:
+:<math>\begin{align}
+  X &= E_K(I) \otimes \alpha^j, \\
+  C &= E_K(P \oplus X) \oplus X,
+\end{align}</math>
+
+where:
+: <math>P</math> is the plaintext,
+: <math>I</math> is the number of the sector,
+: <math>\alpha</math> is the primitive element of <math>\text{GF}(2^{128})</math> defined by polynomial <math>x</math>; i.e., the number ''2'',
+: <math>j</math> is the number of the block within the sector.  XEX uses <math>j \geq 1</math>; XTS uses <math>j \geq 0</math>.
+
+The basic operations of the LRW mode (AES cipher and [[Galois field]] multiplication) are the same as the ones used in the [[Galois/Counter Mode]] (GCM), thus permitting a compact implementation of the universal LRW/XEX/GCM hardware.
+
+[[File:XEX mode encryption.svg]]
+
+The original XEX has a weakness.{{which?|date=August 2025}}<ref>{{cite book |chapter-url=https://link.springer.com/content/pdf/10.1007/978-3-540-74462-7_8.pdf |doi=10.1007/978-3-540-74462-7_8 |chapter=Improved Security Analysis of XEX and LRW Modes |title=Selected Areas in Cryptography |series=Lecture Notes in Computer Science |year=2007 |last1=Minematsu |first1=Kazuhiko |volume=4356 |pages=96–113 |isbn=978-3-540-74461-0 }}</ref>
+
+====<span class="anchor" id="XTS"></span>XEX-based tweaked-codebook mode with ciphertext stealing (XTS)====
+[[Ciphertext stealing]] provides support for sectors with size not divisible by block size, for example, 520-byte sectors and 16-byte blocks. XTS-AES was standardized on December 19, 2007<ref>{{cite web|url=http://standards.ieee.org/announcements/StdsForEncryption.html|archiveurl=https://web.archive.org/web/20080306040807/http://standards.ieee.org/announcements/StdsForEncryption.html |title=IEEE Approves Standards for Data Encryption|author=Karen McCabe|publisher=IEEE Standards Association|date=19 December 2007|archivedate=2008-03-06}}</ref> as [[IEEE_Security_in_Storage_Working_Group#Block_Encryption_Standards|IEEE Std 1619]].<ref>{{cite book|date=April 18, 2008|pages= 1–40|isbn=978-0-7381-5363-6 |doi=10.1109/IEEESTD.2008.4493450  |title= IEEE Standard for Cryptographic Protection of Data on Block-Oriented Storage Devices |journal=IEEE STD 1619-2007 }}</ref>  The XTS standard requires using a different key for the IV encryption than for the block encryption; this differs from XEX which uses only a single key.<ref name="rogaway_xex">{{cite journal|last=Rogaway |first=Phillip |date=2004-09-24 |url=http://www.cs.ucdavis.edu/~rogaway/papers/offsets.pdf |title=Efficient Instantiations of Tweakable Blockciphers and Refinements to Modes OCB and PMAC|type=PDF|publisher=University of California, Davis|journal=Dept. Of Computer Science}}</ref><ref name="liskov">{{cite web |first1=Moses |last1=Liskov |first2=Kazuhiko |last2=Minematsu |date=2008-09-02 |url=http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/comments/XTS/XTS_comments-Liskov_Minematsu.pdf |title=Comments on XTS-AES}}</ref>{{rp|1–4}}  As a result, users wanting [[Advanced Encryption Standard|AES]]-256 and AES-128 encryption must supply 512 bits and 256 bits of key respectively.  The two keys (i.e., both halves of the XTS key) must be distinct for XTS to be [[Chosen-ciphertext attack|CCA]]-secure, since XTS computes the sequence <math>\alpha^j</math> starting at <math>j=0</math>; this differs from XEX which starts at <math>j=1</math>.<ref name="rogaway_xex"/>{{rp|7}}<ref name="liskov"/>{{rp|6}}
+
+[[File:XTS mode encryption.svg]]
+
+On January 27, 2010, [[NIST]] released Special Publication (SP) 800-38E<ref>{{cite journal| url=http://csrc.nist.gov/publications/nistpubs/800-38E/nist-sp-800-38E.pdf |title=Recommendation for Block Cipher Modes of Operation: The XTS-AES Mode for Confidentiality on Storage Devices|author=Morris Dworkin|date=January 2010|series=NIST Special Publication 800-38E|publisher=[[National Institute of Standards and Technology]]|doi=10.6028/NIST.SP.800-38E}}</ref> in final form. SP 800-38E is a recommendation for the XTS-AES mode of operation, as standardized by IEEE Std 1619-2007, for cryptographic modules.  The publication approves the XTS-AES mode of the [[Advanced Encryption Standard|AES]] algorithm by reference to the IEEE Std 1619-2007, subject to one additional requirement, which limits the maximum size of each encrypted data unit (typically a [[disk sector|sector]] or [[block (data storage)|disk block]]) to 2<sup>20</sup> AES blocks. According to SP 800-38E, "In the absence of authentication or access control, XTS-AES provides more protection than the other approved confidentiality-only modes against unauthorized manipulation of the encrypted data."
+
+In anticipation of an update to SP 800-38E, [[IEEE_Security_in_Storage_Working_Group#Block_Encryption_Standards|IEEE Std 1619]] was updated in 2025 to limit the key scope (the maximum amount of data to be encrypted using a single symmetric data-encryption key). 
+
+XTS is supported by [[BestCrypt]], [[Botan (programming library)|Botan]], [[NetBSD]]'s cgd,<ref name=cgd>{{cite web|title=NetBSD cryptographic disk driver|url=http://netbsd.gw.com/cgi-bin/man-cgi?cgd++NetBSD-current|access-date=2019-01-07|archive-date=2019-01-08|archive-url=https://web.archive.org/web/20190108145520/http://netbsd.gw.com/cgi-bin/man-cgi?cgd++NetBSD-current|url-status=dead}}</ref> [[dm-crypt]], [[FreeOTFE]], [[TrueCrypt]], [[VeraCrypt]],<ref name=veracrypt>{{cite web |title=Modes of Operation |work=VeraCrypt Documentation |publisher=IDRIX |url=https://www.veracrypt.fr/en/Modes%20of%20Operation.html |accessdate=2017-10-13}}</ref> [[DiskCryptor]], [[FreeBSD]]'s [[Geli (software)|geli]], [[OpenBSD]] softraid disk encryption software, [[OpenSSL]], [[Mac OS X Lion]]'s [[FileVault]] 2, [[Windows 10]]'s [[BitLocker]]<ref>{{Cite web |url=https://technet.microsoft.com/en-us/library/mt403325.aspx |title=What's new in BitLocker? |accessdate=2015-11-15 |date= November 12, 2015}}</ref> and [[wolfCrypt]].
+<!--
+These following three paragraphs removed until this can be properly cited. There seem to be many figures going around and all have no way to show what is the correct values.
+
+The XTS proof{{Fact|date=March 2009}} yields strong security guarantees as long as the same key is not used to encrypt much more than 1 terabyte of data. Up until this point, no attack can succeed with probability better than approximately one in four quadrillion. However this security guarantee deteriorates as more data is encrypted with the same key. With a petabyte the attack success probability rate increases to ''at most'' four in a trillion, with an exabyte, the success probability is further increased to ''at most'' one in four thousand.
+
+This means that using XTS, with one key for more than a few hundred terabytes of data opens up the possibility of attacks (and is not mitigated by using a larger AES key size, so using a 256-bit key doesn't change this).
+
+The decision on the maximum amount of data to be encrypted with a single key using XTS should consider the above together with the practical implication of the attack (which is the ability of the adversary to modify [[plaintext]] of a specific block, where the position of this block may not be under the adversary's control).
+-->
+
+====XTS weaknesses====
+XTS mode is susceptible to data manipulation and tampering, and applications must employ measures to detect modifications of data if manipulation and tampering is a concern: "...since there are no [[authentication tag]]s then any ciphertext (original or modified by attacker) will be decrypted as some plaintext and there is no built-in mechanism to detect alterations. The best that can be done is to ensure that any alteration of the ciphertext will completely randomize the plaintext, and rely on the application that uses this transform to include sufficient redundancy in its plaintext to detect and discard such random plaintexts." This would require maintaining checksums for all data and metadata on disk, as done in [[ZFS]] or [[Btrfs]]. However, in commonly used file systems such as [[ext4]] and [[NTFS]] only metadata is protected against tampering, while the detection of data tampering is non-existent.<ref>{{Citation
+ | title = Standard for Cryptographic Protection of Data on Block-Oriented Storage Devices
+ | series = IEEE P1619/D16
+ | pages = 34
+ | year = 2007
+ | url = http://grouper.ieee.org/groups/1619/email/pdf00086.pdf
+ | accessdate = 14 September 2012
+ | archive-url = https://web.archive.org/web/20160414004322/http://grouper.ieee.org/groups/1619/email/pdf00086.pdf
+ | archive-date = 14 April 2016
+ | url-status = dead
+ }}</ref>
+
+The mode is susceptible to traffic analysis, replay and randomization attacks on sectors and 16-byte blocks. As a given sector is rewritten, attackers can collect fine-grained (16 byte) ciphertexts, which can be used for analysis or replay attacks (at a 16-byte granularity). It would be possible to define sector-wide block ciphers, unfortunately with degraded performance (see below).<ref name=ptacek-xts>{{cite web |date=2014-04-30 |url=http://sockpuppet.org/blog/2014/04/30/you-dont-want-xts/ |title=You Don't Want XTS | author1=Thomas Ptacek|author2=Erin Ptacek }}</ref>
+
+===CBC–mask–CBC (CMC) and ECB–mask–ECB (EME)===
+CMC and EME protect even against the minor leak mentioned above for LRW. Unfortunately, the price is a twofold degradation of performance: each block must be encrypted twice; many consider this to be too high a cost, since the same leak on a sector level is unavoidable anyway.
+
+CMC, introduced by Halevi and Rogaway, stands for CBC–mask–CBC: the whole sector encrypted in CBC mode (with <math>C_{-1} = E_A(I)</math>), the ciphertext is masked by xoring with <math>2(C'_0 \oplus C'_{k-1})</math>, and re-encrypted in CBC mode starting from the last block. When the underlying block cipher is a strong [[pseudorandom permutation]] (PRP) then on the sector level the scheme is a tweakable PRP. One problem is that in order to decrypt <math>P_0</math> one must  sequentially pass over all the data twice.
+
+In order to solve this problem, Halevi and Rogaway introduced a parallelizable variant called EME (ECB–mask–ECB). It works in the following way:
+* the plaintexts are xored with <math>L = E_K(0)</math>, shifted by different amount to the left, and are encrypted: <math>P'_i = E_K(P_i \oplus 2^i L)</math>;
+* the mask is calculated: <math display=inline>M = M_P \oplus M_C</math>, where <math display=inline>M_P = I \oplus \bigoplus P'_i</math> and <math>M_C = E_K(M_P)</math>;
+* intermediate ciphertexts are masked: <math display=inline>C'_i = P'_i \oplus 2^i M</math> for <math>i = 1, \ldots, k - 1</math> and <math display=inline>C'_0 = M_C \oplus I \oplus \bigoplus_{i=1}^{k-1} C'_i</math>;
+* the final ciphertexts are calculated: <math>C_i = E_K(C'_i) \oplus 2^i L</math> for <math>i = 0, \ldots, k - 1</math>.
+Note that unlike LRW and CMC there is only a single key <math>K</math>.
+
+CMC and EME were considered for standardization by [[SISWG]]. EME is patented, and so is not favored to be a primary supported mode.<ref>P. Rogaway, [https://web.archive.org/web/20160409131450/http://appft1.uspto.gov/netacgi/nph-Parser?Sect1=PTO2&Sect2=HITOFF&p=1&u=%2Fnetahtml%2FPTO%2Fsearch-bool.html&r=1&f=G&l=50&co1=AND&d=PG01&s1=rogaway.IN.&OS=IN%2Frogaway ''Block cipher mode of operation for constructing a wide-blocksize block cipher from a conventional block cipher''], US Patent Application 20040131182 A1.</ref>
+
+=== HCTR and HCTR2 ===
+HCTR (2005) is mode of operation for block ciphers that is length-preserving, wide-block, and tweakable.<ref>{{cite book |last1=Wang |first1=Peng |last2=Feng |first2=Dengguo |last3=Wu |first3=Wenling |chapter=HCTR: A Variable-Input-Length Enciphering Mode |title=Information Security and Cryptology |series=Lecture Notes in Computer Science |date=2005 |volume=3822 |pages=175–188 |doi=10.1007/11599548_15|isbn=978-3-540-30855-3 }}</ref> It, however, has a bug in the specification and another in its security proof, rendering its claimed [[security level]] invalid. HCTR2 (2021) is a variant that fixes these issues and improves on security, performance, and flexibility.<ref name=hctr2>{{cite web |title=Length-preserving encryption with HCTR2 |date=2021 |url=https://eprint.iacr.org/2021/1441}}</ref> HCTR2 is available in the Linux kernel since version 6.0.
+
+HCTR and HCTR2 use a custom block cipher mode of operation called XCTR; AES-128-XCTR is usually used for HCTR2. HCTR2 uses a polynomial hash function called POLYVAL. HCTR2 is efficient on modern processors equipped with [[AES instruction set|AES]] and [[Carry-less_product#Implementations|carry-less multiplication]] instruction sets.<ref name=hctr2/>
+
+=== Extended Code Book (XCB) ===
+The Extended Code Book mode for AES (XCB-AES) was defined in early versions of IEEE Std 1619.2. However, XCB  was reported broken and was removed from the [[IEEE_Security_in_Storage_Working_Group#Block_Encryption_Standards|2025 version, IEEE Std 1619.2-2025]].
+
+== Stream cipher modes ==
+The HBSH (hash, block cipher, stream cipher, hash) construction, published by Google employees in 2018, allows a fast stream cipher to be used in disk encryption. The [[Adiantum (cipher)|Adiantum]] scheme used in low-end [[Android (operating system)|Android]] devices specifically chooses [[UMAC (cryptography)#NH|NH]], 256-bit [[Advanced Encryption Standard]] (AES-256), [[Salsa20#Reduced-round_ChaCha|ChaCha12]], and [[Poly1305]]. The construction is tweakable and wide-block. It requires three passes over the data, but is still faster than AES-128-XTS on a [[ARM Cortex-A7]] (which has no [[AES instruction set]]).<ref name=TOSC18>{{cite journal |last1=Crowley |first1=Paul |last2=Biggers |first2=Eric |title=Adiantum: length-preserving encryption for entry-level processors |journal=IACR Transactions on Symmetric Cryptology |date=13 December 2018 |pages=39–61 |doi=10.13154/tosc.v2018.i4.39-61 |doi-access=free}}</ref> It is available in the Linux kernel since version 5.0.
+
+In 2023, Aldo Gunsing, [[Joan Daemen]] and Bart Mennink presented the "double-decker" construction, which also uses a stream cipher. It is again tweakable and wide-block.<ref name=deck/>
+
+==Patents==
+While the [[authenticated encryption]] scheme [[IAPM (mode)|IAPM]] provides encryption as well as an authentication tag, the encryption component of the IAPM mode completely describes the LRW and XEX schemes above, and hence [[Disk encryption theory#XTS|XTS]] without the [[ciphertext stealing]] aspect. This is described in 
+detail in Figures 8 and 5 of the US patent 6,963,976.<ref>* U.S. Patent 6,963,976, "Symmetric Key Authenticated Encryption Schemes" (filed Nov. 2000, issued Nov. 2005, expires 25 Nov. 2022) [http://patft.uspto.gov/netacgi/nph-Parser?Sect1=PTO2&Sect2=HITOFF&p=1&u=%2Fnetahtml%2FPTO%2Fsearch-bool.html&r=1&f=G&l=50&co1=AND&d=PTXT&s1=6,963,976.PN.&OS=PN/6,963,976&RS=PN/6,963,976] {{Webarchive|url=https://web.archive.org/web/20180811033119/http://patft.uspto.gov/netacgi/nph-Parser?Sect1=PTO2&Sect2=HITOFF&p=1&u=%2Fnetahtml%2FPTO%2Fsearch-bool.html&r=1&f=G&l=50&co1=AND&d=PTXT&s1=6%2C963%2C976.PN.&OS=PN%2F6%2C963%2C976&RS=PN%2F6%2C963%2C976|date=2018-08-11}}[http://pdfpiw.uspto.gov/.piw?Docid=06963976&homeurl=http%3A%2F%2Fpatft.uspto.gov%2Fnetacgi%2Fnph-Parser%3FSect1%3DPTO2%2526Sect2%3DHITOFF%2526p%3D1%2526u%3D%25252Fnetahtml%25252FPTO%25252Fsearch-bool.html%2526r%3D1%2526f%3DG%2526l%3D50%2526co1%3DAND%2526d%3DPTXT%2526s1%3D6,963,976.PN.%2526OS%3DPN%2F6,963,976%2526RS%3DPN%2F6,963,976&PageNum=&Rtype=&SectionNum=&idkey=NONE&Input=View+first+page].</ref>
+
+==See also==
+
+* [[Data remanence]]
+* [[Cold boot attack]]
+* [[Disk encryption software]]
+* [[Disk encryption hardware]]
+* [[IEEE P1619]], standardization project for encryption of the storage data
+
+==References==
+{{Reflist}}
+
+==Further reading==
+* S. Halevi and P. Rogaway, ''A Tweakable Enciphering Mode'', CRYPTO '03 (LNCS, volume 2729), 2003.
+* S. Halevi and P. Rogaway, ''A Parallelizable Enciphering Mode'' [http://www.cs.ucdavis.edu/~rogaway/papers/eme.ps], 2003.
+* Standard Architecture for Encrypted Shared Storage Media, IEEE Project 1619 (P1619), [https://web.archive.org/web/20161220171852/http://siswg.net/index.php?option=com_content&task=view&id=38].
+* SISWG, ''Draft Proposal for Key Backup Format'' [https://web.archive.org/web/20060714161658/http://www.siswg.org/docs/KeyBackup-10-04-2004.pdf], 2004.
+* SISWG, ''Draft Proposal for Tweakable Wide-block Encryption'' [https://web.archive.org/web/20050128092039/http://www.siswg.org/docs/EME-AES-03-22-2004.pdf], 2004. &ndash; describes EME-32-AES 
+* James Hughes, ''Encrypted Storage &mdash; Challenges and Methods'' [http://www.dtc.umn.edu/resources/hughes1.pdf] {{Webarchive|url=https://web.archive.org/web/20060518054010/http://www.dtc.umn.edu/resources/hughes1.pdf |date=2006-05-18 }}
+* {{cite journal |url=http://citp.princeton.edu.nyud.net/pub/coldboot.pdf |title=Lest We Remember: Cold Boot Attacks on Encryption Keys |author=[[J. Alex Halderman]], [[Seth Schoen|Seth D. Schoen]], [[Nadia Heninger]], William Clarkson, William Paul, Joseph A. Calandrino, Ariel J. Feldman, Jacob Appelbaum, and [[Edward Felten|Edward W. Felten]] |publisher=[[Princeton University]] |date=2008-02-21 |url-status=dead |archiveurl=https://web.archive.org/web/20080514160137/http://citp.princeton.edu.nyud.net/pub/coldboot.pdf |archivedate=2008-05-14}}
+* {{cite journal|author=Niels Fergusson|title=AES-CBC + Elephant Diffuser: A Disk Encryption Algorithm for Windows Vista|publisher=[[Microsoft]]|date=August 2006|url=http://download.microsoft.com/download/0/2/3/0238acaf-d3bf-4a6d-b3d6-0a0be4bbb36e/BitLockerCipher200608.pdf}}
+* {{cite journal |last1=Chakraborty |first1=Debrup |last2=López |first2=Cuauhtemoc Mancillas |last3=Sarkar |first3=Palash |title=Disk encryption: do we need to preserve length? |journal=Journal of Cryptographic Engineering |date=April 2018 |volume=8 |issue=1 |pages=49–69 |doi=10.1007/s13389-016-0147-0 |s2cid=4647765 |url=https://eprint.iacr.org/2015/594.pdf}}
+
+==External links==
+* Security in Storage Working Group [http://www.siswg.org/ SISWG].
+* {{cite web |url=http://www.ecrypt.eu.org/stream/ |title=The eSTREAM project |accessdate=2010-03-28 |archive-date=2012-04-15 |archive-url=https://web.archive.org/web/20120415032728/http://www.ecrypt.eu.org/stream/ |url-status=dead }}
+
+{{DEFAULTSORT:Disk Encryption Theory}}
+[[Category:Disk encryption| ]]
+[[Category:Block cipher modes of operation]]
+[[Category:Authenticated-encryption schemes]]

@@ -1,0 +1,175 @@
+<!-- wikipedia: en
+     page: 3691235
+     title: Primality certificate
+     revision: 1374893169
+     timestamp: 2026-09-14T17:59:31Z
+     history: https://en.wikipedia.org/w/index.php?curid=3691235&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374893169 -->
+{{short description|Proof that a number is prime}}
+In [[mathematics]] and [[computer science]], a '''primality certificate''' or '''primality proof''' is a succinct, [[formal proof]] that a number is [[Prime number|prime]]. Primality certificates allow the primality of a number to be rapidly checked without having to run an expensive or unreliable [[primality test]]. "Succinct" usually means that the proof should be at most [[polynomial]]ly larger than the number of digits in the number itself (for example, if the number has ''b'' bits, the proof might contain roughly ''b''<sup>2</sup> bits).
+
+Primality certificates lead directly to proofs that problems such as [[primality testing]] and the [[complement (complexity)|complement]] of [[integer factorization]] lie in [[NP (complexity)|NP]], the class of problems verifiable in polynomial time given a solution. These problems already trivially lie in [[co-NP]]. This was the first strong evidence that these problems are not [[NP-complete]], since if they were, it would imply that NP is subset of co-NP, a result widely believed to be false; in fact, this was the first demonstration of a problem in NP intersect co-NP not known, at the time, to be in P.
+
+Producing certificates for the complement problem, to establish that a number is composite, is straightforward: it suffices to give a nontrivial divisor. Standard probabilistic primality tests such as the [[Baillie–PSW primality test]], the [[Fermat primality test]], and the [[Miller–Rabin primality test]] also produce compositeness certificates in the event where the input is composite, but do not produce certificates for prime inputs.
+
+== Pratt certificates ==
+
+The concept of primality certificates was historically introduced by the '''Pratt certificate''', conceived in 1975 by [[Vaughan Pratt]],<ref>Vaughan Pratt. "Every prime has a succinct certificate". ''SIAM Journal on Computing'', vol. 4, pp. 214–220. 1975. [http://citeseer.ist.psu.edu/context/39245/0 Citations], [http://boole.stanford.edu/pub/SucCert.pdf Full-text].</ref> who described its structure and proved it to have polynomial size and to be verifiable in polynomial time. It is based on the [[Lucas primality test]], which is essentially the [[Conversion (logic)|converse]] of [[Fermat's little theorem]] with an added condition to make it true:
+: '''Lucas' theorem''': Suppose we have an integer ''a'' such that:
+:* ''a''<sup>''n'' − 1</sup> ≡ 1 (mod ''n''),
+:* for every prime factor ''q'' of ''n'' − 1, it is not the case that ''a''<sup>(''n'' − 1)/''q''</sup> ≡ 1 (mod ''n'').
+: Then ''n'' is prime.
+
+Given such an ''a'' (called a ''witness'') and the prime factorization of ''n'' − 1, it's simple to verify the above conditions quickly: we only need to do a linear number of modular exponentiations, since every integer has fewer prime factors than bits, and each of these can be done by [[exponentiation by squaring]] in O(log ''n'') multiplications (see [[big-O notation]]). Even with grade-school integer multiplication, this is only O((log ''n'')<sup>4</sup>) time; using the [[multiplication algorithm]] with best-known asymptotic running time, due to David Harvey and [[Joris van der Hoeven]], we can lower this to O((log ''n'')<sup>3</sup>(log log ''n'')) time, or using [[Big O notation#Extensions to the Bachmann.E2.80.93Landau notations|soft-O notation]] Õ((log ''n'')<sup>3</sup>).
+
+However, it is possible to trick a verifier into accepting a composite number by giving it a "prime factorization" of ''n'' − 1 that includes composite numbers. For example, suppose we claim that ''n'' = 85 is prime, supplying ''a'' = 4 and ''n'' − 1 = 6 × 14 as the "prime factorization". Then (using ''q'' = 6 and ''q'' = 14):
+* 4 is coprime to 85,
+* 4<sup>85−1</sup> ≡ 1 (mod 85),
+* 4<sup>(85−1)/6</sup> ≡ 16 (mod 85), 4<sup>(85−1)/14</sup> ≡ 16 (mod 85).
+
+We would falsely conclude that 85 is prime. We don't want to just force the verifier to factor the number, so a better way to avoid this issue is to give primality certificates for each of the prime factors of ''n'' − 1 as well, which are just smaller instances of the original problem. We continue recursively in this manner until we reach a number known to be prime, such as 2. We end up with a tree of prime numbers, each associated with a witness ''a''. For example, here is a complete Pratt certificate for the number 229:
+* 229 (''a'' = 6, 229 − 1 = 2<sup>2</sup> × 3 × 19),
+** 2 (known prime),
+** 3 (''a'' = 2, 3 − 1 = 2),
+*** 2 (known prime),
+** 19 (''a'' = 2, 19 − 1 = 2 × 3<sup>2</sup>),
+*** 2 (known prime),
+*** 3 (''a'' = 2, 3 − 1 = 2),
+**** 2 (known prime).
+
+This proof tree can be shown to contain at most <math>4\log_2 n - 4</math> values other than 2 by a simple inductive proof (based on theorem&nbsp;2 of Pratt). The result holds for 3; in general, take ''p'' > 3 and let its children in the tree be ''p''<sub>1</sub>, ..., ''p''<sub>''k''</sub>. By the inductive hypothesis, the tree rooted at ''p''<sub>''i''</sub> contains at most <math>4\log_2 p_i - 4</math> values, so the entire tree contains at most
+
+: <math>1 + \sum_{i=1}^k (4\log_2 p_i - 4) = -4k + 4\log_2 p_1 \cdots p_k \leq 4\log_2 p - 4,</math>
+
+since ''k'' ≥ 2, and ''p''<sub>1</sub>...''p''<sub>''k''</sub> ≤ ''p'' − 1. Since each value has at most log ''n'' bits, this also demonstrates that the certificate has a size of O((log ''n'')<sup>2</sup>) bits.
+
+Since there are O(log ''n'') values other than 2, and each requires at most one exponentiation to verify (and exponentiations dominate the running time), the total time is O((log ''n'')<sup>3</sup>(log log ''n'')(log log log ''n'')), or Õ((log ''n'')<sup>3</sup>), which is quite feasible for numbers in the range that computational number theorists usually work with.
+
+However, while useful in theory and easy to verify, actually generating a Pratt certificate for ''n'' requires factoring ''n'' − 1 and other potentially large numbers. This is simple for some special numbers such as [[Fermat primes]], but currently much more difficult than simple primality testing for large primes of general form.
+
+== Atkin–Goldwasser–Kilian–Morain certificates ==
+To address the problem of efficient certificate generation for larger numbers, in 1986 [[Shafi Goldwasser]] and [[Joe Kilian]] described a new type of certificate based on the theory of [[elliptic curve]]s.<ref>Goldwasser, S. and Kilian, J. "Almost All Primes Can Be Quickly Certified". Proc. 18th STOC. pp. 316–329, 1986. [http://groups.csail.mit.edu/cis/pubs/shafi/1986-stoc-gk.pdf Full text].</ref> This was in turn used by [[A. O. L. Atkin]] and [[François Morain]] as the basis for Atkin-Goldwasser-Kilian-Morain certificates, which are the type of certificates generated and verified by [[elliptic curve primality proving]] (ECPP) systems.<ref name = "atkin-morain">{{cite journal | last1 = Atkin | first1 = A O.L. | author1-link = A. O. L. Atkin | last2 = Morain | first2 = F. | doi =  10.1090/s0025-5718-1993-1199989-x| issue = 203 | journal = [[Mathematics of Computation]] | mr = 1199989 | pages = 29–68 | title = Elliptic curves and primality proving | volume = 61 | year = 1993| jstor = 2152935 | bibcode = 1993MaCom..61...29A |url = https://www.ams.org/mcom/1993-61-203/S0025-5718-1993-1199989-X/S0025-5718-1993-1199989-X.pdf | doi-access = free }}</ref> Just as Pratt certificates are based on [[Lucas's theorem]], Atkin–Goldwasser–Kilian–Morain certificates are based on the following theorem of Goldwasser and Kilian (lemma 2 of "Almost All Primes Can Be Quickly Certified"):
+: '''Theorem''': Suppose we are given:
+:* a positive integer ''n'' not divisible by 2 or 3;
+:* M<sub>''x''</sub>, M<sub>''y''</sub>, A, B in <math>\mathbb{Z}_n</math> (the integers mod ''n'') satisfying M<sub>''y''</sub><sup>2</sup> = M<sub>''x''</sub><sup>3</sup> + AM<sub>''x''</sub> + B and with 4A<sup>3</sup> + 27B<sup>2</sup> coprime to ''n'';
+:* a prime <math>q > n^{1/2} + 1 + 2n^{1/4}</math>.
+: Then M = (M<sub>''x''</sub>, M<sub>''y''</sub>) is a non-identity point on the elliptic curve ''y''<sup>2</sup> = ''x''<sup>3</sup> + Ax + B. Let ''k''M be M added to itself ''k'' times using standard elliptic-curve addition. Then, if ''q''M is the [[identity element]] I, then ''n'' is prime.
+
+Technically, an elliptic curve can only be constructed over a field, and <math>\mathbb{Z}_n</math> is only a field if ''n'' is prime, so we seem to be assuming the result we're trying to prove. The difficulty arises in the elliptic-curve addition algorithm, which takes inverses in the field that may not exist in <math>\mathbb{Z}_n</math>. However, it can be shown (lemma 1 of "Almost All Primes Can Be Quickly Certified") that if we merely perform computations as though the curve were well-defined and do not at any point attempt to invert an element with no inverse, the result is still valid; if we do encounter an element with no inverse, this establishes that ''n'' is composite.
+
+To derive a certificate from this theorem, we first encode M<sub>''x''</sub>, M<sub>''y''</sub>, A, B, and ''q'', then recursively encode the proof of primality for ''q'' < ''n'', continuing until we reach a known prime. This certificate has size Õ((log ''n'')<sup>2</sup>) and can be verified in Õ((log ''n'')<sup>4</sup>) time. Moreover, the algorithm that generates these certificates can be shown to be expected polynomial time for all but a small fraction of primes, and this fraction exponentially decreases with the size of the primes. Consequently, it's well-suited to generating certified large random primes, an application that is important in [[cryptography]] applications such as generating provably valid [[RSA (algorithm)|RSA]] keys.
+
+Time spent on generating an ECPP certificate is not bounded, but a heuristic argument gives Õ((log ''n'')<sup>6</sup>) implemented naively as in Goldwasser-Kilian. Atkin and Morain lowered the number to Õ((log ''n'')<sup>5</sup>). FastECPP (Shallit, Franke, Morain, Enge) has lowered the time to Õ((log ''n'')<sup>4</sup>).<ref name=FastECPP>{{cite book |last1=Enge |first1=Andreas |chapter=FastECPP over MPI |title=Mathematical Software – ICMS 2024 |series=Lecture Notes in Computer Science |date=2024 |volume=14749 |pages=36–45 |doi=10.1007/978-3-031-64529-7_4 |chapter-url=https://inria.hal.science/hal-04522492v2/document|arxiv=2404.05506 |isbn=978-3-031-64528-0 }}</ref>
+
+== Pocklington-based certificates ==
+
+Provable prime generation based on variants of Pocklington's theorem (see [[Pocklington primality test]])<ref name="Pocklington">{{cite journal|first=Henry C. |last=Pocklington |author-link=Henry Cabourn Pocklington |title=The determination of the prime or composite nature of large numbers by Fermat's theorem|journal=Proceedings of the Cambridge Philosophical Society|volume=18|date=1914–1916|pages=29–30}}</ref> can be efficient techniques for generating primes (cost is generally less than probabilistic generation) with the added benefit of built in primality certificates. While these may seem to be special primes, notice that every prime integer could be generated with a Pocklington-based provable generation algorithm.
+
+=== Pocklington primality tests ===
+
+Let <math>P=Rh+1</math> where <math>R=\prod q_j^{e_j}</math> where <math>q_j</math> are distinct primes with <math>e_j</math> an integer greater than zero and a witness <math>g</math> such that:
+
+{{NumBlk|:|1. <math>g^{Rh}\equiv 1 \bmod{P}</math>|{{EquationRef|1}}}}
+{{NumBlk|:|2. <math>\gcd((g^{Rh/q_j}-1\bmod{P}), P)=1</math> for all <math>q_j</math>. |{{EquationRef|2}}}}
+
+Then P is prime if one of the following holds:
+{{NumBlk|:|a) (see <ref name="Primes">{{cite book|first1=Richard|last1=Crandall|first2=Carl|last2=Pomerance|title="Prime Numbers: A computational perspective"|edition=2|publisher=Springer-Verlag, 175 Fifth Ave, New York, New York 10010, U.S.A., 2005}}</ref>) <math>R\geq h</math> or equivalently <math>R> P^{1/2}</math>|{{EquationRef|3a}}}}
+{{NumBlk|:|b) (see <ref name="BLS75">{{cite journal |first1=John |last1=Brillhart |author-link1=John Brillhart |first2=D. H. |last2=Lehmer |author-link2=Derrick Henry Lehmer |first3=J. L. |last3=Selfridge |author-link3=John Selfridge |title=New Primality Criteria and Factorizations of 2<sup>m</sup> ± 1 |journal=Mathematics of Computation |volume=29 |number=130 |date=April 1975 |pages=620–647 |jstor=2005583 |doi=10.1090/S0025-5718-1975-0384673-1 |url=https://www.ams.org/journals/mcom/1975-29-130/S0025-5718-1975-0384673-1/S0025-5718-1975-0384673-1.pdf|doi-access=free }}</ref>{{rp|Corollary 1}}) <math>R\geq h^{1/2}</math> or equivalently <math>R> P^{1/3}</math> and 
+* with <math>\begin{array}{lr}a\equiv h\bmod{R} &0\leq a < R\\b=(h-a)/R \end{array}</math>,
+* such that <math>(a-4b)\neq 0</math> and there exists a small prime <math>r>2</math> such that <math>(a-4b)^{r/2}\neq 1\bmod{r}</math>.
+|{{EquationRef|3b}}}}
+
+===Pocklington primality certificate===
+
+A Pocklington primality certificate consists of the prime P, a set primes <math>q_j</math> dividing <math>(P-1)</math>, each with their own Pocklington prime certificate or small enough to be a known prime, and a witness <math>g</math>.
+
+The steps needed for this certificate (and order of computational cost) should be the sum of these steps:
+# Verify that all <math>q_j</math> are primes and that they divide <math>P-1</math>, obtaining <math>R</math> and <math>h</math> in the process. This would take less time than the rest of the process.
+# Verify that ({{EquationNote|1}}) holds. This is the same complexity as the Fermat primality test, Õ((log ''P'')<sup>2</sup>).
+# Verify that ({{EquationNote|2}}) holds. This requires calculation of gcd, done for large numbers usually using the [[Extended Euclidean algorithm]], over the number of primes provided. Each operation takes between Õ((log ''P'')<sup>2</sup>) to Õ((log ''P'')<sup>3</sup>) time depending on the relative magnitude of <math>q_j</math> versus <math>P</math>.
+# Verify that the last step holds. This is approximately:
+#* <math>\log_2{P}\left(1 + \sum_{k=1}^{\infty}\frac{1}{3^k}\right) = 1.5\log_2{P}</math> for version ({{EquationNote|3b}}) to
+#* <math>\log_2{P}\left(1 + \sum_{k=1}^{\infty}\frac{1}{2^k}\right) = 2\log_2{P}</math> for version ({{EquationNote|3a}}).
+
+See also [[PARI/GP]]'s documentation.<ref name="GP/PARI">{{cite web |title=Catalogue of GP/PARI Functions: Arithmetic functions |url=https://pari.math.u-bordeaux.fr/dochtml/html-stable/Arithmetic_functions.html#se:primecert |website=pari.math.u-bordeaux.fr}}</ref>
+
+===A small example===
+
+Let <math>P=1056893</math>. Note that <math>(P-1)=1621\cdot 163\cdot 2^2</math> and <math>P^{1/2}=1028.053\ldots</math>, <math>P^{1/3}=101.86156\ldots</math>.
+* Using the 'witness' 2, equation {{EquationNote|1}} is satisfied and {{EquationNote|2}} using <math>q=163</math> and <math>q=1621</math>.
+* For version {{EquationNote|3a}}, the certificate needs only <math>P=1056893,\ q=1621,\ g=2</math>.
+* for version {{EquationNote|3b}}, the certificate needs only <math>P=1056893,\ q=163,\ g=2</math>, but there's a bit more work to do:
+** <math>h = (1056893-1)/163 = 6484</math>
+** <math>a\equiv h\equiv 127\bmod{163}</math> and <math>b=\left(6484-127\right)/163=39</math>
+** Using <math>r=3</math> fails: <math>\left(127^2-4\cdot 39\right)^{(3-1)/2}\equiv (1^2-0)^1\equiv 1\bmod{3}</math>
+** Using <math>r=5</math> succeeds: <math>\left(127^2-4\cdot 39\right)^{(5-1)/2}\equiv (2^2-1)^2\equiv 2\bmod{5}</math>, and <math>P</math> is prime.
+
+== Gerbicz-based certificate ==
+Gerbicz-based certificate seek to prove the correctness of a [[modular exponentiation]] process as used in the Proth and Fermat probabilistic tests as well as the early steps of the Pocklington test. It has also been adapted to the calculation of Lucas sequence terms, which is used in the deterministic Lucas–Lehmer and Lucas–Lehmer–Riesel tests. This type of certificate take <math>O(\log^2 n)</math> space as well as time to produce.
+
+The produced certificate takes <math>O(\log n)</math> space to transmit and <math>O(1)</math> squarings (themselves being <math>O(\log n)</math>-time) to verify. (This statement assumes a constant ''B'', which is an important tuning parameter in practice: with lower ''B'', more disk space is used to produce the certificate and less time can be spent on verification. Several gigabytes of space are used in practice.)
+
+It is applied to very large numbers where the exponentiation itself is a costly task. For example, a Gerbicz-Pietrzak proof was used to authenticate the Fermat primality test for <math>2^{136279841}-1</math>, the [[Mersenne prime]] found in 2024.<ref>{{cite web |title=136 279 841 Exponent Status |url=https://www.mersenne.org/report_exponent/?exp_lo=136279841&full=1 |website=www.mersenne.org |quote=PRP Certification CERT proof power = 9 Proof certified good}}</ref>
+
+=== Gerbicz-Pietrzak scheme ===
+[[Great Internet Mersenne Prime Search]] and allied projects such as (part of) [[PrimeGrid]] use Pavel Atnashev's "Gerbicz-Pietrzak" scheme, which combines Gerbicz's error checking for modular exponentiation with Pietrzak's verifiable delay function for producing an easily verifiable "proof" of a modular exponentiation to a power of 2<sup>''m''</sup>.<ref>{{cite web|url=https://mersenneforum.org/showthread.php?t=25638|title=The Next Big Development for GIMPS|last=Woltman|first=George|date=2020-06-16|work=GIMPS forum|access-date=20 May 2022}}</ref><ref name="GIMPS">{{cite web |title=GIMPS - The Math - PrimeNet |url=https://www.mersenne.org/various/math.php |website=www.mersenne.org}}</ref>
+
+The Gerbicz error-checking scheme was originally defined for the [[Proth theorem|Proth test]], but was later extended to the [[Fermat primality test]]. The original form verifies the computation <math>u(t)={a^k}^{2^t} \pmod N</math> by adding an additional variable <math>d(t)=\textstyle\prod_{i=0}^t u(iL) \pmod N</math> and an arbitrary scaling constant ''L''. There is therefore a recurrence relation of <math>d(t+1)=d(t)\cdot u((t+1)\cdot L) \pmod N</math> which can be used to update d(t) every ''L'' iterations of exponential doubling. There is also a relation <math>d(t+1)=u(0)\cdot d(t)^{2^L} \pmod N</math>, which is used to check the computation every ''B'' = ''L''<sup>2</sup> iterations. A mismatch would result in a rollback to a previously saved "checkpoint" [[tuple]] of <math>(t, u, d)</math>.<ref>{{cite web |last1=Gerbicz |first1=Robert |title=Fast and robust error checking on Proth/Pepin tests |url=https://www.mersenneforum.org/node/16972?t=22510 |date=2017}}</ref>
+
+With the addition of the Pietrzak VDF scheme,<ref>{{Cite report| last1 = Boneh| first1 = Dan| last2 = Bünz| first2 = Benedikt| last3 = Fisch| first3 = Ben| title = A Survey of Two Verifiable Delay Functions| access-date = 2025-10-06| date = 2018| url = https://eprint.iacr.org/2018/712}}</ref> the calculating client generates a "certificate" file using the saved "checkpoint" residues from the computation, resulting in a file of  <math>O(\log(m/L))</math> elements. It uploads the certificate to a server, which then assigns it to a "verifier" client. The verifier then uses the non-interactive version of the Pietrzak scheme to check the result.<ref name=Li23>{{cite arXiv |author1=Darren Li|author2=Yves Gallot|title=An Efficient Modular Exponentiation Proof Scheme |date=8 Feb 2023 |class=cs.CR |eprint=2209.15623 }}</ref>
+
+A generalization of the Pietrzak scheme to [[Lucas sequence]]s has been published, in which the computation of <math>U_{2^m}(P, Q) \bmod n</math>, <math>V_{2^m}(P, Q) \bmod n</math> is verified.<ref>{{Cite conference| conference = TCC 2023 [IACR 2023/1404]| last1 = Hoffmann| first1 = Charlotte| last2 = Hubáček| first2 = Pavel| last3 = Kamath| first3 = Chethan| last4 = Krňák| first4 = Tomáš| title = (Verifiable) Delay Functions from Lucas Sequences| access-date = 2025-10-11| date = 2023| url = https://eprint.iacr.org/2023/1404}}</ref>
+
+=== Gerbicz-Li scheme ===
+The main limitation of Gerbicz-Pietrzak is that it only applies to modular exponentiation to a power of 2<sup>''m''</sup>. The Gerbicz-Li scheme was developed for [[PrimeGrid]] to overcome the limitation, verifying left-to-right modular exponentiation to any power ''n''. Let ''L'' be the length of the binary expansion of ''n'', so that <math>n=n_02^0+n_12^1+\dots+n_{L-1}2^{L-1}</math>. The process to be verified is to calculate <math>u_i = a^{\lfloor n/2^i\rfloor}</math> by the following recurrence relation:
+
+<math display=block>
+    \begin{align}u_i=\begin{cases}
+        1 & L\le i \\ u_{i+1}^2\cdot a^{n_i} & \text{otherwise}
+    \end{cases}\end{align}
+</math>
+
+There is therefore a relation <math>u_i = u_{i+j}^{2^j}a^{\left\lfloor\frac{n}{2^i}\right\rfloor\bmod 2^j}</math>. As with the Gerbicz scheme, the calculating client saves <math>u_0,u_{B},u_{2B},\dots</math> for some constant <math>B</math> which is a multiple of <math>L</math>. It then checks the equivalences between <math>u_{iB}</math> and <math>u_{(i+1)B}</math> every <math>B</math> blocks, adding a random weight term <math>w_i</math> for soundness in the proof for security:
+
+<math display=block>
+	\begin{align}
+		\prod_{i=0} u_{iB}^{w_i} & \overset{\text{?}}{=} \prod_{i=0} u_{(i+1)B}^{w_i 2^B}a^{\left(\left\lfloor\frac{n}{2^{iB}}\right\rfloor\bmod 2^B\right) w_i}                       \\
+		& = \left(\prod_{i=0} u_{(i+1)B}^{w_i}\right)^{2^B}a^{\sum\limits_{i=0} \left(\left\lfloor\frac{n}{2^{iB}}\right\rfloor\bmod 2^B\right) w_i}
+	\end{align}
+</math>
+
+Hashing is similarly used to produce a non-interactive proof for use by PrimeGrid operators.<ref name=Li23/>
+
+Pavel Atnashev has further generalized Gerbicz-Li to the computation of arbitrary [[Lucas sequence]] terms with <math>Q = -1</math>.<ref>{{cite web |title=prst/src/lucasmul.cpp at main · patnashev/prst |url=https://github.com/patnashev/prst/blob/main/src/lucasmul.cpp |website=GitHub |language=en}}</ref> This generalization is used in his "Morrison test", a generalization of the LLR test with Rödseth starting value, in the [[PrimeGrid]] software "PRST".<ref name=Atnashev23>{{cite web |last1=Atnashev |first1=Pavel |title=A simpler alternative to Lucas–Lehmer–Riesel primality test |url=https://eprint.iacr.org/2023/195 |website=Cryptology ePrint Archive |date=2023 }}</ref>
+
+== AKS certificate ("PRIMES is in P") ==
+
+"PRIMES is in P"<ref name="AKS">{{cite journal |first1=Manindra |last1=Agrawal |authorlink1=Manindra Agrawal |first2=Neeraj |last2=Kayal |authorlink2=Neeraj Kayal |first3=Nitin |last3=Saxena |authorlink3=Nitin Saxena |url=http://www.cse.iitk.ac.in/users/manindra/algebra/primality_v6.pdf |title=PRIMES is in P |journal=[[Annals of Mathematics]] |volume=160 |date=September 2004 |issue=2 |pages=781–793 |doi=10.4007/annals.2004.160.781 |doi-access=free |jstor=3597229 |mr=2123939}}</ref> was a breakthrough in theoretical computer science. This article, published by [[Manindra Agrawal]], [[Nitin Saxena]], and [[Neeraj Kayal]] in August 2002, proves that the famous problem of checking primality of a number can be solved deterministically in polynomial time.  The authors received the 2006 [[Gödel Prize]] and 2006 [[Fulkerson Prize]] for this work.
+
+Because primality testing can now be done deterministically in polynomial time using the [[AKS primality test]], a prime number could itself be considered a certificate of its own primality. This test runs in Õ((log ''n'')<sup>6</sup>) time. In practice this method of verification is more expensive than the verification of Pratt certificates, but does not require any computation to determine the certificate itself.
+
+== Cutoff for "known primes" ==
+From exhaustive trials, it is known that the [[Baillie–PSW primality test]] has no pseudoprimes below 2<sup>64</sup>. As a result, 2<sup>64</sup> is a cutoff after which prime certificates are expected of provided numbers.<ref name="TRNicely">{{cite web |title=The Baillie–PSW Primality Test |url=http://www.trnicely.net/misc/bpsw.html |archive-url=https://web.archive.org/web/20191121062007/http://www.trnicely.net/misc/bpsw.html |date=2012-01-13 |orig-year=First published 2005-06-10 |archive-date=2019-11-21 |url-status=dead |first=Thomas R. |last=Nicely |website=trnicely.net |access-date=2013-03-17}}</ref>
+
+== File formats ==
+Prime number databases accept submissions of certificates in common formats used by primality-proving programs. The following formats exist:
+* Primo format for ECPP. Originally used by a Linux GUI-only program called Primo.<ref>{{cite web |title=Primo for Linux |url=https://www.ellipsa.eu/public/primo/primo.html |website=www.ellipsa.eu}}</ref>
+* PARI format for ECPP and N-1 (Pocklington), used in [[PARI/GP]].<ref name="GP/PARI"/>
+
+A fast ECPP program, Cm, supports generating both Primo and PARI formats. It uses MPI parallelization to scale across multiple computers<ref>{{cite web |title=Introduction |url=https://www.multiprecision.org/cm/}}</ref> and implements the FastECPP algorithm.<ref name=FastECPP>{{cite book |last1=Enge |first1=Andreas |chapter=FastECPP over MPI |title=Mathematical Software – ICMS 2024 |series=Lecture Notes in Computer Science |date=2024 |volume=14749 |pages=36–45 |doi=10.1007/978-3-031-64529-7_4 |chapter-url=https://inria.hal.science/hal-04522492v2/document|arxiv=2404.05506 |isbn=978-3-031-64528-0 }}</ref>
+
+GIMPS (PrimeNet) and PrimeGrid use their own formats for Gerbicz-based exponentiation certificates, not widely accepted by other programs or projects.
+
+== References ==
+{{reflist}}
+
+== External links ==
+* [http://mathworld.wolfram.com/PrimalityCertificate.html Mathworld: Primality Certificate]
+* [http://mathworld.wolfram.com/PrattCertificate.html Mathworld: Pratt Certificate]
+* [http://mathworld.wolfram.com/Atkin-Goldwasser-Kilian-MorainCertificate.html Mathworld: Atkin-Goldwasser-Kilian-Morain Certificate]
+* [https://primes.utm.edu/glossary/page.php?sort=Certificate The Prime Glossary: Certificate of Primality]
+* [https://factordb.com/certoverview.php All primality certificates in ''factordb'']
+* [[Vašek Chvátal]]. [https://web.archive.org/web/20060104210644/http://www.cs.rutgers.edu/~chvatal/notes/ppp/ppp.html Lecture notes on Pratt's Primality Proofs]. Department of Computer Science. Rutgers University. [http://www.cs.concordia.ca/~chvatal/notes/ppp.pdf PDF version at Concordia University].
+
+[[Category:Primality tests]]

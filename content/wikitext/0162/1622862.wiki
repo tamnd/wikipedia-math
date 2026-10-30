@@ -1,0 +1,245 @@
+<!-- wikipedia: en
+     page: 1622862
+     title: Interior-point method
+     revision: 1372922613
+     timestamp: 2026-09-03T00:26:29Z
+     history: https://en.wikipedia.org/w/index.php?curid=1622862&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1372922613 -->
+{{Short description|Algorithms for solving convex optimization problems}}
+{{Use dmy dates|date=September 2021}}
+[[File:karmarkar.svg|thumb|400x400px|Example search for a solution. Blue lines show constraints, red points show iterated solutions.|alt=]]
+'''Interior-point methods''' (also referred to as '''barrier methods''' or '''IPMs''') are [[algorithm]]s for solving [[Linear programming|linear]] and [[nonlinear programming|non-linear]] [[convex optimization]] problems. IPMs combine two advantages of previously-known algorithms:
+
+* Theoretically, their run-time is [[Polynomial time|polynomial]]—in contrast to the [[simplex method]], which has exponential run-time in the worst case.
+* Practically, they run as fast as the simplex method—in contrast to the [[ellipsoid method]], which has polynomial run-time in theory but is very slow in practice.
+In contrast to [[active-set method]]s (such as the simplex method) which traverses the ''boundary'' of the feasible region, and the ellipsoid method which bounds the feasible region from ''outside'', an IPM reaches a best solution by traversing the ''interior'' of the [[feasible region]]—hence the name.
+
+== History ==
+An interior point method was discovered by Soviet mathematician I. I. Dikin in 1967.<ref>{{Cite journal |last1=Dikin |first1=I.I. |year=1967 |title=Iterative solution of problems of linear and quadratic programming. |url=https://zbmath.org/?q=an:0189.19504 |journal=Dokl. Akad. Nauk SSSR |volume=174 |issue=1 |pages=747–748|zbl=0189.19504 }}</ref> The method was reinvented in the U.S. in the mid-1980s. In 1984, [[Narendra Karmarkar]] developed a method for [[linear programming]] called [[Karmarkar's algorithm]],<ref>{{cite conference |last1=Karmarkar |first1=N. |year=1984 |title=Proceedings of the sixteenth annual ACM symposium on Theory of computing – STOC '84 |pages=302 |doi=10.1145/800057.808695 |isbn=0-89791-133-4 |archive-url=https://web.archive.org/web/20131228145520/http://retis.sssup.it/~bini/teaching/optim2010/karmarkar.pdf |archive-date=28 December 2013 |doi-access=free |chapter-url=http://retis.sssup.it/~bini/teaching/optim2010/karmarkar.pdf |chapter=A new polynomial-time algorithm for linear programming |url-status=dead}}</ref> which runs in polynomial time (<math>O(n^{3.5} L)</math> operations on ''L''-bit numbers, where ''n'' is the number of variables and constants), and is also very efficient in practice. Karmarkar's paper created a surge of interest in interior point methods. Two years later, [[James Renegar]] invented the first ''path-following'' interior-point method, with run-time <math>O(n^{3} L)</math>. The method was later extended from linear to convex optimization problems, based on a [[self-concordant]] [[barrier function]] used to encode the [[convex set]].<ref name=":0">{{Cite book |last=Arkadi Nemirovsky |url=https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=8c3cb6395a35cb504019f87f447d65cb6cf1cdf0 |title=Interior point polynomial-time methods in convex programming |year=2004}}</ref>
+
+Any convex optimization problem can be transformed into minimizing (or maximizing) a [[linear function]] over a convex set by converting to the [[Epigraph (mathematics)|epigraph]] form.<ref name=":3">{{cite book |last1=Boyd |first1=Stephen |title=Convex Optimization |last2=Vandenberghe |first2=Lieven |publisher=[[Cambridge University Press]] |year=2004 |isbn=978-0-521-83378-3 |location=Cambridge |pages= |mr=2061575}}</ref>{{Rp|location=143}} The idea of encoding the [[candidate solution|feasible set]] using a barrier and designing barrier methods was studied by Anthony V. Fiacco, Garth P. McCormick, and others in the early 1960s. These ideas were mainly developed for general [[nonlinear programming]], but they were later abandoned due to the presence of more competitive methods for this class of problems (e.g. [[sequential quadratic programming]]).
+
+[[Yurii Nesterov]] and [[Arkadi Nemirovski]] came up with a special class of such barriers that can be used to encode any convex set. They guarantee that the number of [[iteration]]s of the algorithm is bounded by a polynomial in the dimension and accuracy of the solution.<ref>{{Cite journal |mr=2115066 |doi=10.1090/S0273-0979-04-01040-7 |title=The interior-point revolution in optimization: History, recent developments, and lasting consequences |year=2004 |last1=Wright |first1=Margaret H. |journal=Bulletin of the American Mathematical Society |volume=42 |pages=39–57|doi-access=free }}</ref><ref name=":0" />
+
+The class of primal-dual path-following interior-point methods is considered the most successful. [[Mehrotra predictor–corrector method|Mehrotra's predictor–corrector algorithm]] provides the basis for most implementations of this class of methods.<ref>{{cite journal |last=Potra |first=Florian A. |author2=Stephen J. Wright |title=Interior-point methods |journal=Journal of Computational and Applied Mathematics |volume=124 |year=2000 |issue=1–2 |pages=281–302 |doi=10.1016/S0377-0427(00)00433-7|doi-access=free |bibcode=2000JCoAM.124..281P }}</ref>
+
+== Definitions ==
+We are given a [[convex program]] of the form:<math display="block">
+\begin{aligned}
+   \underset{x \in \mathbb{R}^n}{\text{minimize}}\quad & f(x) \\
+    \text{subject to}\quad & x \in G.
+\end{aligned}
+</math>where f is a [[convex function]] and G is a [[convex set]]. Without loss of generality, [[Convex optimization#linear|we can assume that the objective ''f'' is a linear function]]. Usually, the convex set ''G'' is represented by a set of convex inequalities and linear equalities; the linear equalities can be eliminated using [[linear algebra]], so for simplicity we assume there are only convex inequalities, and the program can be described as follows, where the ''g<sub>i</sub>'' are convex functions:<math display="block">
+\begin{aligned}
+   \underset{x \in \mathbb{R}^n}{\text{minimize}}\quad & f(x) \\
+    \text{subject to}\quad & g_i(x) \leq 0 \text{ for } i = 1, \dots, m. \\ 
+\end{aligned}
+</math>We assume that the constraint functions belong to some family (e.g. quadratic functions), so that the program can be represented by a finite ''vector of coefficients'' (e.g. the coefficients to the quadratic functions). The dimension of this coefficient vector is called the ''size'' of the program. A ''numerical solver'' for a given family of programs is an algorithm that, given the coefficient vector, generates a sequence of approximate solutions ''x<sub>t</sub>'' for ''t''=1,2,..., using finitely many arithmetic operations. A numerical solver is called ''convergent'' if, for any program from the family and any positive ''ε''>0, there is some ''T'' (which may depend on the program and on ''ε'') such that, for any ''t''>''T'', the approximate solution ''x<sub>t</sub>''  is ''ε-approximate,'' that is:<math display="block">
+\begin{aligned}
+& f(x_{t}) - f^{*} \leq \epsilon, \\
+& g_{i}(x_{t}) \leq \epsilon \quad \text{for} \quad i = 1, \dots, m, \\
+& x \in G,
+\end{aligned}
+</math>where <math>f^{*}</math> is the optimal solution. A solver is called ''polynomial'' if the total number of arithmetic operations in the first ''T'' steps is at most<blockquote>poly(problem-size) * log(''V''/''ε''),</blockquote>where ''V'' is some data-dependent constant, e.g., the difference between the largest and smallest value in the feasible set. In other words, ''V''/''ε'' is the "relative accuracy" of the solution - the accuracy w.r.t. the largest coefficient. log(''V''/''ε'') represents the number of "accuracy digits". Therefore, a solver is 'polynomial' if each additional digit of accuracy requires a number of operations that is polynomial in the problem size.
+
+== Types ==
+Types of interior point methods include:
+
+* '''Potential reduction methods''': [[Karmarkar algorithm|Karmarkar's algorithm]] was the first one.
+* '''Path-following methods''': the algorithms of [[James Renegar]]<ref name=":1">{{Cite journal |last=Renegar |first=James |date=1988-01-01 |title=A polynomial-time algorithm, based on Newton's method, for linear programming |url=https://doi.org/10.1007/BF01580724 |journal=Mathematical Programming |language=en |volume=40 |issue=1 |pages=59–93 |doi=10.1007/BF01580724 |issn=1436-4646|url-access=subscription }}</ref> and Clovis Gonzaga<ref name=":2">{{Citation |last=Gonzaga |first=Clovis C. |chapter=An Algorithm for Solving Linear Programming Problems in O(n3L) Operations |date=1989 |chapter-url=https://doi.org/10.1007/978-1-4613-9617-8_1 |title=Progress in Mathematical Programming: Interior-Point and Related Methods |pages=1–28 |editor-last=Megiddo |editor-first=Nimrod |access-date=2023-11-22 |place=New York, NY |publisher=Springer |language=en |doi=10.1007/978-1-4613-9617-8_1 |isbn=978-1-4613-9617-8|chapter-url-access=subscription }}</ref> were the first ones.
+* '''Primal-dual methods'''.
+
+== Path-following methods ==
+
+=== Idea ===
+Given a convex optimization program (P)  with constraints, we can convert it to an ''unconstrained'' program by adding a [[barrier function]]. Specifically, let ''b'' be a smooth convex function, defined in the interior of the feasible region ''G'', such that for any sequence <math>\{x_j \in \textbf{G}\}</math>whose limit is on the boundary of ''G'': <math>\lim_{j\to \infty} b(x_j)=\infty</math>. We also assume that ''b'' is non-degenerate, that is: <math>b''(x)</math> is [[Positive-definite function|positive definite]] for all x in interior(G). Now, consider the family of programs: <math>P_t = t \cdot f(x) + b(x)</math>
+
+Technically the program is restricted, since ''b'' is defined only in the interior of ''G''. But practically, it is possible to solve it as an unconstrained program, since any solver trying to minimize the function will not approach the boundary, where ''b'' approaches infinity. Therefore, (''P<sub>t</sub>'') has a unique solution - denote it by ''x''*(''t''). The function ''x''* is a [[continuous function]] of ''t'', which is called the ''central path''. All limit points of ''x''*, as ''t'' approaches infinity, are optimal solutions of the original program (P).
+
+A '''path-following method''' is a method of tracking the function ''x''* along a certain increasing sequence t<sub>1</sub>,t<sub>2</sub>,..., that is: computing a good-enough approximation ''x<sub>i</sub>'' to the point ''x''*(''t<sub>i</sub>''), such that the difference ''x<sub>i</sub>'' - ''x''*(''t<sub>i</sub>'') approaches 0 as ''i'' approaches infinity; then the sequence ''x<sub>i</sub>'' approaches the optimal solution of (P). This requires to specify three things:
+
+* The barrier function b(x).
+* A policy for determining the penalty parameters ''t<sub>i</sub>''.
+* The unconstrained-optimization solver used to solve (''P<sub>i</sub>'') and find ''x<sub>i</sub>'', such as [[Newton's method]]. Note that we can use each ''x<sub>i</sub>'' as a starting-point for solving the next problem (''P<sub>i+1</sub>'').
+
+The main challenge in proving that the method is polytime is that, as the penalty parameter grows, the solution gets near the boundary, and the function becomes steeper. The run-time of solvers such as [[Newton's method]] becomes longer, and it is hard to prove that the total runtime is polynomial.
+
+Renegar<ref name=":1" /> and Gonzaga<ref name=":2" /> proved that a specific instance of a path-following method is polytime:
+
+* The constraints (and the objective) are linear functions;
+* The barrier function is [[Logarithmic barrier function|logarithmic]]:   <math>b(x) = - \sum_{j=1}^{m}\log({-g_j(x)})</math>
+* The penalty parameter ''t'' is updated geometrically, that is, <math>t_{i+1} := \mu \cdot t_i</math>, where ''μ'' is a constant (they took <math>\mu = 1+0.001\cdot \sqrt{m}</math>, where ''m'' is the number of inequality constraints);
+* The solver is Newton's method, and a ''single'' step of Newton is done for each single step in ''t''.
+
+They proved that, in this case, the difference ''x<sub>i</sub>'' - ''x''*(''t<sub>i</sub>'') remains at most 0.01, and f(''x<sub>i</sub>'') - f* is at most <math>\frac{2m}{t_j}</math>. Thus, the solution accuracy is proportional to <math>\frac{1}{t_j}</math>, so to add a single accuracy-digit, it is sufficient to multiply ''t<sub>i</sub>'' by 2 (or any other constant factor), which requires <math>O(\sqrt{m})</math> Newton steps. Since each Newton step takes O(''m n''<sup>2</sup>) operations, the total complexity is O(''m<sup>3/2</sup> n''<sup>2</sup>)  operations for accuracy digit.
+
+[[Yurii Nesterov|Yuri Nesterov]] extended the idea from linear to non-linear programs. He noted that the main property of the logarithmic barrier, used in the above proofs, is that it is [[self-concordant]] with a finite barrier parameter. Therefore, many other classes of convex programs can be solved in polytime using a path-following method, if we can find a suitable self-concordant barrier function for their feasible region.<ref name=":0" />{{Rp|location=Sec.1}}
+
+=== Details ===
+We are given a convex optimization problem (P) in "standard form":<blockquote>'''minimize ''c''<sup>T</sup>''x'' s.t. ''x'' in ''G''''', </blockquote>where ''G'' is convex and closed. We can also assume that ''G'' is bounded (we can easily make it bounded by adding a constraint |''x''|≤''R'' for some sufficiently large ''R'').<ref name=":0" />{{Rp|location=Sec.4}}
+
+To use the interior-point method, we need a [[self-concordant barrier]] for ''G''. Let ''b'' be an ''M''-self-concordant barrier for ''G'', where ''M''≥1 is the self-concordance parameter. We assume that we can compute efficiently the value of ''b'', its gradient, and its [[Hessian matrix|Hessian]], for every point x in the interior of ''G''.
+
+For every ''t''>0, we define the ''penalized objective'' '''f<sub>t</sub>(x) := t''c''<sup>T</sup>''x +'' b(''x'')'''. We define the path of minimizers by: '''x*(t) := arg min f<sub>t</sub>(x)'''. We approximate this path along an increasing sequence ''t<sub>i</sub>''. The sequence is initialized by a certain non-trivial two-phase initialization procedure. Then, it is updated according to the following rule:  <math>t_{i+1} := \mu \cdot t_i</math>.
+
+For each ''t<sub>i</sub>'', we find an approximate minimum of ''f<sub>ti</sub>'', denoted by ''x<sub>i</sub>''. The approximate minimum is chosen to satisfy the following "closeness condition" (where ''L'' is the ''path tolerance''):<blockquote><math>\sqrt{[\nabla_x f_t(x_i)]^T [\nabla_x^2 f_t(x_i)]^{-1} [\nabla_x f_t(x_i)]} \leq L</math>.</blockquote>To find ''x<sub>i</sub>''<sub>+1</sub>, we start with ''x<sub>i</sub>'' and apply the [[damped Newton method]]. We apply several steps of this method, until the above "closeness relation" is satisfied. The first point that satisfies this relation is denoted by ''x<sub>i</sub>''<sub>+1</sub>.<ref name=":0" />{{Rp|location=Sec.4}}
+
+=== Convergence and complexity ===
+
+The convergence rate of the method is given by the following formula, for every ''i'':<ref name=":0" />{{Rp|location=Prop.4.4.1}}<blockquote><math>c^T x_i - c^* \leq \frac{2 M}{t_0} \mu^{-i} </math></blockquote>Taking  <math>\mu = \left(1+r/\sqrt{M}\right) </math>, the number of Newton steps required to go from ''x<sub>i</sub>'' to ''x<sub>i</sub>''<sub>+1</sub> is at most a fixed number, that depends only on ''r'' and ''L''. In particular, the total number of Newton steps required to find an ''ε''-approximate solution (i.e., finding ''x'' in ''G'' such that ''c''<sup>T</sup>''x'' - c* ≤ ''ε'') is at most:<ref name=":0" />{{Rp|location=Thm.4.4.1}}<blockquote><math>O(1) \cdot \sqrt{M} \cdot \ln\left(\frac{M}{t_0 \varepsilon} + 1\right) </math></blockquote>where the constant factor O(1) depends only on ''r'' and ''L''.  The number of Newton steps required for the two-step initialization procedure is at most:<ref name=":0" />{{Rp|location=Thm.4.5.1}}<blockquote><math>O(1) \cdot \sqrt{M} \cdot \ln\left(\frac{M}{1-\pi_{x^*_f}(\bar{x})} + 1\right)
++
+O(1) \cdot \sqrt{M} \cdot \ln\left(\frac{M \text{Var}_G(c)}{\epsilon} + 1\right)
+ </math>{{Clarify|reason=It is not clear what this "pi" function is|date=November 2023}}</blockquote>where the constant factor O(1) depends only on ''r'' and ''L'', and   <math>\text{Var}_G(c) := \max_{x\in G} c^T x - \min_{x\in G} c^T x
+ </math>, and <math>\bar{x}</math> is some point in the interior of ''G''. Overall, the overall Newton complexity of finding an  ''ε''-approximate solution is at most<blockquote><math>O(1) \cdot \sqrt{M} \cdot \ln\left(\frac{V}{\varepsilon} + 1\right) </math>, where V is some problem-dependent constant: <math>V = \frac{\text{Var}_G(c)}{1-\pi_{x^*_f(\bar{x})}}
+ </math>.</blockquote>Each Newton step takes O(''n''<sup>3</sup>) arithmetic operations.
+
+=== Initialization: phase-I methods ===
+To initialize the path-following methods, we need a point in the relative interior of the feasible region ''G''. In other words: if ''G'' is defined by the inequalities ''g<sub>i</sub>''(''x'') ≤ 0, then we need some ''x'' for which ''g<sub>i</sub>''(''x'') < 0 for all ''i'' in 1,...,''m''. If we do not have such a point, we need to find one using a so-called '''phase I method'''.<ref name=":3" />{{Rp|location=11.4}}  A simple phase-I method is to solve the following convex program:<math display="block">
+\begin{aligned}
+   \text{minimize}\quad & s \\
+    \text{subject to}\quad & g_i(x) \leq s \text{ for } i = 1, \dots, m
+\end{aligned}
+</math>Denote the optimal solution by x*,''s''*.
+
+* If ''s''*<0, then we know that x* is an interior point of the original problem and can go on to "phase II", which is solving the original problem.
+* If ''s''*>0, then we know that the original program is infeasible - the feasible region is empty.
+* If ''s''*=0 and it is attained by some solution x*, then the problem is feasible but has no interior point; if it is not attained, then the problem is infeasible.
+
+For this program it is easy to get an interior point: we can take arbitrarily ''x''=0, and take ''s'' to be any number larger than max(''f''<sub>1</sub>(0),...,''f<sub>m</sub>''(0)). Therefore, it can be solved using interior-point methods. However, the run-time is proportional to log(1/''s''*). As s* comes near 0, it becomes harder and harder to find an exact solution to the phase-I problem, and thus harder to decide whether the original problem is feasible.
+
+=== Practical considerations ===
+The theoretic guarantees assume that the penalty parameter is increased at the rate <math>\mu = \left(1+r/\sqrt{M}\right)</math>, so the worst-case number of required Newton steps is <math>O(\sqrt{M})</math>. In theory, if ''μ'' is larger (e.g. 2 or more), then the worst-case number of required Newton steps is in <math>O(M)</math>. However, in practice, larger ''μ'' leads to a much faster convergence. These methods are called ''long-step methods''.<ref name=":0" />{{Rp|location=Sec.4.6}}   In practice, if ''μ'' is between 3 and 100, then the program converges within 20-40 Newton steps, regardless of the number of constraints (though the runtime of each Newton step of course grows with the number of constraints). The exact value of ''μ'' within this range has little effect on the performance.<ref name=":3" />{{Rp|location=chpt.11}}
+
+== Potential-reduction methods ==
+For potential-reduction methods, the problem is presented in the ''conic form'':<ref name=":0" />{{Rp|location=Sec.5}} <blockquote>'''minimize ''c''<sup>T</sup>''x'' s.t. ''x'' in ''{b+L} ∩ K''''', </blockquote>where ''b'' is a vector in R<sup>''n''</sup>,  L is a [[linear subspace]] in R<sup>''n''</sup> (so ''b''+''L'' is an [[affine plane]]), and ''K'' is a closed pointed [[convex cone]] with a nonempty interior. Every convex program can be converted to the conic form. To use the potential-reduction method (specifically, the extension of [[Karmarkar's algorithm]] to convex programming), we need the following assumptions:<ref name=":0" />{{Rp|location=Sec.6}}
+
+* A. The feasible set ''{b+L} ∩ K'' is bounded, and intersects the interior of the cone ''K''.
+* B. We are given in advance a strictly-feasible solution ''x''^, that is, a feasible solution in the interior of ''K''.
+* C. We know in advance the optimal objective value, c*, of the problem.
+* D. We are given an ''M''-logarithmically-homogeneous [[self-concordant barrier]] ''F'' for the cone ''K''.
+
+Assumptions A, B and D are needed in most interior-point methods. Assumption C is specific to Karmarkar's approach; it can be alleviated by using a "sliding objective value". It is possible to further reduce the program to the ''Karmarkar format'':<blockquote>'''minimize ''s''<sup>T</sup>''x'' s.t. ''x'' in ''M ∩ K'' and ''e''<sup>T</sup>''x'' = 1''' </blockquote>where ''M'' is a [[linear subspace]] of in R<sup>''n''</sup>, and the optimal objective value is 0.
+
+The method is based on the following [[scalar potential]] function:<blockquote>''v''(''x'') = ''F''(''x'') + ''M'' ln (''s''<sup>T</sup>''x'')</blockquote>where ''F'' is the ''M''-self-concordant barrier for the feasible cone. It is possible to prove that, when ''x'' is strictly feasible and ''v''(''x'') is very small (- very negative), ''x'' is approximately-optimal. The idea of the potential-reduction method is to modify ''x'' such that the potential at each iteration drops by at least a fixed constant ''X'' (specifically, ''X''=1/3-ln(4/3)). This implies that, after ''i'' iterations, the difference between objective value and the optimal objective value is at most  ''V'' * exp(-''i X'' / ''M''), where ''V'' is a data-dependent constant. Therefore, the number of Newton steps required for an ''ε''-approximate solution is at most <math>O(1) \cdot M \cdot \ln\left(\frac{V}{\varepsilon} + 1\right)+1 </math>.
+
+Note that in path-following methods the expression is <math>\sqrt{M}</math> rather than ''M'', which is better in theory. But in practice, Karmarkar's method allows taking much larger steps towards the goal, so it may converge much faster than the theoretical guarantees.
+
+==Primal-dual methods==
+The primal-dual method's idea is easy to demonstrate for constrained [[nonlinear optimization]].<ref>{{Cite journal |last1=Mehrotra |first1=Sanjay |year=1992 |title=On the Implementation of a Primal-Dual Interior Point Method |journal=SIAM Journal on Optimization |volume=2 |issue=4 |pages=575–601 |doi=10.1137/0802028}}</ref><ref>{{cite book |last=Wright |first=Stephen |title=Primal-Dual Interior-Point Methods |publisher=SIAM |year=1997 |isbn=978-0-89871-382-4 |location=Philadelphia, PA}}</ref> For simplicity, consider the following nonlinear optimization problem with inequality constraints:
+
+<math display="block">\begin{aligned} 
+\operatorname{minimize}\quad & f(x) \\ 
+\text{subject to}\quad 
+&x \in \mathbb{R}^n,\\
+&c_i(x) \ge 0 \text{ for } i = 1, \ldots, m,\\ 
+\text{where}\quad & f : \mathbb{R}^{n} \to \mathbb{R},\ c_i : \mathbb{R}^{n} \to \mathbb{R}.
+\end{aligned}\quad  (1)</math>
+
+This inequality-constrained optimization problem is solved by converting it into an unconstrained objective function whose minimum we hope to find efficiently.
+Specifically, the logarithmic [[barrier function]] associated with (1) is
+<math display="block">B(x,\mu) = f(x) - \mu \sum_{i=1}^m \log(c_i(x)). \quad (2)</math>
+
+Here <math>\mu</math> is a small positive scalar, sometimes called the "barrier parameter", and should be thought of as <math>\mu=\frac{1}{t}</math> given the time variable <math>t</math> introduced above. As <math>\mu</math> converges to zero (or alternatively, as <math>t\rightarrow\infty</math>), the minimum of <math>B(x,\mu)</math> should converge to a solution of (1).
+
+The [[gradient]] of a differentiable function <math>h : \mathbb{R}^n \to \mathbb{R}</math> is denoted <math>\nabla h</math>.
+The gradient of the barrier function is
+<math display="block">\nabla B(x,\mu) = \nabla f(x) - \mu \sum_{i=1}^m \frac{1}{c_i(x)} \nabla c_i(x). \quad (3)</math>
+
+In addition to the original ("primal") variable <math>x</math> we introduce a [[Lagrange multiplier]]-inspired [[Lagrange multiplier#The strong Lagrangian principle: Lagrange duality|dual]] variable <math>\lambda \in \mathbb{R} ^m</math>
+<math display="block">c_i(x) \lambda_i = \mu,\quad \forall i = 1, \ldots, m. \quad (4)</math>
+
+Equation (4) is sometimes called the "perturbed complementarity" condition, for its resemblance to "complementary slackness" in [[KKT conditions]].
+
+We try to find those <math>(x_\mu, \lambda_\mu)</math> for which the gradient of the barrier function is zero.
+
+Substituting <math>1/c_i(x) = \lambda_i / \mu</math> from (4) into (3), we get an equation for the gradient:
+<math display="block">\nabla B(x_\mu, \lambda_\mu) = \nabla f(x_\mu) - J(x_\mu)^T \lambda_\mu = 0, \quad (5)</math>
+where the matrix <math>J</math> is the [[Jacobian matrix and determinant|Jacobian]] of the constraints <math>c(x)</math>.
+
+The intuition behind (5) is that the gradient of <math>f(x)</math> should lie in the subspace spanned by the constraints' gradients. The "perturbed complementarity" with small <math>\mu</math> (4) can be understood as the condition that the solution should either lie near the boundary <math>c_i(x) = 0</math>, or that the projection of the gradient <math>\nabla f</math> on the constraint component <math>c_i(x)</math> normal should be almost zero.
+
+Let <math>(p_x, p_\lambda)</math> be the search direction for iteratively updating <math>(x, \lambda)</math>.
+Applying [[Newton method|Newton's method]] to (4) and (5), we get an equation for <math>(p_x, p_\lambda)</math>:
+<math display="block">\begin{pmatrix}
+ H(x, \lambda) & -J(x)^T \\
+ \operatorname{diag}(\lambda) J(x) & \operatorname{diag}(c(x))
+\end{pmatrix}\begin{pmatrix}
+ p_x  \\
+ p_\lambda
+\end{pmatrix}=\begin{pmatrix}
+ -\nabla f(x) + J(x)^T \lambda  \\
+ \mu 1 - \operatorname{diag}(c(x)) \lambda
+\end{pmatrix},</math>
+
+where <math>H</math> is the [[Hessian matrix]] of <math>B(x, \mu)</math>, <math>\operatorname{diag}(\lambda)</math> is a [[diagonal matrix]] of <math>\lambda</math>, and <math>\operatorname{diag}(c(x))</math> is the diagonal matrix of <math>c(x)</math>.
+
+Because of (1), (4) the condition
+:<math>\lambda \ge 0</math>
+
+should be enforced at each step. This can be done by choosing appropriate <math>\alpha</math>:
+:<math>(x,\lambda) \to (x + \alpha p_x, \lambda + \alpha p_\lambda).</math>[[File:Interior_Point_Trajectory.webm|center|thumb|400x400px|Trajectory of the iterates of ''x'' by using the interior point method.]]
+
+== Types of convex programs solvable via interior-point methods ==
+Here are some special cases of convex programs that can be solved efficiently by interior-point methods.<ref name=":0" />{{Rp|location=Sec.10}}
+
+=== [[Linear program]]s ===
+Consider a linear program of the form: 
+<math display="block">\begin{aligned} 
+\operatorname{minimize}\quad & c^\top x \\ 
+\text{subject to}\quad 
+& Ax \leq b.
+\end{aligned}.</math>
+We can apply path-following methods with the barrier 
+<math display="block">b(x) := -\sum_{j=1}^m \ln(b_j - a_j^T x).</math>
+The function <math>b</math> is self-concordant with parameter ''M''=''m'' (the number of constraints). Therefore, the number of required Newton steps for the path-following method is O(''mn''<sup>2</sup>), and the total runtime complexity is O(''m''<sup>3/2</sup> ''n''<sup>2</sup>).{{Clarify|reason=This is the cost for an approximate solution - not an exact solution. The text does not elaborate on this.|date=November 2023}}
+
+===[[Quadratically constrained quadratic program]]s===
+Given a quadratically constrained quadratic program of the form: 
+<math display="block">\begin{aligned} 
+\operatorname{minimize}\quad & d^\top x \\ 
+\text{subject to}\quad 
+    & f_j(x) := x^\top A_j x + b_j^\top x + c_j \leq 0 \quad \text{ for all } j = 1, \dots, m,
+\end{aligned}</math>
+where all matrices ''A<sub>j</sub>'' are [[Positive semidefinite matrices|positive-semidefinite matrices]].
+We can apply path-following methods with the barrier 
+<math display="block">b(x) := -\sum_{j=1}^m \ln(-f_j(x)).</math> The function <math>b</math> is a self-concordant barrier with parameter ''M''=''m''. The Newton complexity is O(''(m+n)n''<sup>2</sup>), and the total runtime complexity is O(''m''<sup>1/2</sup> (m+n) ''n''<sup>2</sup>).
+
+===L<sub>p</sub> norm approximation===
+Consider a problem of the form 
+<math display="block">\begin{aligned} 
+\operatorname{minimize}\quad & \sum_j |v_j - u_j^\top x|_p
+\end{aligned},</math>
+where each <math>u_j</math> is a vector, each <math>v_j</math> is a scalar, and <math>|\cdot|_p</math> is an [[Lp norm|L<sub>p</sub> norm]] with <math>1< p < \infty.</math> After converting to the standard form, we can apply path-following methods with a self-concordant barrier with parameter ''M''=4''m''. The Newton complexity is O(''(m+n)n''<sup>2</sup>), and the total runtime complexity is O(''m''<sup>1/2</sup> (m+n) ''n''<sup>2</sup>).
+
+===[[Geometric program]]s===
+Consider the problem
+
+<math display="block">\begin{aligned} 
+\operatorname{minimize}\quad & f_0(x) := \sum_{i=1}^k c_{i0} \exp(a_i^\top x) \\ 
+\text{subject to}\quad 
+    & f_j(x) := \sum_{i=1}^k c_{ij} \exp(a_i^\top x) \leq d_j \quad \text{ for all } j = 1, \dots, m.
+\end{aligned}</math>
+
+There is a self-concordant barrier with parameter 2''k''+''m''. The path-following method has Newton complexity O(''mk''<sup>2</sup>+''k''<sup>3</sup>+''n''<sup>3</sup>) and total complexity O((''k+m'')<sup>1/2</sup>[''mk''<sup>2</sup>+''k''<sup>3</sup>+''n''<sup>3</sup>]).
+
+=== [[Semidefinite program]]s ===
+Interior point methods can be used to solve semidefinite programs.<ref name=":0" />{{Rp|location=Sec.11}}
+
+==See also==
+*[[Affine scaling]]
+*[[Augmented Lagrangian method]]
+*[[Chambolle-Pock algorithm]]
+*[[Karush–Kuhn–Tucker conditions]]
+*[[Penalty method]]
+
+==References==
+{{Reflist}}
+
+* {{cite book |last1=Bonnans |first1=J.&nbsp;Frédéric |last2=Gilbert |first2=J.&nbsp;Charles |last3=Lemaréchal |first3=Claude |authorlink3=Claude Lemaréchal |last4=Sagastizábal |first4=Claudia&nbsp;A. |author4-link=Claudia Sagastizábal |title=Numerical optimization: Theoretical and practical aspects |url=https://www.springer.com/mathematics/applications/book/978-3-540-35445-1 |edition=Second revised ed. of translation of 1997 <!-- ''Optimisation numérique: Aspects théoriques et pratiques'' --> French |series=Universitext |publisher=Springer-Verlag |location=Berlin |year=2006 |pages=xiv+490 |isbn=978-3-540-35445-1 |doi=10.1007/978-3-540-35447-5 |mr=2265882}}
+* {{cite book |title=Numerical Optimization |first=Jorge |last=Nocedal |author2=Stephen Wright |year=1999 |publisher=Springer |location=New York, NY |isbn=978-0-387-98793-4}}
+*{{Cite book | last1=Press | first1=WH | last2=Teukolsky | first2=SA | last3=Vetterling | first3=WT | last4=Flannery | first4=BP | year=2007 | title=Numerical Recipes: The Art of Scientific Computing | edition=3rd | publisher=Cambridge University Press | location=New York | isbn=978-0-521-88068-8 | chapter=Section 10.11. Linear Programming: Interior-Point Methods | chapter-url=http://apps.nrbook.com/empanel/index.html#pg=537 | access-date=12 August 2011 | archive-date=11 August 2011 | archive-url=https://web.archive.org/web/20110811154417/http://apps.nrbook.com/empanel/index.html#pg=537 | url-status=dead }}
+
+{{Optimization algorithms|convex}}
+
+[[Category:Optimization algorithms and methods]]

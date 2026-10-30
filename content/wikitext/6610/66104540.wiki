@@ -1,0 +1,147 @@
+<!-- wikipedia: en
+     page: 66104540
+     title: ITP method
+     revision: 1309083765
+     timestamp: 2025-09-02T02:02:11Z
+     history: https://en.wikipedia.org/w/index.php?curid=66104540&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1309083765 -->
+{{Short description|Root-finding algorithm}}
+
+{{Multiple issues|
+{{Primary sources|date=November 2024}}
+{{more citations needed|date=January 2021}}
+{{Notability|date=May 2024}}
+}}
+In [[numerical analysis]], the '''ITP method''' (''Interpolate Truncate and Project method'') is the first [[Root-finding algorithms|root-finding algorithm]] that achieves the [[superlinear convergence]] of the [[secant method]]<ref>{{Cite book|last1=Argyros|first1=I. K.|last2=Hernández-Verón|first2=M. A.|last3=Rubio|first3=M. J.|chapter=On the Convergence of Secant-Like Methods|date=2019|title=Current Trends in Mathematical Analysis and Its Interdisciplinary Applications|language=en|pages=141–183|doi=10.1007/978-3-030-15242-0_5|isbn=978-3-030-15241-3|s2cid=202156085}}</ref> while retaining the optimal<ref>{{Cite journal|last=Sikorski|first=K.|date=1982-02-01|title=Bisection is optimal|url=https://doi.org/10.1007/BF01459080|journal=Numerische Mathematik|language=en|volume=40|issue=1|pages=111–117|doi=10.1007/BF01459080|s2cid=119952605|issn=0945-3245|url-access=subscription}}</ref> [[Best, worst and average case|worst-case]] performance of the [[bisection method]].<ref name=":0">{{Cite journal|last1=Oliveira|first1=I. F. D.|last2=Takahashi|first2=R. H. C.|date=2020-12-06|title=An Enhancement of the Bisection Method Average Performance Preserving Minmax Optimality|url=https://doi.org/10.1145/3423597|journal=ACM Transactions on Mathematical Software|volume=47|issue=1|pages=5:1–5:24|doi=10.1145/3423597|s2cid=230586635 |issn=0098-3500|url-access=subscription}}</ref> It is also the first method with guaranteed average performance strictly better than the bisection method under any continuous distribution.<ref name=":0" /> In practice it performs better than traditional interpolation and hybrid based strategies ([[Brent's method|Brent's Method]], [[Ridders' method|Ridders]], [[Regula falsi|Illinois]]), since it not only converges super-linearly over well behaved functions but also guarantees fast performance under ill-behaved functions where interpolations fail.<ref name=":0" />
+
+The ITP method follows the same structure of standard bracketing strategies that keeps track of [[upper and lower bounds]] for the location of the root; but it also keeps track of the region where worst-case performance is kept upper-bounded.  As a bracketing strategy, in each iteration the ITP queries the value of the function on one point and discards the part of the interval between two points where the function value shares the same sign. The queried point is calculated with three steps: it interpolates finding the [[regula falsi]] estimate, then it perturbs/truncates the estimate (similar to  {{section link|Regula falsi|Improvements in ''regula falsi''}}) and then projects the perturbed estimate onto an interval in the neighbourhood of the bisection midpoint. The neighbourhood around the bisection point is calculated in each iteration in order to guarantee minmax optimality (Theorem 2.1 of <ref name=":0" />). The method depends on three hyper-parameters <math>\kappa_1\in (0,\infty), \kappa_2 \in \left[1,1+\phi\right) </math> and <math>n_0\in[0,\infty) </math> where <math>\phi </math> is the golden ratio <math>\tfrac{1}{2}(1+\sqrt{5}) </math>: the first two control the size of the truncation and the third is a [[slack variable]] that controls the size of the interval for the projection step.{{efn|1=For a more in-depth discussion of the hyper-parameters, see the documentation for [https://docs.rs/kurbo/0.8.1/kurbo/common/fn.solve_itp.html ITP in the kurbo library].}}
+
+== Root finding problem ==
+
+Given a continuous function <math>f</math> defined from <math>[a,b]</math> to <math>\mathbb{R}</math>  such that <math>f(a)f(b)\leq 0</math>, where at the cost of one query one can access the values of <math>f(x)</math> on any given <math>x</math>. And, given a pre-specified target precision <math>\epsilon>0</math>, a root-finding algorithm is designed to solve the following problem with the least amount of queries as possible:<blockquote>
+
+'''Problem Definition:''' Find <math>\hat{x}</math> such that  <math>|\hat{x}-x^*|\leq \epsilon</math>, where <math>x^*</math> satisfies <math>f(x^*) = 0</math>.</blockquote>
+
+This problem is very common in [[numerical analysis]], [[computer science]] and [[engineering]]; and, root-finding algorithms are the standard approach to solve it. Often, the root-finding procedure is called by more complex parent algorithms within a larger context, and, for this reason solving root problems efficiently is of extreme importance since an inefficient approach might come at a high computational cost when the larger context is taken into account. This is what the ITP method attempts to do by simultaneously exploiting interpolation guarantees as well as minmax optimal guarantees of the bisection method that terminates in at most  <math>n_{1/2}\equiv\lceil\log_2((b_0-a_0)/2\epsilon)\rceil </math> iterations when initiated on an interval <math>[a_0,b_0] </math>.
+
+== The method ==
+
+Given <math>\kappa_1\in (0,\infty), \kappa_2 \in \left[1,1+\phi\right) </math>, <math>n_{1/2} \equiv \lceil\log_2((b_0-a_0)/2\epsilon)\rceil </math>  and <math>n_0\in[0,\infty) </math>  where <math>\phi </math> is the golden ratio <math>\tfrac{1}{2}(1+\sqrt{5}) </math>, in each iteration <math>j = 0,1,2\dots </math>  the ITP method calculates the point <math>x_{\text{ITP}} </math> following three steps:
+[[File:ITPstep1.png|thumb|Step 1 of the ITP method.]]
+[[File:ITPstep2.png|thumb|Step 2 of the ITP method.]]
+[[File:ITPstep3.png|thumb|Step 3 of the ITP method.]]
+[[File:ITPall steps.png|thumb|All three steps combined form the ITP method. The thick blue line represents the "projected-truncated-interpolation" of the method.]]
+# [Interpolation Step]  Calculate the bisection and the regula falsi points:   <math>x_{1/2} \equiv \frac{a+b}{2} </math>   and   <math>x_f \equiv \frac{bf(a)-af(b)}{f(a)-f(b)} </math> ;
+# [Truncation Step] Perturb the estimator towards the center:  <math>x_t \equiv x_f+\sigma \delta </math>  where  <math>\sigma \equiv \text{sign}(x_{1/2}-x_f) </math> and <math>\delta \equiv \min\{\kappa_1|b-a|^{\kappa_2},|x_{1/2}-x_f|\} </math> ;
+# [Projection Step] Project the estimator to minmax interval: <math>x_{\text{ITP}} \equiv x_{1/2} -\sigma \rho_k  </math> where <math>\rho_k \equiv \min\left\{\epsilon 2^{n_{1/2}+n_0-j} - \frac{b-a}{2},|x_t-x_{1/2}|\right\} </math>.
+The value of the function <math>f(x_{\text{ITP}}) </math> on this point is queried, and the interval is then reduced to bracket the root by keeping the sub-interval with function values of opposite sign on each end.
+
+=== The algorithm ===
+The following algorithm (written in [[pseudocode]]) assumes the initial values of <math>y_a </math> and <math>y_b </math> are given and satisfy <math>y_a<0 <y_b </math> where <math>y_a\equiv f(a) </math> and <math>y_b\equiv f(b) </math>; and, it returns an estimate <math>\hat{x} </math> that satisfies <math>|\hat{x} - x^*|\leq \epsilon </math> in at most <math>n_{1/2}+n_0 </math> function evaluations.
+ '''Input: <math>a, b, \epsilon, \kappa_1, \kappa_2, n_0, f </math>''' 
+     '''Preprocessing:''' '''<math>n_{1/2} = \lceil \log_2\tfrac{b-a}{2\epsilon}\rceil </math>''', '''<math>n_{\max} = n_{1/2}+n_0 </math>''', and  '''<math>j = 0 </math>''';
+     '''While ( <math>b-a>2\epsilon </math>''' ''')'''
+   
+         '''Calculating Parameters:'''
+             '''<math>x_{1/2} = \tfrac{a+b}{2} </math>''', '''<math>r = \epsilon 2^{n_{\max} - j}-(b-a)/2 </math>''', '''<math>\delta = \kappa_1(b-a)^{\kappa_2} </math>''';
+         '''Interpolation:'''
+             '''<math>x_f = \tfrac{y_ba-y_a b}{y_b-y_a} </math>''';
+         '''Truncation:'''
+             '''<math>\sigma = \text{sign}(x_{1/2}-x_f) </math>''';
+             If '''<math>\delta\leq|x_{1/2}-x_f| </math>''' then '''<math>x_t = x_f+\sigma \delta </math>''',
+             Else '''<math>x_t = x_{1/2} </math>''';
+         '''Projection:'''
+             If '''<math>|x_t-x_{1/2}|\leq r </math>''' then '''<math>x_{\text{ITP}} = x_t </math>''',
+             Else '''<math>x_{\text{ITP}} = x_{1/2}-\sigma r </math>''';
+         '''Updating Interval:'''
+             '''<math>y_{\text{ITP}} = f(x_{\text{ITP}}) </math>''';
+             If '''<math>y_{\text{ITP}}>0 </math>''' then '''<math>b = x_{ITP} </math>''' and '''<math>y_b = y_{\text{ITP}} </math>''',
+             Elseif '''<math>y_{\text{ITP}}<0 </math>''' then '''<math>a = x_{\text{ITP}} </math>''' and '''<math>y_a = y_{\text{ITP}} </math>''',
+             Else '''<math>a = x_{\text{ITP}} </math>''' and '''<math>b = x_{\text{ITP}} </math>''';
+             '''<math>j = j+1 </math>''';
+ '''Output: <math>\hat{x} = \tfrac{a+b}{2} </math>'''
+
+== Example: Finding the root of a polynomial ==
+Suppose that the ITP method is used to find a root of the polynomial <math> f(x) = x^3 - x - 2 \,.</math> Using <math> \epsilon = 0.0005, \kappa_1 = 0.1, \kappa_2 = 2</math> and <math> n_0 = 1</math> we find that:
+{| class="wikitable"
+!Iteration
+!<math>a_n</math>
+!<math>b_n</math>
+!<math>c_n</math>
+!<math>f(c_n)</math>
+|- style="text-align: left;"
+| style="text-align: right;" |1
+|1
+|2
+|1.43333333333333
+|<nowiki>-0.488629629629630</nowiki>
+|- style="text-align: left;"
+| style="text-align: right;" |2
+|1.43333333333333
+|2
+|1.52713145056966
+| style="text-align: right;" |0.0343383329048983
+|- style="text-align: left;"
+| style="text-align: right;" |3
+|1.43333333333333
+|1.52713145056966
+|1.52009281150978
+| style="text-align: right;" |-0.00764147709265051
+|- style="text-align: left;"
+| style="text-align: right;" |4
+|1.52009281150978
+|1.52713145056966
+|1.52137899116052
+| style="text-align: right;" |-4.25363464540141e-06
+|- style="text-align: left;"
+| style="text-align: right;" |5
+|1.52137899116052
+|1.52713145056966
+|1.52138301273268
+| style="text-align: right;" |1.96497878177659e-05
+|- style="text-align: left;"
+| style="text-align: right;" |6
+|1.52137899116052
+|1.52138301273268
+| colspan="2" |&larr; Stopping Criteria Satisfied
+|}
+This example can be compared to {{section link|Bisection method|Example: Finding the root of a polynomial}}. The ITP method required less than half the number of iterations than the bisection to obtain a more precise estimate of the root with no cost on the minmax guarantees. Other methods might also attain a similar speed of convergence (such as Ridders, Brent etc.) but without the minmax guarantees given by the ITP method.
+
+== Analysis ==
+The main advantage of the ITP method is that it is guaranteed to require no more iterations than the bisection method when <math> n_0 = 0</math>. And so its average performance is guaranteed to be better than the bisection method even when interpolation fails. Furthermore, if interpolations do not fail (smooth functions), then it is guaranteed to enjoy the high order of convergence as interpolation based methods.
+
+=== Worst case performance ===
+Because the ITP method projects the estimator onto the minmax interval with a <math> n_0</math> slack, it will require at most <math> n_{1/2}+n_0</math> iterations (Theorem 2.1 of <ref name=":0" />). This is minmax optimal like the bisection method when <math> n_0</math> is chosen to be <math> n_0 = 0</math>.
+
+=== Average performance ===
+Because it does not take more than <math> n_{1/2}+n_0</math> iterations, the average number of iterations will always be less than that of the bisection method for any distribution considered when <math> n_0 = 0</math> (Corollary 2.2 of <ref name=":0" />).
+
+=== Asymptotic performance ===
+If the function <math> f(x)</math> is twice differentiable and the root <math> x^*</math> is simple, then the intervals produced by the ITP method converges to 0 with an order of convergence of <math> \sqrt{\kappa_2}</math> if <math> n_0 \neq 0</math> or if <math> n_0 = 0</math> and <math> (b-a)/\epsilon</math> is not a power of 2 with the term <math> \tfrac{\epsilon 2^{n_{1/2}}}{b-a}</math> not too close to zero (Theorem 2.3 of <ref name=":0" />).
+
+== Software ==
+
+* The itp<ref>{{Citation | last= Northrop | first= P. J. | title= itp: The Interpolate, Truncate, Project (ITP) Root-Finding Algorithm | year= 2023 | url= https://CRAN.R-project.org/package=itp}}</ref> contributed package in [[R (programming language)|R]]. 
+
+== See also ==
+
+* [[Bisection method]]
+* [[Ridders' method]]
+* [[Regula falsi]]
+* [[Brent's method]]
+
+== Notes ==
+{{notelist}}
+
+== References ==
+<!--- See http://en.wikipedia.org/wiki/Wikipedia:Footnotes on how to create references using<ref></ref> tags, these references will then appear here automatically -->
+{{Reflist}}
+
+== External links ==
+
+* [https://link.growkudos.com/1iwxps83474 An Improved Bisection Method], by [https://info.growkudos.com/ Kudos]
+
+{{root-finding algorithms}}
+
+[[Category:Root-finding algorithms]]

@@ -1,0 +1,258 @@
+<!-- wikipedia: en
+     page: 42170225
+     title: Revised simplex method
+     revision: 1331449587
+     timestamp: 2026-01-06T10:23:58Z
+     history: https://en.wikipedia.org/w/index.php?curid=42170225&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1331449587 -->
+{{Short description|Linear programming algorithm}}
+In [[mathematical optimization]], the '''revised simplex method''' is a variant of [[George Dantzig]]'s [[simplex method]] for [[linear programming]].
+
+The revised simplex method is mathematically equivalent to the standard simplex method but differs in implementation. Instead of maintaining a tableau which explicitly represents the constraints adjusted to a set of basic variables, it maintains a representation of a [[Basis (linear algebra)|basis]] of the [[Matrix (mathematics)|matrix]] representing the constraints. The matrix-oriented approach allows for greater computational efficiency by enabling sparse matrix operations.{{sfn|Morgan|1997|loc=§2}}
+
+==Problem formulation==
+For the rest of the discussion, it is assumed that a linear programming problem has been converted into the following standard form:
+:<math>
+\begin{array}{rl}
+\text{minimize} & \boldsymbol{c}^{\mathrm{T}} \boldsymbol{x} \\
+\text{subject to} & \boldsymbol{Ax} = \boldsymbol{b}, \boldsymbol{x} \ge \boldsymbol{0}
+\end{array}
+</math>
+where {{math|'''''A''''' ∈ ℝ<sup>''m''×''n''</sup>}}. Without loss of generality, it is assumed that the constraint matrix {{math|'''''A'''''}} has full row rank and that the problem is feasible, i.e., there is at least one {{math|'''''x''''' ≥ '''0'''}} such that {{math|'''''Ax''''' {{=}} '''''b'''''}}. If {{math|'''''A'''''}} is rank-deficient, either there are redundant constraints, or the problem is infeasible. Both situations can be handled by a presolve step.
+
+==Algorithmic description==
+===Optimality conditions===
+For linear programming, the [[Karush–Kuhn–Tucker conditions]] are both [[necessary and sufficient]] for optimality. The KKT conditions of a linear programming problem in the standard form is
+
+:<math>
+\begin{align}
+\boldsymbol{Ax} & = \boldsymbol{b}, \\
+\boldsymbol{A}^{\mathrm{T}} \boldsymbol{\lambda} + \boldsymbol{s} & = \boldsymbol{c}, \\
+\boldsymbol{x} & \ge \boldsymbol{0}, \\
+\boldsymbol{s} & \ge \boldsymbol{0}, \\
+\boldsymbol{s}^{\mathrm{T}} \boldsymbol{x} & = 0
+\end{align}
+</math>
+
+where {{math|'''''λ'''''}} and {{math|'''''s'''''}} are the [[Lagrange multiplier]]s associated with the constraints {{math|'''''Ax''''' {{=}} '''''b'''''}} and {{math|'''''x''''' ≥ '''0'''}}, respectively.{{sfn|Nocedal|Wright|2006|p=358|loc=Eq.&nbsp;13.4}} The last condition, which is equivalent to {{math|''s<sub>i</sub>x<sub>i</sub>'' {{=}} 0}} for all {{math|1 < ''i'' < ''n''}}, is called the ''complementary slackness condition''.
+
+By what is sometimes known as the ''fundamental theorem of linear programming'',  a vertex {{math|'''''x'''''}} of the feasible polytope can be identified by being a basis {{math|'''''B'''''}} of {{math|'''''A'''''}} chosen from the latter's columns.{{efn|The same theorem also states that the feasible polytope has at least one vertex and that there is at least one vertex which is optimal.{{sfn|Nocedal|Wright|2006|p=363|loc=Theorem&nbsp;13.2}}}} Since {{math|'''''A'''''}} has full rank, {{math|'''''B'''''}} is nonsingular. Without loss of generality, assume that {{math|'''''A''''' {{=}} ['''''B''''' '''''N''''']}}. Then {{math|'''''x'''''}} is given by
+
+:<math>
+\boldsymbol{x} =
+\begin{bmatrix}
+\boldsymbol{x_B} \\
+\boldsymbol{x_N}
+\end{bmatrix} =
+\begin{bmatrix}
+\boldsymbol{B}^{-1} \boldsymbol{b} \\
+\boldsymbol{0}
+\end{bmatrix}
+</math>
+
+where {{math|'''''x<sub>B</sub>''''' ≥ '''0'''}}. Partition {{math|'''''c'''''}} and {{math|'''''s'''''}} accordingly into
+
+:<math>
+\begin{align}
+\boldsymbol{c} & =
+\begin{bmatrix}
+\boldsymbol{c_B} \\
+\boldsymbol{c_N}
+\end{bmatrix}, \\
+\boldsymbol{s} & =
+\begin{bmatrix}
+\boldsymbol{s_B} \\
+\boldsymbol{s_N}
+\end{bmatrix}.
+\end{align}
+</math>
+
+To satisfy the complementary slackness condition, let {{math|'''''s<sub>B</sub>''''' {{=}} '''0'''}}. It follows that
+
+:<math>
+\begin{align}
+\boldsymbol{B}^{\mathrm{T}} \boldsymbol{\lambda} & = \boldsymbol{c_B}, \\
+\boldsymbol{N}^{\mathrm{T}} \boldsymbol{\lambda} + \boldsymbol{s_N} & = \boldsymbol{c_N},
+\end{align}
+</math>
+
+which implies that
+
+:<math>
+\begin{align}
+\boldsymbol{\lambda} & = (\boldsymbol{B}^{\mathrm{T}})^{-1} \boldsymbol{c_B}, \\
+\boldsymbol{s_N} & = \boldsymbol{c_N} - \boldsymbol{N}^{\mathrm{T}} \boldsymbol{\lambda}.
+\end{align}
+</math>
+
+If {{math|'''''s<sub>N</sub>''''' ≥ '''0'''}} at this point, the KKT conditions are satisfied, and thus {{math|'''''x'''''}} is optimal.
+
+===Pivot operation===
+If the KKT conditions are violated, a ''pivot operation'' consisting of introducing a column of {{math|'''''N'''''}} into the basis at the expense of an existing column in {{math|'''''B'''''}} is performed. In the absence of [[Degeneracy (mathematics)|degeneracy]], a pivot operation always results in a strict decrease in {{math|'''''c'''''<sup>T</sup>'''''x'''''}}. Therefore, if the problem is bounded, the revised simplex method must terminate at an optimal vertex after repeated pivot operations because there are only a finite number of vertices.{{sfn|Nocedal|Wright|2006|p=370|loc=Theorem&nbsp;13.4}}
+
+Select an index {{math|''m'' < ''q'' ≤ ''n''}} such that {{math|''s<sub>q</sub>'' < 0}} as the ''entering index''. The corresponding column of {{math|'''''A'''''}}, {{math|'''''A'''<sub>q</sub>''}}, will be moved into the basis, and {{math|''x<sub>q</sub>''}} will be allowed to increase from zero. It can be shown that
+
+:<math>\frac{\partial (\boldsymbol{c}^{\mathrm{T}} \boldsymbol{x})}{\partial x_q} = s_q,</math>
+
+i.e., every unit increase in {{math|''x<sub>q</sub>''}} results in a decrease by {{math|−''s<sub>q</sub>''}} in {{math|'''''c'''''<sup>T</sup>'''''x'''''}}.{{sfn|Nocedal|Wright|2006|p=369|loc=Eq.&nbsp;13.24}} Since
+
+:<math>\boldsymbol{B x_B} + \boldsymbol{A}_q x_q = \boldsymbol{b},</math>
+
+{{math|'''''x<sub>B</sub>'''''}} must be correspondingly decreased by {{math|Δ'''''x<sub>B</sub>''''' {{=}} '''''B'''''<sup>−1</sup>'''''A'''<sub>q</sub>x<sub>q</sub>''}} subject to {{math|'''''x<sub>B</sub>''''' − Δ'''''x<sub>B</sub>''''' ≥ '''0'''}}. Let {{math|'''''d''''' {{=}} '''''B'''''<sup>−1</sup>'''''A'''<sub>q</sub>''}}. If {{math|'''''d''''' ≤ '''0'''}}, no matter how much {{math|''x<sub>q</sub>''}} is increased, {{math|'''''x<sub>B</sub>''''' − Δ'''''x<sub>B</sub>'''''}} will stay nonnegative. Hence, {{math|'''''c'''''<sup>T</sup>'''''x'''''}} can be arbitrarily decreased, and thus the problem is unbounded. Otherwise, select an index {{math|''p'' {{=}} argmin<sub>1≤''i''≤''m''</sub> {{(}}''x<sub>i</sub>''/''d<sub>i</sub>'' {{!}} ''d<sub>i</sub>'' > 0{{)}}}} as the ''leaving index''. This choice effectively increases {{math|''x<sub>q</sub>''}} from zero until {{math|''x<sub>p</sub>''}} is reduced to zero while maintaining feasibility. The pivot operation concludes with replacing {{math|'''''A'''<sub>p</sub>''}} with {{math|'''''A'''<sub>q</sub>''}} in the basis.
+
+==Numerical example==
+{{seealso|Simplex method#Example}}
+Consider a linear program where
+
+:<math>
+\begin{align}
+\boldsymbol{c} & =
+\begin{bmatrix}
+-2 & -3 & -4 & 0 & 0
+\end{bmatrix}^{\mathrm{T}}, \\
+\boldsymbol{A} & =
+\begin{bmatrix}
+3 & 2 & 1 & 1 & 0 \\
+2 & 5 & 3 & 0 & 1
+\end{bmatrix}, \\
+\boldsymbol{b} & =
+\begin{bmatrix}
+10 \\
+15
+\end{bmatrix}.
+\end{align}
+</math>
+
+Let
+
+:<math>
+\begin{align}
+\boldsymbol{B} & =
+\begin{bmatrix}
+\boldsymbol{A}_4 & \boldsymbol{A}_5
+\end{bmatrix}, \\
+\boldsymbol{N} & =
+\begin{bmatrix}
+\boldsymbol{A}_1 & \boldsymbol{A}_2 & \boldsymbol{A}_3
+\end{bmatrix}
+\end{align}
+</math>
+
+initially, which corresponds to a feasible vertex {{math|'''''x''''' {{=}} [0 0 0 10 15]<sup>T</sup>}}. At this moment,
+
+:<math>
+\begin{align}
+\boldsymbol{\lambda} & =
+\begin{bmatrix}
+0 & 0
+\end{bmatrix}^{\mathrm{T}}, \\
+\boldsymbol{s_N} & =
+\begin{bmatrix}
+-2 & -3 & -4
+\end{bmatrix}^{\mathrm{T}}.
+\end{align}
+</math>
+
+Choose {{math|''q'' {{=}} 3}} as the entering index. Then {{math|'''''d''''' {{=}} [1 3]<sup>T</sup>}}, which means a unit increase in {{math|''x''<sub>3</sub>}} results in {{math|''x''<sub>4</sub>}} and {{math|''x''<sub>5</sub>}} being decreased by {{math|1}} and {{math|3}}, respectively. Therefore, {{math|''x''<sub>3</sub>}} is increased to {{math|5}}, at which point {{math|''x''<sub>5</sub>}} is reduced to zero, and {{math|''p'' {{=}} 5}} becomes the leaving index.
+
+After the pivot operation,
+
+:<math>
+\begin{align}
+\boldsymbol{B} & =
+\begin{bmatrix}
+\boldsymbol{A}_3 & \boldsymbol{A}_4
+\end{bmatrix}, \\
+\boldsymbol{N} & =
+\begin{bmatrix}
+\boldsymbol{A}_1 & \boldsymbol{A}_2 & \boldsymbol{A}_5
+\end{bmatrix}.
+\end{align}
+</math>
+
+Correspondingly,
+
+:<math>
+\begin{align}
+\boldsymbol{x} & =
+\begin{bmatrix}
+0 & 0 & 5 & 5 & 0
+\end{bmatrix}^{\mathrm{T}}, \\
+\boldsymbol{\lambda} & =
+\begin{bmatrix}
+0 & -4/3
+\end{bmatrix}^{\mathrm{T}}, \\
+\boldsymbol{s_N} & =
+\begin{bmatrix}
+2/3 & 11/3 & 4/3
+\end{bmatrix}^{\mathrm{T}}.
+\end{align}
+</math>
+
+A positive {{math|'''''s<sub>N</sub>'''''}} indicates that {{math|'''''x'''''}} is now optimal.
+
+==Practical issues==
+===Degeneracy===
+{{seealso|Simplex method#Degeneracy: stalling and cycling}}
+Because the revised simplex method is mathematically equivalent to the simplex method, it also suffers from degeneracy, where a pivot operation does not result in a decrease in {{math|'''''c'''''<sup>T</sup>'''''x'''''}}, and a chain of pivot operations causes the basis to cycle. A perturbation or lexicographic strategy can be used to prevent cycling and guarantee termination.{{sfn|Nocedal|Wright|2006|p=381|loc=§13.5}}
+
+===Basis representation===
+Two types of [[System of linear equations|linear systems]] involving {{math|'''''B'''''}} are present in the revised simplex method:
+
+:<math>
+\begin{align}
+\boldsymbol{B z} & = \boldsymbol{y}, \\
+\boldsymbol{B}^{\mathrm{T}} \boldsymbol{z} & = \boldsymbol{y}.
+\end{align}
+</math>
+
+Instead of refactorizing {{math|'''''B'''''}}, usually an [[LU factorization]] is directly updated after each pivot operation, for which purpose there exist several strategies such as the Forrest−Tomlin and Bartels−Golub methods. However, the amount of data representing the updates as well as numerical errors builds up over time and makes periodic refactorization necessary.{{sfn|Morgan|1997|loc=§2}}{{sfn|Nocedal|Wright|2006|p=372|loc=§13.4}}
+
+==Notes and references==
+===Notes ===
+{{notelist}}
+
+===References===
+{{reflist|2}}
+
+===Bibliography===
+{{refbegin}}
+* {{cite thesis
+|last=Morgan
+|first=S. S.
+|degree=MSc
+|title=A Comparison of Simplex Method Algorithms
+|publisher=[[University of Florida]]
+|year=1997
+|url=http://www.cise.ufl.edu/research/sparse/Morgan/index.htm
+|archive-url=https://web.archive.org/web/20110807134509/http://www.cise.ufl.edu/research/sparse/Morgan/index.htm
+|archive-date=7 August 2011
+}}
+* {{cite book
+|last1=Nocedal
+|first1=J.
+|last2=Wright
+|first2=S. J.
+|editor1-last=Mikosch
+|editor1-first=T. V.
+|editor2-last=Resnick
+|editor2-first=S. I.
+|editor3-last=Robinson
+|editor3-first=S. M.
+|title=Numerical Optimization
+|edition=2nd
+|year=2006
+|series=Springer Series in Operations Research and Financial Engineering
+|publisher=[[Springer Science+Business Media|Springer]]
+|location=New York, NY, USA
+|isbn=978-0-387-30303-1
+|url=https://www.springer.com/mathematics/book/978-0-387-30303-1
+}}
+{{refend}}
+
+{{Optimization algorithms|convex}}
+{{Mathematical programming}}
+
+[[Category:Exchange algorithms]]
+[[Category:Linear programming]]

@@ -1,0 +1,242 @@
+<!-- wikipedia: en
+     page: 2214847
+     title: Geometry processing
+     revision: 1365620838
+     timestamp: 2026-07-23T13:46:48Z
+     history: https://en.wikipedia.org/w/index.php?curid=2214847&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1365620838 -->
+{{Short description|Research topic in computational geometry}}
+[[File:Polygon_Mesh_Processing_Book_Cover.jpg|thumb|right| ''Polygon Mesh Processing'' by Mario Botsch et al. is a textbook on the topic of Geometry Processing.<ref name=PMP2010/>]]
+
+'''Geometry processing''' is an area of research that uses concepts from [[applied mathematics]], [[computer science]] and [[engineering]] to design efficient [[algorithm]]s for the acquisition, [[3D reconstruction|reconstruction]], [[analysis]], manipulation, simulation and transmission of complex 3D models.  As the name implies, many of the concepts, data structures, and algorithms are directly analogous to [[signal processing]] and [[image processing]]. For example, where [[image smoothing]] might convolve an intensity signal with a blur kernel formed using the [[Laplace operator]], [[Laplacian smoothing|geometric smoothing]] might be achieved by convolving a [[Surface (mathematics)|surface]] geometry with a blur kernel formed using the [[Laplace-Beltrami operator]].
+
+Applications of geometry processing algorithms already cover a wide range of areas from [[multimedia]], [[entertainment]] and classical [[computer-aided design]], to biomedical computing, [[reverse engineering]], and [[scientific computing]].<ref name=PMP2010>
+{{cite book |last1=Botsch |first1=Mario|last2= Kobbelt |first2=Leif |last3= Pauly |first3=Mark |last4= Alliez |first4=Pierre |date=2010 |title=Polygon Mesh Processing |publisher=[[CRC Press]] |isbn=9781568814261 }}</ref>
+
+Geometry processing is a common research topic at [[SIGGRAPH]], the premier [[computer graphics]] academic conference, and the main topic of the annual [[Symposium on Geometry Processing]].
+
+== Geometry processing as a life cycle ==
+[[File:Cactus Gaussian Curvature.png|thumb|A mesh of a cactus showing the Gaussian Curvature at each vertex, using the angle defect method]]
+
+Geometry processing involves working with a [[shape]], usually in 2D or 3D, although the shape can live in a space of arbitrary dimensions. The processing of a shape involves three stages, which is known as its life cycle. At its "birth," a shape can be instantiated through one of three methods: a [[3D modeling|model]], a [[Function (mathematics)|mathematical representation]], or a [[3D scanner|scan]]. After a shape is born, it can be analyzed and edited repeatedly in a cycle. This usually involves acquiring different measurements, such as the distances between the points of the shape, the smoothness of the shape, or its [[Euler characteristic]]. Editing may involve denoising, deforming, or performing [[rigid transformation]]s. At the final stage of the shape's "life," it is consumed. This can mean it is consumed by a viewer as a rendered asset in a game or movie, for instance. The end of a shape's life can also be defined by a decision about the shape, like whether or not it satisfies some criteria. Or it can even be [[Digital modeling and fabrication|fabricated]] in the real world, through a method such as 3D printing or laser cutting.
+
+== Discrete Representation of a Shape ==
+Like any other shape, the shapes used in geometry processing have properties pertaining to their [[geometry]] and [[topology]]. The geometry of a shape concerns the position of the shape's [[Euclidean space|points in space]], [[tangent]]s, [[Normal (geometry)|normals]], and [[curvature]]. It also includes the dimension in which the shape lives (ex. <math>R^2</math> or <math>R^3</math>). The [[topology]] of a shape is a collection of properties that do not change even after smooth transformations have been applied to the shape. It concerns dimensions such as the number of [[Holes (topology)|holes]] and [[Boundary (topology)|boundaries]], as well as the [[orientability]] of the shape. One example of a non-orientable shape is the [[Möbius strip|Mobius strip]].
+
+In computers, everything must be discretized. Shapes in geometry processing are usually represented as [[triangle mesh]]es, which can be seen as a [[graph (discrete mathematics)|graph]]. Each node in the graph is a vertex (usually in <math>R^3</math>), which has a position. This encodes the geometry of the shape. Directed edges connect these vertices into triangles, which by the right hand rule, then have a direction called the normal. Each triangle forms a face of the mesh. These are combinatoric in nature and encode the topology of the shape. In addition to triangles, a more general class of [[polygon mesh]]es can also be used to represent a shape. More advanced representations like [[progressive meshes]] encode a coarse representation along with a sequence of transformations, which produce a fine or high resolution representation of the shape once applied. These meshes are useful in a variety of applications, including geomorphs, progressive transmission, mesh compression, and selective refinement.<ref>{{cite web|url=http://hhoppe.com/pm.pdf|title=Progressive Meshes|author=Hugues Hoppe}}</ref>
+[[File:Mesh bunny.png|left|thumb|274x274px|A mesh of the famous Stanford bunny. Shapes are usually represented as a mesh, a collection of polygons that delineate the contours of the shape.]]
+
+=== Properties of a shape ===
+==== Euler Characteristic ====
+One particularly important property of a 3D shape is its [[Euler characteristic]], which can alternatively be defined in terms of its [[Genus (mathematics)|genus]]. The formula for this in the continuous sense is <math>\chi= 2c - 2h - b</math>, where <math>c</math> is the number of connected components, <math>h</math> is number of holes (as in donut holes, see [[torus]]), and <math>b</math> is the number of connected components of the boundary of the surface. A concrete example of this is a mesh of a [[Pair of pants (mathematics)|pair of pants]]. There is one connected component, 0 holes, and 3 connected components of the boundary (the waist and two leg holes). So in this case, the Euler characteristic is -1. To bring this into the discrete world, the Euler characteristic of a mesh is computed in terms of its vertices, edges, and faces. <math>\chi = |V| - |E| + |F|</math>.
+
+[[File:Pants mesh.png|thumb|This image shows a mesh of a pair of pants, with Euler characteristic -1. This is explained by the equation to compute the characteristic: 2c - 2h - b. The mesh has 1 connected component, 0 topological holes, and 3 boundaries (the waist hole and each leg hole): 2 - 0 - 3 = -1.]]
+
+== Surface reconstruction ==
+=== Poisson reconstruction from surface points to mesh ===
+[[File:Mesh reconstruction.gif|thumb|339x339px|A triangle mesh is constructed out of a [[point cloud]]. Sometimes shapes are initialized only as "point clouds," a collection of sampled points from the shape's surface. Often, these point clouds need to be converted to meshes.|left]]
+Depending on how a shape is initialized or "birthed," the shape might exist only as a nebula of sampled points that represent its surface in space. To transform the surface points into a mesh, the Poisson reconstruction<ref name=":0">{{Cite web|url=http://hhoppe.com/proj/poissonrecon/|title=Poisson surface reconstruction|website=hhoppe.com|language=en-us|access-date=2017-01-26}}</ref> strategy can be employed. This method states that the [[indicator function]], a function that determines which points in space belong to the surface of the shape, can actually be computed from the sampled points. The key concept is that gradient of the indicator function is ''0'' everywhere, except at the sampled points, where it is equal to the inward surface normal. More formally, suppose the collection of sampled points from the surface is denoted by <math>S</math>, each point in the space by <math>p_i</math>, and the corresponding normal at that point by <math>n_i</math>. Then the gradient of the indicator function is defined as:
+
+<math>\triangledown g = \begin{cases} \textbf{n}_i, & \forall p_i \in S \\ 0, & \text{otherwise}\end{cases}</math>
+
+The task of reconstruction then becomes a [[Calculus of variations|variational]] problem. To find the indicator function of the surface, we must find a function <math>\chi</math> such that <math>\lVert \triangledown \chi - \textbf{V} \rVert</math> is minimized, where <math>\textbf{V}</math> is the [[vector field]] defined by the samples. As a variational problem, one can view the minimizer <math>\chi </math>as a solution of [[Poisson's equation]].<ref name=":0" /> After obtaining a good approximation for <math>\chi </math> and a value <math>\sigma</math>  for which the points <math>(x,y,z)</math> with <math>\chi(x,y,z)= \sigma</math> lie on the surface to be reconstructed, the [[marching cubes]] algorithm can be used to construct a [[triangle mesh]] from the function  <math>\chi </math> , which can then be applied in subsequent computer graphics applications.
+
+== Registration ==
+{{multiple image
+| align             = right
+| direction         = vertical
+| width             = 
+| image1            = Point-to-point-registration.gif
+| alt1              = Point to point registration
+| caption1          = An animation depicting registration of a partial mesh onto a complete mesh, with piecewise constant approximation of the projection function
+| image2            = Point-to-Plane Registration.gif
+| alt2              = Point to plane registration
+| caption2          = An animation depicting the same registration procedure as above, but with piecewise linear approximation of the projection function. Note that it converges much faster.
+}}
+
+One common problem encountered in geometry processing is how to merge multiple views of a single object captured from different angles or positions. This problem is known as [[Point set registration|registration]]. In registration, we wish to find an optimal [[rigid transformation]] that will align surface <math>X</math> with surface <math>Y</math>. More formally, if <math>P_Y(x)</math> is the projection of a point ''x'' from surface <math>X</math> onto surface <math>Y</math>, we want to find the optimal rotation matrix <math>R</math> and translation vector <math>t</math> that minimize the following objective function:
+
+<math>\int_{x \in X}||Rx + t - P_Y(x)||^2 dx</math>
+
+While rotations are non-linear in general, small rotations can be linearized as skew-symmetric matrices. Moreover, the distance function <math>x - P_Y(x)</math> is non-linear, but is amenable to linear approximations if the change in <math>X</math> is small. An iterative solution such as [[Iterative closest point|Iterative Closest Point (ICP)]] is therefore employed to solve for small transformations iteratively, instead of solving for the potentially large transformation in one go. In ICP, ''n'' random sample points from <math>X</math> are chosen and projected onto <math>Y</math>. In order to sample points uniformly at random across the surface of the triangle mesh, the random sampling is broken into two stages: uniformly sampling points within a triangle; and non-uniformly sampling triangles, such that each triangle's associated probability is proportional to its surface area.<ref>{{cite web|url=http://www.pcl-users.org/file/n4037867/Rusinkiewicz_Effcient_Variants_of_ICP.pdf|title=Efficient Variants of the ICP Algorithm|author=Szymon Rusinkiewicz, Marc Levoy}}</ref> Thereafter, the optimal transformation is calculated based on the difference between each <math>x</math> and its projection. In the following iteration, the projections are calculated based on the result of applying the previous transformation on the samples. The process is repeated until convergence.
+
+== Smoothing ==
+When shapes are defined or scanned, there may be accompanying noise, either to a signal acting upon the surface or to the actual surface geometry. Reducing noise on the former is known as [[Noise reduction|data denoising]], while noise reduction on the latter is known as [[surface fairing]]. The task of geometric smoothing is analogous to signal noise reduction, and consequently employs similar approaches.
+
+The pertinent Lagrangian to be minimized is derived by recording the conformity to the initial signal <math>\bar f</math> and the smoothness of the resulting signal, which approximated by the magnitude of the gradient with a weight <math>\lambda</math>:
+
+<math>\mathcal{L}(f) = \int_{\Omega}\|f - \bar f\|^2 + \lambda \|\nabla f\|^2 dx</math>.
+
+Taking a variation <math>\delta f</math> on <math>\mathcal{L}</math> emits the necessary condition
+
+<math>0 = \delta\mathcal{L}(f) = \int_{\Omega}\delta f(\mathbf{I} + \lambda \nabla^2) f - \delta f \bar f dx</math>.
+
+By discretizing this onto piecewise-constant elements with our signal on the vertices we obtain
+
+<math>
+\begin{align}
+\sum_{i} M_i \delta f_i \bar f_i &=  \sum_i M_i\delta f_i \sum_j (\mathbf{I} + \lambda \nabla^2) f_j =  \sum_i \delta f_i \sum_j (M + \lambda M\nabla^2) f_j,
+\end{align}
+</math>[[File:Noisy sphere.gif|thumb|A noisy sphere being iteratively smoothed|273x273px|left]]where our choice of <math>\nabla^2</math> is chosen to be <math>M^{-1}\mathbf{L}</math> for the cotangent Laplacian <math>\mathbf{L}</math> and the <math>M^{-1}</math> term is to map the image of the Laplacian from areas to points. Because the variation is free, this results in a self-adjoint linear problem to solve with a parameter <math>\lambda</math>: <math>
+\bar f =(M + \lambda \mathbf{L}) f.
+</math> When working with triangle meshes one way to determine the values of the [[Laplacian matrix]] <math>L</math> is through analyzing the geometry of connected triangles on the mesh.
+
+<math>
+L_{ij} =  
+\begin{cases} 
+      \frac{1}{2}(\cot(\alpha_{ij}) + \cot(\beta_{ij})) & \text{edge ij exists} \\
+      -\sum\limits_{i \neq j}L_{ij} & i = j  \\
+      0 & \text{otherwise}
+     
+\end{cases}
+</math>
+
+Where <math>\alpha_{ij}</math> and <math>\beta_{ij}</math> are the angles opposite the edge <math>(i,j)</math><ref>{{Cite web|url=http://www.ctralie.com/Teaching/LapMesh/|title=Chris Tralie : Laplacian Meshes|website=www.ctralie.com|access-date=2017-03-16}}</ref>
+The [[mass matrix]] M as an operator computes the local integral of a function's value and is often set for a mesh with m triangles as follows:
+
+<math>
+M_{ij} =  
+\begin{cases} 
+      \frac{1}{3}\sum\limits_{t=1}^m\begin{cases}
+Area(t) & \text{if triangle t contains vertex i} \\
+0 & \text{otherwise} \end{cases} & \text{if i=j} \\
+      0 & \text{otherwise} 
+\end{cases}
+</math>
+
+== Parameterization ==
+Occasionally, we need to flatten a 3D surface onto a flat plane. This process is known as [[Mesh parameterization|parameterization]]. The goal is to find coordinates ''u'' and ''v'' onto which we can map the surface so that distortions are minimized. In this manner, parameterization can be seen as an optimization problem. One of the major applications of mesh parameterization is [[texture mapping]].
+
+=== Mass springs method ===
+[[File:Tutte Embedding on Beetle.gif|thumb|378x378px|The Tutte Embedding shows non-smooth parameterizations on the side of the beetle.]]
+One way to measure the distortion accrued in the mapping process is to measure how much the length of the edges on the 2D mapping differs from their lengths in the original 3D surface. In more formal terms, the objective function can be written as:
+
+<math>\underset{U}{\text{min}} \sum_{ij \in E} ||u_i - u_j||^2</math>
+
+Where <math>E</math> is the set of mesh edges and <math>U</math> is the set of vertices. However, optimizing this objective function would result in a solution that maps all of the vertices to a single vertex in the ''uv''-coordinates. Borrowing an idea from graph theory, we apply the [[Tutte embedding|Tutte Mapping]] and restrict the boundary vertices of the mesh onto a [[unit circle]] or other [[convex polygon]]. Doing so prevents the vertices from collapsing into a single vertex when the mapping is applied. The non-boundary vertices are then positioned at the [[Barycentric coordinate system|barycentric interpolation]] of their neighbours. The Tutte Mapping, however, still suffers from severe distortions as it attempts to make the edge lengths equal, and hence does not correctly account for the triangle sizes on the actual surface mesh.
+
+=== Least-squares conformal mappings ===
+[[File:Tutte Vs LSCM .gif|left|thumb|394x394px|A comparison of the Tutte Embedding and Least-Squares-Conformal-Mapping parameterization. Notice how the LSCM parameterization is smooth on the side of the beetle.]]
+Another way to measure the distortion is to consider the [[Differential calculus|variations]] on the ''u'' and ''v'' coordinate functions. The wobbliness and distortion apparent in the mass springs methods are due to high variations in the ''u'' and ''v'' coordinate functions. With this approach, the objective function becomes the [[Dirichlet's energy|Dirichlet energy]] on ''u'' and ''v:''
+
+<math>\underset{u,v}{\text{min}} \int_S ||\nabla u||^2 + ||\nabla v||^2 dA</math>
+
+There are a few other things to consider. We would like to minimize the angle distortion to [[Conformal map|preserve orthogonality]]. That means we would like <math>\nabla u = \nabla v^{\perp}</math>. In addition, we would also like the mapping to have proportionally similar sized regions as the original. This results to setting the Jacobian of the ''u'' and ''v'' coordinate functions to 1.
+
+<math>\begin{bmatrix}
+  \dfrac{\partial u}{\partial x} & \dfrac{\partial u}{\partial y}\\[1em]
+  \dfrac{\partial v}{\partial x} & \dfrac{\partial v}{\partial y} \end{bmatrix}
+= 1</math>
+
+Putting these requirements together, we can augment the Dirichlet energy so that our objective function becomes:<ref>{{Cite journal|last=Desbrun|first=Mathieu|year=2002|title=Intrinsic Parameterizations of Surface Meshes|url=http://www.geometry.caltech.edu/pubs/DMA02.pdf|journal=Eurographics|volume=21}}</ref><ref>{{Cite journal|last=Levy|first=Bruno|year=2002|title=Least squares conformal maps for automatic texture atlas generation|url=https://members.loria.fr/Bruno.Levy/papers/LSCM_SIGGRAPH_2002.pdf|journal=ACM Transactions on Graphics|volume=21|issue=3|pages=362–371|doi=10.1145/566654.566590|access-date=2017-03-14|archive-date=2017-03-15|archive-url=https://web.archive.org/web/20170315002156/https://members.loria.fr/Bruno.Levy/papers/LSCM_SIGGRAPH_2002.pdf|url-status=dead}}</ref>
+
+<math>\underset{u,v}{\text{min}} \int_S \frac{1}{2} ||\nabla u||^2 + \frac{1}{2} ||\nabla v||^2 - \nabla u \cdot \nabla v^{\perp} </math>
+
+To avoid the problem of having all the vertices mapped to a single point, we also require that the solution to the optimization problem must have a non-zero norm and that it is orthogonal to the trivial solution.
+
+== Deformation ==
+[[File:Asrigidaspossible-man.gif|thumb|394x394px|An example of as-rigid-as-possible deformation]]
+Deformation is concerned with transforming some rest shape to a new shape. Typically, these transformations are continuous and do not alter the topology of the shape. Modern mesh-based shape deformation methods satisfy user deformation constraints at handles (selected vertices or regions on the mesh) and propagate these handle deformations to the rest of shape smoothly and without removing or distorting details. Some common forms of interactive deformations are point-based, skeleton-based, and cage-based.<ref>{{Cite journal|last1=Jacobson|first1=Alec|last2=Baran|first2=Ilya|last3=Popović|first3=Jovan|author4-link=Olga Sorkine-Hornung|last4=Sorkine|first4=Olga|year=2011|title=Bounded Biharmonic Weights for Real-Time Deformation|url=https://igl.ethz.ch/projects/bbw/bounded-biharmonic-weights-siggraph-2011-jacobson-et-al.pdf|journal=ACM Transactions on Graphics|volume=30|issue=4|pages=1|doi=10.1145/2010324.1964973}}</ref> In point-based deformation, a user can apply transformations to small set of points, called handles, on the shape. Skeleton-based deformation defines a [[skeleton]] for the shape, which allows a user to move the bones and rotate the joints. Cage-based deformation requires a cage to be drawn around all or part of a shape so that, when the user manipulates points on the cage, the volume it encloses changes accordingly.
+
+=== Point-based deformation ===
+Handles provide a sparse set of constraints for the deformation: as the user moves one point, the others must stay in place.
+
+A rest surface <math>\hat{S}</math> [[Immersion (mathematics)|immersed]] in <math>\R^3</math> can be described with a mapping <math>\hat{x} : \Omega \rightarrow \R^3</math>, where <math>\Omega</math> is a 2D parametric domain. The same can be done with another mapping <math>x</math> for the transformed surface <math>S</math>. Ideally, the transformed shape adds as little distortion as possible to the original. One way to model this distortion is in terms of displacements <math>d = x - \hat{x}</math> with a Laplacian-based energy.<ref>{{Cite journal|last=Marc|first=Alexa|author-link=Marc Alexa|year=2003|title=Differential coordinates for local mesh morphing and deformation|journal=The Visual Computer|volume=19|issue=2|pages=105–114|doi=10.1007/s00371-002-0180-0|s2cid=6847571}}</ref> Applying the Laplace operator to these mappings allows us to measure how the position of a point changes relative to its neighborhood, which keeps the handles smooth. Thus, the energy we would like to minimize can be written as:
+
+<math>\min_{\textbf{d}} \int_{\Omega} || \Delta \textbf{d} ||^2 dA</math>.
+
+While this method is translation invariant, it is unable to account for rotations. The As-Rigid-As-Possible deformation scheme<ref>{{Cite journal|last1=Sorkine|first1=Olga|last2=Alexa|first2=Marc|year=2007|title=As-Rigid-As-Possible Surface Modeling|url=https://www.igl.ethz.ch/projects/ARAP/arap_web.pdf|journal=Proceedings of EUROGRAPHICS/ACM SIGGRAPH Symposium on Geometry Processing|pages=109–116|author1-link=Olga Sorkine-Hornung}}</ref> applies a rigid transformation <math>x_i = R\hat{x_i} + t</math> to each handle i, where <math>R \in SO(3) \subset \R^3</math> is a [[rotation matrix]] and <math>t \in \R^3</math> is a translation vector. Unfortunately, there's no way to know the rotations in advance, so instead we pick a “best” rotation that minimizes displacements. To achieve local rotation invariance, however, requires a function <math>\textbf{R} : \Omega \rightarrow SO(3)</math> which outputs the best rotation for every point on the surface. The resulting energy, then, must optimize over both <math>\textbf{x}</math> and <math>\textbf{R}</math>:
+
+<math>\min_{\textbf{x,R} \in SO(3)} \int_{\Omega} || \nabla \textbf{x} - \textbf{R} \nabla \hat{\textbf{x}} ||^2 dA</math>
+
+Note that the translation vector is not present in the final objective function because translations have constant gradient.
+
+== Inside-Outside Segmentation ==
+While seemingly trivial, in many cases, determining the inside from the outside of a triangle mesh is not an easy problem. In general, given a surface <math>S</math> we pose this problem as determining a function <math>isInside(q)</math> which will return <math>1</math> if the point <math>q</math> is inside <math>S</math>, and <math>0</math> otherwise.
+
+In the simplest case, the shape is closed. In this case, to determine if a point <math>q</math> is inside or outside the surface, we can cast a ray <math>r</math> in any direction from a query point, and count the number of times <math>count_r</math> it passes through the surface. If <math>q</math> was outside <math>S</math> then the ray must either not pass through <math>S</math> (in which case <math>count_r = 0</math>) or, each time it enters <math>S</math> it must pass through twice, because S is bounded, so any ray entering it must exit. So if <math>q</math> is outside, <math>count_r</math> is even. Likewise if <math>q</math> is inside, the same logic applies to the previous case, but the ray must intersect <math>S</math> one extra time for the first time it leaves <math>S</math>. So:
+
+<math>
+isInside_r(q) = \left\{
+        \begin{array}{ll}
+            1 & count_r \ is \ odd \\
+            0 & count_r \ is \ even\\
+        \end{array}
+    \right.
+</math>
+
+Now, oftentimes we cannot guarantee that the <math>S</math> is closed. Take the pair of pants example from the top of this article. This mesh clearly has a semantic inside-and-outside, despite there being holes at the waist and the legs.
+
+[[File:Point shooting.gif|thumb|Approximating inside-outside segmentation by shooting rays from a query point for varying number of rays]]
+
+The naive attempt to solve this problem is to shoot many rays in random directions, and classify <math>q</math> as being inside [[if and only if]] most of the rays intersected <math>S</math> an odd number of times. To quantify this, let us say we cast <math>k</math> rays, <math>r_1,r_2,\dots,r_k</math>. We associate a number <math>rayTest(q) = \frac{1}{k}\sum_{i=1}^{k} isInside_{r_i}(q)</math> which is the average value of <math>isInside_r</math> from each ray. Therefore:
+
+<math>
+isInside(q) = \left\{
+        \begin{array}{ll}
+            1 & rayTest(q) \geq 0.5 \\
+            0 & rayTest(q) < 0.5\\
+        \end{array}
+    \right.
+</math>
+
+In the limit of shooting many, many rays, this method handles open meshes, however it in order to become accurate, far too many rays are required for this method to be computationally ideal. Instead, a more robust approach is the Generalized Winding Number.<ref>{{Cite journal|last1=Jacobson|first1=Alec|last2=Ladislav|first2=Kavan|author3-link=Olga Sorkine-Hornung|last3=Sorkine-Hornung|first3=Olga|year=2013|title=Robust Inside-Outside Segmentation using Generalized Winding Numbers|url=http://igl.ethz.ch/projects/winding-number/robust-inside-outside-segmentation-using-generalized-winding-numbers-siggraph-2013-jacobson-et-al.pdf|journal=ACM Transactions on Graphics |volume=32|issue=4|pages=1|doi=10.1145/2461912.2461916|s2cid=207202533}}</ref> Inspired by the 2D [[winding number]], this approach uses the [[solid angle]] at <math>q</math> of each triangle in the mesh to determine if <math>q</math> is inside or outside. The value of the Generalized Winding Number at <math>q</math>, <math>wn(q)</math> is proportional to the sum of the solid angle contribution from each triangle in the mesh:
+
+<math>wn(q) = \frac{1}{4\pi}\sum_{t \in F} solidAngle(t)</math>
+
+For a closed mesh, <math>wn(q)</math> is equivalent to the characteristic function for the volume represented by <math>S</math>. Therefore, we say:
+
+<math>
+isInside(q) = \left\{
+        \begin{array}{ll}
+            1 & wn(q) \geq 0.5 \\
+            0 & wn(q) < 0.5 \\
+        \end{array}
+    \right.
+</math>
+
+Because <math>wn(q)</math> is a [[harmonic function]], it degrades gracefully, meaning the inside-outside segmentation would not change much if we poked holes in a closed mesh. For this reason, the Generalized Winding Number handles open meshes robustly. The boundary between inside and outside smoothly passes over holes in the mesh. In fact, in the limit, the Generalized Winding Number is equivalent to the ray-casting method as the number of rays goes to infinity.
+
+== Applications ==
+* [[Computer-aided design]] (CAD)
+* 3D [[#Surface reconstruction|Surface Reconstruction]], ''e.g.'' range scanners in airport security, autonomous vehicles, medical scanner data reconstruction
+* Image-to-world Registration, ''e.g.'' [[Image-guided surgery]]
+* [[Architecture]], ''e.g.'' creating, [[reverse engineering]]
+* Physics simulations
+* Computer games ''e.g.'' [[collision detection]]
+* [[Geologic modelling]]
+* [[Visualization (graphics)]] ''e.g.'' [[Information visualization]]s, [[mathematical visualization]]s
+* [[Texture mapping]]
+* [[Modelling biological systems]] ''e.g.'' muscle and bone modelling, real-time hand tracking
+
+== See also ==
+* [[Calculus of variations]]
+* [[Computer graphics]]
+** [[3D computer graphics]]
+** [[Graphics processing unit]] (GPU)
+* [[CGAL | CGAL, The Computational Geometry Algorithms Library]]
+* [[Computer-aided design]] (CAD)
+* [[Digital image]]
+** [[Digital image processing]]
+* [[Discrete differential geometry]]
+* [[Glossary of differential geometry and topology]]
+* [[Industrial CT scanning]]
+* [[List of interactive geometry software]]
+* [[MeshLab]]
+* [[MeshLib]]
+* [[Signal processing]]
+** [[Digital signal processing]]
+** [[Digital signal processor]] (DSP)
+* [[Topology]]
+
+==References==
+{{Reflist}}
+
+
+[[Category:Geometry processing| ]]
+[[Category:3D imaging]]
+[[Category:3D computer graphics]]
+[[Category:Geometry]]
+[[Category:Computational geometry]]
+[[Category:Differential geometry]]

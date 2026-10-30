@@ -1,0 +1,132 @@
+<!-- wikipedia: en
+     page: 1072943
+     title: Forward algorithm
+     revision: 1330453610
+     timestamp: 2025-12-31T14:14:58Z
+     history: https://en.wikipedia.org/w/index.php?curid=1072943&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1330453610 -->
+{{short description|Hidden Markov model algorithm}}
+{{Distinguish|Forward-backward algorithm}}
+
+The '''forward algorithm''', in the context of a [[hidden Markov model]] (HMM), is used to calculate a 'belief state': the probability of a state at a certain time, given the history of evidence.  The process is also known as ''filtering''. The forward algorithm is closely related to, but distinct from, the [[Viterbi algorithm]].
+
+==Introduction==
+The forward and backward algorithms should be placed within the context of probability as they appear to simply be names given to a set of standard mathematical procedures within a few fields. For example, neither "forward algorithm" nor "Viterbi" appear in the Cambridge [[Encyclopedia of Mathematics|encyclopedia of mathematics]]. The main observation to take away from these algorithms is how to organize Bayesian updates and inference to be computationally efficient in the context of directed graphs of variables (see [[Belief_propagation|sum-product networks]]).
+
+For an HMM such as this one:
+[[Image:hmm temporal bayesian net.svg|600px|center|Temporal evolution of a hidden Markov model]]
+this probability is written as <math>p(x_t | y_{1:t} )</math>. Here <math>x(t)</math> is the hidden state which is abbreviated as <math>x_t</math> and <math>y_{1:t}</math> are the observations <math>1</math> to <math>t</math>. 
+
+The backward algorithm complements the forward algorithm by taking into account the future history if one wanted to improve the estimate for past times. This is referred to as ''smoothing'' and the [[forward/backward algorithm]] computes <math>p(x_t | y_{1:T} )</math> for <math>1 < t < T</math>. Thus, the full forward/backward algorithm takes into account all evidence. Note that a belief state can be calculated at each time step, but doing this does not, in a strict sense, produce the most likely state ''sequence'', but rather the most likely state at each time step, given the previous history. In order to achieve the most likely sequence, the [[Viterbi algorithm]] is required. It computes the most likely state sequence given the history of observations, that is, the state sequence that maximizes <math>p(x_{0:t}|y_{0:t})</math>.
+
+==Algorithm==
+The goal of the forward algorithm is to compute the [[Joint probability distribution|joint probability]] <math>p(x_t,y_{1:t})</math>, where for notational convenience we have abbreviated <math>x(t)</math> as <math>x_t</math> and <math>(y(1), y(2), ..., y(t))</math> as <math>y_{1:t}</math>. Once the joint probability <math>p(x_t,y_{1:t})</math> is computed, the other probabilities <math>p(x_t|y_{1:t})</math> and <math>p(y_{1:t})</math> are easily obtained. 
+
+Both the state <math>x_t</math> and observation <math>y_t</math> are assumed to be discrete, finite random variables. The hidden Markov model's state transition probabilities <math>p(x_t|x_{t-1})</math>, observation/emission probabilities <math>p(y_t|x_t)</math>, and initial prior probability <math>p(x_0)</math> are assumed to be known. Furthermore, the sequence of observations <math>y_{1:t}</math> are assumed to be given. 
+
+Computing <math>p(x_t,y_{1:t})</math> naively would require [[Marginal distribution|marginalizing]] over all possible state sequences <math>\{x_{1:t-1}\}</math>, the number of which grows exponentially with <math>t</math>. Instead, the forward algorithm takes advantage of the [[conditional independence]] rules of the [[hidden Markov model]] (HMM) to perform the calculation recursively.
+
+To demonstrate the recursion, let
+
+::<math>\alpha(x_t) = p(x_t,y_{1:t}) = \sum_{x_{t-1}}p(x_t,x_{t-1},y_{1:t})</math>.
+
+Using the [[Chain rule (probability)|chain rule]] to expand <math>p(x_t,x_{t-1},y_{1:t})</math>, we can then write
+
+::<math>\alpha(x_t) = \sum_{x_{t-1}}p(y_t|x_t,x_{t-1},y_{1:t-1})p(x_t|x_{t-1},y_{1:t-1})p(x_{t-1},y_{1:t-1})</math>.
+
+Because <math>y_t</math> is conditionally independent of everything but <math>x_t</math>, and <math>x_t</math> is conditionally independent of everything but <math>x_{t-1}</math>, this simplifies to
+
+::<math>\alpha(x_t) = p(y_t|x_t)\sum_{x_{t-1}}p(x_t|x_{t-1})\alpha(x_{t-1})</math>.
+
+Thus, since <math>p(y_t|x_t)</math> and <math>p(x_t|x_{t-1})</math> are given by the model's [[Hidden Markov model#Structural_architecture|emission distributions]] and [[Hidden Markov model#Structural_architecture|transition probabilities]], which are assumed to be known, one can quickly calculate <math>\alpha(x_t)</math> from <math>\alpha(x_{t-1})</math> and avoid incurring exponential computation time. 
+
+The recursion formula given above can be written in a more compact form. Let <math>a_{ij}=p(x_t=i|x_{t-1}=j)</math> be the transition probabilities and <math>b_{ij}=p(y_t=i|x_t=j)</math> be the emission probabilities, then
+
+::<math>\mathbf{\alpha}_t = \mathbf{b}_t^T \odot \mathbf{A} \mathbf{\alpha}_{t-1}</math>
+
+where <math>\mathbf{A} = [a_{ij}]</math> is the transition probability matrix, <math>\mathbf{b}_t</math> is the i-th row of the emission probability matrix <math>\mathbf{B} = [b_{ij}]</math> which corresponds to the actual observation <math>y_t = i</math> at time <math>t</math>, and <math>\mathbf{\alpha}_t = [\alpha(x_t=1),\ldots, \alpha(x_t=n)]^T</math> is the alpha vector. The <math>\odot</math> is the [[Hadamard product (matrices)|hadamard product]] between the transpose of <math>\mathbf{b}_t</math> and <math>\mathbf{A} \mathbf{\alpha}_{t-1}</math>.
+
+The [[initial condition]] is set in accordance to the [[prior probability]] over <math>x_0</math> as 
+
+::<math>\alpha(x_0) = p(y_0|x_0)p(x_0)</math>.
+
+Once the joint probability <math>\alpha(x_t) = p(x_t,y_{1:t})</math> has been computed using the forward algorithm, we can easily obtain the related joint probability <math>p(y_{1:t})</math> as
+
+::<math>p(y_{1:t}) = \sum_{x_t} p(x_t, y_{1:t}) = \sum_{x_t} \alpha(x_t)</math> 
+
+and the required conditional probability <math>p(x_t|y_{1:t})</math> as
+
+::<math>p(x_t|y_{1:t}) = \frac{p(x_t,y_{1:t})}{p(y_{1:t})} = \frac{\alpha(x_t)}{\sum_{x_t} \alpha(x_t)}.</math>
+
+Once the [[conditional probability]] has been calculated, we can also find the point estimate of <math>x_t</math>. For instance, the MAP estimate of <math>x_t</math> is given by
+
+::<math>\widehat{x}_t^{MAP} = \arg \max_{x_t} \; p(x_t|y_{1:t}) = \arg \max_{x_t} \; \alpha(x_t),</math>
+
+while the MMSE estimate of <math>x_t</math> is given by 
+
+::<math>\widehat{x}_t^{MMSE} = \mathbb{E}[x_t|y_{1:t}] = \sum_{x_t} x_t p(x_t|y_{1:t}) = \frac{\sum_{x_t} x_t \alpha(x_t)}{\sum_{x_t} \alpha(x_t)}.</math>
+
+The forward algorithm is easily modified to account for observations from variants of the hidden Markov model as well, such as the [[Linear–quadratic_regulator#Finite-horizon,_discrete-time_LQR|Markov jump linear system]].
+
+==Pseudocode==
+{{framebox|blue|margin-left=35px|width=400px}}
+#Initialize 
+#:<math>t = 0</math>, 
+#:transition probabilities, <math>p(x_t|x_{t-1})</math>, 
+#:emission probabilities, <math>p(y_t|x_t) </math>, 
+#:observed sequence, <math>y_{1:T}</math> 
+#:prior probability, <math>\alpha(x_0)</math>
+#For <math>t = 1</math> to <math>T</math>
+#:<math>\alpha(x_t) = p(y_t|x_t)\sum_{x_{t-1}}p(x_t|x_{t-1})\alpha(x_{t-1})</math>.
+#Return <math>p(x_T|y_{1:T})= \frac{\alpha(x_T)}{\sum_{x_T} \alpha(x_T)}</math>
+{{frame-footer}}
+
+==Example==
+This example on observing possible states of weather from the observed condition of seaweed. We have observations of seaweed for three consecutive days as dry, damp, and soggy in order. The possible states of weather can be sunny, cloudy, or rainy. In total, there can be <math>3^3=27</math> such weather sequences. Exploring all such possible state sequences is computationally very expensive. To reduce this complexity, Forward algorithm comes in handy, where the trick lies in using the conditional independence of the sequence steps to calculate partial probabilities, <math>\alpha(x_t) = p(x_t,y_{1:t}) = p(y_t|x_t)\sum_{x_{t-1}}p(x_t|x_{t-1})\alpha(x_{t-1})</math> as shown in the above derivation. Hence, we can calculate the probabilities as the product of the appropriate observation/emission probability, <math>p(y_t|x_t)</math> ( probability of state <math>y_t</math> seen at time t from previous observation) with the sum of probabilities of reaching that state at time t, calculated using transition probabilities. This reduces complexity of the problem from searching whole search space to just using previously computed <math>\alpha</math>'s and transition probabilities.
+
+==Complexity==
+Complexity of Forward Algorithm is <math>\Theta(nm^2)</math>, where <math>m</math> is the number of possible states for a latent variable (like the number of weather conditions in the example above), and <math>n</math>  is the length of the observed sequence. This is a clear reduction from the ad hoc method of exploring all the possible states, which has a complexity of <math>\Theta(nm^n)</math>.
+
+==Variants of the algorithm==
+* '''Hybrid Forward Algorithm''':<ref>Peng, Jian-Xun, Kang Li, and De-Shuang Huang. "A hybrid forward algorithm for RBF neural network construction." ''Neural Networks, IEEE Transactions'' on 17.6 (2006): 1439-1451.</ref> A variant of the Forward Algorithm called Hybrid Forward Algorithm (HFA) can be used for the construction of radial basis function (RBF) neural networks with tunable nodes. The RBF neural network is constructed by the conventional subset selection algorithms. The network structure is determined by combining both the stepwise forward network configuration and the continuous RBF parameter optimization. It is used to efficiently and effectively produce a parsimonious RBF neural network that generalizes well. It is achieved through simultaneous network structure determination and parameter optimization on the continuous [[parameter space]]. HFA tackles the mixed integer hard problem using an integrated analytic framework, leading to improved network performance and reduced memory usage for the network construction.
+
+* '''Forward Algorithm for Optimal Control in Hybrid Systems''':<ref>Zhang, Ping, and Christos G. Cassandras. "An improved forward algorithm for optimal control of a class of hybrid systems." ''Automatic Control, IEEE Transactions'' on 47.10 (2002): 1735-1739.</ref> This variant of Forward algorithm is motivated by the structure of manufacturing environments that integrate process and operations control. We derive a new property of the optimal state trajectory structure which holds under a modified condition on the cost function. This allows us to develop a low-complexity, scalable algorithm for explicitly determining the optimal controls, which can be more efficient than Forward Algorithm.
+
+* '''Continuous Forward Algorithm''':<ref>Peng, Jian-Xun, Kang Li, and George W. Irwin. "A novel continuous forward algorithm for RBF neural modelling." ''Automatic Control, IEEE Transactions'' on 52.1 (2007): 117-122.</ref> A continuous forward algorithm (CFA) can be used for nonlinear modelling and identification using radial basis function (RBF) neural networks. The proposed algorithm performs the two tasks of network construction and parameter optimization within an integrated analytic framework, and offers two important advantages. First, the model performance can be significantly improved through continuous parameter optimization. Secondly, the neural representation can be built without generating and storing all candidate regressors, leading to significantly reduced memory usage and computational complexity.
+
+==History==
+The forward algorithm is one of the algorithms used to solve the decoding problem. Since the development of [[speech recognition]]<ref name="speechRecognition">[[Lawrence Rabiner|Lawrence R. Rabiner]], "A Tutorial on Hidden Markov Models and Selected Applications in Speech Recognition". ''Proceedings of the [[IEEE]]'', 77 (2), p.&nbsp;257–286, February 1989. [https://dx.doi.org/10.1109/5.18626 10.1109/5.18626]</ref> and pattern recognition and related fields like [[computational biology]] which use HMMs, the forward algorithm has gained popularity.
+
+==Applications==
+The forward algorithm is mostly used in applications that need us to determine the probability of being in a specific state when we know about the sequence of observations. The algorithm can be applied wherever we can train a model as we receive data using [[Baum–Welch algorithm|Baum-Welch]]<ref>Zhang, Yanxue, Dongmei Zhao, and Jinxing Liu. "The Application of Baum-Welch Algorithm in Multistep Attack." ''The Scientific World Journal'' 2014.</ref> or any general [[Expectation–maximization algorithm|EM algorithm]]. The Forward algorithm will then tell us about the probability of data with respect to what is expected from our model. One of the applications can be in the domain of [[Finance|finance]], where it can help decide on when to buy or sell tangible assets.
+
+It can have applications in all fields where we apply [[Hidden Markov model|Hidden Markov Models]] (HMMs). The popular ones include [[Natural language processing]] domains like [[Part-of-speech tagging|tagging part-of-speech]] and [[Speech recognition|speech recognition]].<ref name="speechRecognition"/> Recently it is also being used in the domain of [[bioinformatics]].
+
+Forward algorithm can also be applied to perform [[Weather forecasting|weather speculations]]. We can have an HMM describing the weather and its relation to the state of observations for few consecutive days (some examples could be dry, damp, soggy, sunny, cloudy, rainy etc.). We can consider calculating the probability of observing any sequence of observations recursively given the HMM. We can then calculate the probability of reaching an intermediate state as the sum of all possible paths to that state. Thus the partial probabilities for the final observation will hold the probability of reaching those states going through all possible paths.
+
+== See also ==
+* [[Viterbi algorithm]]
+* [[Forward-backward algorithm]]
+* [[Baum–Welch algorithm]]
+
+== References==
+{{reflist}}
+
+== Further reading ==
+* Russell and Norvig's ''Artificial Intelligence, a Modern Approach'', starting on page 570 of the 2010 edition, provides a succinct exposition of this and related topics
+* Smyth, Padhraic, David Heckerman, and Michael I. Jordan. "Probabilistic independence networks for hidden Markov probability models." Neural computation 9.2 (1997): 227-269. [http://www.datalab.uci.edu/papers/hmmpin.pdf]
+* Read, Jonathon. "Hidden Markov Models and Dynamic Programming." University of Oslo (2011). [http://www.uio.no/studier/emner/matnat/ifi/INF4820/h11/undervisningsmateriale/20111014-notes.pdf]
+* Kohlschein, Christian, '' An introduction to Hidden Markov Models ''[http://www.tcs.rwth-aachen.de/lehre/PRICS/WS2006/kohlschein.pdf]
+* Manganiello, Fabio, Mirco Marchetti, and Michele Colajanni. ''Multistep attack detection and alert correlation in intrusion detection systems.'' Information Security and Assurance. Springer Berlin Heidelberg, 2011. 101-110. [https://weblab.ing.unimore.it/papers/isa2011.pdf]
+* Zhang, Ping, and Christos G. Cassandras. "An improved forward algorithm for optimal control of a class of hybrid systems." Automatic Control, IEEE Transactions on 47.10 (2002): 1735-1739.
+* Stratonovich, R. L. "Conditional markov processes". ''Theory of Probability & Its Applications'' 5, no. 2 (1960): 156178.
+
+== Softwares ==
+* [https://cran.r-project.org/web/packages/HMM/index.html Hidden Markov Model R-Package] contains functionality for computing and retrieving forward  procedure
+* [https://cran.r-project.org/web/packages/momentuHMM/index.htmm momentuHMM R-Package] provides tools for using and inferring HMMs.
+* [http://www.ghmm.org/ GHMM Library for Python] 
+* [http://hackage.haskell.org/cgi-bin/hackage-scripts/package/hmm The hmm package] Haskell library for HMMS, implements Forward algorithm.
+* [https://github.com/pushkar/ABAGAIL Library for Java] contains Machine Learning and Artificial Intelligence algorithm implementations.
+
+[[Category:Markov models]]

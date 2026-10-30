@@ -1,0 +1,82 @@
+<!-- wikipedia: en
+     page: 4076217
+     title: Merkle–Damgård construction
+     revision: 1362916064
+     timestamp: 2026-07-07T00:06:36Z
+     history: https://en.wikipedia.org/w/index.php?curid=4076217&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1362916064 -->
+{{short description|Method of building collision-resistant cryptographic hash functions}}
+In [[cryptography]], the '''Merkle–Damgård construction''' or '''Merkle–Damgård hash function''' is a method of building [[Collision resistance|collision-resistant]] [[cryptographic hash function]]s from collision-resistant [[one-way compression function]]s.<ref name=GoldwasserBellare>{{cite web |url=http://cseweb.ucsd.edu/~mihir/papers/gb.html |access-date=2023-03-28 |title=Lecture Notes on Cryptography |date=July 2008 |archive-url=https://web.archive.org/web/20210714090706/http://cseweb.ucsd.edu/~mihir/papers/gb.html |archive-date=2021-07-14 |last1=Goldwasser |first1=Shafi |last2=Bellare |first2=Mihir |author1-link=Shafi Goldwasser |author2-link=Mihir Bellare}}</ref>{{rp|145}} This construction was used in the design of many popular hash algorithms such as [[MD5]], [[SHA-1]], and [[SHA-2]].
+
+The Merkle–Damgård construction was described in [[Ralph Merkle]]'s [[Doctor of Philosophy|Ph.D.]] [[thesis]] in 1979.<ref>[[Ralph Merkle|R.C. Merkle]]. [http://www.ralphmerkle.com/papers/Thesis1979.pdf ''Secrecy, authentication, and public key systems.''] Stanford Ph.D. thesis 1979, pages 13-15.</ref> Ralph Merkle and [[Ivan Damgård]] independently proved that the structure is sound: that is, if an appropriate [[Padding (cryptography)|padding scheme]] is used and the compression function is [[Collision resistance|collision-resistant]], then the hash function will also be collision-resistant.<ref>[[Ralph Merkle|R.C. Merkle]]. ''A Certified Digital Signature''. In Advances in Cryptology – CRYPTO '89 Proceedings, [[Lecture Notes in Computer Science]] Vol. 435, G. Brassard, ed, Springer-Verlag, 1989, pp. 218-238.</ref><ref>[[Ivan Damgård|I. Damgård]]. ''A Design Principle for Hash Functions''. In Advances in Cryptology – CRYPTO '89 Proceedings, Lecture Notes in Computer Science Vol. 435, G. Brassard, ed, Springer-Verlag, 1989, pp. 416-427.</ref>
+
+The Merkle–Damgård hash function first applies an [[#MD-compliant padding|MD-compliant padding]] function to create an input whose size is a multiple of a fixed number (e.g. 512 or 1024) — this is because compression functions cannot handle inputs of arbitrary size. The hash function then breaks the result into blocks of fixed size, and processes them one at a time with the compression function, each time combining a block of the input with the output of the previous round.<ref name=GoldwasserBellare />{{rp|146}} In order to make the construction secure, Merkle and Damgård proposed that messages be padded with a padding that encodes the length of the original message. This is called ''length padding'' or ''Merkle–Damgård strengthening''.
+
+[[Image:Merkle-Damgard hash big.svg|thumb|400px|right|Merkle–Damgård hash construction]]
+
+In the diagram, the one-way compression function is denoted by ''f'', and transforms two fixed length inputs to an output of the same size as one of the inputs. The algorithm starts with an initial value, the [[initialization vector]] (IV). The IV is a fixed value (algorithm- or implementation-specific). For each message block, the compression (or compacting) function ''f'' takes the result so far, combines it with the message block, and produces an intermediate result. The last block is padded with zeros as needed and bits representing the length of the entire message are appended. (See below for a detailed length-padding example.)
+
+To harden the hash further, the last result is then sometimes fed through a ''finalisation function''. The finalisation function can have several purposes such as compressing a bigger internal state (the last result) into a smaller output hash size or to guarantee a better mixing and [[avalanche effect]] on the bits in the hash sum. The finalisation function is often built by using the compression function.{{citation needed|date=January 2011}} (Note that in some documents a different terminology is used: the act of length padding is called "finalisation".{{Citation needed|date=December 2017}})
+
+== Security characteristics ==
+
+The popularity of this construction is due to the fact, proven by [[Ralph Merkle|Merkle]] and [[Ivan Damgård|Damgård]], that if the one-way compression function ''f'' is [[Collision resistance|collision resistant]], then so is the hash function constructed using it. Unfortunately, this construction also has several undesirable properties:
+
+* Second [[preimage attack]]s against long messages are always much more efficient than brute force.<ref>{{Cite journal|last=Kelsey|first=John|last2=Schneier|first2=Bruce|date=2004|title=Second Preimages on n-bit Hash Functions for Much Less than 2^n Work|url=https://eprint.iacr.org/2004/304.pdf|via=Cryptology ePrint Archive: Report 2004/304}}</ref>
+* Multicollisions (many messages with the same hash) can be found with only a little more work than collisions.<ref>Antoine Joux. ''Multicollisions in iterated hash functions. Application to cascaded construction.'' In Advances in Cryptology – CRYPTO '04 Proceedings, Lecture Notes in Computer Science, Vol. 3152, M. Franklin, ed, Springer-Verlag, 2004, pp. 306–316.</ref>
+* They are vulnerable to "<abbr title='also known as "Nostradamus attack"'>herding attacks</abbr>", which combine the cascaded construction for multicollision finding (similar to the above) with collisions found for a given prefix (chosen-prefix collisions). This allows for constructing highly specific colliding documents, and it can be done for more work than finding a collision, but much less than would be expected to do this for a [[random oracle]].<ref>John Kelsey and Tadayoshi Kohno. ''Herding Hash Functions and the Nostradamus Attack'' In Eurocrypt 2006, Lecture Notes in Computer Science, Vol. 4004, pp. 183–200.</ref><ref>{{cite web
+|url=http://www.win.tue.nl/hashclash/Nostradamus/|title=Nostradamus
+|date=2007-11-30|work=The HashClash Project|publisher=[[Eindhoven University of Technology|TU/e]]
+|last1=Stevens|first1=Marc
+|last2=Lenstra|first2=Arjen|author-link2=Arjen Lenstra
+|last3=de Weger|first3=Benne|access-date=2013-03-30}}</ref>
+* They are vulnerable to [[Length extension attack|length extension attacks]]: Given the hash {{Math|''H''(''X'')}} of an unknown input {{Mvar|X}}, it is easy to find the value of {{Math|''H''(Pad(''X'') {{!}}{{!}} ''Y'')}}, where {{Math|Pad}} is the padding function of the hash. That is, it is possible to find hashes of inputs related to {{Mvar|X}} even though {{Mvar|X}} remains unknown.<ref>Yevgeniy Dodis, Thomas Ristenpart, Thomas Shrimpton. ''Salvaging Merkle–Damgård for Practical Applications''. Preliminary version in Advances in Cryptology – EUROCRYPT '09 Proceedings, Lecture Notes in Computer Science Vol. 5479, A. Joux, ed, Springer-Verlag, 2009, pp. 371–388.</ref> Length extension attacks were actually used to attack a number of commercial web message authentication schemes such as one used by [[Flickr]].<ref>Thai Duong, Juliano Rizzo, [https://dl.packetstormsecurity.net/0909-advisories/flickr_api_signature_forgery.pdf Flickr's API Signature Forgery Vulnerability], 2009</ref>
+
+== <span class="anchor" id="Wide pipe"></span> Wide-pipe construction ==
+[[Image:WidePipeHashFunction.png|thumb|400px|right|The wide-pipe hash construction. The intermediate chaining values have been doubled.]]
+
+Due to several structural weaknesses of Merkle–Damgård construction, especially the length extension problem and multicollision attacks, [[Stefan Lucks]] proposed the use of the wide-pipe hash<ref>{{Cite journal|last=Lucks|first=Stefan|date=2004|title=Design Principles for Iterated Hash Functions|url=https://eprint.iacr.org/2004/253|via=Cryptology ePrint Archive, Report 2004/253}}</ref> instead of Merkle–Damgård construction. The wide-pipe hash is very similar to the Merkle–Damgård construction but has a larger internal state size, meaning that the bit-length that is internally used is larger than the output bit-length. If a hash of {{Mvar|n}} bits is desired, then the compression function {{Mvar|f}} takes {{Math|2''n''}} bits of chaining value and {{Mvar|m}} bits of the message and compresses this to an output of {{Math|2''n''}} bits.
+
+Therefore, in a final step, a second compression function compresses the last internal hash value ({{Math|2''n''}} bits) to the final hash value ({{Mvar|n}} bits). This can be done as simply as discarding half of the last {{Math|2''n''}}-bit output. SHA-512/224 and SHA-512/256 take this form since they are derived from a variant of SHA-512. SHA-384 and SHA-224 are similarly derived from SHA-512 and SHA-256, respectively, but the width of their pipe is much less than {{Math|2''n''}}.
+
+== Fast wide-pipe construction ==
+[[Image:FastWidePipeHashFunction.png|thumb|400px|right|The fast wide-pipe hash construction. Half of the chaining value is used in the compression function.]]
+It has been demonstrated by [[Mridul Nandi]] and [[Souradyuti Paul]] that a wide-pipe hash function can be made approximately twice as fast if the wide-pipe state can be divided in half in the following manner: one half is input to the succeeding compression function while the other half is combined with the output of that compression function.<ref name="NP10">Mridul Nandi and Souradyuti Paul (2010). [https://eprint.iacr.org/2010/193 "Speeding Up the Widepipe: Secure and Fast Hashing"] - via Cryptology ePrint Archive, Paper 2010/193</ref>
+
+The main idea of the hash construction is to forward half of the previous chaining value forward to XOR it to the output of the compression function. In so doing the construction takes in longer message blocks every iteration than the original wide pipe. Using the same function {{Mvar|f}} as before, it takes {{Mvar|n}}-bit chaining values and {{Math|''n'' + ''m''}} bits of the message. However, the price to pay is the extra memory used in the construction for feed-forward.
+
+== Parallel algorithm ==
+The MD construction is inherently sequential. There is a [[parallel algorithm]]<ref>{{cite book |last1=Sarkar |first1=Palash |url=https://link.springer.com/chapter/10.1007/3-540-45311-3_4 |title=A parallel algorithm for extending cryptographic hash functions |last2=Schellenberg |first2=Paul J. |publisher=Springer-Verlag |year=2001 |ISBN=978-3-540-45311-6 |series=Lecture Notes in Computer Science |volume=2247 |pages=40-49 |doi=10.1007/3-540-45311-3_4}}</ref> which constructs a collision-resistant hash function from a collision-resistant compression function. The hash function PARSHA-256<ref>{{cite book |last1=Pal |first1=Pinakpani |url=https://link.springer.com/chapter/10.1007/978-3-540-39887-5_25 |title=PARSHA-256 – A new parallelizable hash Function and a multithreaded implementation |last2=Sarkar |first2=Palash |publisher=Springer-Verlag |year=2003 |ISBN=978-3-540-39887-5 |series=Lecture Notes in Computer Science |volume=2887 |pages=347-361 |doi=10.1007/978-3-540-39887-5_25}}</ref> was designed using the parallel algorithm and the compression function of SHA-256.
+
+== MD-compliant padding ==
+As mentioned in the introduction, the padding scheme used in the Merkle–Damgård construction must be chosen carefully to ensure the security of the scheme. [[Mihir Bellare]] gives sufficient conditions for a padding scheme to possess to ensure that the MD construction is secure: it suffices that the scheme be "MD-compliant" (the original length-padding scheme used by Merkle is an example of MD-compliant padding).<ref name=GoldwasserBellare />{{rp|145}} The conditions are:
+*{{Mvar|M}} is a prefix of {{Math|Pad(''M'')}}.
+*If {{Math|1={{abs|''M''<sub>1</sub>}} = {{abs|''M''<sub>2</sub>}}}}, then {{Math|1={{abs|Pad(''M''<sub>1</sub>)}} = {{abs|Pad(''M''<sub>2</sub>)}}}}.
+*If {{Math|{{abs|''M''<sub>1</sub>}} ≠ {{abs|''M''<sub>2</sub>}}}}, then the last block of {{Math|Pad(''M''<sub>1</sub>)}} is different from the last block of {{Math|Pad(''M''<sub>2</sub>)}}.
+
+Here, {{Math|{{abs|''X''}}}} denotes the length of {{Mvar|X}}. With these conditions in place, a collision in the MD hash function exists ''exactly when'' there is a collision in the underlying compression function. Therefore, the Merkle–Damgård construction is provably secure when the underlying compression function is secure.<ref name=GoldwasserBellare />{{rp|147}}
+
+== Length padding example ==
+
+To be able to feed the message to the compression function, the last block must be padded with constant data (generally with zeroes) to a full block. For example, suppose the message to be hashed is "HashInput" (9 octet string, 0x48617368496e707574 in [[ASCII]]) and the block size of the compression function is 8 bytes (64 bits). We get two blocks (the padding octets shown with the lightblue background color):
+: {{mono|48 61 73 68 49 6e 70 75, 74 {{Background color|#00FFFF|00 00 00 00 00 00 00}}}}
+
+This implies that other messages having the same content but ending with additional zeros at the end will result in the same hash value. In the above example, another almost-identical message (0x48617368496e7075 74{{font color|red|00}}) will generate the same hash value as the original message "HashInput" above. In other words, any message having extra zeros at the end makes it indistinguishable from the one without them. To prevent this situation, the first bit of the first padding octet is changed to "1" (0x80), yielding:
+: {{mono|48 61 73 68 49 6e 70 75, 74 {{font color|red|{{Background color|#00FFFF|80}}}} {{Background color|#00FFFF|00 00 00 00 00 00}}}}
+
+However, most common implementations use a fixed bit-size (generally 64 or 128 bits in modern algorithms) at a fixed position at the end of the last block for inserting the message length value (see ''[[SHA-1#SHA-1 pseudocode|SHA-1 pseudocode]]''). Further improvement can be made by inserting the length value in the last block if there is enough space. Doing so avoids having an extra block for the message length. If we assume the length value is encoded on 5 bytes (40 bits), the message becomes:
+: {{mono|48 61 73 68 49 6e 70 75, 74 {{font color|red|{{Background color|#00FFFF|80}}}} {{Background color|#00FFFF|00}} {{Background color|#FFF600|00 00 00 00 09}}}}
+
+Storing the message length out-of-band in metadata, or otherwise embedded at the start of the message, is an effective mitigation of the [[length extension attack]]{{citation needed|date=April 2020}}, as long as invalidation of either the message length and checksum are both considered failure of integrity checking.
+
+== References ==
+* ''[https://cacr.uwaterloo.ca/hac/ Handbook of Applied Cryptography]'' by Menezes, van Oorschot and Vanstone (2001), chapter 9.
+* ''[http://www.cs.umd.edu/~jkatz/imc.html Introduction to Modern Cryptography]'', by Jonathan Katz and Yehuda Lindell. Chapman and Hall/CRC Press, August 2007, page 134 (construction 4.13).
+* ''[https://link.springer.com/book/10.1007/978-3-319-21936-3 Cryptography Made Simple]'' by Nigel Smart (2015), chapter 14.
+<references/>
+
+{{Cryptography navbox | hash}}
+
+{{DEFAULTSORT:Merkle-Damgard Construction}}
+[[Category:Cryptographic hash functions]]

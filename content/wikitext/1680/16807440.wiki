@@ -1,0 +1,59 @@
+<!-- wikipedia: en
+     page: 16807440
+     title: Kochanski multiplication
+     revision: 1311265436
+     timestamp: 2025-09-14T11:13:53Z
+     history: https://en.wikipedia.org/w/index.php?curid=16807440&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1311265436 -->
+'''Kochanski multiplication'''<ref>{{cite book |first=Martin J. |last=Kochanski |contribution=Developing an RSA Chip |title=Advances in Cryptology – Proceedings of CRYPTO 85 |series=Lecture Notes in Computer Science |publisher=Springer-Verlag |location=Berlin |year=1985 |volume=218 |isbn=3-540-16463-4 |pages=350–357 |doi=10.1007/3-540-39799-X_25|s2cid=35095400 }}</ref> is an [[algorithm]] that allows [[modular arithmetic]] (multiplication or operations based on it, such as [[modular exponentiation|exponentiation]]) to be performed efficiently when the modulus is large (typically several hundred bits). This has particular application in [[number theory]] and in [[cryptography]]: for example, in the [[RSA (algorithm)|RSA]] [[cryptosystem]] and [[Diffie–Hellman key exchange]].
+
+The most common way of implementing large-integer multiplication in hardware is to express the multiplier in [[binary numeral system|binary]] and enumerate its bits, one bit at a time, starting with the most significant bit, perform the following operations on an [[accumulator (computing)|accumulator]]:
+
+#Double the contents of the accumulator (if the accumulator stores numbers in binary, as is usually the case, this is a simple "shift left" that requires no actual computation).
+#If the current bit of the multiplier is 1, add the multiplicand into the accumulator; if it is 0, do nothing.
+
+For an ''n''-bit multiplier, this will take ''n'' clock cycles (where each cycle does either a shift or a shift-and-add).
+
+To convert this into an algorithm for modular multiplication, with a modulus ''r'', it is necessary to subtract ''r'' conditionally at each stage:
+
+#Double the contents of the accumulator.
+#If the result is greater than or equal to ''r'', subtract ''r''. (Equivalently, subtract ''r'' from the accumulator and store the result back into the accumulator [[if and only if]] it is non-negative).
+#If the current bit of the multiplier is 1, add the multiplicand into the accumulator; if it is 0, do nothing.
+#If the result of the addition is greater than or equal to ''r'', subtract ''r''. If no addition took place, do nothing.
+
+This algorithm works. However, it is critically dependent on the speed of addition.
+
+Addition of long integers suffers from the problem that [[carry (arithmetic)|carries]] have to be propagated from right to left and the final result is not known until this process has been completed. Carry propagation can be speeded up with [[carry look-ahead adder|carry look-ahead]] logic, but this still makes addition very much slower than it needs to be (for 512-bit addition, addition with carry look-ahead is 32 times slower than addition without carries at all{{Citation needed|date=April 2025|reason=how was this factor calculated?}}).
+
+Non-modular multiplication can make use of [[carry-save adder]]s, which save time by storing the carries from each digit position and using them later: for example, by computing 111111111111+000000000010 as 111111111121 instead of waiting for the carry to propagate through the whole number to yield the true binary value 1000000000001. That final propagation still has to be done to yield a binary result but this only needs to be done once at the very end of the multiplication.
+
+Unfortunately, the modular multiplication method outlined above needs to know the magnitude of the accumulated value at every step, in order to decide whether to subtract ''r'': for example, if it needs to know whether the value in the accumulator is greater than 1000000000000, the carry-save representation 111111111121 is useless and needs to be converted to its true binary value for the comparison to be made.
+
+It therefore seems that one can have ''either'' the speed of carry-save ''or'' modular multiplication, but not both.
+
+==Outline of the algorithm==
+
+The principle of the Kochanski algorithm is one of making guesses as to whether or not ''r'' should be subtracted, based on the most significant few bits of the carry-save value in the accumulator. Such a guess will be wrong some of the time, since there is no way of knowing whether latent carries in the less significant digits (which have not been examined) might not invalidate the result of the comparison. Thus:
+
+*A [[subtraction]] may not have been made when one was required. In that case the result in the accumulator is greater than ''r'' (although the algorithm doesn't know it yet), and so after the next shift left, 2''r'' will need to be subtracted from the accumulator.
+*A subtraction may have been made when one was not required. In that case the result in the accumulator is less than 0 (although the algorithm doesn't know it yet), and so after the next shift left, ''r'' or even 2''r'' will need to be added back to the accumulator to make it positive again.
+
+What is happening is essentially a race between the errors that result from wrong guesses, which double with every shift left, and the corrections made by adding or subtracting multiples of ''r'' based on a guess of what the errors may be.
+
+It turns out<ref>{{cite web |first=Martin J. |last=Kochanski |url=http://www.nugae.com/encryption/bin/design.pdf |title=A New Method of Serial Modular Multiplication |date=19 August 2003 |archive-url=https://web.archive.org/web/20180716202844/http://www.nugae.com/encryption/bin/design.pdf |archive-date=2018-07-16}} Describes the algorithm in full detail.</ref> that examining the most significant 4 bits of the accumulator is sufficient to keep the errors within bounds and that the only values that need to be added to the accumulator are −2''r'', −''r'', 0, +''r'', and +2''r'', all of which can be generated instantaneously by simple shifts and negations.
+
+At the end of a complete modular multiplication, the true binary result of the operation has to be evaluated and it is possible that an additional addition or subtraction of ''r'' will be needed as a result of the carries that are then discovered; but the cost of that extra step is small when amortized over the hundreds of shift-and-add steps that dominate the overall cost of the multiplication.
+
+==Alternatives==
+
+Brickell<ref>{{cite book |first=Ernest F. |last=Brickell |contribution=A Fast Modular Multiplication Algorithm with Applications to Two Key Cryptography |title=Advances in Cryptology – Proceedings of CRYPTO '82 |publisher=Plenum |location=New York |year=1983 |pages=51–60 |doi=10.1007/978-1-4757-0602-4_5 |isbn=0-306-41366-3}}</ref> has published a similar algorithm that requires greater complexity in the electronics for each digit of the accumulator.
+
+[[Montgomery reduction|Montgomery multiplication]] is an alternative algorithm which processes the multiplier "backwards" (least significant digit first) and uses the least significant digit of the accumulator to control whether or not the modulus should be added. This avoids the need for carries to propagate. However, the algorithm is impractical for single modular multiplications, since two or three additional Montgomery steps have to be performed to convert the operands into a special form before processing and to convert the result back into conventional binary at the end.
+
+== References ==
+{{Reflist}}
+* {{cite web |url=http://www.nugae.com/encryption/fap4.htm |title=Creating the FAP4 Chip |archive-url=https://web.archive.org/web/20180509134026/http://www.nugae.com/encryption/fap4.htm |archive-date=2018-05-09 |first=Martin |last=Kochanski}} Informal explanation and motivation of the algorithm, with details of an actual hardware implementation.
+
+[[Category:Cryptographic algorithms]]
+[[Category:Modular arithmetic]]

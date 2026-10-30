@@ -1,0 +1,56 @@
+<!-- wikipedia: en
+     page: 662181
+     title: Irrational base discrete weighted transform
+     revision: 1364721671
+     timestamp: 2026-07-18T03:47:25Z
+     history: https://en.wikipedia.org/w/index.php?curid=662181&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1364721671 -->
+{{Short description|Variant of fast Fourier transform}}
+In [[mathematics]], the '''irrational base discrete weighted transform''' ('''IBDWT''') is a variant of the [[fast Fourier transform]] using an [[irrational number|irrational]] base; it was developed by [[Richard Crandall]] ([[Reed College]]), [[Barry Fagin]] ([[Dartmouth College]]) and [[Joshua Doenias]] ([[NeXT|NeXT Software]])<ref>{{cite journal|url=https://jstor.org/stable/24993611|title=The Challenge of Large Numbers|last=Crandall|first=Richard|year=1997|journal=Scientific American|volume=276 |issue=2 |pages=74–78 |doi=10.1038/scientificamerican0297-74 |jstor=24993611 |bibcode=1997SciAm.276b..74C |access-date=29 March 2023|url-access=subscription}}</ref> in the early 1990s using [[Mathematica]]. It implies a fast, practical implementation of large-number [[modular multiplication]] on modern computers, at asymptotically 2&times; faster than non-modular [[FFT multiplication]].<ref>{{cite web|url=https://wolfram.com/customer-stories/mathematica-use-of-renowned-computational-scientist-and-author-richard-crandall.html|title=Mathematica Use of Renowned Computational Scientist and Author Richard Crandall|work=Wolfram Research|access-date=29 March 2023}}</ref><ref name=GrangerScott15/>
+
+It is most notably used in the [[Great Internet Mersenne Prime Search]].
+
+==Algorithm==
+The IBDWT method, as applied to the Lucas-Lehmer test for Mersenne primes (which requires repeated squaring modulo a Mersenne number <math>M_p = 2^p - 1</math>), is based on four key elements developed by Crandall and Fagin:<ref name="thall" />
+* '''Balanced-radix representations''': Allows digits to be signed (e.g., in the range <math>-W/2 \le x_j < W/2</math>), which reduces error bounds.<ref name="thall" />
+* '''Variable-base digit representations''': Allows each digit <math>x_j</math> to have its own base <math>W_j</math>.<ref name="thall" />
+* '''Weighted cyclic convolutions''': The multiplication is performed using a Discrete Weighted Transform (DWT).<ref name="thall" />
+* '''Irrational numeric bases''': The base used for the transform is irrational.<ref name="thall" />
+
+This approach avoids the need for zero-padding the arrays and performs the multiplication modulo <math>M_p</math> directly.<ref name="thall" /> The algorithm to compute the product <math>xy \pmod{M_p}</math> is as follows:<ref name="thall" />
+# Choose a run length (signal-length) <math>N < p</math>.<ref name="thall" />
+# Establish a variable base representation for the numbers. For example, <math display=inline>x = \sum_{j=0}^{N-1} x_j 2^{\lceil pj/N \rceil}</math>.<ref name="thall" /> Each term is usually between 16 and 20 bits if using double-precision terms. The maximum size of each term is determined empirically,{{efn|For examples of empirical formulae and tables, see [https://github.com/preda/gpuowl/commit/834d199e5ee9d5fde93bf38eac15328d765a49cc gpuowl] and Prime95 "gwnum.c".}} at least before the contribution of Percival 2003.
+# Define a weight-signal <math>a</math> where each component <math>a_j = 2^{\lceil pj/N \rceil - pj/N}</math>, approximated by floats in the interval [1, 2).<ref name="thall" /> 
+# Compute the forward DWT for both numbers: <math>\mathcal{X} \leftarrow DWT_{(N,a)}x</math> and <math>\mathcal{Y} \leftarrow DWT_{(N,a)}y</math>. This is practically computed using a standard DFT (like an FFT) as <math>DWT_{(N,a)}x \triangleq DFT_{(N)}(ax)</math>.<ref name="thall" />
+# Perform a component-wise product of the transformed arrays: <math>\mathcal{Z} \leftarrow \mathcal{X}\mathcal{Y}</math>.<ref name="thall" />
+# Compute the inverse DWT: <math>z \leftarrow DWT_{(N,a)}^{-1}\mathcal{Z}</math>. This is computed as <math>z = a^{-1} DFT_{(N)}^{-1}(\mathcal{Z})</math>.<ref name="thall" />
+# Round the resulting components to the nearest integer: <math>z \leftarrow \text{round}(z)</math>, optionally checking the roundoff error is no greater than 0.4 (greater indicates too many integer bits stuffed into each term).<ref name="thall" />
+# Adjust the resulting digits <math>\{z_n\}</math> to restore the variable-base radix representation. This step handles carries and borrows. Single-step partial carrying is sufficient.<ref name="thall" />
+
+== Applications ==
+Double-precision IBDWT is used in the [[Great Internet Mersenne Prime Search]]'s x86 client [[Prime95]] to perform modular multiplication in the [[Lucas–Lehmer primality test|Lucas–Lehmer test]] and Fermat primarily tests. The prime95 IBDWT library ''gwnum'' is also used in programs such as [[PrimeGrid]]'s [[Lucas–Lehmer–Riesel_test#LLR_software|LLR2 and PRST]]. It is chosen because x86 CPUs since Pentium 4 have so much double-precision floating-point computing power that it is much faster to multiply numbers using IBDWT than to do so using a more straightforward integer FFT (NTT).
+
+Double-precision IBDWT has also been ported to other CPU architectures in the form of [[Glucas]]. It has also been ported to GPUs in the form of CUDALucas, GPUowl, and PRPLL.<ref name=thall>{{cite web|url=https://ece.northeastern.edu/groups/nucar/GPGPU4/files/thall.pdf|title=Fast Mersenne Prime Testing on the GPU|last=Thall|first=Andrew|access-date=29 March 2023}}</ref>
+
+IBDWT can also be done using integer arithmetic modulo 2<sup>64</sup>-2<sup>32</sup>+1, a [[number theoretic transform]]. This approach was first demonstrated by Nick Craig-Wood in ''ARMPrime''.<ref>{{cite web |last1=Craig-Wood |first1=Nick |title=ncw/iprime |website=[[GitHub]] |url=https://github.com/ncw/iprime |date=4 October 2023}}</ref> This too has been ported to GPUs, providing an alternative for consumer GPUs with weak double-precision computing power but acceptable 32-bit integer power, especially Nvidia models from the 2020s boasting "1:1" or "1:2" 32-bit integer multiplication speed but "1:64" double-precision speed relative to 32-bit floating-point.<ref>{{cite web |last1=Gallot |first1=Yves |title=galloty/marin |website=[[GitHub]] |url=https://github.com/galloty/marin |date=21 September 2025}}</ref>
+
+=== Derived methods ===
+Granger and Scott demonstrated using IBDWT-inspired "GRP (generalized [[repunit]] prime) multiplication" to accelerate eliptic curve cryptography over F(2<sup>521</sup>-1), the [[P-521]]. This is a Karatsuba-like technique featuring a cyclic convolution similar to IBDWT.<ref name=GrangerScott15>{{multiref2|{{cite conference|date=March 31, 2015|conference=PKC 2015|url=https://www.iacr.org/workshops/pkc2015/talks/VIII/RobGranger2.pdf|title=Faster ECC over F(2^521−1)|first1=Robert|last1=Granger|first2=Michael|last2=Scott}}|{{Citation| last1 = Granger| first1 = Robert| last2 = Scott| first2 = Michael| title = Faster ECC over $\mathbb{F}_{2^{521}-1}$| access-date = 2025-11-03| date = 2014| url = https://eprint.iacr.org/2014/852}}}}</ref>
+
+== Notes ==
+{{notelist}}
+
+== References ==
+{{reflist}}
+
+== Further reading ==
+{{refbegin}}
+* [[Richard Crandall]], [[Barry Fagin]]: ''Discrete weighted transforms and large-integer arithmetic'', Mathematics of Computation 62, 205, 305-324, January 1994 ([http://www.faginfamily.net/barry/Papers/Discrete%20Weighted%20Transforms.pdf PDF file])
+* [[Richard Crandall]]: ''Topics in Advanced Scientific Computation'', TELOS/Springer-Verlag
+* {{cite journal |last1=Percival |first1=Colin |title=Rapid multiplication modulo the sum and difference of highly composite numbers |journal=Mathematics of Computation |date=5 March 2002 |volume=72 |issue=241 |pages=387–396 |doi=10.1090/S0025-5718-02-01419-9}}
+{{refend}}
+[[Category:Fast Fourier transforms]]
+[[Category:Discrete transforms]]
+
+{{Mathanalysis-stub}}

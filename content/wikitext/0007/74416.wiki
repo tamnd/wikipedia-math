@@ -1,0 +1,111 @@
+<!-- wikipedia: en
+     page: 74416
+     title: Yarrow algorithm
+     revision: 1375168305
+     timestamp: 2026-09-16T05:10:21Z
+     history: https://en.wikipedia.org/w/index.php?curid=74416&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375168305 -->
+{{short description|Random number generator}}
+{{More citations needed|date=November 2015}}
+The '''Yarrow algorithm''' is a family of [[cryptographic pseudorandom number generator]]s (CSPRNG) devised by [[John Kelsey (cryptanalyst)|John Kelsey]], [[Bruce Schneier]], and [[Niels Ferguson]] and published in 1999. The Yarrow algorithm is explicitly unpatented, [[royalty-free]], and [[open source]]; no license is required to use it. An improved design from Ferguson and Schneier, [[Fortuna (PRNG)|Fortuna]], is described in their book, ''Practical Cryptography''
+
+Yarrow was used in [[FreeBSD]], but is now superseded by Fortuna.<ref name=bsd>{{cite web|url=https://svnweb.freebsd.org/base?view=revision&revision=284959|title=[base] Revision 284959|website=Svnweb.freebsd.org|access-date=18 October 2016}}</ref> Yarrow was also incorporated in iOS<ref>{{cite web|url=https://www.apple.com/br/ipad/business/docs/iOS_Security_Oct12.pdf |title=iOS Security |date=October 2012 |website=Apple.com |access-date=2016-10-21}}</ref> and [[macOS]] for their [[/dev/random]] devices, but Apple has switched to Fortuna since 2020 Q1.<ref>{{Cite web|title=Random number generation|url=https://support.apple.com/en-hk/guide/security/seca0c73a75b/web|access-date=2020-10-26|website=Apple Support|language=en}}</ref>
+
+==Name==
+The name ''Yarrow'' alludes to the use of the [[Achillea millefolium|yarrow plant]] in the random generating process of [[I Ching divination]]. Since the [[Xia dynasty]] ({{circa|2070}} to {{circa|1600 BCE}}), Chinese have used yarrow stalks for divination. Fortunetellers divide a set of 50 yarrow stalks into piles and use [[modular arithmetic]] recursively to generate two bits of random information<ref>
+{{cite web
+ | url = https://www.schneier.com/cryptography/yarrow/qa.html
+ | title = Questions & Answers about Yarrow
+ | last1 = Schneier
+ | first1 = Bruce
+ | author-link1 = Bruce Schneier
+ | website = Schneier on Security
+ | access-date = 2016-02-15
+ | quote = The fortuneteller would divide a set of 50 stalks into piles, then repeatedly use modular arithmetic to generate two random bits.
+}}
+</ref>
+that have a non-[[Discrete uniform distribution|uniform distribution]].
+
+==Principles==
+Yarrow's main design principles are: resistance to attacks, easy use by programmers with no cryptography background, and reusability of existing building blocks. The former widely used designs such as [[ANSI X9.17]] and [[RSAREF 2.0 PRNG]] have loopholes that provide attack opportunities under some circumstances. Some of them are not designed with real-world attacks in mind. Yarrow also aims to provide easy integration, to enable system designers with little knowledge of PRNG functionality.<ref name="report1999">{{cite book |last1=Kelsey |first1=John |last2=Schneier |first2=Bruce |last3=Ferguson |first3=Niels |title=Selected Areas in Cryptography |chapter=Yarrow-160: Notes on the Design and Analysis of the Yarrow Cryptographic Pseudorandom Number Generator |series=Lecture Notes in Computer Science |date=August 1999 |volume=1758 |pages=13–33 |doi=10.1007/3-540-46513-8_2 |isbn=978-3-540-67185-5 |chapter-url=https://www.schneier.com/wp-content/uploads/2016/02/paper-yarrow.pdf}}</ref>
+
+==Design==
+
+===Components===
+The design of Yarrow consists of four major components: an [[Entropy (computing)|entropy]] accumulator, a [[Random seed|reseed]] mechanism, a generation mechanism, and reseed control.
+
+Yarrow accumulates entropy into two pools: the fast pool, which provides frequent reseeds of the [[Unique key|key]] to keep the duration of key compromises as short as possible; the slow pool, which provides rare but conservative reseeds of the key. This makes sure that the reseed is secured even when the entropy estimates are very optimistic.
+
+The reseed mechanism connects the entropy accumulator to the generating mechanism. Reseeding from the fast pool uses the current key and the [[Hash value|hash]] of all inputs to the fast pool since startup to generate a new key; reseeding from the slow pool behaves similarly, except it also uses the hash of all inputs to the slow pool to generate a new key. Both of the reseedings reset the entropy estimation of the fast pool to zero, but the last one also sets the estimation of the slow pool to zero. The reseeding mechanism updates the key constantly, so that even if the key of pool information is known to the attacker before the reseed, they will be unknown to the attacker after the reseed.
+
+The reseed control component is leveraging between frequent reseeding, which is desirable but might allow [[#Iterative guessing attack|iterative guessing attacks]], and infrequent reseeding, which compromises more information for an attacker who has the key. Yarrow uses the fast pool to reseed whenever the source passes some threshold values, and uses the slow pool to reseed whenever at least two of its sources pass some other threshold value. The specific threshold values are mentioned in the [[#Yarrow-160|Yarrow-160]] section.
+
+===Design philosophy===
+Yarrow assumes that enough entropy can be accumulated to ensure that the PRNG is in an unpredictable state. The designers accumulate entropy in the purpose of keeping the ability to recover the PRNG even when the key is compromised. Similar design philosophy is taken by RSAREF, DSA and ANSI X9.17 PRNGs.
+
+===Yarrow-160===
+The Yarrow uses two important algorithms: a [[cryptographic hash function|one-way hash function]] and a [[block cipher]]. The specific description and properties are listed in the table below.
+{| class="wikitable"
+|-
+! Algorithms !! Properties !! What Yarrow-160 uses
+|-
+| Hash function h(x) ||
+* One-way
+* m-bit output size
+* collision intractable
+Given {{var|M}} input values, the |M| selections of output values are uniformly distributed over ''m''-bit values. 
+|| [[SHA-1]] hash function
+|-
+| Block cipher E() ||
+*Resistant to known-plaintext and chosen-plaintext attacks
+High statistical performance of outputs when given highly patterned inputs. 
+|| Three-key [[Triple DES]]
+|}
+
+====Generation====
+[[File:Functions for Generation Mechanism.png|thumb|Functions for generation mechanism]]
+Yarrow-160 uses three-key [[Triple DES]] in counter mode to generate outputs. ''{{math|C}}'' is an ''n''-bit counter value; ''{{math|K}}'' is the key. In order to generate the next output block, Yarrow follows the functions shown here.
+
+Yarrow keeps count of the output block, because once the key is compromised, the leak of the old output before the compromised one can be stopped immediately. Once some system security parameter ''{{math|P<sub>g</sub>}}'' is reached, the algorithm will generate ''{{math|k}}'' bits of PRNG output and use them as the new key. In Yarrow-160, the system [[security parameter]] is set to be ''10'', which means ''{{math|P<sub>g</sub> {{=}} 10}}''. The parameter is intentionally set to be low to minimize the number of outputs that can be backtracked.
+
+====Reseed====
+The reseed mechanism of Yarrow-160 uses SHA-1 and Triple DES as the hash function and block cipher. The details steps are in the original paper.
+
+====Implementation of Yarrow-160====
+Yarrow-160 has been implemented in [[Java (programming language)|Java]], and for [[FreeBSD]]. The examples can be found in "An implementation of the Yarrow PRNG for FreeBSD"<ref>{{cite web|url=https://www.usenix.org/legacy/events/bsdcon02/full_papers/murray/murray_html/|title=An implementation of the Yarrow PRNG for FreeBSD|access-date=18 October 2016}}</ref> by Mark R. V. Murray.
+
+==Pros and cons of Yarrow==
+{{Prose|section|date=November 2015}}
+
+===Pros===
+*Yarrow reuses existing building blocks.
+*Compared to previous PRNGs, Yarrow is reasonably efficient.
+*Yarrow can be used by programmers with no cryptography background in a reasonably secure way. Yarrow is portable and precisely defined. The interface is simple and clear. These features somewhat decrease the chances of implementation errors.
+*Yarrow was created using an attack-oriented design process.
+*The [[entropy estimation]] of Yarrow is very conservative, thus preventing [[Brute force attack|exhaustive search attacks]]. It is very common that PRNGs fail in real-world applications due to entropy overestimation and guessable starting points.
+*The reseeding process of Yarrow is relatively computationally expensive, thus the cost of attempting to guess the PRNG's key is higher.
+*Yarrow uses functions to simplify the management of seed files, thus the files are constantly updated.
+*To handle [[cryptanalysis|cryptanalytic]] attacks, Yarrow is designed to be based on a block cipher that is secured. The [[level of security]] of the generation mechanism depends on the block cipher.
+*Yarrow tries to avoid data-dependent execution paths. This is done to prevent [[side-channel attacks]] such as [[timing attacks]] and [[power analysis]]. This is an improvement compared to earlier PRNGs, for example RSAREF 2.0 PRNG, that will completely fall apart once additional information about the internal operations are no longer secured.
+*Yarrow uses cryptographic hash functions to process input samples, and then uses a secure update function to combine the samples with the existing key. This makes sure that the attacker cannot easily manipulate the input samples. PRNGs such as RSAREF 2.0 PRNG do not have the ability to resist this kind of chosen-input attack.
+*Unlike ANSI X9.17 PRNG, Yarrow has the ability to recover from a key compromise. This means that even when the key is compromised, the attacker will not be able to predict future outputs forever. This is due to the reseeding mechanism of Yarrow.<ref name="report1999"/>{{rp|5}}
+*Yarrow has the entropy samples pool separated from the key, and only reseeds the key when the entropy pool content is completely unpredictable. {{anchor|Iterative guessing attack}}This design prevents iterative guessing attacks, where an attacker with the key guesses the next sample and checks the result by observing the next output.
+
+===Cons===
+*Yarrow depends on SHA-1, a hash that has been broken (in terms of [[collision resistance]]) since Yarrow's publication and is no longer considered secure.<ref>{{Cite web |last1=Stevens |first1=Marc |last2=Bursztein |first2=Elie |last3=Karpman |first3=Pierre |last4=Albertini |first4=Ange |last5=Markov |first5=Yarik |date=2017-02-23 |title=SHAttered |url=https://shattered.io/ |access-date=2017-04-27 |website=SHAttered}}</ref> However, there is no published attack that uses SHA-1 collisions to undermine Yarrow's randomness.
+*Since the outputs of Yarrow are cryptographically derived, the systems that use those outputs can only be as secure as the generation mechanism itself. That means the attacker who can break the generation mechanism will easily break a system that depends on Yarrow's outputs. This problem cannot be solved by increasing entropy accumulation.
+*Yarrow requires entropy estimation, which is a very big challenge for implementations.<ref>{{cite web|url=https://www.silabs.com/Support%20Documents/TechnicalDocs/AN0806.pdf |title=Fortuna Cryptographically Secure PRNG : AN0806 - Application Note |website=Silabs.com |access-date=2016-10-21}}</ref> It is hard to be sure how much entropy to collect before using it to reseed the PRNG.<ref>{{cite web|url=http://www.codeproject.com/Articles/6321/Fortuna-A-Cryptographically-Secure-Pseudo-Random-N|title=Fortuna – A Cryptographically Secure Pseudo Random Number Generator – CodeProject|last=citadel|date=4 March 2004 |access-date=18 October 2016}}</ref> This problem is solved by [[Fortuna (PRNG)|Fortuna]], an improvement of Yarrow. Fortuna has 32 pools to collect entropy and removed the entropy estimator completely.
+*Yarrow's strength is limited by the size of the key. For example, Yarrow-160 has an effective [[key size]] of 160 bits. If the security requires 256 bits, Yarrow-160 is not capable of doing the job.
+
+==References==
+{{Reflist}}
+
+==External links==
+* [http://www.schneier.com/yarrow.html Yarrow algorithm page]
+* [https://freenet.googlecode.com/svn/trunk/freenet/src/freenet/crypt/Yarrow.java "Yarrow implementation in Java"] {{Webarchive|url=https://web.archive.org/web/20080614213825/http://freenet.googlecode.com/svn/trunk/freenet/src/freenet/crypt/Yarrow.java |date=2008-06-14 }}
+* [https://www.freebsd.org/cgi/man.cgi?query=random&sektion=4 "Yarrow implementation in FreeBSD"]
+* [https://www.usenix.org/legacy/events/bsdcon02/full_papers/murray/murray_html/#entropy:block "An implementation of the Yarrow PRNG for FreeBSD"]
+
+[[Category:Pseudorandom number generators]]
+[[Category:Cryptographically secure pseudorandom number generators]]

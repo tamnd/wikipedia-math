@@ -1,0 +1,111 @@
+<!-- wikipedia: en
+     page: 2732435
+     title: Davis–Putnam algorithm
+     revision: 1341841193
+     timestamp: 2026-03-05T10:32:12Z
+     history: https://en.wikipedia.org/w/index.php?curid=2732435&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1341841193 -->
+{{Short description|Check the validity of a logic formula}}
+In [[logic]] and [[computer science]], the '''Davis–Putnam algorithm''' was developed by [[Martin Davis (mathematician)|Martin Davis]] and [[Hilary Putnam]] for checking the validity of a [[first-order logic]] formula using a [[Resolution (logic)|resolution]]-based decision procedure for [[propositional logic]]. Since the set of valid first-order formulas is [[recursively enumerable]] but not [[Recursive set|recursive]], there exists no general algorithm to solve this problem. Therefore, the Davis–Putnam algorithm only terminates on valid formulas. Today, the term "Davis–Putnam algorithm" is often used synonymously with the resolution-based propositional decision procedure ('''Davis–Putnam procedure''') that is actually only one of the steps of the original algorithm.
+
+==Overview==
+[[File:Resolution.png|thumb|400px|Two runs of the Davis-Putnam procedure on example propositional ground instances.
+''Top to bottom, Left:'' Starting from the formula <math>(a \lor b \lor c) \land (b \lor \lnot c \lor \lnot f) \land (\lnot b \lor e)</math>, the algorithm resolves on <math>b</math>, and then on <math>c</math>. Since no further resolution is possible, the algorithm stops; since the [[empty clause]] couldn't be derived, the result is "''satisfiable''".
+''Right:'' Resolving the given formula on <math>b</math>, then on <math>a</math>, then on <math>c</math> yields the empty clause; hence the algorithm returns "''unsatisfiable''".]]
+
+The procedure is based on [[Herbrand's theorem]], which implies that an [[satisfiable|unsatisfiable]] formula has an unsatisfiable [[ground instance]], and on the fact that a formula is valid if and only if its negation is unsatisfiable. Taken together, these facts imply that to prove the validity of ''φ'' it is enough to prove that a ground instance of ''¬φ'' is unsatisfiable. If ''φ'' is not valid, then the search for an unsatisfiable ground instance will not terminate.
+
+The procedure for checking validity of a formula ''φ'' roughly consists of these three parts:
+* put the formula ''¬φ'' in [[prenex]] form and eliminate quantifiers 
+* generate all propositional ground instances, one by one
+* check if each instance is satisfiable. 
+** If some instance is unsatisfiable, then return that ''φ'' is valid. Else continue checking.
+
+The last part is a [[SAT solver]] based on [[Resolution (logic)|resolution]] (as seen on the illustration), with an eager use of [[unit propagation]] and pure literal elimination (elimination of clauses with variables that occur only positively or only negatively in the formula).{{clarify|reason=In the algorithm below, adding to and removing from a formula should be defined. I guess the formula has to be in clausal normal form (this should be explained then), and adding and removing is achieved by set operations? Moreover, the 'consistent set of literals' test, and the concepts 'polarity', 'pure  literal' and 'unit propagation' should be briefly explained.|date=June 2021}}
+
+{{Algorithm-begin|name=DP SAT solver}}
+     Input: A set of clauses Φ.
+     Output: A Truth Value: true if Φ can be satisfied, false otherwise.
+
+ '''function''' DP-SAT(Φ)
+    '''repeat'''
+        // ''unit propagation:''
+        '''while''' Φ contains a unit clause {''l''} '''do'''
+            '''for every''' clause ''c'' in Φ that contains ''l'' '''do'''
+               Φ ← ''remove-from-formula''(''c'', Φ);
+            '''for every''' clause ''c'' in Φ that contains ¬''l'' '''do'''
+               Φ ← ''remove-from-formula''(''c'', Φ);
+               Φ ← ''add-to-formula''(''c'' \ {¬''l''}, Φ);
+        // ''eliminate clauses not in normal form:''
+        '''for every''' clause ''c'' in Φ that contains both a literal ''l'' and its negation ¬''l'' '''do'''
+            Φ ← ''remove-from-formula''(''c'', Φ);
+        // ''pure literal elimination:''
+        '''while''' there is a literal ''l'' all of which occurrences in Φ have the same polarity '''do'''
+            '''for every''' clause ''c'' in Φ that contains ''l'' '''do'''
+               Φ ← ''remove-from-formula''(''c'', Φ);
+        // ''stopping conditions:''
+        '''if''' Φ is empty '''then'''
+            '''return''' true;
+        '''if''' Φ contains an empty clause '''then'''
+            '''return''' false;
+        // ''Davis-Putnam procedure:''
+        pick a literal ''l'' that occurs with both polarities in Φ
+        '''for every''' clause ''c'' in Φ containing ''l'' and every clause ''n'' in Φ containing its negation ¬''l'' '''do'''
+            // ''resolve c with n:''
+            ''r'' ← (''c'' \ {''l''}) ∪ (''n'' \ {¬''l''});
+            Φ ← ''add-to-formula''(''r'', Φ);
+        '''for every''' clause ''c'' that contains ''l'' or ¬''l'' '''do'''
+            Φ ← ''remove-from-formula''(''c'', Φ);        
+{{Algorithm-end}}
+
+At each step of the SAT solver, the intermediate formula generated is [[equisatisfiable]], but possibly not [[Logical equivalence|equivalent]], to the original formula. The resolution step leads to a worst-case exponential blow-up in the size of the formula.
+
+The [[Davis–Putnam–Logemann–Loveland algorithm]] is a 1962 refinement of the propositional satisfiability step of the Davis–Putnam procedure which requires only a linear amount of memory in the worst case. It eschews the resolution for ''the splitting rule'': a backtracking algorithm that chooses a literal ''l'', and then recursively checks if a simplified formula with ''l'' assigned a true value is satisfiable or if a simplified formula with ''l'' assigned false is. It still forms the basis for today's (as of 2015) most efficient complete [[SAT solver]]s.
+
+==See also==
+*[[Herbrandization]]
+*[[DPLL algorithm]]
+
+==References==
+* {{cite journal
+|last=Davis
+|first=Martin
+|author2=Putnam, Hilary
+| title=A Computing Procedure for Quantification Theory
+| journal =[[Journal of the ACM]]
+| volume = 7 
+| issue = 3
+| pages = 201–215
+| year = 1960
+| doi=10.1145/321033.321034| doi-access =free
+}}
+*{{cite journal
+| last=Davis
+| first=Martin |author2=Logemann, George |author3=Loveland, Donald
+| title=A Machine Program for Theorem Proving
+| journal =[[Communications of the ACM]]
+| volume=5
+| issue=7
+| pages = 394–397
+| year=1962
+| url=http://portal.acm.org/citation.cfm?doid=368273.368557
+| doi=10.1145/368273.368557| hdl=2027/mdp.39015095248095
+| hdl-access=free
+}}
+* {{cite conference
+ | author = R. Dechter
+ |author2=I. Rish
+ | editor = J. Doyle and E. Sandewall and P. Torasso
+ | title = Directional Resolution: The Davis–Putnam Procedure, Revisited
+ | book-title = Principles of Knowledge Representation and Reasoning: Proc. of the Fourth International Conference (KR'94)
+ | pages = 134–145
+ | publisher = Kaufmann
+ }}
+* {{cite book|author=John Harrison|title=Handbook of practical logic and automated reasoning|url=https://archive.org/details/handbookpractica00harr|url-access=limited|year=2009|publisher=Cambridge University Press|isbn=978-0-521-89957-4|pages=[https://archive.org/details/handbookpractica00harr/page/n100 79]–90}}
+
+
+{{DEFAULTSORT:Davis-Putnam algorithm}}
+[[Category:Boolean algebra]]
+[[Category:Constraint programming]]
+[[Category:Automated theorem proving]]

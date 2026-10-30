@@ -1,0 +1,242 @@
+<!-- wikipedia: en
+     page: 985410
+     title: Binary GCD algorithm
+     revision: 1376009681
+     timestamp: 2026-09-21T13:02:00Z
+     history: https://en.wikipedia.org/w/index.php?curid=985410&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1376009681 -->
+{{Short description|Algorithm for computing the greatest common divisor}}
+{{Use dmy dates|date=September 2026}}
+[[File:binary_GCD_algorithm_visualisation.svg|thumb|upright=1.8|Visualisation of using the binary GCD algorithm to find the greatest common divisor (GCD) of 36 and 24.  Thus, the GCD is 2<sup>2</sup> × 3 = 12.]]
+
+The '''binary GCD algorithm''', also known as '''Stein's algorithm''' or the '''binary Euclidean algorithm''',{{r|brenta|brentb}} is an algorithm that computes the [[greatest common divisor]] (GCD) of two nonnegative integers. Stein's algorithm uses simpler arithmetic operations than the conventional [[Euclidean algorithm]]; it replaces division with [[arithmetic shift]]s, comparisons, and subtraction.
+
+Although the algorithm in its contemporary form was first published by the physicist and programmer Josef Stein in 1967,<ref name="Stein"/> it was known by the 2nd century BCE, in ancient China.{{r|Knuth98}}
+
+==Algorithm==
+
+The algorithm finds the GCD of two nonnegative numbers <math>u</math> and <math>v</math> by repeatedly applying these identities:
+
+# <math>\gcd(u, 0) = u</math>: everything divides zero, and <math>u</math> is the largest number that divides <math>u</math>.
+# <math>\gcd(2u, 2v) = 2 \cdot \gcd(u, v)</math>: <math>2</math> is a common divisor.
+# <math>\gcd(u, 2v) = \gcd(u, v)</math> if <math>u</math> is odd: <math>2</math> is then not a common divisor.
+# <math>\gcd(u, v) = \gcd(u, v - u)</math> if <math>u, v</math> odd and <math>u \leq v</math>.
+
+As GCD is commutative (<math>\gcd(u, v) = \gcd(v, u)</math>), those identities still apply if the operands are swapped: <math>\gcd(0, v) = v</math>, <math>\gcd(2u, v) = \gcd(u, v)</math> if <math>v</math> is odd, etc.
+
+==Implementation==
+
+While the above description of the algorithm is mathematically correct, the binary GCD algorithm performs more loop iterations that the Euclidean one, so it only offers a performance advantage if those iterations are substantially faster.  Performant software implementations typically differ from it in a few notable ways:
+* eschewing repeated [[trial division]] by <math>2</math> in favour of the [[count trailing zeros]] primitive and a single [[bit shift]], which is functionally equivalent to repeatedly applying identity 3, but much faster;
+* expressing the algorithm [[Iteration#Computing|iteratively]] rather than [[Recursion (computer science)|recursively]]: the resulting implementation can be laid out to avoid repeated work, invoking identity&nbsp;2 at the start and maintaining as invariant that both numbers are odd upon entering the loop, which only needs to implement identities 3 and 4; and
+* making the loop's body [[Branch (computer science)#Branch-free code|branch-free]] except for its exit condition {{code|lang=c|code=v == 0}}: [[Branch predictor|unpredictable branch]]es can have a large, negative impact on performance.<ref name="intel"/><ref name="lemire"/>
+
+The following is an implementation of the algorithm in [[C (programming language)|C]].
+<syntaxhighlight lang="C">
+
+// Count trailing zeros.  This is a pedagogical example only;
+// for efficiency use __builtin_ctzll() or similar.
+static int ctz(uint64_t n)  {
+    int s = 0, t;
+    while ((t = n & 15) == 0) { n >>= 4; s += 4; }
+    return s + ((0x12131210 >> 2*t) & 3);
+}
+ 
+uint64_t gcd(uint64_t u, uint64_t v)  {
+	if (!u || !v) return u | v;	// Identity #1
+
+	int shift = ctz(u | v);
+	u >>= ctz(u);
+
+	uint64_t min, max;
+	while (v) {
+		v >>= ctz(v);			// Identity #3
+
+		min = (u < v) ? u : v;	// Identity #4
+		max = (u > v) ? u : v;
+		u = min;
+		v = max - min;
+	}
+	return u << shift;			// Identity #2
+}
+</syntaxhighlight>
+
+The following is an implementation of the algorithm in [[Rust (programming language)|Rust]] exemplifying those differences, adapted from [https://github.com/uutils/coreutils/blob/31087e821dc81dfbe4ed97980ae1faa19cbb3250/src/uu/factor/src/numeric/gcd.rs ''uutils''].  The conditional exchange of <math>u</math> and <math>v</math> (ensuring <math>u \leq v</math>) compiles down to [[conditional moves]];:<ref name="rust disassembly"/>
+
+<!-- PLEASE CHECK ANY CHANGES TO THIS ALGORITHM WITH THE TESTS AND OUTPUT HERE:
+     https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=ea08036e202de879eb462dd5fc9747b3 -->
+<syntaxhighlight lang="rust">
+pub fn gcd(mut u: u64, mut v: u64) -> u64 {
+    // Base cases: gcd(n, 0) = gcd(0, n) = n
+    if u == 0 {
+        return v;
+    } else if v == 0 {
+        return u;
+    }
+
+    // Using identities 2 and 3:
+    // gcd(2ⁱ u, 2ʲ v) = 2ᵏ gcd(u, v) with u, v odd and k = min(i, j)
+    // 2ᵏ is the greatest power of two that divides both 2ⁱ u and 2ʲ v
+    let i = u.trailing_zeros();  u >>= i;
+    let j = v.trailing_zeros();  v >>= j;
+    let k = i.min(j);
+
+    loop {
+        // u and v are odd at the start of the loop
+        debug_assert!(u % 2 == 1, "u = {} should be odd", u);
+        debug_assert!(v % 2 == 1, "v = {} should be odd", v);
+
+        // Swap if necessary so u ≤ v
+        if u > v {
+            (u, v) = (v, u);
+        }
+
+        // Identity 4: gcd(u, v) = gcd(u, v-u) as u ≤ v and u, v are both odd 
+        v -= u;
+        // v is now even
+
+        if v == 0 {
+            // Identity 1: gcd(u, 0) = u
+            // The shift by k is necessary to add back the 2ᵏ factor that was removed before the loop
+            return u << k;
+        }
+
+        // Identity 3: gcd(u, 2ʲ v) = gcd(u, v) as u is odd
+        v >>= v.trailing_zeros();
+    }
+}
+</syntaxhighlight>
+
+'''Note''': The implementation above accepts ''unsigned'' (non-negative) integers; given that <math>\gcd(u, v) = \gcd(\pm{}u, \pm{}v)</math>, the signed case can be handled as follows:
+<syntaxhighlight lang="rust">
+/// Computes the GCD of two signed 64-bit integers
+/// The result is unsigned and not always representable as i64: gcd(i64::MIN, i64::MIN) == 1 << 63
+pub fn signed_gcd(u: i64, v: i64) -> u64 {
+    gcd(u.unsigned_abs(), v.unsigned_abs())
+}
+</syntaxhighlight>
+
+==Complexity==
+[[Big O notation|Asymptotically]], the algorithm requires <math>O(n)</math> steps, where <math>n</math> is the number of bits in the larger of the two numbers, as every two steps reduce at least one of the operands by at least a factor of <math>2</math>.  Each step involves only a few arithmetic operations (<math>O(1)</math> with a small constant); when working with [[Word (computer architecture)|word-sized]] numbers, each arithmetic operation translates to a single machine operation, so the number of machine operations is on the order of <math>n</math>, i.e. <math>\log_{2}(\max(u, v))</math>.
+
+For arbitrarily large numbers, the [[asymptotic notation|asymptotic complexity]] of this algorithm is <math>O(n^2)</math>,<ref name="gmplib"/> as each arithmetic operation (subtract and shift) involves a linear number of machine operations (one per word in the numbers' binary representation).
+If the numbers can be represented in the machine's memory, ''i.e.'' each number's ''size'' can be represented by a single machine word, this bound is reduced to:
+<math display="block">
+O\left(\frac{n^2}{\log_2 n}\right)
+</math>
+
+This is the same as for the Euclidean algorithm, though a more precise analysis by Akhavi and Vallée proved that binary GCD uses about 60% fewer bit operations.<ref name="bit-complexity"/>
+
+==Extensions==
+
+The binary GCD algorithm can be extended in several ways, either to output additional information, deal with [[Arbitrary-precision arithmetic|arbitrarily large integers]] more efficiently, or to compute GCDs in domains other than the integers.
+
+The ''extended binary GCD'' algorithm, analogous to the [[extended Euclidean algorithm]], fits in the first kind of extension, as it provides the [[Bézout coefficients]] in addition to the GCD: integers <math>a</math> and <math>b</math> such that <math>a\cdot{}u + b\cdot{}v = \gcd(u, v)</math>.<ref name="egcd-knuth"/><ref name="egcd-applied-crypto"/><ref name="egcd-cohen"/>
+
+In the case of large integers, the best asymptotic complexity is <math>O(M(n) \log n)</math>, with <math>M(n)</math> the cost of <math>n</math>-bit multiplication; this is near-linear and vastly smaller than the binary GCD algorithm's <math>O(n^2)</math>, though concrete implementations only outperform older algorithms for numbers larger than about 64 kilobits (''i.e.'' greater than 8×10<sup>19265</sup>).  This is achieved by extending the binary GCD algorithm using ideas from the [[Schönhage–Strassen algorithm]] for fast integer multiplication.<ref name="stehlé-zimmermann"/>
+
+The binary GCD algorithm has also been extended to domains other than natural numbers, such as [[Gaussian integers]],<ref name="weilert"/> [[Eisenstein integers]],<ref name="eisenstein"/> quadratic rings,<ref name="some-quadratic-rings"/><ref name="UFD-quadratic-rings"/> and [[Ring of integers|integer rings]] of [[number fields]].<ref name="integer-rings" />
+
+==Historical description==
+An algorithm for computing the GCD of two numbers was known in ancient China, under the [[Han dynasty]], as a method to reduce fractions:
+
+{{blockquote| title= Fangtian – Land surveying| source=''[[The Nine Chapters on the Mathematical Art]]'' |text=If possible halve it; otherwise, take the denominator and the numerator, subtract the lesser from the greater, and do that alternately to make them the same. Reduce by the same number.}}
+
+The phrase "if possible halve it" is ambiguous,<ref name="Knuth98"/>
+* if this applies when ''either'' of the numbers become even, the algorithm is the binary GCD algorithm;
+* if this only applies when ''both'' numbers are even, the algorithm is similar to the [[Euclidean algorithm]].
+
+==See also==
+{{Portal|Computer programming}}
+* [[Euclidean algorithm]]
+* [[Extended Euclidean algorithm]]
+* [[Least common multiple]]
+
+==References==
+<references>
+<ref name="Stein">{{Citation |first=J. |last=Stein |title=Computational problems associated with Racah algebra |journal=Journal of Computational Physics |volume= 1 |issue=3 |pages=397–405 |date=February 1967 |issn=0021-9991 |doi=10.1016/0021-9991(67)90047-2|bibcode=1967JCoPh...1..397S }}</ref>
+
+<ref name="Knuth98">{{Citation |first=Donald |last=Knuth |author-link=Donald Knuth |series=[[The Art of Computer Programming]] |volume=2 |title=Seminumerical Algorithms |edition=3rd |publisher=Addison-Wesley |isbn=978-0-201-89684-8 |year=1998 }}</ref>
+
+<ref name="intel">{{Cite web | title=Avoiding the Cost of Branch Misprediction | first=Rajiv | last=Kapoor | date=21 February 2009 | website=Intel Developer Zone | url=https://software.intel.com/content/www/us/en/develop/articles/avoiding-the-cost-of-branch-misprediction.html }}</ref>
+
+<ref name="lemire">{{Cite web | title=Mispredicted branches can multiply your running times | first=Daniel | last=Lemire | date=15 October 2019 | url=https://lemire.me/blog/2019/10/15/mispredicted-branches-can-multiply-your-running-times/ }}</ref>
+
+<ref name="rust disassembly">{{Cite web | title=Compiler Explorer | first=Matt | last=Godbolt | access-date=4 February 2024 | url=https://rust.godbolt.org/z/56jva3KPn }}</ref>
+
+<ref name="egcd-knuth">{{Harvnb|Knuth|1998|p=646}}, answer to exercise 39 of section 4.5.2</ref>
+
+<ref name="egcd-applied-crypto">{{Cite book |chapter=§14.4 Greatest Common Divisor Algorithms |chapter-url=https://cacr.uwaterloo.ca/hac/about/chap14.pdf#page=17 |title=Handbook of Applied Cryptography |url=http://cacr.uwaterloo.ca/hac/ |pages=606–610 |date=October 1996 |publisher=CRC Press |first1=Alfred J. |last1=Menezes |first2=Paul C. |last2=van Oorschot |first3=Scott A. |last3=Vanstone |isbn=0-8493-8523-7 |access-date=9 September 2017}}</ref>
+
+<ref name="egcd-cohen">{{cite book |last=Cohen |first=Henri |author-link= Henri Cohen (number theorist) |year=1993 |title=A Course in Computational Algebraic Number Theory
+|pages=17–18 |chapter=Chapter 1 : Fundamental Number-Theoretic Algorithms <!-- TODO: Section 3: Euclid's algorithms -->
+|isbn= 0-387-55640-0|publisher=Springer-Verlag|series=[[Graduate Texts in Mathematics]]|volume=138
+|url= https://books.google.com/books?id=hXGr-9l1DXcC}}</ref>
+
+<ref name="gmplib">{{Cite web | url=https://gmplib.org/manual/Binary-GCD.html | title=GNU MP 6.1.2: Binary GCD}}</ref>
+<ref name="stehlé-zimmermann">{{citation
+ | last1 = Stehlé | first1 = Damien
+ | last2 = Zimmermann | first2 = Paul | author-link2 = Paul Zimmermann (mathematician)
+ | contribution = A binary recursive gcd algorithm
+ | doi = 10.1007/978-3-540-24847-7_31
+ | mr = 2138011
+ | pages = 411–425
+ | publisher = Springer, Berlin
+ | series = Lecture Notes in Comput. Sci.
+ | title = Algorithmic number theory
+ | contribution-url = https://hal.archives-ouvertes.fr/docs/00/07/15/33/PDF/RR-5050.pdf
+ | volume = 3076
+ | year = 2004 | isbn = 978-3-540-22156-2
+ | s2cid = 3119374
+ | id = INRIA Research Report RR-5050
+ }}.</ref>
+<ref name="bit-complexity">{{Citation | first1 = Ali | last1 = Akhavi | first2 = Brigitte | last2 = Vallée | title = Average Bit-Complexity of Euclidean Algorithms | year = 2000 | journal = Proceedings ICALP'00, Lecture Notes Computer Science 1853 | pages = 373–387 | url = https://vallee.users.greyc.fr/Publications/icalp8-2000.ps }}</ref>
+<ref name=brenta>{{cite conference |first=Richard P. |last=Brent |author-link=Richard P. Brent |url=https://wwwmaths.anu.edu.au/~brent/pub/pub183.html |title=Twenty years' analysis of the Binary Euclidean Algorithm |conference=1999 Oxford-Microsoft Symposium in honour of Professor Sir Antony Hoare |date=13–15 September 1999 |location=Oxford}}</ref>
+<ref name=brentb>{{cite tech report |first=Richard P. |last=Brent |author-link=Richard P. Brent |title=Further analysis of the Binary Euclidean algorithm |publisher=Oxford University Computing Laboratory |id=PRG TR-7-99 |date=November 1999 |arxiv=1303.2772 |url=https://www.cs.ox.ac.uk/techreports/oucl/tr-7-99.html}}</ref>
+<ref name="weilert">{{cite journal |first=André |last=Weilert |title=(1+i)-ary GCD Computation in Z[i] as an Analogue to the Binary GCD Algorithm
+|date=July 2000 |journal=Journal of Symbolic Computation |volume=30 |issue=5 |pages=605–617 |doi=10.1006/jsco.2000.0422|doi-access=free }}</ref>
+<ref name="eisenstein">{{cite conference |last1=Damgård |first1=Ivan Bjerre |last2=Frandsen |first2=Gudmund Skovbjerg
+|title=Efficient Algorithms for GCD and Cubic Residuosity in the Ring of Eisenstein Integers |doi=10.1007/978-3-540-45077-1_11
+|doi-access= |pages=109–117 |conference=14th International Symposium on the Fundamentals of Computation Theory |location=[[Malmö]], Sweden |date= 12–15 August 2003}}</ref>
+<ref name="some-quadratic-rings">{{cite conference |last1=Agarwal |first1=Saurabh |last2=Frandsen |first2=Gudmund Skovbjerg
+|title=Binary GCD Like Algorithms for Some Complex Quadratic Rings |doi=10.1007/978-3-540-24847-7_4 |pages=57–71
+|conference=Algorithmic Number Theory Symposium |date= 13–18 June 2004 |location=[[Burlington, VT]], USA}}</ref>
+<ref name="UFD-quadratic-rings">{{cite conference |last1=Agarwal |first1=Saurabh |last2=Frandsen |first2=Gudmund Skovbjerg
+|title=A New GCD Algorithm for Quadratic Number Rings with Unique Factorization |doi=10.1007/11682462_8 |pages=30–42
+|conference=7th Latin American Symposium on Theoretical Informatics |date= 20–24 March 2006 |location=Valdivia, Chile}}</ref>
+<ref name="integer-rings">{{cite conference |last=Wikström |first=Douglas
+|title=On the l-Ary GCD-Algorithm in Rings of Integers |doi=10.1007/11523468_96 |pages=1189–1201 |date= 11–15 July 2005
+|conference=Automata, Languages and Programming, 32nd International Colloquium |location=Lisbon, Portugal}}</ref>
+</references>
+
+==Further reading==
+* {{cite book |first=Donald |last=Knuth |author-link=Donald Knuth |series=[[The Art of Computer Programming]] |volume=2
+|title=Seminumerical Algorithms |chapter=§4.5 Rational arithmetic |pages=330–417
+|edition=3rd |publisher=Addison-Wesley |isbn=978-0-201-89684-8 |year=1998 |ref=none}}
+Covers the extended binary GCD, and a probabilistic analysis of the algorithm.
+
+* {{cite book |last=Cohen |first=Henri |author-link= Henri Cohen (number theorist) |year=1993 |title=A Course in Computational Algebraic Number Theory
+|pages=12–24 |chapter=Chapter 1 : Fundamental Number-Theoretic Algorithms <!-- TODO: Section 3: Euclid's algorithms -->
+|isbn= 0-387-55640-0|publisher=Springer-Verlag|series=[[Graduate Texts in Mathematics]]|volume=138
+|url= https://books.google.com/books?id=hXGr-9l1DXcC}}
+Covers a variety of topics, including the extended binary GCD algorithm which outputs [[Bézout coefficients]], efficient handling of multi-precision integers using a variant of [[Lehmer's GCD algorithm]], and the relationship between GCD and [[simple continued fraction|continued fraction expansion]]s of real numbers.
+
+* {{cite journal|last=Vallée |first=Brigitte | author-link=Brigitte Vallée
+| title=Dynamics of the Binary Euclidean Algorithm: Functional Analysis and Operators |pages=660–685
+| date=September–October 1998 |journal=Algorithmica |volume=22 |issue=4 |doi=10.1007/PL00009246
+|s2cid=27441335 | archive-url=https://web.archive.org/web/20110513012901/http://users.info.unicaen.fr/~brigitte/Publications/bin-gcd.ps
+| url=https://users.info.unicaen.fr/~brigitte/Publications/bin-gcd.ps |archive-date=13 May 2011 |format=PS
+}}
+An analysis of the algorithm in the average case, through the lens of [[functional analysis]]: the algorithms' main parameters are cast as a [[dynamical system]], and their average value is related to the [[invariant measure]] of the system's [[transfer operator]].
+
+== External links ==
+* [https://xlinux.nist.gov/dads/HTML/binaryGCD.html NIST Dictionary of Algorithms and Data Structures: binary GCD algorithm]
+* [https://www.cut-the-knot.org/blue/binary.shtml Cut-the-Knot: Binary Euclid's Algorithm] at [[cut-the-knot]]
+* [https://wwwmaths.anu.edu.au/~brent/pub/pub037.html ''Analysis of the Binary Euclidean Algorithm''] (1976), a paper by [[Richard Brent (scientist)|Richard P. Brent]], including a variant using left shifts
+
+{{number theoretic algorithms}}
+
+{{DEFAULTSORT:Binary Gcd Algorithm}}
+[[Category:Number theoretic algorithms]]
+[[Category:Articles with example Rust code]]

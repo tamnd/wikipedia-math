@@ -1,0 +1,139 @@
+<!-- wikipedia: en
+     page: 197253
+     title: Borůvka's algorithm
+     revision: 1369348056
+     timestamp: 2026-08-14T12:00:02Z
+     history: https://en.wikipedia.org/w/index.php?curid=197253&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1369348056 -->
+{{Short description|Method for finding minimum spanning trees}}
+{{Infobox Algorithm
+|image=[[File:Boruvka's algorithm (Sollin's algorithm) Anim.gif|frameless|upright=1.35]]
+|caption=Animation of Borůvka's algorithm
+|class=[[Minimum spanning tree|Minimum spanning tree algorithm]]
+|data=[[Graph (abstract data type)|Graph]]
+|time=<math>O(|E|\log |V|)</math>
+}}
+'''Borůvka's algorithm''' is a [[greedy algorithm]] for finding a [[minimum spanning tree]] in a graph,
+or a minimum spanning forest in the case of a graph that is not connected.
+
+It was first published in 1926 by [[Otakar Borůvka]] as a method of constructing an efficient [[electricity network]] for [[Moravia]].<ref>{{cite journal | last = Borůvka | first = Otakar | author-link = Otakar Borůvka | year = 1926 | title = O jistém problému minimálním |trans-title=About a certain minimal problem | journal = Práce Mor. Přírodověd. Spol. V Brně III | volume = 3 | pages = 37–58 | url = https://dml.cz/handle/10338.dmlcz/500114 | language = cs, de}}</ref><ref>{{cite journal | last = Borůvka | first = Otakar | author-link = Otakar Borůvka | year = 1926 | title = Příspěvek k řešení otázky ekonomické stavby elektrovodních sítí (Contribution to the solution of a problem of economical construction of electrical networks) | journal = Elektronický Obzor | volume = 15 | pages = 153&ndash;154 | language = cs }}</ref><ref>{{cite journal
+ | last1 = Nešetřil | first1 = Jaroslav | author1-link = Jaroslav Nešetřil
+ | last2 = Milková | first2 = Eva
+ | last3 = Nešetřilová | first3 = Helena
+ | doi = 10.1016/S0012-365X(00)00224-7
+ | issue = 1–3
+ | journal = [[Discrete Mathematics (journal)|Discrete Mathematics]]
+ | mr = 1825599
+ | pages = 3–36
+ | title = Otakar Borůvka on minimum spanning tree problem: translation of both the 1926 papers, comments, history
+ | volume = 233
+ | year = 2001| hdl = 10338.dmlcz/500413
+ | hdl-access = free
+ }}</ref>
+The algorithm was rediscovered by [[Gustave Choquet|Choquet]] in 1938;<ref>{{cite journal | last = Choquet | first = Gustave | author-link = Gustave Choquet | year = 1938 | title = Étude de certains réseaux de routes | journal = Comptes Rendus de l'Académie des Sciences | volume = 206 | pages = 310&ndash;313 | language = fr }}</ref> again by [[Kazimierz Florek|Florek]],  [[Jan Łukasiewicz|Łukasiewicz]], [[Julian Perkal|Perkal]], [[Hugo Steinhaus|Steinhaus]], and [[Stefan Zubrzycki|Zubrzycki]] in 1951;<ref>{{cite journal
+ | last1 = Florek | first1 = K.
+ | last2 = Łukaszewicz | first2 = J. | author2-link = Jan Łukasiewicz
+ | last3 = Perkal | first3 = J.
+ | last4 = Steinhaus | first4 = Hugo | author4-link = Hugo Steinhaus
+ | last5 = Zubrzycki | first5 = S.
+ | journal = Colloquium Mathematicum
+ | language = fr
+ | mr = 0048832
+ | pages = 282–285
+ | title = Sur la liaison et la division des points d'un ensemble fini
+ | url = https://eudml.org/doc/209969
+ | volume = 2
+ | year = 1951| issue = 3–4
+ | doi = 10.4064/cm-2-3-4-282-285
+ }}</ref> and again by Georges Sollin in 1965.<ref>{{cite journal | last = Sollin | first = Georges | year = 1965 | title = Le tracé de canalisation | journal = Programming, Games, and Transportation Networks |  language = fr }}</ref> This algorithm is frequently called '''Sollin's algorithm''', especially in the [[parallel computing]] literature.
+
+The algorithm begins by finding the minimum-weight edge incident to each vertex of the graph, and adding all of those edges to the forest.
+Then, it repeats a similar process of finding the minimum-weight edge from each tree constructed so far to a different tree, and adding all of those edges to the forest.
+Each repetition of this process reduces the number of trees, within each connected component of the graph, to at most half of this former value,
+so after logarithmically many repetitions the process finishes. When it does, the set of edges it has added forms the minimum spanning forest.
+
+== Pseudocode ==
+
+The following pseudocode illustrates a basic implementation of Borůvka's algorithm.
+In the conditional clauses, every edge ''uv'' is considered cheaper than "None".  The purpose of the ''completed'' variable is to determine whether the forest ''F'' is yet a spanning forest.
+
+If edges do not have distinct weights, then a consistent '''tie-breaking rule''' must be used, e.g. based on some [[total order]] on vertices or edges.
+This can be achieved by representing vertices as integers and comparing them directly; comparing their [[memory address]]es; etc.
+A tie-breaking rule is necessary to ensure that the created graph is indeed a forest, that is, it does not contain cycles. For example, consider a triangle graph with nodes {''a'',''b'',''c''} and all edges of weight 1. Then a cycle could be created if we select ''ab'' as the minimal weight edge for {''a''}, ''bc'' for {''b''}, and ''ca'' for {''c''}.
+A tie-breaking rule which orders edges first by source, then by destination, will prevent creation of a cycle, resulting in the minimal spanning tree {''ab'', ''bc''}.
+
+ '''algorithm''' Borůvka '''is'''
+     '''input:''' A weighted undirected graph ''G'' = (''V'', ''E'').
+     '''output:''' ''F'', a minimum spanning forest of ''G''.
+ 
+     Initialize a forest ''F'' to (''V'', ''{{prime|E}}'') where ''{{prime|E}}'' = {}.
+ 
+     ''completed'' := '''false'''
+     '''while''' not ''completed'' '''do'''
+         Find the [[Component_(graph_theory)|connected component]]s of ''F'' and assign to each vertex its component
+         Initialize the cheapest edge for each component to "None"
+         '''for each''' edge ''uv'' in ''E'', where ''u'' and ''v'' are in different components of ''F'':
+             let ''wx'' be the cheapest edge for the component of ''u''
+             '''if''' is-preferred-over(''uv'', ''wx'') '''then'''
+                 Set ''uv'' as the cheapest edge for the component of ''u''
+             let ''yz'' be the cheapest edge for the component of ''v''
+             '''if''' is-preferred-over(''uv'', ''yz'') '''then'''
+                 Set ''uv'' as the cheapest edge for the component of ''v''
+         '''if''' all components have cheapest edge set to "None" '''then'''
+             ''// no more trees can be merged -- we are finished''
+             ''completed'' := '''true'''
+         '''else'''
+             ''completed'' := '''false'''
+             '''for each''' component whose cheapest edge is not "None" '''do'''
+                 Add its cheapest edge to ''E'''
+ 
+ '''function''' is-preferred-over(''edge1'', ''edge2'') '''is'''
+     '''return''' (''edge2'' is "None") or
+            (weight(''edge1'') < weight(''edge2'')) or
+            (weight(''edge1'') = weight(''edge2'') and tie-breaking-rule(''edge1'', ''edge2''))
+ 
+ '''function''' tie-breaking-rule(''edge1'', ''edge2'') '''is'''
+     The tie-breaking rule; returns '''true''' if and only if ''edge1''
+     is preferred over ''edge2'' in the case of a tie.
+
+As an optimization, one could remove from ''G'' each edge that is found to connect two vertices in the same component, so that it does not contribute to the time for searching for cheapest edges in later components.
+
+== Complexity ==
+
+Borůvka's algorithm can be shown to take {{math|[[Big O notation|O]](log ''V'')}} iterations of the outer loop until it terminates, and therefore to run in time {{math|[[Big O notation|O]](''E'' log ''V'')}}, where {{mvar|E}} is the number of edges, and {{mvar|V}} is the number of vertices in {{mvar|G}} (assuming {{math|''E'' ≥ ''V''}}). In [[planar graph]]s, and more generally in families of graphs closed under [[graph minor]] operations, it can be made to run in linear time, by removing all but the cheapest edge between each pair of components after each stage of the algorithm.<ref>{{Cite book|last=Eppstein|first=David|author-link=David Eppstein|contribution=Spanning trees and spanners|title=Handbook of Computational Geometry|editor1-first=J.-R.|editor1-last=Sack|editor1-link=Jörg-Rüdiger Sack|editor2-first=J.|editor2-last=Urrutia|editor2-link= Jorge Urrutia Galicia|publisher=Elsevier|year=1999|pages=425–461}}; {{Cite journal|last=Mareš|first=Martin|title=Two linear time algorithms for MST on minor closed graph classes|journal=Archivum Mathematicum|volume=40|year=2004|issue=3|pages=315–320|url=http://www.emis.de/journals/AM/04-3/am1139.pdf}}.</ref>
+
+== Example ==
+
+{| class="wikitable"
+! | Image
+! width="100" | components
+! | Description
+|-
+|[[File:Borůvka Algorithm 1.svg|200px]]
+| {A}<br/>{B}<br/>{C}<br/>{D}<br/>{E}<br/>{F}<br/>{G}
+|This is our original weighted graph. The numbers near the edges indicate their weight. Initially, every vertex by itself is a component (blue circles).
+|-
+|[[File:Borůvka Algorithm 2.svg|200px]]
+| {A,B,D,F}<br/>{C,E,G}
+|In the first iteration of the outer loop, the minimum weight edge out of every component is added. Some edges are selected twice (AD, CE). Two components remain.
+|-
+|[[File:Borůvka Algorithm 3.svg|200px]]
+| {A,B,C,D,E,F,G}
+|In the second and final iteration, the minimum weight edge out of each of the two remaining components is added. These happen to be the same edge. One component remains and we are done. The edge BD is not considered because both endpoints are in the same component.
+|}
+
+== Other algorithms ==
+
+Other algorithms for this problem include [[Prim's algorithm]] and [[Kruskal's algorithm]]. Fast parallel algorithms can be obtained by combining Prim's algorithm with Borůvka's.<ref>{{cite journal|last1=Bader|first1=David A.|last2=Cong|first2=Guojing|title=Fast shared-memory algorithms for computing the minimum spanning forest of sparse graphs|journal=Journal of Parallel and Distributed Computing|date=2006|volume=66|issue=11|pages=1366–1378|doi=10.1016/j.jpdc.2006.06.001|s2cid=2004627}}</ref>
+
+A faster randomized minimum spanning tree algorithm based in part on Borůvka's algorithm due to Karger, Klein, and Tarjan runs in expected {{math|O(''E'')}} time.<ref>{{cite journal|last1=Karger|first1=David R.|last2=Klein|first2=Philip N.|last3=Tarjan|first3=Robert E.|title=A randomized linear-time algorithm to find minimum spanning trees|journal=Journal of the ACM|date=1995|volume=42|issue=2|pages=321–328|doi=10.1145/201019.201022|s2cid=832583}}</ref>  The best known (deterministic) minimum spanning tree algorithm by [[Bernard Chazelle]] is also based in part on Borůvka's and runs in {{math|O(''E'' α(''E'',''V''))}} time, where α is the [[Ackermann function#Inverse|inverse Ackermann function]].<ref>{{Cite journal|last=Chazelle|first=Bernard|title=A minimum spanning tree algorithm with inverse-Ackermann type complexity|journal=J. ACM|volume=47|year=2000|issue=6|pages=1028–1047|url=http://www.cs.princeton.edu/~chazelle/pubs/mst.pdf|doi=10.1145/355541.355562|s2cid=6276962}}</ref> These randomized and deterministic algorithms combine steps of Borůvka's algorithm, reducing the number of components that remain to be connected, with steps of a different type that reduce the number of edges between pairs of components.
+
+==Notes==
+<references/>
+
+{{Graph traversal algorithms}}
+
+[[Category:Graph algorithms]]
+[[Category:Spanning tree]]
+[[Category:Articles with example pseudocode]]

@@ -1,0 +1,118 @@
+<!-- wikipedia: en
+     page: 1498076
+     title: Unit in the last place
+     revision: 1368302084
+     timestamp: 2026-08-08T07:22:14Z
+     history: https://en.wikipedia.org/w/index.php?curid=1498076&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1368302084 -->
+{{Short description|Floating-point accuracy metric}}
+{{more citations needed|date=March 2015}}
+{{Use dmy dates|date=July 2021}}
+In [[computer science]] and [[numerical analysis]], '''unit in the last place''' or '''unit of least precision''' ('''ulp''') is the spacing between two consecutive [[floating-point]] numbers, i.e., the value the ''[[least significant digit]]'' (rightmost digit) represents if it is 1.<!-- Strictly speaking, when dealing with the representation, it needs to be normalized (e.g. in IEEE 754 decimal arithmetic); but perhaps this would be too much detailed for the LEDE. --> It is used as a measure of [[Accuracy and precision|accuracy]] in numeric calculations.<ref>{{cite journal |author-first=David |author-last=Goldberg |title=What Every Computer Scientist Should Know About Floating-Point Arithmetic |journal=[[ACM Computing Surveys]] |date=March 1991 |volume=23 |issue=1 |pages=5–48 |doi=10.1145/103162.103163 |doi-access=free|s2cid=222008826}} (With the addendum "Differences Among IEEE 754 Implementations": [https://web.archive.org/web/20171011072644/http://www.cse.msu.edu/~cse320/Documents/FloatingPoint.pdf], [https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html]).</ref>
+
+==Definition==
+The most common definition is: In [[radix]] <math>b</math> with precision <math>p</math>, if <math>b^e \le |x| < b^{e+1}</math>, then {{nowrap|<math>\operatorname{ulp}(x) = b^{\max \{ e, \, e_\min \} - p + 1}</math>,<ref name="hfpa2018">{{cite book |author-last1=Muller |author-first1=Jean-Michel |author-last2=Brunie |author-first2=Nicolas |author-last3=de Dinechin |author-first3=Florent |author-last4=Jeannerod |author-first4=Claude-Pierre |author-first5=Mioara |author-last5=Joldes |author-last6=Lefèvre |author-first6=Vincent |author-last7=Melquiond |author-first7=Guillaume |author-last8=Revol |author-first8=Nathalie|author8-link=Nathalie Revol |author-last9=Torres |author-first9=Serge |title=Handbook of Floating-Point Arithmetic |date=2018 |orig-year=2010 |publisher=[[Birkhäuser]] |edition=2 |isbn=978-3-319-76525-9 |doi=10.1007/978-3-319-76526-6}}</ref>}} where <math>e_\min</math> is the minimal exponent of the normal numbers. In particular, <math>\operatorname{ulp}(x) = b^{e - p + 1}</math> for [[Normal number (computing)|normal numbers]], and <math>\operatorname{ulp}(x) = b^{e_\min - p + 1}</math> for [[Subnormal number|subnormals]].
+<!-- TODO: Say something about ulp(0), not defined above. See what the sources (books, programming languages, libraries) say... But note that some documents use a definition for their own purpose, for practical reasons; this should not be regarded as a standard definition. -->
+
+Another definition, suggested by John Harrison, is slightly different: <math>\operatorname{ulp}(x)</math> is the distance between the two closest ''straddling'' floating-point numbers <math>a</math> and <math>b</math> (i.e., satisfying <math>a \le x \le b</math> and <math>a \neq b</math>), assuming that the exponent range is not upper-bounded.<ref>{{cite web|last=Harrison|first=John|title=A Machine-Checked Theory of Floating Point Arithmetic|url=https://www.cl.cam.ac.uk/~jrh13/papers/fparith.html|access-date=2013-07-17}}</ref><ref>{{cite web|last=Muller|first=Jean-Michel|title=On the definition of ulp(x)|series=INRIA Technical Report 5504|url=https://inria.hal.science/inria-00070503v1/document|date=19 May 2006|access-date=2026-02-27}}.</ref> These definitions differ only at signed powers of the radix.<ref name="hfpa2018"/>
+
+==Examples==
+===Example 1===
+Let <math>x</math> be a positive floating-point number and assume that the active rounding mode is [[IEEE floating point#Roundings to nearest|round to nearest, ties to even]], denoted <math>\operatorname{RN}</math>. If <math>\operatorname{ulp}(x) \le 1</math>, then <math>\operatorname{RN} (x + 1) > x</math>. Otherwise, <math>\operatorname{RN} (x + 1) = x</math> or <math>\operatorname{RN} (x + 1) = x + \operatorname{ulp}(x)</math>, depending on the value of the least significant digit and the exponent of <math>x</math>. This is demonstrated in the following [[Haskell]] code typed at an interactive prompt:
+<syntaxhighlight lang="lhaskell">
+> until (\x -> x == x+1) (+1) 0 :: Float
+1.6777216e7
+> it-1
+1.6777215e7
+> it+1
+1.6777216e7
+</syntaxhighlight>
+
+Here we start with 0 in [[Single-precision floating-point format|single precision]] (binary32) and repeatedly add 1 until the operation does not change the value. Since the [[significand]] for a single-precision number contains 24 bits, the first integer that is not exactly representable is 2<sup>24</sup>+1, and this value rounds to 2<sup>24</sup> in round to nearest, ties to even. Thus the result is equal to 2<sup>24</sup>.
+
+===Example 2===
+The following example in [[Java (programming language)|Java]] approximates [[Pi|{{pi}}]] as a floating-point value by finding the two double values bracketing <math>\pi</math>: <math>p_0 < \pi < p_1</math>.
+<syntaxhighlight lang="Java">
+// π with 20 decimal digits
+BigDecimal π = new BigDecimal("3.14159265358979323846");
+
+// truncate to a double floating point
+double p0 = π.doubleValue();
+// -> 3.141592653589793  (hex: 0x1.921fb54442d18p1)
+
+// p0 is smaller than π, so find next number representable as double
+double p1 = Math.nextUp(p0);
+// -> 3.1415926535897936 (hex: 0x1.921fb54442d19p1)
+</syntaxhighlight>
+
+Then <math>\operatorname{ulp}(\pi)</math> is determined as <math>\operatorname{ulp}(\pi) = p_1 - p_0</math>.
+<syntaxhighlight lang="Java">
+// ulp(π) is the difference between p1 and p0
+BigDecimal ulp = new BigDecimal(p1).subtract(new BigDecimal(p0));
+// -> 4.44089209850062616169452667236328125E-16
+// (this is precisely 2**(-51))
+
+// same result when using the standard library function
+double ulpMath = Math.ulp(p0);
+// -> 4.440892098500626E-16 (hex: 0x1.0p-51)
+</syntaxhighlight>
+
+===Example 3===
+
+Another example, in [[Python (programming language)|Python]], also typed at an interactive prompt, is:
+
+<syntaxhighlight lang="pycon">
+>>> x = 1.0
+>>> p = 0
+>>> while x != x + 1:
+...   x = x * 2
+...   p = p + 1
+... 
+>>> x
+9007199254740992.0
+>>> p
+53
+>>> x + 2 + 1
+9007199254740996.0
+</syntaxhighlight>
+
+In this case, we start with <code>x = 1</code> and repeatedly double it until <code>x = x + 1</code>. Similarly to Example&nbsp;1, the result is 2<sup>53</sup> because the [[double-precision]] floating-point format uses a 53-bit significand.
+
+== Relevance ==
+The [[IEEE 754]] specification—followed by all modern floating-point hardware—requires that the result of an [[elementary arithmetic]] operation (addition, subtraction, multiplication, division, and [[square root]] since 1985, and [[Fused multiply–add|FMA]] since 2008) be correctly [[Rounding#Floating-point rounding|rounded]], which implies that in rounding to nearest, the rounded result is within 0.5 ulp of the mathematically exact result, using John Harrison's definition; conversely, this property implies that the distance between the rounded result and the mathematically exact result is minimized (but for the halfway cases, it is satisfied by two consecutive floating-point numbers). Reputable [[List of numerical libraries|numerical libraries]] compute the basic [[transcendental function]]s to between 0.5 and about 1 ulp (in practice, a probabilistic statement: common examples are 0.51 ulp and 0.501 ulp, corresponding to an incorrect rounding out of 100 and 1000 random floating-point inputs respectively).<ref name=Kahan>{{cite web |last=Kahan |first=William |title=A Logarithm Too Clever by Half |url=https://people.eecs.berkeley.edu/~wkahan/LOG10HAF.TXT |access-date=2008-11-14}}</ref><ref name=Brisebarre>{{cite web |last1=Brisebarre |first1=Nicolas |last2=Hanrot |first2=Guillaume |last3=Muller |first3=Jean-Michel |last4=Zimmermann |first4=Paul |title=Correctly-rounded evaluation of a function: why, how, and at what cost? |url=https://hal.science/hal-04474530 |date=May 2024}}</ref> Only a few libraries compute them within 0.5 ulp, this problem being complex due to the [[table-maker's dilemma]].<ref name=Kahan/>
+
+Since the 2010s, advances in floating-point mathematics have allowed correctly rounded transcendental functions to be almost as fast in average as these earlier, less accurate functions. These functions generally employ Ziv's 1991 "onion-peeling" strategy, in which a function first computes a fast approximation, then checks whether a more accurate method is required for correct rounding. What makes this strategy practical is that advances in both algorithms and computing power allows identification of the "breakpoints" where a function transitions from correctly-rounded to otherwise, therefore reducing the "hardness to round" identified in the table-maker's dilemma.<ref name=Brisebarre/>
+
+IEEE 754-2019 requires that its recommended arithmetic operations (which includes the transcendental functions) be correctly-rounded if present, an important departure from IEEE 754-2008 which introduced most of them.<ref>{{Cite book |title=IEEE Standard for Floating-Point Arithmetic |series=IEEE STD 754-2019 |pages=1–82 |author=IEEE Computer Society |date=22 July 2019 |publisher=IEEE |id=IEEE Std 754-2019 |doi=10.1109/IEEESTD.2019.8766229 |isbn=978-1-5044-5924-2 |ref=CITEREFIEEE_7542019}}</ref>{{rp|&sect;9.2}}
+
+==Language support==
+The [[Boost C++ libraries]] provides the functions <code>boost::math::float_next</code>, <code>boost::math::float_prior</code>, <code>boost::math::nextafter</code> 
+and <code>boost::math::float_advance</code> to obtain nearby (and distant) floating-point values,<ref name="Boost advance">{{cite book | url=https://www.boost.org/doc/libs/release/libs/math/doc/html/math_toolkit/next_float/float_advance.html | title=Boost float_advance}}</ref> and <code>boost::math::float_distance(a, b)</code> to calculate the floating-point distance between two doubles.<ref name="Boost float_distance">{{cite book | url=https://www.boost.org/doc/libs/release/libs/math/doc/html/math_toolkit/next_float/float_distance.html | title=Boost float_distance}}</ref>
+
+The [[C (programming language)|C language]] library provides functions to calculate the next floating-point number in some given direction: <code>nextafterf</code> and <code>nexttowardf</code> for <code>float</code>, <code>nextafter</code> and <code>nexttoward</code> for <code>double</code>, <code>nextafterl</code> and <code>nexttowardl</code> for <code>long double</code>, declared in <code><math.h></code>. It also provides the macros <code>FLT_EPSILON</code>, <code>DBL_EPSILON</code>, <code>LDBL_EPSILON</code>, which represent the positive difference between 1.0 and the next greater representable number in the corresponding type (i.e. the ulp of one).<ref name=c99>{{cite book | url=https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1256.pdf  | title=ISO/IEC 9899:1999 specification | at=p. 237, §7.12.11.3 ''The nextafter functions'' and §7.12.11.4 ''The nexttoward functions''}}</ref>
+
+The [[Go (programming language)|Go]] standard library provides the functions <code>math.Nextafter</code> (for 64 bit floats) and <code>math.Nextafter32</code> (for 32 bit floats) both of which return the next representable floating-point value towards another provided floating-point value.<ref>{{cite web |title=math package - math - Go Packages |url=https://pkg.go.dev/math |website=pkg.go.dev |access-date=19 May 2025}}</ref>
+
+The [[Java (language)|Java]] standard library provides the functions {{Javadoc:SE|java/lang|Math|ulp(double)}} and {{Javadoc:SE|java/lang|Math|ulp(float)}}. They were introduced with Java 1.5.
+
+The [[Swift (programming language)|Swift]] standard library provides access to the next floating-point number in some given direction via the instance properties <code>nextDown</code> and <code>nextUp</code>. It also provides the instance property <code>ulp</code> and the type property <code>ulpOfOne</code> (which corresponds to C macros like <code>FLT_EPSILON</code><ref>{{cite web | url=https://developer.apple.com/documentation/swift/floatingpoint/ulpofone-7hdlb | title=ulpOfOne - FloatingPoint {{pipe}} Apple Developer Documentation | website=Apple Inc. | access-date=2019-08-18}}</ref>) for Swift's floating-point types.<ref>{{cite web | url=https://developer.apple.com/documentation/swift/floatingpoint | title=FloatingPoint - Swift Standard Library {{pipe}} Apple Developer Documentation | website=Apple Inc. | access-date=2019-08-18}}</ref>
+
+==See also==
+* [[IEEE 754]]
+* [[ISO/IEC 10967]], part 1 requires an ulp function
+* [[Least significant bit]] (LSB)
+* [[Machine epsilon]]
+* [[Round-off error]]
+
+==References==
+{{Reflist}}
+
+==Bibliography==
+{{Wiktionary|ulp}}
+
+*Goldberg, David (1991–03). "Rounding Error" in "What Every Computer Scientist Should Know About Floating-Point Arithmetic". Computing Surveys, ACM, March 1991. Retrieved from https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html#689.
+*{{Cite book|title=Handbook of floating-point arithmetic|last=Muller|first=Jean-Michel|publisher=Birkhäuser|year=2010|isbn=978-0-8176-4704-9|location=Boston|pages=32–37}}
+
+[[Category:Computer arithmetic]]
+[[Category:Floating point]]

@@ -1,0 +1,288 @@
+<!-- wikipedia: en
+     page: 10237
+     title: Exponentiation by squaring
+     revision: 1374418421
+     timestamp: 2026-09-11T23:33:46Z
+     history: https://en.wikipedia.org/w/index.php?curid=10237&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374418421 -->
+{{short description|Algorithm for fast exponentiation}}
+{{confusing|talk=talk:Exponentiation by squaring#Least significant bit is first|date=May 2022}}
+{{more citations needed|date=February 2018}}
+
+In [[mathematics]] and [[computer programming]], '''exponentiating by squaring''' is a general method for fast computation of large [[positive integer]] powers of a [[number]], or more generally of an element of a [[semigroup]], like a [[polynomial]] or a [[square matrix]]. Some variants are commonly referred to as '''square-and-multiply''' algorithms or '''binary exponentiation'''. These can be of quite general use, for example in [[modular arithmetic]] or powering of matrices. For semigroups for which [[Abelian group#Notation|additive notation]] is commonly used, like [[elliptic curve]]s used in [[cryptography]], this method is also referred to as '''double-and-add'''.
+
+==Basic method==
+
+===Recursive version===
+The method is based on the observation that, for any integer <math>n > 0</math>, one has
+<math display="block"> x^n=
+ \begin{cases}
+  x \, (x^2)^{(n-1)/2} & \text{if } n \text{ is odd}, \\
+  (x^2)^{n/2} & \text{if } n \text{ is even}.
+ \end{cases}
+</math>
+
+If the exponent {{mvar|n}} is zero, then the answer is 1. If the exponent is negative then we can reuse the previous formula by rewriting the value using a positive exponent. That is,
+<math display="block">
+ x^n = \left(\frac{1}{x}\right)^{-n}.
+</math>
+
+Together, these may be implemented directly as the following [[recursion (computer science)|recursive algorithm]]:
+
+ '''Inputs''': a real number ''x''; an integer ''n''
+ '''Output''': ''x<sup>n</sup>''
+ 
+ '''function''' exp_by_squaring(''x'', ''n'') '''is'''
+     '''if''' ''n'' < 0 '''then'''
+         '''return''' exp_by_squaring(1 / ''x'', −''n'')
+     '''else if''' ''n'' = 0 '''then'''
+         '''return''' 1
+     '''else if''' ''n'' is even '''then'''
+         '''return''' exp_by_squaring(''x'' × ''x'', ''n'' / 2)
+     '''else if''' ''n'' is odd '''then'''
+         '''return''' ''x'' × exp_by_squaring(''x'' × ''x'', (''n'' − 1) / 2)
+ '''end function'''
+
+In each recursive call, the least-significant digit of the [[binary representation]] of {{mvar|n}} is removed. It follows that the number of recursive calls is <math>\lceil \log_2 n\rceil,</math> the number of [[bit]]s of the binary representation of {{mvar|n}}. So this algorithm computes this number of squares and a lower number of multiplication, which is equal to the number of 1s in the binary representation of {{mvar|n}}. This logarithmic number of operations is to be compared with the trivial algorithm which requires {{math|''n'' − 1}} multiplications.
+
+This algorithm is not [[Tail call|tail-recursive]]. This implies that it requires an amount of auxiliary memory that is roughly proportional to the number of recursive calls, or perhaps higher if the amount of data per iteration is increasing.
+
+The algorithms of the next section use a different approach, and the resulting algorithms needs the same number of operations, but use an auxiliary memory that is roughly the same as the memory required to store the result.
+
+===With constant auxiliary memory===
+
+The variants described in this section are based on the formula
+<math display="block">
+ y x^n = \begin{cases}
+  yx\,(x^2)^{(n-1)/2} & \text{if } n \text{ is odd}, \\
+  y\,(x^2)^{n/2} & \text{if } n \text{ is even}.
+ \end{cases}
+</math>
+
+If one applies recursively this formula, by starting with {{math|1=''y'' = 1}}, one gets eventually an exponent equal to {{math|0}}, and the desired result is then the left factor.
+
+This may be implemented as a tail-recursive function:
+<syntaxhighlight lang="pascal">
+Function exp_by_squaring(x, n)
+    return exp_by_squaring2(1, x, n)
+
+Function exp_by_squaring2(y, x, n)
+    if n < 0 then return exp_by_squaring2(y, 1 / x, -n);
+    else if n = 0 then return y;
+    else if n is even then return exp_by_squaring2(y, x * x, n / 2);
+    else if n is odd then return exp_by_squaring2(x * y, x * x, (n - 1) / 2).
+</syntaxhighlight>
+
+The iterative version of the algorithm also uses a bounded auxiliary space, and is given by
+
+<syntaxhighlight lang="pascal">
+Function exp_by_squaring_iterative(x, n)
+    if n < 0 then
+        x := 1 / x;
+        n := -n;
+    if n = 0 then return 1
+    y := 1;
+    while n > 1 do
+        if n is odd then
+            y := x * y;
+            n := n - 1;
+        x := x * x;
+        n := n / 2;
+    return x * y
+</syntaxhighlight>
+
+The correctness of the algorithm results from the fact that <math>yx^n</math> is invariant during the computation; it is <math>1 \cdot x^n = x^n</math> at the beginning; and it is <math>yx^1 = xy</math> at the end.
+
+These algorithms use exactly the same number of operations as the algorithm of the preceding section, but the multiplications are done in a different order.
+
+==Computational complexity==
+
+A brief analysis shows that such an algorithm uses <math>\lfloor \log_2n\rfloor</math> squarings and at most <math>\lfloor \log_2n\rfloor</math> multiplications, where <math>\lfloor\;\rfloor</math> denotes the [[floor function]]. More precisely, the number of multiplications is one less than the number of ones present in the [[binary expansion]] of ''n''. For ''n'' greater than about 4 this is computationally more efficient than naively multiplying the base with itself repeatedly.
+
+Each squaring results in approximately double the number of digits of the previous, and so, if multiplication of two ''d''-digit numbers is implemented in O(''d''<sup>''k''</sup>) operations for some fixed ''k'', then the complexity of computing ''x''<sup>''n''</sup> is given by
+
+: <math>
+ \sum\limits_{i=0}^{O(\log n)} \big(2^i O(\log x)\big)^k = O\big((n \log x)^k\big).
+</math>
+
+==2<sup>''k''</sup>-ary method==
+This algorithm calculates the value of ''x<sup>n</sup>'' after expanding the exponent in base 2<sup>''k''</sup>. It was first proposed by [[Alfred_Brauer|Brauer]] in 1939. In the algorithm below we make use of the following function ''f''(0) = (''k'', 0) and ''f''(''m'') = (''s'', ''u''), where ''m'' = ''u''·2<sup>''s''</sup> with ''u'' odd.
+
+Algorithm:
+
+;Input: An element ''x'' of ''G'', a parameter ''k'' > 0, a non-negative integer {{math|1=''n'' = (''n''<sub>''l''−1</sub>, ''n''<sub>''l''−2</sub>, ..., ''n''<sub>0</sub>)<sub>2<sup>''k''</sup></sub>}} and the precomputed values <math>x^3, x^5, ... , x^{2^k-1}</math>.
+
+;Output: The element ''x<sup>n</sup>'' in ''G''
+
+ y := 1; i := l - 1
+ '''while''' i ≥ 0 do
+     (s, u) := f(n<sub>i</sub>)
+     '''for''' j := 1 '''to''' k - s '''do'''
+         y := y<sup>2</sup>
+     y := y * x<sup>u</sup>
+     '''for''' j := 1 '''to''' s '''do'''
+         y := y<sup>2</sup>
+     i := i - 1
+ '''return''' y
+
+For optimal efficiency, ''k'' should be the smallest integer satisfying<ref name="frey">{{cite book |editor1-last=Cohen |editor1-first=H. |editor2-last=Frey, G. |date=2006 |title=Handbook of Elliptic and Hyperelliptic Curve Cryptography |series=Discrete Mathematics and Its Applications |publisher=Chapman & Hall/CRC |isbn=978-1-58488-518-4}}</ref>
+
+: <math>\lg n < \frac{k(k + 1) \cdot 2^{2k}}{2^{k+1} - k - 2} + 1.</math>
+
+==Sliding-window method==
+This method is an efficient variant of the 2<sup>''k''</sup>-ary method. For example, to calculate the exponent 398, which has binary expansion (110 001 110)<sub>2</sub>, we take a window of length 3 using the 2<sup>''k''</sup>-ary method algorithm and calculate 1, x<sup>3</sup>, x<sup>6</sup>, x<sup>12</sup>, x<sup>24</sup>, x<sup>48</sup>, x<sup>49</sup>, x<sup>98</sup>, x<sup>99</sup>, x<sup>198</sup>, x<sup>199</sup>, x<sup>398</sup>.
+But, we can also compute 1, x<sup>3</sup>, x<sup>6</sup>, x<sup>12</sup>, x<sup>24</sup>, x<sup>48</sup>, x<sup>96</sup>, x<sup>192</sup>, x<sup>199</sup>, x<sup>398</sup>, which saves one multiplication and amounts to evaluating (110 001 110)<sub>2</sub>
+
+Here is the general algorithm:
+
+Algorithm:
+
+;Input: An element ''x'' of ''G'', a non negative integer {{math|1=''n''=(''n''<sub>''l''−1</sub>, ''n''<sub>''l''−2</sub>, ..., ''n''<sub>0</sub>)<sub>2</sub>}}, a parameter ''k'' > 0 and the pre-computed values <math>x^3, x^5, ... ,x^{2^k-1}</math>.
+
+;Output: The element ''x<sup>n</sup>'' &isin; ''G''.
+
+Algorithm:
+
+ y := 1; i := l - 1
+ '''while''' i > -1 '''do'''
+     '''if''' n<sub>i</sub> = 0 '''then'''
+         y := y<sup>2</sup>
+         i := i - 1
+     '''else'''
+         s := max{i - k + 1, 0}
+         '''while''' n<sub>s</sub> = 0 '''do'''
+             s := s + 1<ref group="notes">In this line, the loop finds the longest string of length less than or equal to ''k'' ending in a non-zero value. Not all odd powers of 2 up to <math>x^{2^k-1}</math> need be computed, and only those specifically involved in the computation need be considered.</ref>
+         '''for''' h := 1 '''to''' i - s + 1 '''do'''
+             y := y<sup>2</sup>
+         u := (n<sub>i</sub>, n<sub>i-1</sub>, ..., n<sub>s</sub>)<sub>2</sub>
+         y := y * x<sup>u</sup>
+         i := s - 1
+ '''return''' y
+
+==Montgomery's ladder technique==
+Many algorithms for exponentiation do not provide defence against [[side-channel attack]]s. Namely, an attacker observing the sequence of squarings and multiplications can (partially) recover the exponent involved in the computation. This is a problem if the exponent should remain secret, as with many [[Public-key cryptography|public-key cryptosystems]]. A technique called "[[Peter Montgomery (mathematician)|Montgomery's]] ladder"<ref name="ladder">{{cite journal |last=Montgomery |first=Peter L. |date=1987 |title=Speeding the Pollard and Elliptic Curve Methods of Factorization |journal=Math. Comput. |volume=48 |number=177 |pages=243–264 |doi=10.1090/S0025-5718-1987-0866113-7 |url=https://www.ams.org/journals/mcom/1987-48-177/S0025-5718-1987-0866113-7/S0025-5718-1987-0866113-7.pdf |doi-access=free }}</ref> addresses this concern.
+
+Given the [[binary expansion]] of a positive, non-zero integer ''n'' = (''n''<sub>''k''−1</sub>...''n''<sub>0</sub>)<sub>2</sub> with ''n''<sub>k−1</sub> = 1, we can compute ''x<sup>n</sup>'' as follows:
+ x<sub>1</sub> = x; x<sub>2</sub> = x<sup>2</sup>
+ '''for''' i = k - 2 to 0 '''do'''
+     '''if''' n<sub>i</sub> = 0 '''then'''
+         x<sub>2</sub> = x<sub>1</sub> * x<sub>2</sub>; x<sub>1</sub> = x<sub>1</sub><sup>2</sup>
+     '''else'''
+         x<sub>1</sub> = x<sub>1</sub> * x<sub>2</sub>; x<sub>2</sub> = x<sub>2</sub><sup>2</sup>
+ '''return''' x<sub>1</sub>
+
+The algorithm performs a fixed sequence of operations ([[up to]] log ''n''): a multiplication and squaring takes place for each bit in the exponent, regardless of the bit's specific value. A similar algorithm for multiplication by doubling exists.
+
+This specific implementation of Montgomery's ladder is not yet protected against cache [[timing attack]]s: memory access latencies might still be observable to an attacker, as different variables are accessed depending on the value of bits of the secret exponent. Modern cryptographic implementations use a "scatter" technique to make sure the processor always misses the faster cache.<ref>{{cite journal |last1=Gueron |first1=Shay |title=Efficient software implementations of modular exponentiation |journal=Journal of Cryptographic Engineering |date=5 April 2012 |volume=2 |issue=1 |pages=31–43 |doi=10.1007/s13389-012-0031-5 |s2cid=7629541 |url=https://eprint.iacr.org/2011/239.pdf}}</ref>
+
+==Fixed-base exponent==
+There are several methods which can be employed to calculate ''x<sup>n</sup>'' when the base is fixed and the exponent varies. As one can see, [[precomputation]]s play a key role in these algorithms.
+
+===Yao's method===
+Yao's method is orthogonal to the {{math|2<sup>''k''</sup>}}-ary method where the exponent is expanded in radix {{math|1=''b'' = 2<sup>''k''</sup>}} and the computation is as performed in the algorithm above. Let {{mvar|n}}, {{mvar|n<sub>i</sub>}}, {{mvar|b}}, and {{mvar|b<sub>i</sub>}} be integers.
+
+Let the exponent {{mvar|n}} be written as
+: <math> n = \sum_{i=0}^{w-1} n_i b_i,</math>
+where <math>0 \leqslant n_i < h</math> for all <math>i \in [0, w-1]</math>.
+
+Let {{math|1=''x<sub>i</sub>'' = ''x<sup>b<sub>i</sub></sup>''}}.
+
+Then the algorithm uses the equality
+: <math>x^n = \prod_{i=0}^{w-1} x_i^{n_i} = \prod_{j=1}^{h-1} \bigg[\prod_{n_i=j} x_i\bigg]^j.</math>
+
+Given the element {{mvar|x}} of {{mvar|G}}, and the exponent {{mvar|n}} written in the above form, along with the precomputed values {{math|1=''x''<sup>''b''<sub>0</sub></sup>...''x''<sup>''b''<sub>''w''−1</sub></sup>}}, the element {{mvar|x<sup>n</sup>}} is calculated using the algorithm below:
+
+ y = 1, u = 1, j = h - 1
+ '''while''' j > 0 '''do'''
+     '''for''' i = 0 '''to''' w - 1 '''do'''
+         '''if''' n<sub>i</sub> = j '''then'''
+             u = u × x<sup>b<sub>i</sub></sup>
+     y = y × u
+     j = j - 1
+ '''return''' y
+
+If we set {{math|1=''h'' = 2<sup>''k''</sup>}} and {{math|1=''b<sub>i</sub>'' = ''h<sup>i</sup>''}}, then the {{mvar|n<sub>i</sub>}} values are simply the digits of {{mvar|n}} in base {{mvar|h}}. Yao's method collects in ''u'' first those {{mvar|x<sub>i</sub>}} that appear to the highest power {{tmath|h - 1}}; in the next round those with power {{tmath|h - 2}} are collected in {{mvar|u}} as well etc. The variable ''y'' is multiplied {{tmath|h - 1}} times with the initial {{mvar|u}}, {{tmath|h - 2}} times with the next highest powers, and so on.
+The algorithm uses {{tmath|w + h - 2}} multiplications, and {{tmath|w + 1}} elements must be stored to compute {{mvar|x<sup>n</sup>}}.<ref name=frey />
+
+===Euclidean method===
+The Euclidean method was first introduced in ''Efficient exponentiation using precomputation and vector addition chains'' by P.D Rooij.
+
+This method for computing <math>x^n</math> in group {{math|'''G'''}}, where {{mvar|n}} is a natural integer, whose algorithm is given below, is using the following equality recursively:
+: <math>x_0^{n_0} \cdot x_1^{n_1} = \left(x_0 \cdot x_1^q\right)^{n_0} \cdot x_1^{n_1 \mod n_0},</math>
+where <math>q = \left\lfloor \frac{n_1}{n_0} \right\rfloor</math>.
+In other words, a Euclidean division of the exponent {{math|''n''<sub>1</sub>}} by {{math|''n''<sub>0</sub>}} is used to return a quotient {{mvar|q}} and a rest {{math|''n''<sub>1</sub> mod ''n''<sub>0</sub>}}.
+
+Given the base element {{mvar|x}} in group {{math|'''G'''}}, and the exponent <math>n</math> written as in Yao's method, the element <math>x^n</math> is calculated using <math>l</math> precomputed values <math>x^{b_0}, ..., x^{b_{l_i}}</math> and then the algorithm below.
+
+ '''Begin loop'''
+     {{nowrap|Find <math>M \in [0, l - 1]</math>,}} {{nowrap|such that <math>\forall i \in [0, l - 1], n_M \ge n_i</math>.}}
+     {{nowrap|Find <math>N \in \big([0, l - 1] - M\big)</math>,}} {{nowrap|such that <math>\forall i \in \big([0, l - 1] - M\big), n_N \ge n_i</math>.}}
+     '''Break loop''' {{nowrap|if <math>n_N = 0</math>.}}
+     {{nowrap|'''Let''' <math>q = \lfloor n_M / n_N \rfloor</math>,}} {{nowrap|and then '''let''' <math>n_N = (n_M \bmod n_N)</math>.}}
+     {{nowrap|Compute recursively <math>x_M^q</math>,}} {{nowrap|and then '''let''' <math>x_N = x_N \cdot x_M^q</math>.}}
+ '''End loop''';
+ {{nowrap|'''Return''' <math>x^n = x_M^{n_M}</math>.}}
+
+The algorithm first finds the largest value among the {{math|''n''<sub>''i''</sub>}} and then the [[Infimum and supremum|supremum]] within the set of {{math|{{(}} ''n''<sub>''i''</sub> \ ''i'' ≠ ''M'' {{)}}}}.
+Then it raises {{math|''x''<sub>''M''</sub>}} to the power {{mvar|q}}, multiplies this value with {{math|''x''<sub>''N''</sub>}}, and then assigns {{math|''x''<sub>''N''</sub>}} the result of this computation and {{math|''n''<sub>''M''</sub>}} the value {{math|''n''<sub>''M''</sub>}} modulo {{math|''n''<sub>''N''</sub>}}.
+
+==Further applications==
+The approach also works with [[semigroup]]s that are not of [[characteristic zero]], for example allowing fast computation of large [[Modular exponentiation|exponents modulo]] a number. Especially in [[cryptography]], it is useful to compute powers in a [[Ring (mathematics)|ring]] of [[modular arithmetic|integers modulo {{mvar|q}}]]. For example, the evaluation of
+:{{math|13789<sup>722341</sup> (mod 2345) {{=}} 2029}}
+would take a very long time and much storage space if the naïve method of computing {{math|13789<sup>722341</sup>}} and then taking the [[remainder]] when divided by 2345 were used. Even using a more effective method will take a long time: square 13789, take the remainder when divided by 2345, multiply the [[result]] by 13789, and so on.
+
+Applying above ''exp-by-squaring'' algorithm, with "*" interpreted as {{math|1=''x'' * ''y'' = ''xy'' mod 2345}} (that is, a multiplication followed by a division with remainder) leads to only 27 multiplications and divisions of integers, which may all be stored in a single machine word. Generally, any of these approaches will take fewer than {{math|2log{{sub|2}}(722340) &leq; 40}} modular multiplications.
+
+The approach can also be used to compute integer powers in a [[group (mathematics)|group]], using either of the rules
+:{{math|Power(''x'', −''n'') {{=}} Power(''x''<sup>−1</sup>, ''n'')}},
+:{{math|Power(''x'', −''n'') {{=}} (Power(''x'', ''n''))<sup>−1</sup>}}.
+
+The approach also works in [[non-commutative]] semigroups and is often used to compute powers of [[matrix (mathematics)|matrices]].
+
+More generally, the approach works with positive integer exponents in every [[magma (algebra)|magma]] for which the [[binary operation]] is [[power associative]].
+
+==Signed-digit recoding==
+In certain computations it may be more efficient to allow negative coefficients and hence use the inverse of the base, provided inversion in {{mvar|'''G'''}} is "fast" or has been precomputed. For example, when computing {{math|''x''<sup>2<sup>''k''</sup>−1</sup>}}, the binary method requires {{math|''k''−1}} multiplications and {{math|''k''−1}} squarings. However, one could perform {{mvar|k}} squarings to get {{math|''x''<sup>2<sup>''k''</sup></sup>}} and then multiply by {{math|''x''<sup>−1</sup>}} to obtain {{math|''x''<sup>2<sup>''k''</sup>−1</sup>}}.
+
+To this end we define the [[signed-digit representation]] of an integer {{mvar|n}} in radix {{mvar|b}} as
+: <math>n = \sum_{i=0}^{l-1} n_i b^i \text{  with  } |n_i| < b.</math>
+
+''Signed binary representation'' corresponds to the particular choice {{math|1=''b'' = 2}} and <math>n_i \in \{-1, 0, 1\}</math>. It is denoted by <math>(n_{l-1} \dots n_0)_s</math>. There are several methods for computing this representation. The representation is not unique. For example, take {{math|1=''n'' = 478}}: two distinct signed-binary representations are given by <math>(10\bar 1 1100\bar 1 10)_s</math> and <math>(100\bar 1 1000\bar 1 0)_s</math>, where <math>\bar 1</math> is used to denote {{math|−1}}. Since the binary method computes a multiplication for every non-zero entry in the base-2 representation of {{mvar|n}}, we are interested in finding the signed-binary representation with the smallest number of non-zero entries, that is, the one with ''minimal'' [[Hamming weight]]. One method of doing this is to compute the representation in [[non-adjacent form]], or NAF for short, which is one that satisfies <math>n_i n_{i+1} = 0 \text{ for all } i \geqslant 0</math> and denoted by <math>(n_{l-1} \dots n_0)_\text{NAF}</math>. For example, the NAF representation of 478 is <math>(1000\bar 1 000\bar 1 0)_\text{NAF}</math>. This representation always has minimal Hamming weight. A simple algorithm to compute the NAF representation of a given integer <math>n = (n_l n_{l-1} \dots n_0)_2</math> with <math>n_l = n_{l-1} = 0</math> is the following:
+
+ {{nowrap|<math>c_0=0</math>}}
+ for {{math|1=''i'' = 0}} to {{math|''l'' − 1}} do
+   {{nowrap|<math>c_{i+1} = \left\lfloor\frac{1}{2}(c_i + n_i + n_{i+1})\right\rfloor</math>}}
+   {{nowrap|<math>n_i' = c_i + n_i - 2c_{i+1}</math>}}
+ {{nowrap|return <math>(n_{l-1}' \dots n_0')_\text{NAF}</math>}}
+
+Another algorithm by Koyama and Tsuruoka does not require the condition that <math>n_i = n_{i+1} = 0</math>; it still minimizes the Hamming weight.
+
+==Alternatives and generalizations==
+{{main|Addition-chain exponentiation}}
+Exponentiation by squaring can be viewed as a suboptimal [[addition-chain exponentiation]] algorithm: it computes the exponent by an [[addition chain]] consisting of repeated exponent doublings (squarings) and/or incrementing exponents by ''one'' (multiplying by ''x'') only. More generally, if one allows ''any'' previously computed exponents to be summed (by multiplying those powers of ''x''), one can sometimes perform the exponentiation using fewer multiplications (but typically using more memory). The smallest power where this occurs is for ''n'' = 15:
+
+: <math>x^{15} = x \times (x \times [x \times x^2]^2)^2</math> (squaring, 6 multiplies),
+: <math>x^{15} = x^3 \times ([x^3]^2)^2</math> (optimal addition chain, 5 multiplies if ''x''<sup>3</sup> is re-used).
+
+In general, finding the ''optimal'' addition chain for a given exponent is a hard problem, for which no efficient algorithms are known, so optimal chains are typically used for small exponents only (e.g. in [[compiler]]s where the chains for small powers have been pre-tabulated). However, there are a number of [[heuristic]] algorithms that, while not being optimal, have fewer multiplications than exponentiation by squaring at the cost of additional bookkeeping work and memory usage. Regardless, the number of multiplications never grows more slowly than [[Big-O notation|&Theta;]](log ''n''), so these algorithms improve asymptotically upon exponentiation by squaring by only a constant factor at best.
+
+==See also==
+* [[Modular exponentiation]]
+* [[Vectorial addition chain]]
+* [[Montgomery modular multiplication]]
+* [[Non-adjacent form]]
+* [[Addition chain]]
+
+==Notes==
+{{Reflist|group=notes}}
+
+==References==
+{{Reflist}}
+
+==External links==
+* {{OEIS el |A014701|Number of multiplications to compute n-th power by the Chandah-sutra method}}
+
+[[Category:Exponentials]]
+[[Category:Computer arithmetic algorithms]]
+[[Category:Computer arithmetic]]

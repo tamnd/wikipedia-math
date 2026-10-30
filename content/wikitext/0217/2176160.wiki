@@ -1,0 +1,448 @@
+<!-- wikipedia: en
+     page: 2176160
+     title: Interval arithmetic
+     revision: 1375747495
+     timestamp: 2026-09-19T20:25:36Z
+     history: https://en.wikipedia.org/w/index.php?curid=2176160&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375747495 -->
+{{Short description|Method for bounding the errors of numerical computations}}
+{{multiple issues|
+{{More citations needed|date=January 2020|details=Some references link to repositories rather than specific sources and need to be further detailed. Some references still need to be converted into CS1 citation style.}}
+{{Tone|details=The text frequently uses "we" as if this would be a textbook. This needs to change into a more encyclopedic tone avoiding "we", etc.|date=February 2020}}
+}}
+{{Use dmy dates|date=January 2020|cs1-dates=y}}
+{{Use list-defined references|date=January 2022}}
+[[File:Set of curves Outer approximation.png|345px|thumb|right|[[Tolerance function]] ({{color|teal|turquoise}}) and interval-valued approximation ({{color|red|red}})]]
+'''Interval arithmetic''' (also known as '''interval mathematics''', '''interval analysis''' or '''interval computation''') is a mathematical technique used to mitigate [[rounding error|rounding]] and [[measurement error]]s in [[numerical analysis|mathematical computation]] by computing function [[Floating point error mitigation|bounds]]. [[Numerical methods]] involving interval [[arithmetic]] can guarantee relatively reliable and mathematically correct results. Instead of representing a value as a single number, interval arithmetic or interval mathematics represents each value as a [[Interval (mathematics)|range of possibilities]].
+
+Mathematically, instead of working with an uncertain [[real number|real-valued]] variable {{mvar|x}}, interval arithmetic works with an interval {{closed-closed|''a'', ''b''}} that defines the range of values that {{mvar|x}} can have. In other words, any value of the variable {{mvar|x}} lies in the closed interval between {{mvar|a}} and {{mvar|b}}. A function {{mvar|f}}, when applied to {{mvar|x}}, produces an interval {{closed-closed|''c'', ''d''}} which includes all the possible values for {{math|''f''(''x'')}} for all {{math|x ∈ {{closed-closed|''a'', ''b''}}}}.
+
+Interval arithmetic is suitable for a variety of purposes; the most common use is in scientific works, particularly when the calculations are handled by software, where it is used to keep track of [[rounding error]]s in calculations and of uncertainties in the knowledge of the exact values of physical and technical parameters. The latter often arise from measurement errors and tolerances for components or due to limits on computational accuracy. Interval arithmetic also helps find guaranteed solutions to equations (such as [[differential equation]]s) and [[optimization problem]]s.
+
+==Introduction==
+The main objective of interval [[arithmetic]] is to provide a simple way of calculating [[upper and lower bounds]] of a function's range in one or more variables. These endpoints are not necessarily the true [[supremum]] or [[infimum]] of a range since the precise calculation of those values can be difficult or impossible; the bounds only need to contain the function's range as a subset.
+
+This treatment is typically limited to real intervals, so quantities in the form
+<math display="block">[a,b] = \{x \in \mathbb{R} \mid a \le x \le b\},</math>
+where {{math|''a'' {{=}} −∞}} and {{math|''b'' {{=}} ∞}} are allowed. With one of {{mvar|a}}, {{mvar|b}} infinite, the interval would be an unbounded interval; with both infinite, the interval would be the extended real number line. Since a real number {{mvar|r}} can be interpreted as the interval {{closed-closed|''r'', ''r''}}, intervals and real numbers can be freely combined.
+
+===Example===
+[[File:Interval BMI Simple Example.png|350px|thumb|left|[[Body mass index]] for a person 1.80&nbsp;m tall in relation to body weight {{mvar|m}} (in kilograms)]]
+Consider the calculation of a person's [[body mass index]] (BMI). BMI is calculated as a person's body weight in kilograms divided by the square of their height in meters. Suppose a person uses a scale that has a precision of one kilogram, where intermediate values cannot be discerned, and the true weight is rounded to the nearest whole number. For example, 79.6&nbsp;kg and 80.3&nbsp;kg are indistinguishable, as the scale can only display values to the nearest kilogram. It is unlikely that when the scale reads 80&nbsp;kg, the person has a weight of ''exactly'' 80.0&nbsp;kg. Thus, the scale displaying 80&nbsp;kg indicates a weight between 79.5&nbsp;kg and 80.5&nbsp;kg, or the interval {{closed-open|79.5, 80.5}}.
+
+The BMI of a man who weighs 80&nbsp;kg and is 1.80&nbsp;m tall is approximately 24.7. A weight of 79.5&nbsp;kg and the same height yields a BMI of 24.537, while a weight of 80.5&nbsp;kg yields 24.846. Since the body mass is continuous and always increasing for all values within the specified weight interval, the true BMI must lie within the interval {{closed-closed|24.537, 24.846}}. Since the entire interval is less than 25, which is the cutoff between normal and excessive weight, it can be concluded with certainty that the man is of normal weight.
+
+The error in this example does not affect the conclusion (normal weight), but this is not generally true. If the man were slightly heavier, the BMI's range may include the cutoff value of 25. In such a case, the scale's precision would be insufficient to make a definitive conclusion.
+
+The range of BMI examples could be reported as {{closed-closed|24.5, 24.9}} since this interval is a superset of the calculated interval. The range could not, however, be reported as {{closed-closed|24.6, 24.8}}, as the interval does not contain possible BMI values.
+
+==== Multiple intervals ====
+[[File:Interval BMI Example.png|260px|thumb|right|Body mass index for different weights in relation to height L (in meters)]]
+Height and body weight both affect the value of the BMI. Though the example above only considered variation in weight, height is also subject to uncertainty. Height measurements in meters are usually rounded to the nearest centimeter: a recorded measurement of 1.79 meters represents a height in the interval {{closed-open|1.785, 1.795}}. Since the BMI uniformly increases with respect to weight and decreases with respect to height, the error interval can be calculated by substituting the lowest and highest values of each interval, and then selecting the lowest and highest results as boundaries.  The BMI must therefore exist in the interval
+
+<math display="block">\frac{[79.5, 80.5)}{[1.785, 1.795)^2} \subseteq [24.673, 25.266].</math>
+In this case, the man may have normal weight or be overweight; the weight and height measurements were insufficiently precise to make a definitive conclusion.
+
+== Interval operators ==
+A binary operation {{math|∗}} on two intervals, such as addition or multiplication is defined by
+
+<math display="block">[x_1, x_2] {\,\star\,} [y_1, y_2] = \{ x \star y \, | \, x \in [x_1, x_2] \,\land\, y \in [y_1, y_2] \}.</math>
+
+In other words, it is the set of all possible values of {{math|''x'' ∗ ''y''}}, where {{mvar|x}} and {{mvar|y}} are in their corresponding intervals. If {{math|∗}} is [[monotonic function|monotone]] for each operand on the intervals, which is the case for the four basic arithmetic operations (except division when the denominator contains zero), the extreme values occur at the endpoints of the operand intervals. Writing out all combinations, one way of stating this is
+<math display="block">[x_1, x_2] \star [y_1, y_2] = \left[ \min\{ x_1 \star y_1, x_1 \star y_2, x_2 \star y_1, x_2 \star y_2\}, \max \{x_1 \star y_1, x_1 \star y_2, x_2 \star y_1, x_2 \star y_2\} \right],</math>
+provided that {{math|''x'' ∗ ''y''}} is defined for all {{math|''x'' ∈ {{closed-closed|''x''<sub>1</sub>, ''x''<sub>2</sub>}}}} and {{math|''y'' ∈ {{closed-closed|''y''<sub>1</sub>, ''y''<sub>2</sub>}}}}.
+
+For practical applications, this can be simplified further:
+
+* [[Addition]]: <math display="block">[x_1, x_2] + [y_1, y_2] = [x_1+y_1, x_2+y_2]</math>
+* [[Subtraction]]: <math display="block">[x_1, x_2] - [y_1, y_2] = [x_1-y_2, x_2-y_1]</math>
+* [[Multiplication]]: <math display="block">[x_1, x_2] \cdot [y_1, y_2] = [\min \{x_1 y_1,x_1 y_2,x_2 y_1,x_2 y_2\}, \max\{x_1 y_1,x_1 y_2,x_2 y_1,x_2 y_2\}]</math>
+* [[Division (mathematics)|Division]]: <math display="block">\frac{[x_1, x_2]}{[y_1, y_2]} = [x_1, x_2] \cdot \frac{1}{[y_1, y_2]},</math> where <math display="block">\begin{align}
+\frac{1}{[y_1, y_2]} &= \left [\frac{1}{y_2}, \frac{1}{y_1} \right ] && \textrm{if}\;0 \notin [y_1, y_2] \\
+\frac{1}{[y_1, 0]}   &= \left [-\infty, \frac{1}{y_1} \right ] \\
+\frac{1}{[0, y_2]}   &= \left [\frac{1}{y_2}, \infty \right ] \\
+\frac{1}{[y_1, y_2]} &= \left [-\infty, \frac{1}{y_1} \right ] \cup \left [\frac{1}{y_2}, \infty \right ] \subseteq [-\infty, \infty] && \textrm{if}\;0 \in (y_1, y_2)
+\end{align}</math>
+
+The last case loses useful information about the exclusion of {{open-open|{{sfrac|1|''y''<sub>1</sub>}}, {{sfrac|1|''y''<sub>2</sub>}}}}. Thus, it is common to work with {{closed-closed|-∞, {{sfrac|1|''y''<sub>1</sub>}}}} and {{closed-closed|{{sfrac|1|''y''<sub>2</sub>}}, ∞}} as separate intervals. More generally, when working with discontinuous functions, it is sometimes useful to do the calculation with so-called ''multi-intervals'' of the form {{math|⋃<sub>''i''</sub> {{closed-closed|''a<sub>i</sub>'', ''b<sub>i</sub>''}}}}. The corresponding ''multi-interval arithmetic'' maintains a set of (usually disjoint) intervals and also provides for overlapping intervals to unite.<ref name="Dreyer_2003" />
+
+[[File:Interval multiplication.png|120px|right|thumb|Multiplication of positive intervals]]
+
+Interval multiplication often only requires two multiplications. If {{math|''x''<sub>1</sub>}}, {{math|''y''<sub>1</sub>}} are nonnegative,
+
+<math display="block">[x_1, x_2] \cdot [y_1, y_2] = [x_1 \cdot y_1, x_2 \cdot y_2], \qquad \text{ if } x_1, y_1 \geq 0.</math>
+
+The multiplication can be interpreted as the area of a rectangle with varying edges. The result interval covers all possible areas, from the smallest to the largest.
+
+With the help of these definitions, it is already possible to calculate the range of simple functions, such as {{math|''f''(''a'',''b'',''x'') {{=}} ''ax'' + ''b''}}. For example, if {{math|''a'' {{=}} {{closed-closed|1, 2}}}}, {{math|''b'' {{=}} {{closed-closed|5, 7}}}} and {{math|''x'' {{=}} {{closed-closed|2, 3}}}}:
+
+<math display="block">f(a,b,x) = [1,2] \cdot [2,3] + [5,7] = [1 \cdot 2, 2\cdot 3] + [5,7] = [7,13].</math>
+
+===Notation===
+To shorten the notation of intervals, brackets can be used.
+
+{{math|[''x''] ≡ {{closed-closed|''x''<sub>1</sub>, ''x''<sub>2</sub>}}}} can be used to represent an interval. Note that in such a compact notation, {{math|[''x'']}} should not be confused between a single-point interval {{closed-closed|''x''<sub>1</sub>, ''x''<sub>1</sub>}} and a general interval. For the set of all intervals, we can use
+
+<math display="block">[\R] := \left \{\, [x_1, x_2] \,|\, x_1 \leq x_2 \text{ and } x_1, x_2 \in \R \cup \{-\infty, \infty\} \right \}</math>
+
+as an abbreviation.  For a vector of intervals we can use a bold font:
+
+<math display="block">[\mathbf{x}] = \left([x]_1, \ldots , [x]_n \right) \in [\R]^n .</math>
+
+===Elementary functions===
+[[File:Value domain of monotonic function.png|160px|right|thumb|Values of a monotonic function]]
+Interval functions beyond the four basic operators may also be defined.
+
+For [[monotonic function]]s in one variable, the range of values is simple to compute. If {{math|''f'' : ℝ → ℝ}} is monotonically increasing in the interval {{closed-closed|''x''<sub>1</sub>, ''x''<sub>2</sub>}}, then for all {{math|''y''<sub>1</sub>, ''y''<sub>2</sub> ∈ {{closed-closed|''x''<sub>1</sub>, ''x''<sub>2</sub>}}}} such that {{math|''y''<sub>1</sub> < ''y''<sub>2</sub>}}, then {{math|''f''(''y''<sub>1</sub>) ≤ ''f''(''y''<sub>2</sub>)}} (and if {{mvar|f}} is decreasing, {{math|''f''(''y''<sub>1</sub>) ≥ ''f''(''y''<sub>2</sub>)}}).
+
+The range corresponding to the interval {{math|{{closed-closed|''y''<sub>1</sub>, ''y''<sub>2</sub>}} ⊆ {{closed-closed|''x''<sub>1</sub>, ''x''<sub>2</sub>}}}} can be therefore calculated by applying the function to its endpoints:
+
+<math display="block">f([y_1, y_2]) = \left[\min \left  \{f(y_1), f(y_2) \right \}, \max \left\{ f(y_1), f(y_2) \right\}\right].</math>
+
+From this, the following basic features for interval functions can easily be defined:
+
+* [[Exponential function]]: <math display="block">a^{[x_1, x_2]} = [a^{x_1},a^{x_2}] \qquad \text{for } a > 1,</math>
+* [[Logarithm]]: <math display="block">\log_a [x_1, x_2] = [\log_a {x_1}, \log_a {x_2}] \quad \text{for positive intervals } [x_1, x_2] \text{ and } a>1,</math>
+* Odd powers: <math display="block">[x_1, x_2]^n = [x_1^n,x_2^n] \qquad \text{for odd } n\in \N.</math>
+
+For even powers, the range of values being considered is important and needs to be dealt with before doing any multiplication. For example, {{math|''x''<sup>''n''</sup>}} for {{math|''x'' ∈ {{closed-closed|−1, 1}}}} should produce the interval {{closed-closed|0, 1}} for even {{math|''n'' ∈ ℕ}}. But if {{math|{{closed-closed|−1, 1}}<sup>''n''</sup>}} is taken by repeating interval multiplication of form  {{math|{{closed-closed|−1, 1}} · {{closed-closed|−1, 1}} · ⋯ · {{closed-closed|−1, 1}}}} then the result is {{closed-closed|−1, 1}}, wider than necessary.
+
+More generally one can say that, for piecewise monotonic functions, it is sufficient to consider the endpoints {{math|''x''<sub>1</sub>}}, {{math|''x''<sub>2</sub>}} of an interval, together with the so-called ''critical points'' within the interval, being those points where the monotonicity of the function changes direction. For the [[sine]] and [[cosine]] functions, the critical points are respectively at {{math|(''n'' + {{sfrac|1|2}})''π''}} and {{math|''nπ''}}, for {{math|''n'' ∈ ℤ}}. Thus, only up to five points within an interval need to be considered, as the resulting interval is {{closed-closed|−1, 1}} if the interval includes at least two extrema. For sine and cosine, only the endpoints need full evaluation, as the critical points lead to easily pre-calculated values—namely −1, 0, and 1.
+
+===Interval extensions of general functions===
+In general, it may not be easy to find such a simple description of the output interval for many functions.  But it may still be possible to extend functions to interval arithmetic. If {{math|''f'' : ℝ<sup>''n''</sup> → ℝ}} is a function from a real vector to a real number, then {{math|[''f''] : [ℝ]<sup>''n''</sup> → [ℝ]}} is called an ''interval extension'' of {{mvar|f}} if
+<math display="block">[f]([\mathbf{x}]) \supseteq \{f(\mathbf{y}) \mid \mathbf{y} \in [\mathbf{x}]\}.</math>
+
+This definition of the interval extension does not give a precise result.  For example, both  {{math|[''f'']({{closed-closed|''x''<sub>1</sub>, ''x''<sub>2</sub>}}) {{=}} {{closed-closed|''e''<sup>''x''<sub>1</sub></sup>, ''e''<sup>''x''<sub>2</sub></sup>}}}} and {{math|[''g'']({{closed-closed|''x''<sub>1</sub>, ''x''<sub>2</sub>}}) {{=}} {{closed-closed|−∞, ∞}}}} are allowable extensions of the exponential function. Tighter extensions are desirable, though the relative costs of calculation and imprecision should be considered; in this case, {{math|[''f'']}} should be chosen as it gives the tightest possible result.
+
+Given a real expression, its ''natural interval extension'' is achieved by using the interval extensions of each of its subexpressions, functions, and operators.
+
+The ''Taylor interval extension'' (of degree {{mvar|k}}) is a {{math|''k'' + 1}} times differentiable function {{mvar|f}} defined by
+
+<math display="block">[f]([\mathbf{x}]) :=  f(\mathbf{y}) + \sum_{i=1}^k\frac{1}{i!}\mathrm{D}^i f(\mathbf{y}) \cdot ([\mathbf{x}] - \mathbf{y})^i + [r]([\mathbf{x}], [\mathbf{x}], \mathbf{y}), </math>
+
+for some {{math|'''y''' ∈ ['''x''']}}, where {{math|D<sup>''i''</sup> ''f''('''y''')}} is the {{mvar|i}}th order differential of {{mvar|f}} at the point {{math|'''y'''}} and {{math|[''r'']}} is an interval extension of the ''Taylor remainder''.
+
+<math display="block">r(\mathbf{x}, \boldsymbol{\xi}, \mathbf{y}) = \frac{1}{(k+1)!}\mathrm{D}^{k+1} f(\boldsymbol{\xi}) \cdot (\mathbf{x}-\mathbf{y})^{k+1}. </math>
+
+[[File:Meanvalue extension.png|220px|right|thumb|Mean value form]]
+The vector {{math|'''ξ'''}} lies between {{math|'''x'''}} and {{math|'''y'''}} with {{math|'''x''', '''y''' ∈ ['''x''']}}; {{math|'''ξ'''}} is protected by {{math|['''x''']}}. Usually {{math|'''y'''}} is chosen to be the midpoint of the interval and uses the natural interval extension to assess the remainder.
+
+The special case of the Taylor interval extension of degree {{math|''k'' {{=}} 0}} is also referred to as the ''mean value form''.
+
+==Complex interval arithmetic==
+An interval can be defined as a set of points within a specified distance of the center, and this definition can be extended from real numbers to [[complex number]]s.<ref name="Petkovic_1998"/> Another extension defines intervals as rectangles in the complex plane. As is the case with computing with real numbers, computing with complex numbers involves uncertain data. So, given the fact that an interval number is a real closed interval and a complex number is an ordered pair of [[real number]]s, there is no reason to limit the application of interval arithmetic to the measure of uncertainties in computations with real numbers.<ref name="Dawood_2011"/> Interval arithmetic can thus be extended, via complex interval numbers, to determine regions of uncertainty in computing with complex numbers. One can either define complex interval arithmetic using rectangles or using disks, both with their respective advantages and disadvantages.<ref name="Dawood_2011"/>
+
+The basic algebraic operations for real interval numbers (real closed intervals) can be extended to complex numbers. It is therefore not surprising that complex interval arithmetic is similar to, but not the same as, ordinary complex arithmetic.<ref name="Dawood_2011"/> It can be shown that, as is the case with real interval arithmetic, there is no distributivity between the addition and multiplication of complex interval numbers except for certain special cases, and inverse elements do not always exist for complex interval numbers.<ref name="Dawood_2011"/> Two other useful properties of ordinary complex arithmetic fail to hold in complex interval arithmetic: the additive and multiplicative properties, of ordinary complex conjugates, do not hold for complex interval conjugates.<ref name="Dawood_2011"/>
+
+Interval arithmetic can be extended, in an analogous manner, to other multidimensional [[number systems]] such as [[quaternion]]s and [[octonion]]s, but with the expense that we have to sacrifice other useful properties of ordinary arithmetic.<ref name="Dawood_2011"/>
+
+==Interval methods==
+{{More citations needed section|date=February 2018}} 
+The methods of classical numerical analysis cannot be transferred one-to-one into interval-valued algorithms, as dependencies between numerical values are usually not taken into account.
+
+===Rounded interval arithmetic===
+[[File:Illustration of outward rounding.png|200px|left|thumb|Outer bounds at different level of rounding]]
+To work effectively in a real-life implementation, intervals must be compatible with floating point computing.  The earlier operations were based on exact arithmetic, but in general fast numerical solution methods may not be available for it.  The range of values of the function {{math|''f''(''x'', ''y'') {{=}} ''x'' + ''y''}} for {{math|''x'' ∈ {{closed-closed|0.1, 0.8}}}} and {{math|''y'' ∈ {{closed-closed|0.06, 0.08}}}} are in this example {{closed-closed|0.16, 0.88}}.  Where the same calculation is done with single-digit precision, the result would normally be {{closed-closed|0.2, 0.9}}. But {{math|{{closed-closed|0.2, 0.9}} ⊉ {{closed-closed|0.16, 0.88}}}}, so this approach would contradict the basic principles of interval arithmetic, as a part of the domain of {{math|''f''({{closed-closed|0.1, 0.8}}, {{closed-closed|0.06, 0.08}})}} would be lost. Instead, the outward-rounded solution {{closed-closed|0.1, 0.9}} is used.
+
+The standard [[IEEE 754]] for binary floating-point arithmetic also sets out procedures for the implementation of rounding.  An IEEE 754 compliant system allows programmers to round to the nearest floating-point number; alternatives are rounding towards zero (truncating), rounding toward positive infinity (rounding up), or rounding towards negative infinity (rounding down).
+
+The required ''external rounding'' for interval arithmetic can thus be achieved by changing the rounding settings of the processor in the calculation of the upper limit (up) and lower limit (down). Alternatively, an appropriate small interval {{closed-closed|''ε''<sub>1</sub>, ''ε''<sub>2</sub>}} can be added.
+
+Interval arithmetic has also been implemented using [[arbitrary-precision arithmetic|arbitrary-precision floating-point arithmetic]], where the precision is much higher (but still finite, hence still requires rounding). Larger arbitrary-precision numbers are slow to compute and take a significant amount of space to store. A variant of interval arithmetic called '''{{vanchor|ball arithmetic}}''' stores a high-precision midpoint and a low-precision radius instead of two high-precision lower and upper bounds as in conventional (infimum–supremum) interval arithmetic,<ref>{{cite web |last1=van der Hoeven |first1=Joris |title=Ball arithmetic |url=https://www.texmacs.org/joris/ball/ball-abs.html |website=www.texmacs.org|quote=We mainly concentrate on the automatic and efficient computation of high quality error bounds, based on a variant of interval arithmetic which we like to call “ball arithmetic”.}}</ref> reducing the cost of computation.<ref name="flintarb">{{cite web |title=Feature overview — FLINT 3.5.0-dev documentation |url=https://flintlib.org/doc/overview.html |website=flintlib.org|quote=In traditional (inf–sup) interval arithmetic, both endpoints of an interval {{closed-closed|''a'', ''b''}} are full-precision numbers, which makes interval arithmetic twice as expensive as floating-point arithmetic. In ball arithmetic, only the midpoint {{mvar|m}} of an interval {{math|[''m'' ± ''r'']}} is a full-precision number, and a few bits suffice for the radius {{mvar|r}}. At high precision, ball arithmetic is therefore not more expensive than plain floating-point arithmetic.}}</ref>
+
+===Dependency problem===
+[[File:Interval-dependence problem-front view.png|right|thumb|Approximate estimate of the value range]]
+
+The so-called ''dependency problem'' is a major obstacle to the application of interval arithmetic. Although interval methods can determine the range of elementary arithmetic operations and functions very accurately, this is not always true with more complicated functions. If an interval occurs several times in a calculation using parameters, and each occurrence is taken independently, then this can lead to an unwanted expansion of the resulting intervals.
+
+[[File:Interval-dependence problem.png|180px|left|thumb|Treating each occurrence of a variable independently]]
+
+As an illustration, take the function {{mvar|f}} defined by {{math|''f''(''x'') {{=}} ''x''<sup>2</sup> + ''x''}}. The values of this function over the interval {{closed-closed|−1, 1}} are {{closed-closed|−{{sfrac|1|4}}, 2}}. As the natural interval extension, it is calculated as
+
+<math display="block">[-1, 1]^2 + [-1, 1] = [0,1] + [-1,1] = [-1,2],</math>
+
+which is slightly larger; we have instead calculated the [[infimum and supremum]] of the function {{math|''h''(''x'', ''y'') {{=}} ''x''<sup>2</sup> + ''y''}} over {{math|''x'', ''y'' ∈ {{closed-closed|−1, 1}}}}. There is a better expression of {{mvar|f}} in which the variable {{mvar|x}} only appears once, namely by rewriting the [[quadratic equation|quadratic]] {{math|''f''(''x'') {{=}} ''x''<sup>2</sup> + ''x''}} by [[completing the square]]:
+
+<math display="block">f(x) = \left(x + \tfrac{1}{2}\right)^2 -\tfrac{1}{4}.</math>
+
+So the suitable interval calculation is
+
+<math display="block">\left([-1,1] + \tfrac{1}{2}\right)^2 -\tfrac{1}{4} =  \left[-\tfrac{1}{2}, \tfrac{3}{2}\right]^2 -\tfrac{1}{4} = \left[0, \tfrac{9}{4}\right] -\tfrac{1}{4} = \left[-\tfrac{1}{4},2\right]</math>
+
+and gives the correct values.
+
+In general, it can be shown that the exact range of values can be achieved, if each variable appears only once and if {{mvar|f}} is continuous inside the box. However, not every function can be rewritten this way.
+
+[[File:Interval-wrapping effect.png|160px|right|thumb|Wrapping effect]]
+The dependency of the problem causing over-estimation of the value range can go as far as covering a large range, preventing more meaningful conclusions.
+
+An additional increase in the range stems from the solution of areas that do not take the form of an interval vector. The solution set of the linear system
+
+<math display="block">\begin{cases} x = p \\ y = p \end{cases} \qquad  p\in [-1,1]</math>
+
+is precisely the line between the points {{math|(−1, −1)}} and {{math|(1, 1)}}. Using interval methods results in the unit square, {{math|{{closed-closed|−1, 1}} × {{closed-closed|−1, 1}}}}. This is known as the ''wrapping effect''.
+
+===Linear interval systems===
+A linear interval system consists of a matrix interval extension {{math|['''A'''] ∈ [ℝ]<sup>''n'' × ''m''</sup>}} and an interval vector {{math|['''b'''] ∈ [ℝ]<sup>''n''</sup>}}. We want the smallest cuboid {{math|['''x'''] ∈ [ℝ]<sup>''m''</sup>}}, for all vectors {{math|'''x''' ∈ ℝ<sup>''m''</sup>}} which there is a pair {{math|('''A''', '''b''')}} with {{math|'''A''' ∈ ['''A''']}} and {{math|'''b''' ∈ ['''b''']}} that satisfies
+<math display="block">\mathbf{A} \cdot \mathbf{x} = \mathbf{b}</math>.
+
+For quadratic systems (in other words, for {{math|''n'' {{=}} ''m''}}) there can be such an interval vector {{math|['''x''']}}, which covers all possible solutions, found simply with the interval Gauss method.  This replaces the numerical operations, in that the linear algebra method known as [[Gaussian elimination]] becomes its interval version.  However, since this method uses the interval entities {{math|['''A''']}} and {{math|['''b''']}} repeatedly in the calculation, it can produce poor results for some problems. Hence using the result of the interval-valued Gauss only provides first rough estimates, since although it contains the entire solution set, it also has a large area outside it.
+
+A rough solution {{math|['''x''']}} can often be improved by an interval version of the [[Gauss–Seidel method]]. The motivation for this is that the {{mvar|i}}th row of the interval extension of the linear equation
+:<math>
+\begin{pmatrix}
+ {[a_{11}]} & \cdots & {[a_{1n}]} \\
+ \vdots & \ddots & \vdots  \\
+ {[a_{n1}]} & \cdots & {[a_{nn}]}
+\end{pmatrix}
+\cdot
+\begin{pmatrix}
+{x_1} \\
+\vdots \\
+{x_n}
+\end{pmatrix}
+=
+\begin{pmatrix}
+{[b_1]} \\
+\vdots \\
+{[b_n]}
+\end{pmatrix}
+</math>
+can be determined by the variable {{mvar|x<sub>i</sub>}} if the division {{math|{{sfrac|1|[''a<sub>ii</sub>'']}}}} is allowed.  It is therefore simultaneously
+<math display="block">x_j \in [x_j] \quad \text{and} \quad x_j \in \frac{[b_i]- \sum\limits_{k \neq j} [a_{ik}] \cdot [x_k]}{[a_{ii}]}.</math>
+So we can now replace {{math|[''x<sub>j</sub>'']}} by
+<math display="block">[x_j] \cap \frac{[b_i]- \sum\limits_{k \neq j} [a_{ik}] \cdot [x_k]}{[a_{ii}]},</math>
+and so the vector {{math|['''x''']}} by each element.
+
+Since the procedure is more efficient for a [[diagonally dominant matrix]], instead of the system {{math|['''A'''] · '''x''' {{=}} ['''b''']}}, one can often try multiplying it by an appropriate rational matrix {{math|'''M'''}} with the resulting matrix equation
+<math display="block">(\mathbf{M}\cdot[\mathbf{A}])\cdot \mathbf{x} = \mathbf{M}\cdot[\mathbf{b}]</math>
+left to solve. If one chooses, for example, {{math|'''M''' {{=}} '''A'''<sup>−1</sup>}} for the central matrix {{math|'''A''' ∈ ['''A''']}}, then {{math|'''M''' · ['''A''']}} is an outer extension of the identity matrix.
+
+These methods only work well if the widths of the intervals occurring are sufficiently small.  For wider intervals, it can be useful to use an interval-linear system on finite (albeit large) real number equivalent linear systems. If all the matrices {{math|'''A''' ∈ ['''A''']}} are invertible, it is sufficient to consider all possible combinations (upper and lower) of the endpoints occurring in the intervals.  The resulting problems can be resolved using conventional numerical methods. Interval arithmetic is still used to determine rounding errors.
+
+This is only suitable for systems of smaller dimension, since with a fully occupied {{math|''n'' × ''n''}} matrix, {{math|2<sup>''n''<sup>2</sup></sup>}} real matrices need to be inverted, with {{math|2<sup>''n''</sup>}} vectors for the right-hand side.  This approach was developed by Jiri Rohn and is still being developed.<ref name="Rohn"/>
+
+===Interval Newton method===
+[[File:Interval Newton step.png|250px|right|thumb|Reduction of the search area in the interval Newton step in "thick" functions.]]
+An interval variant of [[Newton's method]] for finding the zeros in an interval vector {{math|['''x''']}} can be derived from the average value extension.<ref name="Hansen_2004"/> For an unknown vector {{math|'''z''' ∈ ['''x''']}} applied to {{math|'''y''' ∈ ['''x''']}}, gives
+<math display="block">f(\mathbf{z}) \in  f(\mathbf{y}) + [J_f](\mathbf{[x]}) \cdot (\mathbf{z} - \mathbf{y}).</math>
+For a zero {{math|'''z'''}}, that is {{math|''f''('''z''') {{=}} 0}}, thus must satisfy
+<math display="block"> f(\mathbf{y}) + [J_f](\mathbf{[x]}) \cdot (\mathbf{z} - \mathbf{y})=0 .</math>
+This is equivalent to
+<math display="block"> \mathbf{z} \in \mathbf{y} - [J_f](\mathbf{[x]})^{-1}\cdot f(\mathbf{y}).</math>
+An outer estimate of {{math|[''J<sub>f</sub>''](['''x'''])<sup>−1</sup> · ''f''('''y''')}} can be determined using linear methods.
+
+In each step of the interval Newton method, an approximate starting value {{math|['''x'''] ∈ [ℝ]<sup>''n''</sup>}} is replaced by
+<math display="block">[\mathbf{x}]\cap \left(\mathbf{y} - [J_f](\mathbf{[x]})^{-1}\cdot f(\mathbf{y})\right)</math>
+and so the result can be improved. In contrast to traditional methods, the interval method approaches the result by containing the zeros. This guarantees that the result produces all zeros in the initial range. Conversely, it proves that no zeros of {{mvar|f}} were in the initial range {{math|['''x''']}} if a Newton step produces the empty set.
+
+The method converges on all zeros in the starting region. Division by zero can lead to the separation of distinct zeros, though the separation may not be complete; it can be complemented by the [[#Bisection and covers|bisection method]].
+
+As an example, consider the function {{math|''f''(''x'') {{=}} ''x''<sup>2</sup> − 2}}, the starting range {{math|[''x''] {{=}} {{closed-closed|−2, 2}}}}, and the point {{math|''y'' {{=}} 0}}. We then have {{math|''J<sub>f</sub>''(''x'') {{=}} 2''x''}} and the first Newton step gives
+<math display="block">[-2,2]\cap \left(0 - \frac{1}{2\cdot[-2,2]} (0-2)\right) = [-2,2]\cap \left(\left[-\infty, -\tfrac12\right]\cup \left[\tfrac12, \infty\right] \right) = \left[-2, -\tfrac12\right] \cup \left[\tfrac12, 2\right].</math>
+More Newton steps are used separately on {{math|''x'' ∈ {{closed-closed|−2, −{{sfrac|1|2}}}}}} and {{math|''x'' ∈ {{closed-closed|{{sfrac|1|2}}, 2}}}}. These converge to arbitrarily small intervals around {{math|−{{sqrt|2}}}} and {{math|+{{sqrt|2}}}} respectively.
+
+The interval Newton method can also be used with ''thick functions'' such as  {{math|''g''(''x'') {{=}} ''x''<sup>2</sup> − {{closed-closed|2, 3}}}}, which would in any case have interval results. The result then produces intervals containing {{math|{{closed-closed|−{{sqrt|3}}, −{{sqrt|2}}}} ∪ {{closed-closed|{{sqrt|2}}, {{sqrt|3}}}}}}.
+
+===Bisection and covers===
+[[File:Illustration of interval mincing.png|220px|right|thumb|Rough estimate ({{color|teal|turquoise}}) and improved estimates through "mincing" ({{color|red|red}})]]
+
+The various interval methods deliver conservative results as dependencies between the sizes of different interval extensions are not taken into account. However, the dependency problem becomes less significant for narrower intervals.
+
+Covering an interval vector {{math|['''x''']}} by smaller boxes {{math|['''x'''<sub>1</sub>], …, ['''x'''<sub>''k''</sub>]}}, so that
+
+<math display="block">[\mathbf{x}] = \bigcup_{i=1}^k [\mathbf{x}_i],</math>
+
+is then valid for the range of values.
+
+<math display="block">f([\mathbf{x}]) =  \bigcup_{i=1}^k f([\mathbf{x}_i]).</math>
+
+So, for the interval extensions described above the following holds:
+
+<math display="block">[f]([\mathbf{x}]) \supseteq  \bigcup_{i=1}^k [f]([\mathbf{x}_i]).</math>
+
+Since {{math|[''f''](['''x'''])}} is often a genuine [[superset]] of the right-hand side, this usually leads to an improved estimate.
+
+Such a cover can be generated by the [[bisection method]] such as thick elements {{closed-closed|''x''<sub>''i''1</sub>, ''x''<sub>''i''2</sub>}} of the interval vector
+<math display="block">[\mathbf{x}] = ([x_{11}, x_{12}], \ldots, [x_{n1}, x_{n2}])</math>
+by splitting in the center into the two intervals
+<math display="block">\left[ x_{i1}, \frac{x_{i1}+x_{i2}}{2} \right] \quad\text{and}\quad \left[ \frac{x_{i1}+x_{i2}}{2}, x_{i2} \right].</math>
+If the result is still not suitable then further gradual subdivision is possible. A cover of {{math|2<sup>''r''</sup>}} intervals results from {{mvar|r}} divisions of vector elements, substantially increasing the computation costs.
+
+With very wide intervals, it can be helpful to split all intervals into several subintervals with a constant (and smaller) width, a method known as ''mincing''. This then avoids the calculations for intermediate bisection steps. Both methods are only suitable for problems of low dimension.
+
+==Application==
+Interval arithmetic can be used in various areas (such as [[set inversion]], [[motion planning]], [[set estimation]], or stability analysis) to treat estimates with no exact numerical value.<ref name="Jaulin_2001"/>
+
+===Rounding error analysis===
+Interval arithmetic is used with error analysis, to control rounding errors arising from each calculation. The advantage of interval arithmetic is that after each operation there is an interval that reliably includes the true result. The distance between the interval boundaries gives the current calculation of rounding errors directly:
+: Error = {{math|abs(''a'' − ''b'')}} for a given interval {{closed-closed|''a'', ''b''}}.
+Interval analysis adds to rather than substituting for traditional methods for error reduction, such as [[pivot element|pivoting]].
+
+===Tolerance analysis===
+Parameters for which no exact figures can be allocated often arise during the simulation of technical and physical processes. The production process of technical components allows certain tolerances, so some parameters fluctuate within intervals. In addition, many fundamental constants are not known precisely.<ref name="Dreyer_2003"/>
+
+If the behavior of such a system affected by tolerances satisfies, for example, {{math|''f''(''x'', ''p'') {{=}} 0}}, for {{math|'''p''' ∈ ['''p''']}} and unknown {{math|'''x'''}} then the set of possible solutions.
+<math display="block">\{\mathbf{x}\,|\, \exists \mathbf{p} \in [\mathbf{p}], f(\mathbf{x}, \mathbf{p})= 0\}</math>,
+can be found by interval methods. This provides an alternative to traditional [[propagation of error]] analysis. Unlike point methods, such as [[Monte Carlo simulation]], interval arithmetic methodology ensures that no part of the solution area can be overlooked. However, the result is always a worst-case analysis for the distribution of error, as other probability-based distributions are not considered.
+
+===Fuzzy interval arithmetic===
+[[File:Fuzzy arithmetic.png|275px|right|thumb|Approximation of the [[normal distribution]] by a sequence of intervals]]
+Interval arithmetic can also be used with affiliation functions for fuzzy quantities as they are used in [[fuzzy logic]]. Apart from the strict statements {{math|''x'' ∈ [''x'']}} and {{math|''x'' ∉ [''x'']}}, intermediate values are also possible, to which real numbers {{math|''μ'' ∈ {{closed-closed|0, 1}}}} are assigned. {{math|''μ'' {{=}} 1}} corresponds to definite membership while {{math|''μ'' {{=}} 0}} is non-membership. A distribution function assigns uncertainty, which can be understood as a further interval.
+
+For ''fuzzy arithmetic''<ref name="Hanss"/> only a finite number of discrete affiliation stages {{math|''μ<sub>i</sub>'' ∈ {{closed-closed|0, 1}}}} are considered. The form of such a distribution for an indistinct value can then be represented by a sequence of intervals.
+
+:<math>\left[x^{(1)}\right] \supset \left[x^{(2)}\right] \supset \cdots \supset \left[x^{(k)} \right].</math>
+
+The interval {{math|[''x''<sup>(''i'')</sup>]}} corresponds exactly to the fluctuation range for the stage {{math|''μ<sub>i</sub>''}}.
+
+The appropriate distribution for a function {{math|''f''(''x''<sub>1</sub>, …, ''x<sub>n</sub>'')}} concerning indistinct values {{math|''x''<sub>1</sub>, …, ''x<sub>n</sub>''}} and the corresponding sequences
+
+<math display="block">\left[x_1^{(1)} \right] \supset \cdots \supset \left[x_1^{(k)} \right], \ldots, \left[x_n^{(1)} \right] \supset \cdots \supset \left[x_n^{(k)} \right]</math>
+
+can be approximated by the sequence
+
+<math display="block">\left[y^{(1)}\right] \supset \cdots \supset \left[y^{(k)}\right],</math>
+
+where
+
+<math display="block">\left[y^{(i)}\right] = f \left( \left[x_{1}^{(i)}\right], \ldots \left[x_{n}^{(i)}\right]\right)</math>
+
+and can be calculated by interval methods. The value {{math|[''y''<sup>(1)</sup>]}} corresponds to the result of an interval calculation.
+
+===Computer-assisted proof===
+[[Warwick Tucker]] used interval arithmetic in order to solve the 14th of [[Smale's problems]], that is, to show that the [[Lorenz attractor]] is a [[Attractor#Strange attractor|strange attractor]].<ref name="Tucker_1999"/> [[Thomas Callister Hales|Thomas Hales]] used interval arithmetic in order to solve the [[Kepler conjecture]].
+
+The [[Fast Library for Number Theory]] website lists several uses of the FLINT/Arb ball arithmetic library in published papers and preprints.<ref>{{cite web |title=Applications & benchmarks: Numerical computation |url=https://flintlib.org/applications.html |website=FLINT: Fast Library for Number Theory (flintlib.org)}}</ref>
+
+==History==
+Interval arithmetic is not a completely new phenomenon in mathematics; it has appeared several times under different names in the course of history. For example, [[Archimedes]] calculated lower and upper bounds {{math|{{sfrac|223|71}} < [[Pi#History|''π'']] < {{sfrac|22|7}}}} in the 3rd century BC. Actual calculation with intervals has neither been as popular as other numerical techniques nor been completely forgotten.
+
+Rules for calculating with intervals and other subsets of the real numbers were published in a 1931 work by Rosalind Cicely Young.<ref name="Young_1931"/> Arithmetic work on range numbers to improve the reliability of digital systems was then published in a 1951 textbook on linear algebra by {{ill|Paul S. Dwyer|de}};<ref name="Dwyer_1951"/> intervals were used to measure rounding errors associated with floating-point numbers. A comprehensive paper on interval algebra in numerical analysis was published by Teruo Sunaga (1958).<ref name="Sunaga_1958"/>
+
+The birth of modern interval arithmetic was marked by the appearance of the book ''Interval Analysis'' by [[Ramon E. Moore]] in 1966.<ref name="Moore_1966"/><ref name="Moore_2009"/> He had the idea in spring 1958, and a year later he published an article about computer interval arithmetic.<ref name="Hansen_2001"/> Its merit was that starting with a simple principle, it provided a general method for automated error analysis, not just errors resulting from rounding.
+
+Independently in 1956, [[Mieczyslaw Warmus]] suggested formulae for calculations with intervals,<ref name="Warmus_2008"/> though Moore found the first non-trivial applications.
+
+In the following twenty years, German groups of researchers carried out pioneering work around [[Ulrich W. Kulisch]]<ref name="Kulisch_1989"/><ref name="Kulisch_1969"/> and {{Interlanguage link|Götz Alefeld|de}}<ref name="Alefeld"/> at the [[University of Karlsruhe]] and later also at the [[University of Wuppertal|Bergische University of Wuppertal]].
+For example, {{Interlanguage link|Karl Nickel|de}} explored more effective implementations, while improved containment procedures for the solution set of systems of equations were due to Arnold Neumaier among others. In the 1960s, [[Eldon R. Hansen]] dealt with interval extensions for linear equations and then provided crucial contributions to global optimization, including what is now known as Hansen's method, perhaps the most widely used interval algorithm.<ref name="Hansen_2004"/> Classical methods in this often have the problem of determining the largest (or smallest) global value, but could only find a local optimum and could not find better values; Helmut Ratschek and Jon George Rokne developed [[branch and bound]] methods, which until then had only applied to integer values, by using intervals to provide applications for continuous values.
+
+In 1988, Rudolf Lohner developed [[Fortran]]-based software for reliable solutions for initial value problems using [[ordinary differential equations]].<ref name="Lohner"/>
+
+The journal ''Reliable Computing'' (originally ''Interval Computations'') has been published since the 1990s, dedicated to the reliability of computer-aided computations. As lead editor, R. Baker Kearfott, in addition to his work on global optimization, has contributed significantly to the unification of notation and terminology used in interval arithmetic.<ref name="Kearfott"/>
+
+In recent years work has concentrated in particular on the estimation of [[preimage]]s of parameterized functions and to robust control theory by the COPRIN working group of [[INRIA]] in [[Sophia Antipolis]] in France.<ref name="INRIA"/>
+
+==<span class="anchor" id="XSC"></span><span class="anchor" id="FORTRAN-SC"></span><span class="anchor" id="C-XSC"></span><span class="anchor" id="ACRITH"></span><span class="anchor" id="ACRITH-XSC"></span>Implementations==
+There are many software packages that permit the development of numerical applications using interval arithmetic.<ref name="Kreinovich"/> These are usually provided in the form of program libraries.  There are also [[C++]] and Fortran [[compiler]]s that handle interval data types and suitable operations as a language extension, so interval arithmetic is supported directly.
+
+Since 1967, ''Extensions for Scientific Computation'' (XSC) have been developed in the [[University of Karlsruhe]] for various [[programming language]]s, such as C++, Fortran, and [[Pascal (programming language)|Pascal]].<ref name="XSC_2007"/> The first platform was a [[Zuse]] [[Z23 (computer)|Z23]], for which a new interval data type with appropriate elementary operators was made available. There followed in 1976, [[Pascal-SC]], a Pascal variant on a [[Zilog Z80]] that it made possible to create fast, complicated routines for automated result verification. Then came the [[Fortran 77]]-based ACRITH-XSC for the [[System/370]] architecture (FORTRAN-SC), which was later delivered by IBM. Starting from 1991 one could produce code for [[C (programming language)|C]] compilers with [[Pascal-XSC]]; a year later the C++ class library supported C-XSC on many different computer systems. In 1997, all XSC variants were made available under the [[GNU General Public License]]. At the beginning of 2000, C-XSC 2.0 was released under the leadership of the working group for scientific computation at the [[Bergische University of Wuppertal]] to correspond to the improved C++ standard.
+
+Another C++-class library was created in 1993 at the [[Hamburg University of Technology]] called ''Profil/BIAS'' (Programmer's Runtime Optimized Fast Interval Library, Basic Interval Arithmetic), which made the usual interval operations more user-friendly. It emphasized the efficient use of hardware, portability, and independence of a particular presentation of intervals.
+
+The [[Boost (C++ libraries)|Boost collection]] of C++ libraries contains a template class for intervals. Its authors are aiming to have interval arithmetic in the standard C++ language.<ref name="Sylvian"/>
+
+The [[Frink (programming language)|Frink]] programming language has an implementation of interval arithmetic that handles [[arbitrary-precision arithmetic|arbitrary-precision number]]s. Programs written in Frink can use intervals without rewriting or recompilation.
+
+GAOL<ref name="Gaol"/> is another C++ interval arithmetic library that is unique in that it offers the relational interval operators used in interval [[constraint programming]].
+
+The Moore library<ref name="Moore"/> is an efficient implementation of interval arithmetic in C++. It provides intervals with endpoints of arbitrary precision and is based on the [[Concepts (C++)|''concepts'' feature of C++]].
+
+The [[Julia (programming language)|Julia]] programming language<ref name="Julia"/> has an implementation of interval arithmetics along with high-level features, such as [[Root-finding algorithm|root-finding]] (for both real and complex-valued functions) and interval [[constraint programming]], via the <kbd>ValidatedNumerics.jl</kbd> package.<ref name="Validated"/>
+
+In addition, computer algebra systems, such as [[Euler Mathematical Toolbox]], [[FriCAS]], [[Maple (software)|Maple]], [[Mathematica]], [[Maxima (software)|Maxima]]<ref name="RJF"/> and [[MuPAD]], can handle intervals. A [[Matlab]] extension ''Intlab''<ref name="Intlab"/> builds on [[BLAS]] routines, and the toolbox <kbd>b4m</kbd> makes a Profil/BIAS interface.<ref name="Intlab"/><ref name="B4M"/>
+
+A library for the functional language [[OCaml]] was written in assembly language and C.<ref name="Alliot_2012"/>
+
+MPFI is a library for arbitrary precision interval arithmetic; it is written in C and is based on [[MPFR]].<ref name="MPFI"/>
+
+==IEEE 1788 standard==
+{{anchor|IEEE 1788}}
+A standard for interval arithmetic, IEEE Std 1788-2015, has been approved in June 2015.<ref name="IEEE_2015_1788"/> Two reference implementations are freely available.<ref name="Revol_2015"/> These have been developed by members of the standard's working group: The libieeep1788<ref name="IEEE_P1788_C++"/> library for C++, and the interval package<ref name="Octave"/> for [[GNU Octave]].
+
+A minimal subset of the standard, IEEE Std 1788.1-2017, has been approved in December 2017 and published in February 2018. It should be easier to implement and may speed production of implementations.<ref name="IEEE_2017_1788"/>
+
+==Conferences and workshops==
+Several international conferences or workshops take place every year in the world. The main conference is probably SCAN (International Symposium on Scientific Computing, Computer Arithmetic, and Verified Numerical Computation), but there is also SWIM (Small Workshop on Interval Methods), PPAM (International Conference on Parallel Processing and Applied Mathematics), REC (International Workshop on Reliable Engineering Computing).
+
+==See also==
+* [[Affine arithmetic]]
+* [[INTLAB]] (Interval Laboratory)
+* [[Automatic differentiation]]
+* [[Multigrid method]]
+* [[Monte-Carlo simulation]]
+* [[Interval finite element]]
+* [[Fuzzy number]]
+* [[Significant figures]]
+* [[Karlsruhe Accurate Arithmetic]] (KAA)
+* [[Unum (number format)|Unum]]
+
+==References==
+{{Reflist|refs=
+<ref name="Kulisch_1969">{{cite book |chapter=Grundzüge der Intervallrechnung |language=de |author-first=Ulrich W. |author-last=Kulisch |author-link=Ulrich W. Kulisch |date=1969 |title=Jahrbuch Überblicke Mathematik |editor-first=Detlef |editor-last=Laugwitz |volume=2 |publisher=[[Bibliographisches Institut]] |location=Mannheim, Germany |pages=51–98}}</ref>
+<ref name="Kulisch_1989">{{cite book |author-last=Kulisch |author-first=Ulrich W. |author-link=Ulrich W. Kulisch |title=Wissenschaftliches Rechnen mit Ergebnisverifikation. Eine Einführung |date=1989 |publisher=[[Vieweg-Verlag]] |location=Wiesbaden |language=de |isbn=3-528-08943-1}}</ref>
+<ref name="Dreyer_2003">{{cite book |author-last=Dreyer |author-first=Alexander |title=Interval Analysis of Analog Circuits with Component Tolerances |date=2003 |publisher=[[Shaker Verlag]] |location=Aachen, Germany |isbn=3-8322-4555-3 |page=15}}</ref>
+<ref name="Petkovic_1998">[https://books.google.com/books?id=Vtqk6WgttzcC Complex interval arithmetic and its applications], [[Miodrag S. Petković]], Ljiljana D. Petković, [[Wiley-VCH]], 1998, {{ISBN|978-3-527-40134-5}}</ref>
+<ref name="Dawood_2011">Hend Dawood (2011). ''Theories of Interval Arithmetic: Mathematical Foundations and Applications''. Saarbrücken: LAP LAMBERT Academic Publishing. {{ISBN|978-3-8465-0154-2}}.</ref>
+<ref name="Rohn">{{Cite web |url=http://www.cs.cas.cz/rohn/publist/000home.htm |title=Jiri Rohn, List of publications |access-date=26 May 2008 |archive-url=https://web.archive.org/web/20081123003440/http://www.cs.cas.cz/rohn/publist/000home.htm |archive-date=23 November 2008 |url-status=dead }}</ref>
+<ref name="Hansen_2004">{{cite book |author-last1=Walster |author-first1=G. William |author-last2=Hansen |author-first2=Eldon Robert |author-link2=Eldon Robert Hansen |title=Global Optimization using Interval Analysis |edition=2nd |date=2004 |publisher=Marcel Dekker |location=New York, USA |isbn=0-8247-4059-9}}</ref>
+<ref name="Jaulin_2001">{{cite book |author-last1=Jaulin |author-first1=Luc |author-last2=Kieffer |author-first2=Michel |author-last3=Didrit |author-first3=Olivier |author-last4=Walter |author-first4=Eric |title=Applied Interval Analysis |date=2001 |publisher=Springer |location=Berlin |isbn=1-85233-219-0}}</ref>
+<ref name="Hanss">[http://www.itm.uni-stuttgart.de/research/unsicherheiten/unsicherheiten_en.php Application of Fuzzy Arithmetic to Quantifying the Effects of Uncertain Model Parameters, Michael Hanss], [[University of Stuttgart]]</ref>
+<ref name="Tucker_1999">[[Warwick Tucker|Tucker, Warwick]] (1999). The Lorenz attractor exists. Comptes Rendus de l'Académie des Sciences-Series I-Mathematics, 328(12), 1197-1202.</ref>
+<ref name="Young_1931">Young, Rosalind Cicely (1931). The algebra of many-valued quantities. Mathematische Annalen, 104(1), 260-290. (NB. A doctoral candidate at the [[University of Cambridge]].)</ref>
+<ref name="Dwyer_1951">[[:de:Paul S. Dwyer|Dwyer, Paul Sumner]] (1951). Linear computations. Oxford, England: Wiley. ([[University of Michigan]])</ref>
+<ref name="Sunaga_1958">{{cite journal |author-first=Teruo |author-last=Sunaga |title=Theory of interval algebra and its application to numerical analysis |journal=RAAG Memoirs |issue<!-- ? -->=2 |date=1958 |pages=29–46}}</ref>
+<ref name="Moore_1966">{{cite book |author-last=Moore |author-first=Ramon Edgar |author-link=Ramon Edgar Moore |title=Interval Analysis |date=1966 |publisher=[[Prentice-Hall]] |location=Englewood Cliff, New Jersey, USA |isbn=0-13-476853-1}}</ref>
+<ref name="Moore_2009">{{cite book |author-last1=Cloud |author-first1=Michael J. |author-last2=Moore |author-first2=Ramon Edgar |author-link2=Ramon Edgar Moore |author-last3=Kearfott |author-first3=R. Baker |title=Introduction to Interval Analysis |date=2009 |publisher=[[Society for Industrial and Applied Mathematics]] (SIAM) |location=Philadelphia |isbn=978-0-89871-669-6}}</ref>
+<ref name="Hansen_2001">{{cite web |url=https://interval.louisiana.edu/Moores_early_papers/bibliography.html |title=Publications Related to Early Interval Work of R. E. Moore |author-last=Hansen |author-first=Eldon Robert |author-link=Eldon Robert Hansen |date=2001-08-13 |publisher=University of Louisiana at Lafayette Press |access-date=2015-06-29}}</ref>
+<ref name="Warmus_2008">[http://www.ippt.gov.pl/~zkulpa/quaphys/warmus.html Precursory papers on interval analysis] by [[Mieczyslaw Warmus]] {{webarchive |url=https://web.archive.org/web/20080418041803/http://www.ippt.gov.pl/~zkulpa/quaphys/warmus.html |date=2008-04-18}}</ref>
+<ref name="Alefeld">{{cite book |author-last1=Alefeld |author-first1=Götz |author-link=:de:Götz Alefeld |author-last2=Herzberger |author-first2=Jürgen |title=Einführung in die Intervallrechnung |series=Reihe Informatik |year=1974 |volume=12 |publisher=[[B.I.-Wissenschaftsverlag]] |location=Mannheim, Wien, Zürich |isbn=3-411-01466-0 |language=de}}</ref>
+<ref name="Lohner">[http://fam-pape.de/raw/ralph/studium/dgl/dglsem.html Bounds for ordinary differential equations of Rudolf Lohner] {{Webarchive|url=https://web.archive.org/web/20180511153904/http://fam-pape.de/raw/ralph/studium/dgl/dglsem.html |date=11 May 2018 }} (in German)</ref>
+<ref name="Kearfott">[http://interval.louisiana.edu/kearfott.html Bibliography of R. Baker Kearfott], [[University of Louisiana at Lafayette]]</ref>
+<ref name="INRIA">[https://www-sop.inria.fr/coprin/logiciels/ALIAS/Movie/movie_undergraduate.mpg Introductory Film (mpeg)] of the [https://www-sop.inria.fr/coprin/index_english.html COPRIN] teams of [[INRIA]], [[Sophia Antipolis]]</ref>
+<ref name="Kreinovich">[http://www.cs.utep.edu/interval-comp/main.html Software for Interval Computations] {{Webarchive|url=https://web.archive.org/web/20060302095039/http://www.cs.utep.edu/interval-comp/main.html |date=2006-03-02  }} collected by [[Vladik Kreinovich]], [[University of Texas at El Paso]].</ref>
+<ref name="XSC_2007">[http://www.math.uni-wuppertal.de/org/WRST/xsc/history.html History of XSC-Languages] {{webarchive|url=https://web.archive.org/web/20070929131317/http://www.math.uni-wuppertal.de/org/WRST/xsc/history.html |date=2007-09-29}}</ref>
+<ref name="Sylvian">[https://www-sop.inria.fr/members/Sylvain.Pion/cxx/ A Proposal to add Interval Arithmetic to the C++ Standard Library]</ref>
+<ref name="Gaol">[https://sourceforge.net/projects/gaol Gaol is Not Just Another Interval Arithmetic Library]</ref>
+<ref name="Moore">[https://arxiv.org/abs/1611.09567 Moore: Interval Arithmetic in Modern C++]</ref>
+<ref name="Julia">[https://julialang.org The Julia programming language]</ref>
+<ref name="Validated">[http://github.com/JuliaIntervals/ValidatedNumerics.jl ValidatedNumerics.jl]</ref>
+<ref name="Intlab">{{Cite web |url=http://www.ti3.tu-harburg.de/rump/intlab/ |title=Intlab INTerval LABoratory |access-date=2012-11-07  |archive-date=2020-01-30  |archive-url=https://web.archive.org/web/20200130222824/http://www.ti3.tu-harburg.de/rump/intlab/ |url-status=dead }}</ref>
+<ref name="B4M">[http://www.ti3.tu-harburg.de/zemke/b4m/ b4m]</ref>
+<ref name="Alliot_2012">{{cite book |author-last1=Alliot |author-first1=Jean-Marc |author-last2=Gotteland |author-first2=Jean-Baptiste |author-last3=Vanaret |author-first3=Charlie |author-last4=Durand |author-first4=Nicolas |author-last5=Gianazza |author-first5=David |date=2012 |url=https://hal.archives-ouvertes.fr/hal-00934812 |title=Implementing an interval computation library for OCaml on x86/amd64 architectures |publisher=17th ACM SIGPLAN International Conference on Functional Programming}}</ref>
+<ref name="MPFI">[https://perso.ens-lyon.fr/nathalie.revol/software.html MPFI, a multiple precision interval arithmetic library based on MPFR]</ref>
+<ref name="IEEE_2015_1788">[https://standards.ieee.org/ieee/1788/4431/ IEEE Standard for Interval Arithmetic]</ref>
+<ref name="Revol_2015">[[Nathalie Revol]] (2015). The (near-)future IEEE 1788 standard for interval arithmetic, [https://kam.mff.cuni.cz/conferences/swim2015/slides/revol.pdf slides] // SWIM 2015: 8th Small Workshop in Interval Methods. Prague, 9–11 June 2015</ref>
+<ref name="IEEE_P1788_C++">[https://github.com/nehmeier/libieeep1788 C++ implementation of the preliminary IEEE P1788 standard for interval arithmetic]</ref>
+<ref name="Octave">[https://octave.sourceforge.net/interval/ GNU Octave interval package]</ref>
+<ref name="IEEE_2017_1788">{{cite web |url=https://standards.ieee.org/findstds/standard/1788.1-2017.html |title=IEEE Std 1788.1-2017 - IEEE Standard for Interval Arithmetic (Simplified) |author=<!--Staff writer(s); no by-line.--> |date=2017 |website=IEEE Standard |publisher=IEEE Standards Association |access-date=2018-02-06 |archive-date=2018-02-07  |archive-url=https://web.archive.org/web/20180207122425/https://standards.ieee.org/findstds/standard/1788.1-2017.html |url-status=dead }}</ref>
+<ref name="RJF">[https://people.eecs.berkeley.edu/~fateman/papers/simp-interval.pdf] Interval Arithmetic for Maxima:  A Brief Summary by Richard J. Fateman.]</ref>
+}}
+
+==Further reading==
+* {{cite journal |last=Hayes |first=Brian |date=November–December 2003 |title=A Lucid Interval |journal=American Scientist |publisher=Sigma Xi |volume=91 |issue=6 |pages=484–488 |url=http://www.cs.utep.edu/interval-comp/hayes.pdf |doi=10.1511/2003.6.484 |archive-date=2021-08-27  |access-date=2008-05-24  |archive-url=https://web.archive.org/web/20210827160931/http://cs.utep.edu/interval-comp/hayes.pdf |url-status=dead }}
+* {{cite book |author-link=Warwick Tucker |author-last=Tucker |author-first=Warwick |date=2011 |url=https://books.google.com/books?id=IEN56sqHtR8C&pg=PP1 |title=Validated numerics: a short introduction to rigorous computations |publisher=[[Princeton University Press]]|isbn=978-1400838974 }}
+* {{anchor|Triplex}}{{cite journal |title=Definition von Schrankenzahlen in Triplex-ALGOL |language=de |author-first=Hans-Wilm |author-last=Wippermann |date=1968 |orig-date=1967-06-15, 1966 |journal=[[Computing (journal)|Computing]] |issn=0010-485X |publisher=Springer |volume=3 |issue=2 |location=Karlsruhe, Germany |doi=10.1007/BF02277452 |s2cid=36685400 |pages=99–109}} (11 pages) (NB. About [[Triplex-ALGOL Karlsruhe]], an ALGOL 60 (1963) implementation with support for triplex numbers.)
+
+==External links==
+* [https://mathworld.wolfram.com/IntervalArithmetic.html Interval arithmetic (Wolfram Mathworld)]
+* [https://www2.math.uu.se/~warwick/main/papers/ECM04Tucker.pdf Validated Numerics for Pedestrians]
+* [https://www.mat.univie.ac.at/~neum/interval.html Interval Methods from Arnold Neumaier] {{Webarchive|url=https://web.archive.org/web/20201202191034/https://www.mat.univie.ac.at/~neum/interval.html |date=2020-12-02  }}, [[University of Vienna]]
+* [https://www.ensta-bretagne.fr/jaulin/swim.html SWIM (Summer Workshop on Interval Methods)]
+* [https://link.springer.com/conference/ppam International Conference on Parallel Processing and Applied Mathematics]
+* [http://www.ti3.tu-harburg.de/rump/intlab/ INTLAB, Institute for Reliable Computing] {{Webarchive|url=https://web.archive.org/web/20200130222824/http://www.ti3.tu-harburg.de/rump/intlab/ |date=2020-01-30  }}, [[Hamburg University of Technology]]
+* [https://www.texmacs.org/joris/ball/ball.html Ball arithmetic by Joris van der Hoeven]
+* [http://verifiedby.me/kv/index-e.html kv - a C++ Library for Verified Numerical Computation]
+** {{GitHub|mskashi/kv}}
+* [https://arblib.org/ Arb - a C library for arbitrary-precision ball arithmetic]
+** {{GitHub|fredrik-johansson/arb}}
+* {{GitHub|JuliaIntervals}}
+{{Data types}}
+
+{{DEFAULTSORT:Interval Arithmetic}}
+[[Category:Arithmetic]]
+[[Category:Computer arithmetic]]
+[[Category:Numerical analysis]]
+[[Category:Data types]]

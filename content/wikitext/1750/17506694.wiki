@@ -1,0 +1,256 @@
+<!-- wikipedia: en
+     page: 17506694
+     title: Wang and Landau algorithm
+     revision: 1371059389
+     timestamp: 2026-08-24T10:12:11Z
+     history: https://en.wikipedia.org/w/index.php?curid=17506694&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1371059389 -->
+{{Short description|Monte Carlo method for density of states}}
+The '''Wang and Landau algorithm''', proposed by  Fugao Wang and [[David P. Landau]],<ref name=WangLandau/><ref name=":0">{{Cite journal |last=Wang |first=Fugao |last2=Landau |first2=D. P. |date=2001-10-17 |title=Determining the density of states for classical statistical models: A random walk algorithm to produce a flat histogram |url=https://link.aps.org/doi/10.1103/PhysRevE.64.056101 |journal=Physical Review E |language=en |volume=64 |issue=5 |doi=10.1103/PhysRevE.64.056101 |issn=1063-651X|arxiv=cond-mat/0107006 }}</ref><ref>{{Cite journal |last=Landau |first=D. P. |last2=Tsai |first2=Shan-Ho |last3=Exler |first3=M. |date=2004-10-01 |title=A new approach to Monte Carlo simulations in statistical physics: Wang-Landau sampling |url=https://pubs.aip.org/ajp/article/72/10/1294/1044458/A-new-approach-to-Monte-Carlo-simulations-in |journal=American Journal of Physics |language=en |volume=72 |issue=10 |pages=1294–1302 |doi=10.1119/1.1707017 |issn=0002-9505|url-access=subscription }}</ref> is a [[Monte Carlo method]] designed to [[estimator|estimate]] the [[density of states]] of a system. The method performs a non-Markovian [[random walk]] to build the density of states by quickly visiting all the available energy spectrum. The Wang and Landau algorithm is an important method to obtain the density of states required to perform a [[multicanonical ensemble|multicanonical simulation]].
+
+The Wang–Landau algorithm can be applied to any system which is characterized by a cost (or energy) function. For instance,
+it has been applied to the solution of numerical integrals<ref name=Belardinelli_Integrals/> and the folding of proteins.<ref name=Ojeda1/><ref name=Ojeda2/>
+The Wang–Landau sampling is related to the [[metadynamics]] algorithm.<ref>Christoph Junghans, Danny Perez, and Thomas Vogel. "Molecular Dynamics in the Multicanonical Ensemble: Equivalence of Wang–Landau Sampling, Statistical Temperature Molecular Dynamics, and Metadynamics." Journal of Chemical Theory and Computation 10.5 (2014): 1843-1847. [[Digital_object_identifier|doi]]:[https://dx.doi.org/10.1021/ct500077d 10.1021/ct500077d]</ref>
+
+==Overview==
+
+The Wang and Landau algorithm is used to obtain an [[Estimator|estimate]] for the [[density of states]] of a system characterized by a cost function. It uses a non-Markovian [[stochastic process]] which asymptotically converges to a [[multicanonical ensemble]].<ref name=WangLandau/> (i.e., to a [[Metropolis–Hastings algorithm]] with [[sampling distribution]] inverse to the density of states) The major consequence is that this sampling distribution leads to a simulation where the energy barriers are invisible. This means that the algorithm visits all the accessible states (favorable and less favorable) much faster than a Metropolis algorithm.<ref name=Berg/>
+
+==Algorithm==
+
+Consider a system defined on a phase space <math>\Omega</math>, and a cost function, <math>E</math> (the energy), bounded on a spectrum <math>E\in\Gamma = [E_\min,E_\max]</math>. <math>E</math> has an associated density of states, <math>\rho(E)</math>, which is to be estimated. The [[estimator]] is <math>\hat \rho(E) \equiv \exp(S(E))</math>. Because Wang and Landau algorithm works in discrete spectra,<ref name=WangLandau/> the spectrum <math>\Gamma</math> is divided in <math>N</math> discrete values with a difference between them of <math>\Delta</math>, such that
+
+:<math> \Delta = \frac{E_\max-E_\min}{N}</math>.
+
+Given this discrete spectrum, the algorithm is initialized by:
+
+*setting all entries of the microcanonical entropy to zero, <math>S(E_i) = 0\ \ i=1,2,...,N</math>
+*initializing <math>f = 1</math> and
+*initializing the system randomly, by putting in a random configuration <math>\boldsymbol{r}\in\Omega</math>.
+
+The algorithm then performs a [[multicanonical ensemble]] simulation:<ref name=WangLandau/> a [[Metropolis–Hastings algorithm|Metropolis–Hastings]] random walk in the phase space of the system with a [[probability distribution]] given by <math>P(\boldsymbol{r}) = 1/\hat{\rho}(E(\boldsymbol{r})) = \exp (-S(E(\boldsymbol{r})))</math> and a probability of proposing a new state given by a probability distribution <math>g(\boldsymbol{r} \rightarrow \boldsymbol{r}')</math>. A histogram <math>H(E)</math> of visited energies is stored. Like in the Metropolis–Hastings algorithm, a proposal-acceptance step is performed, and consists in (see [[Metropolis–Hastings algorithm#Formal derivation|Metropolis–Hastings algorithm overview]]):
+
+# proposing a state <math>\boldsymbol{r}'\in\Omega</math> according to the arbitrary proposal distribution <math>g(\boldsymbol{r} \rightarrow \boldsymbol{r}')</math>
+# accept/refuse the proposed state according to
+
+:::<math>A(\boldsymbol{r}\rightarrow \boldsymbol{r}') = \min\left(1,e^{S - S'}\frac{g(\boldsymbol{r}'\rightarrow \boldsymbol{r})}{g(\boldsymbol{r}\rightarrow \boldsymbol{r}')}\right)</math>
+
+:::where <math>S = S(E(\boldsymbol{r}))</math> and <math>S' = S(E(\boldsymbol{r}'))</math>.
+
+After each proposal-acceptance step, the system transits to some value <math>E_i</math>, <math>H(E_i)</math> is incremented by one and the following update is performed:
+
+:<math> S(E_i) \leftarrow S(E_i) + f</math>.
+
+This is the crucial step of the algorithm, and it is what makes the Wang and Landau algorithm non-Markovian: the [[stochastic process]] now depends on the history of the process. Hence the next time there is a proposal to a state with that particular energy <math>E_i</math>, that proposal is now more likely refused; in this sense, the algorithm forces the system to visit all of the spectrum equally.<ref name=WangLandau/> The consequence is that the histogram <math>H(E)</math> is more and more flat. However, this flatness depends on how well-approximated the calculated entropy is to the exact entropy, which naturally depends on the value of f.<ref name=Belardinelli_Saturation/> To better and better approximate the exact entropy (and thus [[histogram]]'s flatness), f is decreased after M proposal-acceptance steps:
+
+:<math>f \leftarrow f/2</math>.
+
+It was later shown that updating the f by constantly dividing by two can lead to saturation errors.<ref name=Belardinelli_Saturation/> A small modification to the Wang and Landau method to avoid this problem is to use the f factor proportional to <math>1/t</math>, where <math>t</math> is proportional to the number of steps of the simulation.<ref name=Belardinelli_Saturation/>
+
+==Test system==
+
+We want to obtain the DOS for the [[harmonic oscillator]] potential.
+
+:<math> E(x) =  x^2, \, </math>
+
+The analytical DOS is given by,
+
+:<math> \rho(E) = \int \delta (E(x)-E) \, dx= \int \delta (x^2-E) \, dx,</math>
+
+by performing the last integral we obtain
+
+:<math> \rho(E) \propto 
+\begin{cases} 
+E^{-1/2}, \text{for } x \in \mathbb{R}^1 \\
+\text{const}, \text{for } x \in \mathbb{R}^2 \\
+E^{1/2}, \text{for } x \in \mathbb{R}^3 \\
+\end{cases}
+</math>
+
+In general, the DOS for a multidimensional harmonic oscillator will be given by some power of ''E'', the exponent will be a function of the dimension of the system.
+
+Hence, we can use a simple harmonic oscillator potential to test the accuracy of Wang–Landau algorithm because we know already the analytic form of the density of states. Therefore, we compare the estimated density of states <math>\hat \rho(E)</math> obtained by the Wang–Landau algorithm with <math>\rho(E)</math>.
+
+==Sample code==
+
+The following is a sample code of the Wang–Landau algorithm in [[Python (programming language)|Python]], where we assume that a symmetric proposal distribution g is used:
+
+:<math>g(\boldsymbol{x}'\rightarrow \boldsymbol{x})=g(\boldsymbol{x}\rightarrow \boldsymbol{x}')</math>
+
+The code considers a "system" which is the underlying system being studied.
+
+<syntaxhighlight lang="python">
+current_energy = system.random_configuration()  # A random initial configuration
+
+while f > epsilon:
+    system.propose_configuration()  # A proposed configuration is proposed
+    proposed_energy = system.proposed_energy()  # The energy of the proposed configuration computed
+
+    if random() < exp(entropy[current_energy] - entropy[proposed_energy]):
+        # If accepted, update the energy and the system:
+        current_energy = proposed_energy
+        system.accept_proposed_configuration()
+    else:
+        # If rejected
+        system.reject_proposed_configuration()
+
+    H[current_energy] += 1
+    entropy[current_energy] += f
+
+    if is_flat(H):  # is_flat tests whether the histogram is flat (e.g. 95% flatness)
+        H[:] = 0
+        f *= 0.5  # Refine the f parameter
+</syntaxhighlight>
+
+== Parallel Implementations ==
+The Wang–Landau algorithm lends itself to [[parallelisation]] (utilising multiple [[CPU]] and/or [[GPU]] cores to improve simulation performance) in three key ways. First is that the energy domain may be divided into several smaller energy sub-domains, with an independent Wang–Landau walker gathering statistics in each sub-domain.<ref name=":0" /> (In this case, the global DOS is periodically recovered from the local DOS.) These energy sub-domains may be chosen to be non-uniform in size, to ensure a higher concentration of walkers in regions where the density of states is most challenging to converge.<ref>{{Cite journal |last=Naguszewski |first=Hubert J. |last2=Woodgate |first2=Christopher D. |last3=Quigley |first3=David |date=2026-07-01 |title=Optimal parallelisation strategies for flat histogram Monte Carlo sampling |url=https://www.sciencedirect.com/science/article/pii/S0010465526001074 |journal=Computer Physics Communications |volume=324 |article-number=110125 |doi=10.1016/j.cpc.2026.110125 |issn=0010-4655|hdl=1983/0be4a5d6-c077-4aee-b055-6146332c0fa1 |hdl-access=free |arxiv=2510.11562 }}</ref> Second is that, in a given energy domain, multiple independent Wang–Landau walkers may gather statistics which are later combined.<ref name=":0" /><ref>{{Cite journal |last=Yin |first=Junqi |last2=Landau |first2=D. P. |date=2012-08-01 |title=Massively parallel Wang–Landau sampling on multiple GPUs |url=https://www.sciencedirect.com/science/article/pii/S0010465512000859 |journal=Computer Physics Communications |volume=183 |issue=8 |pages=1568–1573 |doi=10.1016/j.cpc.2012.02.023 |issn=0010-4655|url-access=subscription }}</ref> Third is that, in the case that multiple energy sub-domains are used, an overlap between energy sub-domains facilitates [[replica exchange]], ''i.e.'' swapping of walkers from one energy sub-domain to another, which can improve exploration of the configuration space.<ref>{{Cite journal |last=Valentim |first=Alexandra |last2=Rocha |first2=Julio C S |last3=Tsai |first3=Shan-Ho |last4=Li |first4=Ying Wai |last5=Eisenbach |first5=Markus |last6=Fiore |first6=Carlos E |last7=Landau |first7=David P |date=2015-09-28 |title=Exploring Replica-Exchange Wang-Landau sampling in higher-dimensional parameter space |url=https://iopscience.iop.org/article/10.1088/1742-6596/640/1/012006 |journal=Journal of Physics: Conference Series |volume=640 |article-number=012006 |doi=10.1088/1742-6596/640/1/012006 |issn=1742-6588|arxiv=1508.02748 }}</ref><ref>{{Cite journal |last=Vogel |first=Thomas |last2=Li |first2=Ying Wai |last3=Wüst |first3=Thomas |last4=Landau |first4=David P. |date=2014-08-05 |title=Scalable replica-exchange framework for Wang-Landau sampling |url=https://link.aps.org/doi/10.1103/PhysRevE.90.023302 |journal=Physical Review E |language=en |volume=90 |issue=2 |doi=10.1103/PhysRevE.90.023302 |issn=1539-3755|arxiv=1407.5140 }}</ref><ref>{{Cite journal |last=Vogel |first=Thomas |last2=Li |first2=Ying Wai |last3=Wüst |first3=Thomas |last4=Landau |first4=David P. |date=2013-05-22 |title=Generic, Hierarchical Framework for Massively Parallel Wang-Landau Sampling |url=https://link.aps.org/doi/10.1103/PhysRevLett.110.210603 |journal=Physical Review Letters |language=en |volume=110 |issue=21 |doi=10.1103/PhysRevLett.110.210603 |issn=0031-9007|arxiv=1305.5615 }}</ref>
+
+==Wang and Landau molecular dynamics: Statistical Temperature Molecular Dynamics (STMD)==
+[[Molecular dynamics]] (MD) is usually preferable to [[Monte Carlo method|Monte Carlo]] (MC), so it is desirable to have a MD algorithm incorporating the basic WL idea for flat energy sampling. That algorithm is Statistical Temperature Molecular Dynamics (STMD), developed <ref name=STMD/> by Jaegil Kim et al at Boston University.
+
+An essential first step was made with the Statistical Temperature Monte Carlo (STMC) algorithm.  WLMC requires an extensive increase in the number of energy bins with system size, caused by working directly with the density of states. STMC is centered on an intensive quantity, the statistical temperature, <math>T(E) = 1/(dS(E)/dE)</math>, where E is the potential energy. When combined with the relation, <math>\Omega(E) = e^{S(E)}</math>, where we set <math>k_B=1</math>, the WL rule for updating the density of states gives  the rule for updating the discretized statistical temperature,
+
+: <math> \tilde{T}_{j\pm 1}^\prime= \alpha_{j\pm 1} \tilde{T}_{j\pm 1}, </math>
+
+where <math>\alpha_{j\pm 1}=1/(1\mp \delta f \tilde{T}_{j \pm 1}), \delta f = (\ln f/2\Delta E), \Delta E</math> is the energy bin size, and <math>\tilde{T}</math> denotes the running estimate. We define f as in,<ref name=WangLandau/> a factor >1 that multiplies the estimate of the DOS for the i'th energy bin when the system visits an energy in that bin.
+
+The details are given in Ref.<ref name=STMD/> With an initial guess for <math>T(E)</math> and the range restricted to lie between <math>T_L</math> and <math>T_U</math>, the simulation proceeds as in WLMC, with significant numerical differences. An interpolation of <math>\tilde{T}(E)</math> gives a continuum expression of the estimated <math>S(E)</math> upon integration of its inverse, allowing the use of larger energy bins than in WL. Different values of <math>S(E)</math> are available within the same energy bin when evaluating the acceptance probability. When histogram fluctuations are less than 20% of the mean, <math>f</math>  is reduced according to <math>f \rightarrow \sqrt{f}</math>.
+
+STMC was compared with WL for the [[Ising model]] and the Lennard-Jones liquid. Upon increasing energy bin size, STMC gets the same results over a considerable range, while the performance of WL deteriorates rapidly. STMD can use smaller initial values of <math>f_d=f-1</math> for more rapid convergence. In sum, STMC needs fewer steps to obtain the same quality of results.
+
+Now consider the main result, STMD. It is based on the observation that in a standard MD simulation at temperature <math>T_0</math> with forces derived from the potential energy <math>E([x])</math>, where <math>[x]</math> denotes all the positions, the sampling weight for a configuration is <math>e^{-E([x])/T_0}</math>. Furthermore, if the forces are derived from a function <math>W(E)</math>, the sampling weight is <math>e^{-W(E([x]))/T_0}</math>.
+
+For flat energy sampling, let the [[effective potential]] be <math>T_0 S(E)</math> - entropic molecular dynamics. Then the weight is <math>e^{-S(E)}</math>. Since the density of states is <math>e^{+S(E)}</math>, their product gives flat energy sampling.
+
+The forces are calculated as 
+
+: <math>F = (-d/dx) T_0 S(E) = T_0 (dS/dE) (-d/dx) E([x]) = (T_0/T(E)) F^0</math>
+
+where <math>F^0</math> denotes the usual force derived from the potential energy. Scaling the usual forces by the factor <math>(T_0/T(E))</math> produces flat energy sampling. 
+
+STMD starts with an ordinary MD algorithm at constant <math>T_0</math> and V. The forces are scaled as indicated, and the statistical temperature is updated every time step, using the same procedure as in STMC. As the simulation converges to flat energy sampling, the running estimate <math>\tilde{T}(E)</math> converges to the true <math>T(E)</math>. Technical details including steps to speed convergence are described in <ref name=STMD/> and.<ref name=fluidgel/>
+
+In STMD <math>T_0</math> is called the kinetic temperature as it controls the velocities as usual, but does not enter the configurational sampling, which is unusual. Thus STMD can probe low energies with fast particles. Any canonical average can be calculated with reweighting, but the statistical temperature, <math>T(E)</math>, is immediately available with no additional analysis. It is extremely valuable for studying phase transitions. In finite nanosystems <math>T(E)</math> has a feature corresponding to every "subphase transition". For a sufficiently strong transition, an equal-area construction on an S-loop in <math>1/T(E)</math> gives the transition temperature.
+
+STMD has been refined by the BU group,<ref name=fluidgel/> and applied to several systems by them and others.  It was recognized by D. Stelter that despite our emphasis on working with intensive quantities, <math>\ln(f)</math> is extensive. However <math>\delta f = (\ln(f)/2\Delta E)</math> is intensive, and the procedure <math>f \rightarrow \sqrt{f}</math> based on histogram flatness is  replaced by cutting <math>\delta f</math> in half every fixed number of time steps. This simple change makes STMD entirely intensive and substantially improves performance for large systems.<ref name=fluidgel/> Furthermore, the final value of the intensive <math>\delta f</math> is a constant that determines the magnitude of error in the converged <math>T(E)</math>, and is independent of system size. STMD is implemented in [[LAMMPS]] as fix stmd.
+
+STMD is particularly useful for phase transitions. Equilibrium information is impossible to obtain with a canonical simulation, as [[supercooling]] or superheating is necessary to cause the transition. However an STMD run obtains flat energy sampling with a natural progression of heating and cooling, without getting trapped in the low energy or high energy state. Most recently it has been applied to the fluid/gel transition <ref name=fluidgel/> in lipid-wrapped nanoparticles.
+
+Replica exchange STMD <ref name=RESTMD/> has also been presented by the BU group.
+
+==References==
+
+<references>
+
+<ref name=WangLandau>
+{{cite journal
+| title = Efficient, Multiple-Range Random Walk Algorithm to Calculate the Density of States
+|author1=Wang, Fugao   |author2=Landau, D. P.
+ |name-list-style=amp | journal = Phys. Rev. Lett.
+|  volume = 86
+|  issue = 10
+|  pages = 2050–2053
+|date=Mar 2001
+| pmid = 11289852
+|  doi = 10.1103/PhysRevLett.86.2050
+| bibcode=2001PhRvL..86.2050W
+|arxiv = cond-mat/0011174 |s2cid=2941153 }}
+</ref>
+<ref name=Belardinelli_Integrals>
+{{cite journal
+| title = Analysis of the convergence of the 1/t and Wang–Landau algorithms in the calculation of multidimensional integrals
+| author = R. E. Belardinelli and S. Manzi and V. D. Pereyra
+| journal = Phys. Rev. E
+|  volume = 78
+|  article-number = 067701
+|date=Dec 2008
+|  doi = 10.1103/PhysRevE.78.067701
+| pmid = 19256982
+| issue = 6
+|arxiv = 0806.0268 |bibcode = 2008PhRvE..78f7701B | s2cid = 8645288
+}}
+</ref>
+<ref name=Ojeda1>
+{{cite journal
+| title = Monte Carlo Simulations of Proteins in Cages: Influence of Confinement on the Stability of Intermediate States
+| author = P. Ojeda and M. Garcia and A. Londono and N.Y. Chen
+| journal = Biophys. J.
+|  volume = 96
+|  issue = 3
+|  pages = 1076–1082
+|date=Feb 2009
+|  doi = 10.1529/biophysj.107.125369
+| pmid = 18849410
+| pmc = 2716574
+| bibcode=2009BpJ....96.1076O
+|arxiv = 0711.0916
+}}
+</ref>
+<ref name=Ojeda2>
+{{cite journal
+| title = Electric Field-Driven Disruption of a Native beta-Sheet Protein Conformation and Generation of alpha-Helix-Structure
+|author1=P. Ojeda  |author2=M. Garcia 
+ |name-list-style=amp
+ | journal = Biophys. J.
+|  volume = 99
+|  issue = 2
+|  pages = 595–599
+|date=Jul 2010
+|  doi = 10.1016/j.bpj.2010.04.040
+| bibcode=2010BpJ....99..595O
+| pmid=20643079
+| pmc=2905109
+}}
+</ref>
+<ref name=Berg>{{Cite journal | last1 = Berg | first1 = B. | last2 = Neuhaus | first2 = T. | doi = 10.1103/PhysRevLett.68.9 | title = Multicanonical ensemble: A new approach to simulate first-order phase transitions | journal = Physical Review Letters | volume = 68 | issue = 1 | pages = 9–12 | year = 1992 | pmid =  10045099|arxiv = hep-lat/9202004 |bibcode = 1992PhRvL..68....9B | s2cid = 19478641 }}</ref>
+<ref name=Belardinelli_Saturation>
+{{cite journal
+| title   = Wang–Landau algorithm: A theoretical analysis of the saturation of the error
+|author1=Belardinelli, R. E.  |author2=Pereyra, V. D.
+ |name-list-style=amp | journal =  The Journal of Chemical Physics
+| volume  = 127
+| issue   = 18
+| page   = 184105 
+| year    = 2007
+| doi     = 10.1063/1.2803061 
+|pmid=18020628  |arxiv = cond-mat/0702414 |bibcode = 2007JChPh.127r4105B |s2cid=25162388 }}
+</ref>
+<ref name=STMD>
+{{cite journal
+| title = Statistical-Temperature Monte Carlo and Molecular Dynamics Algorithms
+|author1=Kim, Jaegil   |author2=Straub, John | author3=Keyes, Tom
+ |name-list-style=amp | journal = Phys. Rev. Lett.
+|  volume = 97
+|  issue = 5
+|  pages = 50601–50604
+|date=Aug 2006
+|  doi = 10.1103/PhysRevLett.97.050601 }}
+</ref>
+<ref name=fluidgel>
+{{cite journal
+| title = Simulation of fluid/gel phase equilibrium in lipid vesicles
+|author1=Stelter, David  | author2=Keyes, Tom
+ |name-list-style=amp | journal = Soft Matter
+|  volume = 15
+|  pages = 8102–8112
+| date = 2019
+|  doi = 10.1039/c9sm00854c }}
+</ref>
+<ref name=RESTMD>
+{{cite journal
+| title = Replica Exchange Statistical-Temperature Molecular Dynamics Algorithm
+|author1=Kim, Jaegil   |author2=Straub, John | author3=Keyes, Tom
+ |name-list-style=amp | journal = Journal of Physical Chemistry B
+|  volume = 116
+|  pages = 8646–8653
+|date=Apr 2012
+|  doi = 10.1021/jp300366j |pmc=11240102}}
+</ref>
+
+</references>
+
+[[Category:Markov chain Monte Carlo]]
+[[Category:Statistical algorithms]]
+[[Category:Computational physics]]
+[[Category:Articles with example Python (programming language) code]]

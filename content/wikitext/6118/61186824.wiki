@@ -1,0 +1,455 @@
+<!-- wikipedia: en
+     page: 61186824
+     title: Streamline upwind Petrov–Galerkin pressure-stabilizing Petrov–Galerkin formulation for incompressible Navier–Stokes equations
+     revision: 1374571481
+     timestamp: 2026-09-12T21:29:37Z
+     history: https://en.wikipedia.org/w/index.php?curid=61186824&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374571481 -->
+{{short description|Finite element method for Navier-Stokes equations}}
+The '''streamline upwind Petrov–Galerkin pressure-stabilizing Petrov–Galerkin formulation for incompressible Navier–Stokes equations''' can be used for [[finite element]] computations of high [[Reynolds number]] [[incompressible flow]] using equal order of finite element space (i.e. <math> \mathbb{P}_k-\mathbb{P}_k </math>) by introducing additional stabilization terms in the Navier–Stokes [[Galerkin method|Galerkin formulation]].<ref name="Tezduyar91">{{cite journal|author-link1=Tayfun Tezduyar |last1=Tezduyar |first1=T. E. |title=Stabilized Finite Element Formulations for Incompressible Flow Computations††This research was sponsored by NASA-Johnson Space Center (under grant NAG 9-449), NSF (under grant MSM-8796352), U.S. Army (under contract DAAL03-89-C-0038), and the University of Paris VI. |journal=Advances in Applied Mechanics |date=1 January 1991 |volume=28 |pages=1–44 |publisher=Elsevier|doi=10.1016/S0065-2156(08)70153-4 }}</ref><ref name="Tobiska91">{{cite journal |last1=Tobiska |first1=Lutz |last2=Lube |first2=Gert |title=A modified streamline diffusion method for solving the stationary Navier–Stokes equation |journal=Numerische Mathematik |date=1 December 1991 |volume=59 |issue=1 |pages=13–29 |doi=10.1007/BF01385768 |s2cid=123397636 |language=en |issn=0945-3245}}</ref>
+
+The finite element (FE) numerical computation of incompressible [[Navier–Stokes equations]] (NS) suffers from two main sources of numerical [[Numerical stability|instabilities]] arising from the associated Galerkin problem.<ref name="Tezduyar91"/> Equal order finite elements for [[pressure]] and [[velocity]], (for example, <math> \mathbb{P}_k-\mathbb{P}_k, \; \forall k \ge 0 </math>), do not satisfy the [[inf-sup condition]] and leads to instability on the discrete pressure (also called spurious pressure).<ref name="Tobiska91"/>
+Moreover, the [[advection]] term in the Navier–Stokes equations can produce [[oscillation]]s in the velocity field (also called spurious velocity).<ref name="Tobiska91"/> Such spurious velocity oscillations become more evident for advection-dominated (i.e., high [[Reynolds number]] <math> Re </math>) flows.<ref name="Tobiska91"/> To control instabilities arising from inf-sup condition and convection dominated problem, pressure-stabilizing Petrov–Galerkin (PSPG) stabilization along with Streamline-Upwind Petrov-Galerkin (SUPG) stabilization can be added to the NS Galerkin formulation.<ref name="Tezduyar91"/><ref name="Tobiska91"/>
+
+==The incompressible Navier–Stokes equations for a Newtonian fluid==
+
+Let <math> \Omega \subset \mathbb{R}^3 </math> be the spatial [[fluid]] domain with a smooth [[Boundary (topology)|boundary]] <math> \partial \Omega \equiv \Gamma </math>, where <math> \Gamma=\Gamma_N \cup \Gamma_D </math> with <math> \Gamma_D </math> the subset of <math> \Gamma </math> in which the essential ([[Dirichlet boundary condition|Dirichlet]]) [[boundary conditions]] are set, while <math> \Gamma_N </math> the portion of the boundary where natural ([[Neumann boundary condition|Neumann]]) boundary conditions have been considered. Moreover, <math> \Gamma_N = \Gamma \setminus \Gamma_D </math>, and <math> \Gamma_N \cap \Gamma_D=\emptyset </math>. Introducing an unknown velocity field <math> \mathbf{u}(\mathbf{x},t):\Omega \times [0,T] \rightarrow \mathbb{R}^3 </math> and an unknown pressure field <math> p(\mathbf{x},t):\Omega \times [0,T] \rightarrow \mathbb{R} </math>, in absence of [[body forces]], the [[Incompressible flow|incompressible]] Navier–Stokes (NS) equations read<ref name="Quarteroni14">{{cite book |author-link1= Alfio Quarteroni |last1=Quarteroni |first1=Alfio |title=Numerical Models for Differential Problems |date=2014 |publisher=Springer-Verlag |isbn=978-88-470-5883-5 |edition=2 |url=https://www.springer.com/gp/book/9788847058835 |language=en}}</ref>
+<math display="block">\begin{cases}
+\frac{\partial \mathbf u}{\partial t}+( \mathbf u \cdot \nabla ) \mathbf u - \frac{1}{\rho}\nabla \cdot \boldsymbol{\sigma} (\mathbf u,p)=\mathbf 0 & \text{in } \Omega \times (0,T],
+\\
+\nabla \cdot {\mathbf u}=0 & \text{in } \Omega \times (0,T],
+\\
+\mathbf u = \mathbf g & \text{on } \Gamma_D \times (0,T],
+\\
+\boldsymbol{\sigma} (\mathbf u,p) \mathbf{\hat{n}} = \mathbf h & \text{on } \Gamma_N \times (0,T],
+\\
+\mathbf{u} (\mathbf{x},0) = \mathbf u_0(\mathbf{x})& \text{in } \Omega \times \{0\},
+\end{cases}</math>
+where <math> \mathbf{\hat{n}} </math> is the outward directed unit [[normal vector]] to <math> \Gamma_N </math>, <math> \boldsymbol{\sigma} </math> is the [[Cauchy stress tensor]], <math> \rho </math> is the fluid [[density]] , and <math> \nabla </math> and <math> \nabla \cdot </math> are the usual [[gradient]] and [[divergence]] [[Operator (mathematics)|operator]]s.
+The functions <math> \mathbf g </math> and <math> \mathbf h </math> indicate suitable Dirichlet and Neumann data, respectively, while <math> \mathbf u_0 </math> is the known initial field [[Partial differential equation|solution]] at time <math> t=0 </math>.
+
+For a [[Newtonian fluid]], the Cauchy stress tensor <math> \boldsymbol{\sigma} </math> depends linearly on the components of the [[strain rate tensor]]:<ref name="Quarteroni14"/>
+<math display="block">\boldsymbol{\sigma} (\mathbf u,p)=-p \mathbf{I} +2\mu \mathbf S(\mathbf u),</math>
+where <math> \mu </math> is the [[dynamic viscosity]] of the fluid (taken to be a known constant) and <math> \mathbf{I} </math> is the second order [[tensor|identity tensor]], while <math> \mathbf S(\mathbf u) </math> is the [[strain rate tensor]]
+<math display="block">\mathbf S(\mathbf u)=\frac{1}{2} \big[ \nabla \mathbf u + (\nabla \mathbf u)^T \big].</math>
+
+The first of the NS equations represents the [[Momentum|balance of the momentum]] and the second one the conservation of the mass, also called [[continuity equation]] (or incompressible constraint).<ref name="Quarteroni14"/> [[Vector-valued function|Vectorial functions]] <math> \mathbf u_0 </math>, <math> \mathbf g </math>, and <math> \mathbf h </math> are assigned.
+
+Hence, the [[strong formulation]] of the incompressible Navier–Stokes equations for a constant density, Newtonian and [[Homogeneous and heterogeneous mixtures|homogeneous fluid]] can be written as:<ref name="Quarteroni14"/>
+
+Find, <math> \forall t \in (0,T] </math>, velocity <math> \mathbf u(\mathbf{x},t) </math> and pressure <math> p(\mathbf{x},t) </math> such that:
+<math display="block">\begin{cases}
+\frac{\partial \mathbf u}{\partial t}+( \mathbf u \cdot \nabla ) \mathbf u + \nabla \hat p -2\nu \nabla \cdot \mathbf S(\mathbf u)=\mathbf 0 & \text{in } \Omega \times (0,T],
+\\
+\nabla \cdot {\mathbf u}=0 & \text{in } \Omega \times (0,T],
+\\
+\left( - \hat p \mathbf{I} +2\nu \mathbf S(\mathbf u) \right) \mathbf{\hat{n}} = \mathbf h & \text{on } \Gamma_N \times (0,T],
+\\
+\mathbf u = \mathbf g & \text{on } \Gamma_D \times (0,T] \;,
+\\
+\mathbf{u} (\mathbf{x},0) = \mathbf u_0(\mathbf{x}) & \text{in } \Omega \times \{0\},
+\end{cases}</math>
+where, <math> \nu = \frac{\mu}{\rho} </math> is the [[kinematic viscosity]], and <math> \hat p=\frac{p}{\rho} </math> is the pressure rescaled by density (however, for the sake of clearness, the hat on pressure variable will be neglect in what follows).
+
+In the NS equations, the Reynolds number shows how important is the non linear term, <math> ( \mathbf u \cdot \nabla ) \mathbf u </math>, compared to the dissipative term, <math> \nu \nabla \cdot \mathbf S(\mathbf u):</math><ref name="Pope2000">{{cite book |last1=Pope |first1=Stephen B. |title=Turbulent Flows by Stephen B. Pope |date=2000 |publisher=Cambridge University Press |isbn=978-0-521-59886-6 |url=https://www.cambridge.org/core/books/turbulent-flows/69322053C06F73F7EB7124915F9256BD |language=en}}</ref>
+<math display="block">
+\frac{( \mathbf u \cdot \nabla ) \mathbf u}{\nu \nabla \cdot \mathbf S(\mathbf u)}\approx \frac{\frac{U^2}{L}}{\nu\frac{U}{L^2}}=\frac{UL}{\nu} = \mathrm{Re}.
+</math>
+
+The Reynolds number is a measure of the ratio between the [[advection]] [[convection]] terms, generated by [[inertia]]l forces in the [[flow velocity]], and the [[diffusion]] term specific of fluid [[viscous forces]].<ref name="Pope2000"/> Thus, <math> \mathrm{Re} </math> can be used to discriminate between advection-convection dominated flow and diffusion dominated one.<ref name="Pope2000"/> Namely:
+* for "low" <math> \mathrm{Re} </math>, viscous forces dominate and we are in the viscous fluid situation (also named [[Laminar Flow]]),<ref name="Pope2000"/>
+* for "high" <math> \mathrm{Re} </math>, inertial forces prevail and a slightly viscous fluid with high velocity emerges (also named [[Turbulent Flow]]).<ref name="Pope2000"/>
+
+===The weak formulation of the Navier–Stokes equations===
+The [[weak formulation]] of the strong formulation of the NS equations is obtained by multiplying the first two NS equations by [[test functions]] <math> \mathbf v </math> and <math> q </math>, respectively, belonging to suitable [[function spaces]], and integrating these equation all over the fluid domain <math> \Omega </math>.<ref name="Quarteroni14"/> As a consequence:<ref name="Quarteroni14"/>
+<math display="block">\begin{align}
+& \int_{\Omega}\frac{\partial \mathbf u}{\partial t}\cdot \mathbf v\,d\Omega+ \int_{\Omega}(\mathbf u \cdot \nabla ) \mathbf u \cdot \mathbf v \,d\Omega + \int_{\Omega}\nabla p \cdot \mathbf v \,d\Omega\,-\int_{\Omega}2\nu \nabla \cdot \mathbf S(\mathbf u) \cdot \mathbf v \,d\Omega = 0,
+\\
+& \int_{\Omega} \nabla \cdot \mathbf u \, q \,d\Omega=0. 
+\end{align} </math>
+
+By summing up the two equations and performing [[integration by parts]] for pressure (<math> \nabla p </math>) and viscous (<math> \nabla \cdot \mathbf S (\mathbf u) </math>) term:<ref name="Quarteroni14"/>
+<math display="block">\int_\Omega \frac{\partial \mathbf u}{\partial t}\cdot \mathbf v\,d\Omega+ \int_{\Omega}(\mathbf u \cdot \nabla ) \mathbf u \cdot \mathbf v \,d\Omega\,
++\int_\Omega \nabla \cdot \mathbf u \, q \,d\Omega- \int_{\Omega}p \nabla \cdot \mathbf v \,d\Omega+\int_{\partial \Omega}p \mathbf v \cdot \mathbf{\hat n} \,d\Gamma \,
++ \int_\Omega 2\nu \mathbf S(\mathbf u) : \nabla \mathbf v \,d\Omega-\int_{\partial \Omega}2\nu \mathbf S(\mathbf u) \cdot \mathbf v \cdot \mathbf{\hat n} \,d\Gamma \, =0. </math>
+
+Regarding the choice of the function spaces, it's enough that <math> p </math> and <math> q </math>, <math> \mathbf u </math> and <math> \mathbf v </math>, and their [[derivative]], <math> \nabla \mathbf u </math> and <math> \nabla \mathbf v </math> are [[square-integrable functions]] in order to have sense in the [[integral]]s that appear in the above formulation.<ref name="Quarteroni14" /> Hence,<ref name="Quarteroni14" />
+<math display="block">\begin{align}
+& \mathcal{Q} = L^2(\Omega) = \left\{ q \in \Omega \text{ s.t. } \Vert q\Vert_{L^2}=\sqrt{\int_{\Omega}{\vert q \vert^2 \ d\Omega}} < \infty \right\},
+\\
+& \mathcal{V}=\{ \mathbf v \in [L^2(\Omega)]^3 \text{ and } \nabla \mathbf v \in [L^2(\Omega)]^{3 \times 3}, \, \mathbf v|_{\Gamma_{D}}=\mathbf g \},
+\\ 
+& \mathcal{V}_0=\{ \mathbf v \in \mathcal{V} \text{ s.t. } \mathbf v|_{\Gamma_D}=\mathbf 0\}. 
+\end{align} </math>
+
+Having specified the function spaces <math> \mathcal{V} </math>, <math> \mathcal{V}_0 </math> and <math> \mathcal{Q} </math>, and by applying the boundary conditions, the boundary terms can be rewritten as<ref name="Quarteroni14" />
+<math display="block">
+\int_{\Gamma_D \cup \Gamma_N}p \mathbf v \cdot \mathbf{\hat n} \,d\Gamma+ \int_{\Gamma_D \cup \Gamma_N} -2\nu S(\mathbf u) \cdot \mathbf v \cdot \mathbf{\hat n} \,d\Gamma,
+</math>
+where <math> \partial \Omega=\Gamma_D \cup \Gamma_N </math>. The integral terms with <math> \Gamma_D </math> vanish because <math> \mathbf v|_{\Gamma_D}=\mathbf 0 </math>, while the term on <math> \Gamma_N </math> become
+<math display="block">
+\int_{\Gamma_{N}} [p \mathbf I -2\nu S(\mathbf u)] \cdot \mathbf v \cdot \mathbf{\hat n} \,d\Gamma = -\int_{\Gamma_{N}} \mathbf h \cdot \mathbf v \,d\Gamma,
+</math>
+
+The weak formulation of Navier–Stokes equations reads:<ref name="Quarteroni14"/>
+
+Find, for all <math> t \in (0,T] </math>, <math> (\mathbf u,p)\in \{ \mathcal{V} \times \mathcal{Q}\} </math>, such that
+<math display="block"> \left( \frac{\partial \mathbf u}{\partial t},\mathbf v \right)+c(\mathbf u,\mathbf u,\mathbf v)+b(\mathbf u,q)-b(\mathbf v,p) + a(\mathbf u,\mathbf v) = f(\mathbf v)</math>
+
+with <math> \mathbf{u}|_{t=0}=\mathbf{u}_0 </math>, where<ref name="Quarteroni14" />
+<math display="block">\begin{align}
+\left( \frac{\partial \mathbf u}{\partial t},\mathbf v \right)&:=\int_{\Omega}\frac{\partial \mathbf u}{\partial t}\cdot \mathbf v\,d\Omega,
+\\ 
+b(\mathbf u,q)&:=\int_{\Omega} \nabla \cdot \mathbf u \, q \,d\Omega,
+\\
+a(\mathbf u,\mathbf v)&:=\int_{\Omega}2\nu \mathbf S(\mathbf u) : \nabla \mathbf v \,d\Omega,
+\\
+c(\mathbf w,\mathbf u,\mathbf v)&:=\int_{\Omega}(\mathbf w \cdot \nabla ) \mathbf u \cdot \mathbf v \,d\Omega,
+\\
+f(\mathbf v)&:=-\int_{\Gamma_{N}} \mathbf h \cdot \mathbf v \,d\Gamma.
+\end{align} </math>
+
+==Finite element Galerkin formulation of Navier–Stokes equations==
+
+In order to numerically solve the NS problem, first the [[discretization]] of the weak formulation is performed.<ref name="Quarteroni14"/>
+Consider a [[triangulation]] <math> \Omega_h </math>, composed by [[tetrahedra]] <math> \mathcal{T}_i </math>, with <math> i = 1, \ldots, N_{\mathcal{T}} </math> (where <math> N_{\mathcal{T}} </math> is the total number of tetrahedra), of the domain <math> \Omega </math> and <math> h </math> is the [[characteristic length]] of the element of the triangulation.<ref name="Quarteroni14"/>
+
+Introducing two families of [[Linear subspace|finite-dimensional sub-spaces]] <math> \mathcal{V}_h </math> and <math> \mathcal{Q}_h </math>, approximations of <math> \mathcal{V} </math> and <math> \mathcal{Q} </math> respectively, and depending on a discretization parameter <math> h </math>, with <math> \dim \mathcal{V}_h = N_V </math> and <math> \dim \mathcal{Q}_h = N_Q </math>,<ref name="Quarteroni14"/>
+<math display="block">
+\mathcal{V}_h \subset \mathcal{V} \;\;\;\;\;\;\;\;\; \mathcal{Q}_h \subset \mathcal{Q},
+</math>
+the discretized-in-space Galerkin problem of the weak NS equation reads:<ref name="Quarteroni14"/>
+
+Find, for all <math> t \in (0,T] </math>, <math> (\mathbf u_h,p_h)\in \{ \mathcal{V}_{h} \times \mathcal{Q}_h\} </math>, such that
+<math display="block">\begin{align}
+& \left( \frac{\partial \mathbf u_h}{\partial t},\mathbf v_h \right)+c(\mathbf u_h,\mathbf u_h,\mathbf v_h)+b(\mathbf u_h,q_h)-b(\mathbf v_h,p_h)+a(\mathbf u_h,\mathbf v_h)=f(\mathbf v_h)
+\\
+& \;\;\;\;\;\;\;\;\;\;\forall \mathbf v_h \in \mathcal{V}_{0h} \;\;,\;\; \forall q_h \in \mathcal{Q}_h, 
+\end{align}</math>
+with <math> \mathbf{u}_h|_{t=0}=\mathbf{u}_{h,0} </math>, where <math> \mathbf{g}_{h} </math> is the [[approximation]] (for example, its [[interpolant]]) of <math> \mathbf{g} </math>, and
+<math display="block">\mathcal{V}_{0h}=\{ \mathbf v_h \in \mathcal{V}_h \text{ s.t. } \mathbf v_h|_{\Gamma_D}=\mathbf 0\}.</math>
+
+Time discretization of discretized-in-space NS Galerkin problem can be performed, for example, by using the second order [[Backward Differentiation Formula]] (BDF2), that is an [[Explicit and implicit methods|implicit]] second order [[multistep method]].<ref name="Quarteroni07">{{cite book |author-link1= Alfio Quarteroni |last1=Quarteroni |first1=Alfio |last2=Sacco |first2=Riccardo |last3=Saleri |first3=Fausto |title=Numerical Mathematics |date=2007 |publisher=Springer-Verlag |isbn=978-3-540-34658-6 |edition=2 |url=https://www.springer.com/de/book/9783540346586 |language=en}}</ref> Divide uniformly the finite [[time interval]] <math> [0,T] </math> into <math> N_t </math> [[time step]] of size <math> \delta t</math><ref name="Quarteroni14"/>
+<math display="block">t_n=n\delta t, \;\;\; n=0,1,2,\ldots,N_t \;\;\;\;\; N_t=\frac{T}{\delta t}.</math>
+
+For a general function <math> z </math>, denoted by <math> z^n </math> as the approximation of <math> z(t_n) </math>. Thus, the BDF2 approximation of the [[time derivative]] reads as follows:<ref name="Quarteroni14"/>
+<math display="block">
+\left( \frac{\partial \mathbf u_h}{\partial t} \right)^{n+1} \simeq \frac{ 3 \mathbf u_h^{n+1} -4 \mathbf u_h^{n}+ \mathbf u_h^{n-1}}{2\delta t} \;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\; \text{for } n \geq 1.
+</math>
+
+So, the fully discretized in time and space NS Galerkin problem is:<ref name="Quarteroni14"/>
+
+Find, for <math> n = 0, 1, \ldots, N_t-1 </math>, <math> (\mathbf u^{n+1}_h,p^{n+1}_h)\in \{ \mathcal{V}_{h} \times \mathcal{Q}_h\} </math>, such that
+<math display="block">\begin{align}
+\left( \frac{ 3 \mathbf u_h^{n+1} -4 \mathbf u_h^{n}+ \mathbf u_h^{n-1}}{2\delta t},\mathbf v_h \right) & + c(\mathbf u^*_h,\mathbf u^{n+1}_h,\mathbf v_h)+b(\mathbf u^{n+1}_h,q_h)-b(\mathbf v_h,p_h^{n+1})+ a(\mathbf u^{n+1}_h,\mathbf v_h)=f(\mathbf v_h),
+\\
+& \;\;\;\;\;\;\;\;\;\;\forall \mathbf v_h \in \mathcal{V}_{0h} \;\;,\;\; \forall q_h \in \mathcal{Q}_h, 
+\end{align}</math>
+with <math> \mathbf{u}^{0}_h = \mathbf{u}_{h,0} </math>, and <math> \mathbf{u}^*_h </math> is a quantity that will be detailed later in this section.
+
+The main issue of a fully implicit method for the NS Galerkin formulation is that the resulting problem is still [[Nonlinear partial differential equation|non linear]], due to the [[Convection|convective term]], <math> c(\mathbf u^*_h,\mathbf u^{n+1}_h,\mathbf v_h)</math>.<ref name="Quarteroni14"/> Indeed, if <math> \mathbf{u}^*_h=\mathbf{u}^{n+1}_h </math> is put, this choice leads to solve a non-linear system (for example, by means of the [[Newton's method|Newton]] or [[Fixed-point iteration|Fixed point]] algorithm) with a huge computational cost.<ref name="Quarteroni14"/> In order to reduce this cost, it is possible to use a [[Semi-implicit Euler method|semi-implicit]] approach with a second order [[extrapolation]] for the velocity, <math> \mathbf u^*_h </math>, in the convective term:<ref name="Quarteroni14"/>
+<math display="block">\mathbf u^*_h=2\mathbf u^{n}_h-\mathbf u^{n-1}_h.</math>However, the time steps need to be smaller with the second-order extrapolation.<ref name=":0">{{Cite journal |last=Kadapa |first=Chennakesava |last2=Dettmer |first2=Wulf G. |last3=Perić |first3=Djordje |date=2020-08-01 |title=Accurate iteration-free mixed-stabilised formulation for laminar incompressible Navier–Stokes: Applications to fluid–structure interaction |url=https://www.sciencedirect.com/science/article/pii/S0889974619309612 |journal=Journal of Fluids and Structures |volume=97 |article-number=103077 |doi=10.1016/j.jfluidstructs.2020.103077 |issn=0889-9746|arxiv=2001.04925 }}</ref> An alternative is to use a linearised version of the convection term:<ref name=":0" /><math display="block">c(\mathbf u^{n+1}_h, \mathbf u^{n+1}_h, \mathbf v_h)
+\approx
+c(\mathbf u^{n}_h, \mathbf u^{n+1}_h, \mathbf v_h)
++
+c(\mathbf u^{n+1}_h, \mathbf u^{n}_h, \mathbf v_h)
+-c(\mathbf u^{n}_h, \mathbf u^{n}_h, \mathbf v_h).</math>
+
+===Finite element formulation and the INF-SUP condition===
+Let's define the finite element (FE) spaces of [[continuous functions]], <math> X_h^r </math> ([[polynomials]] of degree <math> r </math> on each element <math> \mathcal{T}_i </math> of the triangulation) as<ref name="Quarteroni14"/>
+<math display="block">
+X_h^r= \left\{ v_h \in C^0(\overline{\Omega}) : v_h|_{\mathcal{T}_i} \in \mathbb{P}_r \ \forall \mathcal{T}_i \in \Omega_h \right\} \;\;\;\;\;\;\;\;\; r=0,1,2,\ldots,
+</math>
+where, <math> \mathbb{P}_r </math> is the space of polynomials of degree less than or equal to <math> r </math>.
+
+Introduce the finite element formulation, as a specific Galerkin problem, and choose <math> \mathcal{V}_h </math> and <math> \mathcal{Q}_h </math> as<ref name="Quarteroni14" />
+<math display="block">
+\mathcal{V}_h\equiv [X_h^r]^3 \;\;\;\;\;\;\;\; \mathcal{Q}_h\equiv X_h^s \;\;\;\;\;\;\;\;\;\;\;\;\;\;\;\; r,s \in \mathbb{N}.
+</math>
+
+The FE spaces <math> \mathcal{V}_h </math> and <math> \mathcal{Q}_h </math> need to satisfy the [[Ladyzhenskaya–Babuška–Brezzi condition|inf-sup condition]](or LBB):<ref name="Brezzi91">{{cite book |title=Mixed and Hybrid Finite Element Methods |volume=15 |date=1991 |language=en-gb|doi=10.1007/978-1-4612-3172-1 |series=Springer Series in Computational Mathematics |isbn=978-1-4612-7824-5 |last1=Brezzi |first1=Franco |last2=Fortin |first2=Michel |url= https://hal.inria.fr/inria-00075815/file/RR-0737.pdf}}<!--https://hal.inria.fr/inria-00075815/file/RR-0737.pdf--></ref>
+<math display="block">
+\exists \beta_h >0 \;\text{ s.t. } \; \inf_{q_h \in \mathcal{Q}_h}\sup_{\mathbf v_h \in \mathcal{V}_h} \frac{b(q_h,\mathbf v_h)}{\Vert \mathbf v_h \Vert_{H^1} \Vert q_h \Vert_{L^2}} \geq \beta_h \;\;\;\;\;\;\;\; \forall h>0,
+</math>
+
+with <math> \beta_h >0 </math>, and independent of the [[mesh]] size <math> h.</math><ref name="Brezzi91" /> This [[Property (mathematics)|property]] is necessary for the [[Well-posed problem|well posedness]] of the discrete problem and the [[Numerical method|optimal convergence of the method]].<ref name="Brezzi91" /> Examples of FE spaces satisfying the inf-sup condition are the so named Taylor-Hood pair <math> \mathbb{P}_{k+1}-\mathbb{P}_k </math> (with <math> k \geq 1 </math>), where it can be noticed that the velocity space <math> \mathcal{V}_h </math> has to be, in some sense, "richer" in comparison to the pressure space <math> \mathcal{Q}_h. </math><ref name="Brezzi91" /> Indeed, the inf-sup condition couples the space <math> \mathcal{V}_h </math> and <math> \mathcal{Q}_h </math>, and it is a sort of compatibility condition between the velocity and pressure spaces.<ref name="Brezzi91" />
+
+The equal order finite elements, <math> \mathbb{P}_{k}-\mathbb{P}_k </math> (<math> \forall k </math>), do not satisfy the inf-sup condition and leads to instability on the discrete pressure (also called spurious pressure).<ref name="Brezzi91" /> However, <math> \mathbb{P}_{k}-\mathbb{P}_k </math> can still be used with additional stabilization terms such as Streamline Upwind Petrov-Galerkin with a Pressure-Stabilizing Petrov-Galerkin term (SUPG-PSPG).<ref name="Tobiska91" /><ref name="Tezduyar91" />
+
+In order to derive the FE [[Algebraic equation|algebraic formulation]] of the fully discretized Galerkin NS problem, it is necessary to introduce two [[Basis function|basis]] for the discrete spaces <math> \mathcal{V}_h </math> and <math> \mathcal{Q}_h </math><ref name="Quarteroni14" />
+<math display="block">\{ \boldsymbol{\phi}_i(\mathbf x) \}_{i=1}^{N_V} \;\;\;\;\;\; \{ \psi_k(\mathbf x) \}_{k=1}^{N_Q},</math>
+in order to expand our [[Variable (mathematics)|variables]] as<ref name="Quarteroni14"/>
+<math display="block">\mathbf u^n_h = \sum_{j=1}^{N_V} U^n_j \boldsymbol{\phi}_j(\mathbf x), \;\;\;\;\;\;\;\;\;\; q^n_h=\sum_{l=1}^{N_Q} P^n_l \psi_l(\mathbf x).</math>
+
+The [[coefficient]]s, <math> U^n_j </math> (<math> j=1,\ldots,N_V </math>) and <math> P^n_l </math> (<math> l=1,\ldots,N_Q </math>) are called [[degrees of freedom]] (d.o.f.) of the finite element for the velocity and pressure field, respectively. The [[dimension]] of the FE spaces, <math> N_V </math> and <math> N_Q </math>, is the number of d.o.f, of the velocity and pressure field, respectively. Hence, the total number of d.o.f <math> N_{d.o.f} </math> is <math> N_{d.o.f}=N_V+N_Q </math>.<ref name="Quarteroni14"/>
+
+Since the fully discretized Galerkin problem holds for all elements of the space <math> \mathcal{V}_h </math> and <math> \mathcal{Q}_h </math>, then it is valid also for the basis.<ref name="Quarteroni14"/> Hence, choosing these basis functions as test functions in the fully discretized NS Galerkin problem, and using [[bilinearity]] of <math> a(\cdot,\cdot) </math> and <math> b(\cdot,\cdot) </math>, and [[Multilinear form|trilinearity]] of <math> c(\cdot,\cdot,\cdot) </math>, the following linear system is obtained:<ref name="Quarteroni14"/>
+<math display="block">
+\begin{cases}
+\displaystyle M \frac{ 3 \mathbf U^{n+1} -4 \mathbf U^{n}+ \mathbf U^{n-1}}{2\delta t} + A\mathbf U^{n+1} +C(\mathbf U^*)\mathbf U^{n+1}+\displaystyle{B^T \mathbf P^{n+1} = \mathbf F^{n}}
+\\
+\displaystyle{B \mathbf U^{n+1} = \mathbf 0}
+\end{cases}
+</math>
+where <math> M \in \mathbb{R}^{N_V \times N_V} </math> , <math> A \in \mathbb{R}^{N_V \times N_V} </math>, <math> C(\mathbf U^*) \in \mathbb{R}^{N_V \times N_V} </math>, <math> B \in \mathbb{R}^{N_Q \times N_V} </math>, and <math> F \in \mathbb{R}^{N_V} </math> are given by<ref name="Quarteroni14"/>
+<math display="block">
+\begin{align}
+& M_{ij}=\int_{\Omega} \boldsymbol{\phi}_j \cdot \boldsymbol{\phi}_i d\Omega
+\\
+& A_{ij}=a(\boldsymbol{\phi}_j,\boldsymbol{\phi}_i)
+\\
+& C_{ij}(\mathbf u^*)=c(\mathbf u^*,\boldsymbol{\phi}_j,\boldsymbol{\phi}_i),
+\\
+& B_{kj}=b(\boldsymbol{\phi}_j,\psi_k),
+\\
+& F_{i}=f(\boldsymbol{\phi}_i)
+\end{align}
+</math>
+and <math> \mathbf U </math> and <math> \mathbf P </math> are the unknown vectors<ref name="Quarteroni14"/>
+<math display="block">
+\mathbf U^n=\Big( U^n_1,\ldots,U^n_{N_V} \Big)^T, \;\;\;\;\;\;\;\;\;\;\;\; \mathbf P^n=\Big( P^n_1,\ldots,P^n_{N_Q} \Big)^T.
+</math>
+
+Problem is completed by an [[initial condition]] on the velocity <math> \mathbf U(0)=\mathbf U_0 </math>. Moreover, using the semi-implicit treatment <math> \mathbf U^{*}=2\mathbf U^{n}-\mathbf U^{n-1} </math>, the trilinear term <math> c(\cdot,\cdot,\cdot) </math> becomes bilinear, and the corresponding [[Matrix (mathematics)|matrix]] is<ref name="Quarteroni14"/> 
+<math display="block">
+C_{ij}=c(\mathbf u^*,\boldsymbol{\phi}_j,\boldsymbol{\phi}_i)=\int_{\Omega}(\mathbf u^* \cdot \nabla ) \boldsymbol{\phi}_j \cdot \boldsymbol{\phi}_i \,d\Omega,
+</math>
+
+Hence, the [[linear system]] can be written in a single [[Monolithic system|monolithic]] matrix (<math> \Sigma </math>, also called monolithic NS matrix) of the form<ref name="Quarteroni14"/>
+<math display="block">
+\begin{bmatrix} K & B^T \\ B & 0 \end{bmatrix}
+\begin{bmatrix} \mathbf U^{n+1} \\ \mathbf P^{n+1} \end{bmatrix}
+= \begin{bmatrix} \mathbf F^n + \frac{1}{2\delta t}M(4 \mathbf U^n -\mathbf U^{n-1}) \\ \mathbf 0 \end{bmatrix} , \;\;\;\;\;
+\Sigma = \begin{bmatrix} K & B^T \\ B & 0 \end{bmatrix}.
+</math>
+where <math display="inline"> K=\frac{3}{2\delta t}M+A+C(U^*) </math>.
+
+==Streamline upwind Petrov–Galerkin formulation for incompressible Navier–Stokes equations==
+
+NS equations with finite element formulation suffer from two source of numerical instability, due to the fact that: 
+* NS is a convection dominated problem, which means "large" <math> Re </math>, where numerical oscillations in the velocity field can occur (spurious velocity);
+* FE spaces <math> \mathbb{P}_k-\mathbb{P}_k (\forall k) </math> are unstable combinations of velocity and pressure finite element spaces, that do not satisfy the inf-sup condition, and generates numerical oscillations in the pressure field (spurious pressure).
+
+To control instabilities arising from inf-sup condition and convection dominated problem, Pressure-Stabilizing Petrov–Galerkin(PSPG) stabilization along with Streamline-Upwind Petrov–Galerkin (SUPG) stabilization can be added to the NS Galerkin formulation.<ref name="Tezduyar91"/>
+
+<math display="block">
+s(\mathbf u^{n+1}_h, p^{n+1}_h ;\mathbf v_h, q_h)=\gamma \sum_{\mathcal{T} \in \Omega_h} \tau_{\mathcal{T}} \int_{\mathcal{T}}\left[ \mathcal{L}(\mathbf u^{n+1}_h, p^{n+1}) \right]^T \mathcal{L}_{ss}(\mathbf v_h, q_h)d\mathcal{T},
+</math>
+where <math> \gamma>0 </math> is a positive constant, <math> \tau_{\mathcal{T}} </math> is a stabilization parameter, <math> \mathcal{T} </math> is a generic tetrahedron belonging to the finite elements [[Graph partition|partitioned]] domain <math> \Omega_h </math>, <math> \mathcal{L}(\mathbf u, p) </math> is the residual of the NS equations.<ref name="Tezduyar91"/>
+
+<math display="block">
+\mathcal{L}(\mathbf u, p) = \begin{bmatrix}
+\frac{\partial \mathbf u}{\partial t}+ (\mathbf u \cdot \nabla ) \mathbf u + \nabla p -2\nu \nabla \cdot \mathbf S(\mathbf u) \\ \nabla \cdot \mathbf u \end{bmatrix}, 
+</math>
+and <math> \mathcal{L}_{ss}(\mathbf u, p) </math> is the skew-symmetric part of the NS equations<ref name="Tezduyar91"/>
+<math display="block">
+\mathcal{L}_{ss}(\mathbf u, p) = \begin{bmatrix}
+(\mathbf u \cdot \nabla ) \mathbf u + \nabla p \\ \mathbf 0 \end{bmatrix} . 
+</math>
+
+The skew-symmetric part of a generic operator <math> \mathcal{L}(\mathbf u, p) </math> is the one for which <math> \Bigl( \mathcal{L}(\mathbf u, p),(\mathbf v, q) \Bigr ) = -\Bigl( (\mathbf v, q), \mathcal{L}(\mathbf u, p) \Bigr ).</math><ref name="Quarteroni07"/>
+
+Since it is based on the residual of the NS equations, the SUPG-PSPG is a strongly [[Numerical method|consistent]] stabilization method.<ref name="Tezduyar91"/>
+
+The discretized finite element Galerkin formulation with SUPG-PSPG stabilization can be written as:<ref name="Tezduyar91"/>
+
+Find, for all <math> t = 0, 1, \ldots, N_t-1, </math> <math>(\mathbf u^{n+1}_h,p^{n+1}_h)\in \{ \mathcal{V}_{h} \times \mathcal{Q}_h\} </math>, such that
+<math display="block">
+\begin{align}
+&\left( \frac{ 3 \mathbf u_h^{n+1} -4 \mathbf u_h^{n}+ \mathbf u_h^{n-1}}{2\delta t},\mathbf v_h \right) + c(\mathbf u^*_h,\mathbf u^{n+1}_h,\mathbf v_h)+b(\mathbf u^{n+1}_h,q_h)-b(\mathbf v_h,p^{n+1}_h) 
+\\
+& \;\;\;\;\;\;\;\;\;\;\;\; +a(\mathbf u^{n+1}_h,\mathbf v_h)+s(\mathbf u^{n+1}_h, p^{n+1}_h ;\mathbf v_h, q_h)=0
+\\
+\;\;\;\;\;\;\;\;\;\;\forall \mathbf v_h \in \mathcal{V}_{0h} \;\;,\;\; \forall q_h \in \mathcal{Q}_h, 
+\end{align}
+</math>
+with <math> \mathbf{u}^{0}_h=\mathbf{u}_{h,0} </math>, where<ref name="Tezduyar91"/>
+<math display="block">
+\begin{align}
+s(\mathbf u^{n+1}_h, p^{n+1}_h ;\mathbf v_h, q_h) &=\gamma \sum_{\mathcal{T} \in \Omega_h} \tau_{M,\mathcal{T}} \left( \frac{3 \mathbf u_h^{n+1} -4 \mathbf u_h^{n}+ \mathbf u_h^{n-1}}{2\delta t} 
++ (\mathbf u_h^* \cdot \nabla ) \mathbf u_h^{n+1}+\nabla p^{n+1}_{h}+ \right.
+\\
+& \left. -2\nu \nabla \cdot \mathbf S(\mathbf u^{n+1}_h) \; \boldsymbol{,} \; u_h^* \cdot \nabla \mathbf v_h + \frac{\nabla q_h}{\rho} 
+\right)_{\mathcal{T}}+ \gamma \sum_{\mathcal{T} \in \Omega_h} \tau_{C,\mathcal{T}}\left( \nabla \cdot \mathbf u^{n+1}_h \boldsymbol{,} \; \nabla \cdot \mathbf v_h \right)_{\mathcal{T}}, 
+\end{align} 
+</math>
+
+and <math> \tau_{M,\mathcal{T}} </math>, and <math> \tau_{C,\mathcal{T}} </math> are two stabilization parameters for the momentum and the continuity NS equations, respectively. In addition, the notation <math display="inline"> \left( a \boldsymbol{,} \; b \right)_{\mathcal{T}}=\int_{\mathcal{T}}ab \; d\mathcal{T} </math> has been introduced, and <math> \mathbf u^*_h </math> was defined in agreement with the semi-implicit treatment of the convective term.<ref name="Tezduyar91"/>
+
+In the previous expression of <math> s \left( \cdot \, ; \cdot \right) </math>, the term <math display="inline"> \sum_{\mathcal{T} \in \Omega_h} \tau_{M,\mathcal{T}} \left( 
+\nabla p^{n+1}_{h} \boldsymbol{,} \; \frac{\nabla q_h}{\rho} \right)_{\mathcal{T}}, </math> is the Brezzi-Pitkaranta stabilization for the inf-sup, while the term
+<math display="inline"> \sum_{\mathcal{T} \in \Omega_h} \tau_{M,\mathcal{T}} \left( 
+u_h^* \cdot \nabla \mathbf u^{n+1}_h \boldsymbol{,} \; u_h^* \cdot \nabla \mathbf v_h \right)_{\mathcal{T}}, </math>
+corresponds to the streamline diffusion term stabilization for large <math> \mathrm{Re} </math>.<ref name="Tezduyar91"/> The other terms occur to obtain a strongly consistent stabilization.<ref name="Tezduyar91"/>
+
+Regarding the choice of the stabilization parameters <math> \tau_{M,\mathcal{T}} </math>, and <math> \tau_{C,\mathcal{T}} </math>:<ref name="Tobiska91"/>
+<math display="block">
+\tau_{M,\mathcal{T}}=\left( \frac{\sigma_{BDF}^2}{\delta t^2} + \frac{\Vert \mathbf u \Vert^2}{h_{\mathcal{T}}^2} + C_k\frac{\nu^2}{h_{\mathcal{T}}^4} \right)^{-1/2}, \;\;\;\;\; \tau_{C,\mathcal{T}}=\frac{h_{\mathcal{T}}^2}{\tau_{M,\mathcal{T}}},
+</math>
+
+where: <math> C_k=60 \cdot 2^{k-2} </math> is a constant obtained by an inverse [[Inequality (mathematics)|inequality]] relation (and <math> k </math> is the order of the chosen pair <math> \mathbb{P}_k-\mathbb{P}_k </math>); <math> \sigma_{BDF} </math> is a constant equal to the order of the time discretization; <math> \delta t </math> is the time step; <math> h_{\mathcal{T}} </math> is the "element length" (e.g. the element diameter) of a generic tetrahedra belonging to the partitioned domain <math> \Omega_h </math>.<ref name="Forti15">{{cite journal |last1=Forti |first1=Davide |last2=Dedè |first2=Luca |title=Semi-implicit BDF time discretization of the Navier–Stokes equations with VMS-LES modeling in a High Performance Computing framework |journal=Computers & Fluids |date=August 2015 |volume=117 |pages=168–182 |doi=10.1016/j.compfluid.2015.05.011}}</ref> The parameters <math> \tau_{M,\mathcal{T}} </math> and <math> \tau_{C,\mathcal{T}} </math> can be obtained by a multidimensional generalization of the [[Mathematical optimization|optimal]] value introduced in<ref name="Tezduyar92">{{cite journal |last1=Shih |first1=Rompin |last2=Ray |first2=S. E. |last3=Mittal |first3=Sanjay |last4=Tezduyar |first4=T. E. |title=Incompressible flow computations with stabilized bilinear and linear equal-order-interpolation velocity-pressure elements |journal=Computer Methods in Applied Mechanics and Engineering |volume=95 |issue=2 |page=221 |date=1992 |language=en|bibcode=1992CMAME..95..221T |doi=10.1016/0045-7825(92)90141-6 |s2cid=31236394 }}</ref> for the one-dimensional case.<ref name="Tezduyar03">{{cite journal |last1=Kler |first1=Pablo A. |last2=Dalcin |first2=Lisandro D. |last3=Paz |first3=Rodrigo R. |last4=Tezduyar |first4=Tayfun E. |title=SUPG and discontinuity-capturing methods for coupled fluid mechanics and electrochemical transport problems |journal=Computational Mechanics |date=1 February 2013 |volume=51 |issue=2 |pages=171–185 |doi=10.1007/s00466-012-0712-z |language=en |issn=1432-0924|bibcode=2013CompM..51..171K |s2cid=123650035 |hdl=11336/1065 |hdl-access=free }}</ref>
+
+Notice that the terms added by the SUPG-PSPG stabilization can be explicitly written as follows<ref name="Tobiska91"/> 
+<math display="block">
+\begin{align}
+s^{(1)}_{11}=\biggl( \frac{3}{2} \frac{\mathbf u^{n+1}_h}{\delta t} 
+\; \boldsymbol{,} \; 
+\mathbf u^*_h \cdot \nabla \mathbf v_h \biggr)_\mathcal{T}, 
+\;\;\;\;&\;\;\;\; 
+s^{(1)}_{21}=\biggl( \frac{3}{2} \frac{\mathbf u^{n+1}_h}{\delta t} 
+\; \boldsymbol{,} \; 
+\frac{\nabla q_h}{\rho} \biggr)_\mathcal{T},
+\\
+s^{(2)}_{11}=\biggl( \mathbf u^*_h \cdot \nabla \mathbf u_h^{n+1} 
+\; \boldsymbol{,} \; 
+\mathbf u^*_h \cdot \nabla \mathbf v_h \biggr)_\mathcal{T}, 
+\;\;\;\;&\;\;\;\;
+s^{(2)}_{21}=\biggl( \mathbf u^*_h \cdot \nabla \mathbf u_h^{n+1} 
+\; \boldsymbol{,} \; 
+\frac{\nabla q_h}{\rho} \biggr)_\mathcal{T},
+\\
+s^{(3)}_{11}=\biggl( -2\nu \nabla \cdot \mathbf S & (\mathbf u^{n+1}_h) 
+\; \boldsymbol{,} \; 
+\mathbf u^*_h \cdot \nabla \mathbf v_h \biggr)_\mathcal{T}, 
+\\
+s^{(3)}_{21}=\biggl( -2\nu \nabla \cdot \mathbf S & (\mathbf u^{n+1}_h) 
+\; \boldsymbol{,} \; 
+\frac{\nabla q_h}{\rho} \biggr)_\mathcal{T},
+\\
+s^{(3)}_{11}=\biggl( -2\nu \nabla \cdot \mathbf S & (\mathbf u^{n+1}_h) 
+\; \boldsymbol{,} \; 
+\mathbf u^*_h \cdot \nabla \mathbf v_h \biggr)_\mathcal{T}, 
+\\
+s^{(3)}_{21}=\biggl( -2\nu \nabla \cdot \mathbf S & (\mathbf u^{n+1}_h) 
+\; \boldsymbol{,} \; 
+\frac{\nabla q_h}{\rho} \biggr)_\mathcal{T},
+\\
+s^{(4)}_{11}=\biggl( \nabla \cdot \mathbf u_h^{n+1} 
+\; \boldsymbol{,} & \; 
+\nabla \mathbf \cdot \mathbf v_h \biggr)_\mathcal{T},
+\end{align}
+</math>
+
+<math display="block">
+\begin{align}
+s_{12}=\biggl( \nabla p_h 
+\; \boldsymbol{,} \; 
+\mathbf u^*_h \cdot \nabla \mathbf v_h \biggr)_\mathcal{T}, 
+\;\;\;\;&\;\;\;\;
+s_{22}=\biggl( \nabla p_h 
+\; \boldsymbol{,} \; 
+\frac{\nabla q_h}{\rho} \biggr)_\mathcal{T},
+\\
+f_v=\biggl( \frac{4\mathbf u^{n}_h-\mathbf u^{n-1}_h}{2\delta t} 
+\; \boldsymbol{,} \; 
+\mathbf u^*_h \cdot \nabla \mathbf v_h \biggr)_\mathcal{T}, 
+\;\;\;\;&\;\;\;\; 
+f_q=\biggl( \frac{4\mathbf u^{n}_h-\mathbf u^{n-1}_h}{2\delta t}
+\; \boldsymbol{,} \; 
+\frac{\nabla q_h}{\rho} \biggr)_\mathcal{T},
+\end{align}
+</math>
+
+where, for the sake of clearness, the sum over the tetrahedra was omitted: all the terms to be intended as <math display="inline"> s^{(n)}_{(I,J)} = \sum_{\mathcal{T} \in \Omega_h} \tau_{\mathcal{T}}\left(\cdot \, , \cdot \right)_\mathcal{T} </math>; moreover, the indices <math> I,J </math> in <math> s^{(n)}_{(I,J)} </math> refer to the position of the corresponding term in the monolithic NS matrix, <math> \Sigma </math>, and <math> n </math> distinguishes the different terms inside each block<ref name="Tobiska91"/>
+<math display="block">
+\begin{bmatrix}
+\Sigma_{11} & \Sigma_{12} \\ \Sigma_{21} & \Sigma_{22} \end{bmatrix} \Longrightarrow 
+\begin{bmatrix}
+s^{(1)}_{(11)} + s^{(2)}_{(11)} + s^{(3)}_{(11)} + s^{(4)}_{(11)} & s_{(12)} \\ s^{(1)}_{(21)}+s^{(2)}_{(21)}+s^{(3)}_{(21)} & s_{(22)} \end{bmatrix} , 
+</math>
+
+Hence, the NS monolithic system with the SUPG-PSPG stabilization becomes<ref name="Tobiska91"/>
+<math display="block">
+\begin{bmatrix}
+\ \tilde{K} & B^T+S_{12}^T \\ \widetilde{B} & S_{22} \end{bmatrix} \begin{bmatrix}
+\mathbf U^{n+1} \\ \mathbf P^{n+1} \end{bmatrix} = \begin{bmatrix}
+\ \mathbf F^n + \frac{1}{2\delta t}M(4 \mathbf U^n -\mathbf U^{n-1})+\mathbf F_v \\ \mathbf F_q \end{bmatrix},
+</math>
+where <math display="inline"> \tilde{K}=K+\sum\limits_{i=1}^4 S^{(i)}_{11} </math>, and <math display="inline"> \tilde{B}=B+\sum\limits_{i=1}^3S^{(i)}_{21} </math>.
+
+It is well known that SUPG-PSPG stabilization does not exhibit excessive numerical diffusion if at least second-order velocity elements and first-order pressure elements (<math> \mathbb{P}_2-\mathbb{P}_1 </math>) are used.<ref name="Tezduyar92"/>
+
+
+==Goal-Oriented Error Estimation for the Navier–Stokes Equations==
+{{AI-section|date=October 2025}}
+The goal-oriented approach to finite element error estimation introduces an adjoint (dual) problem whose solution provides a weight function that measures the sensitivity of a functional of interest with respect to the residual of the governing equations.
+
+Incompressible Navier–Stokes Equations
+
+Consider the incompressible Navier–Stokes equations (NSE) in an open domain <math>\Omega \subset \mathbb{R}^3</math>:
+
+<math> \left\{ \begin{aligned} \partial_t u + (u \cdot \nabla) u + \nabla p - \nabla \cdot (\mu \nabla u) &= f, & \text{in } \Omega \times (0,T],\\ \nabla \cdot u &= 0, & \text{in } \Omega \times (0,T],\\ u &= 0, & \text{on } \partial\Omega \times (0,T],\\ u(x,0) &= u_0(x), & \text{in } \Omega. \end{aligned} \right. </math>
+==Linearized Error Equation==
+
+Let <math>(u_h,p_h)</math> be a finite element approximation to <math>(u,p)</math>.
+Substitute <math>u = u_h + e_u</math> and <math>p = p_h + e_p</math> into the NSE and subtract the discrete equations satisfied by <math>(u_h,p_h)</math>.
+Defining the residual <math>R(\hat{U}_h) = (R_1, R_2)</math>, the (nonlinear) error system becomes
+
+<math> \mathcal{A}(u_h) \begin{pmatrix} e_u \\ e_p \end{pmatrix} = \begin{pmatrix} -\,R_1(\hat{U}_h) - (e_u \cdot \nabla)e_u \\[2pt] -\,R_2(\hat{U}_h) \end{pmatrix}, </math>
+
+where the block operators are defined as
+
+<math> \begin{aligned} A_{11}(u_h)[e_u] &= \partial_t e_u + (u_h \cdot \nabla)e_u + (e_u \cdot \nabla)u_h - \nabla\!\cdot(\mu\nabla e_u),\\ A_{12}[e_p] &= \nabla e_p,\\ A_{21}[e_u] &= \nabla\!\cdot e_u,\\ A_{22}[e_p] &= 0. \end{aligned} </math>
+
+The residual components are
+
+<math> \begin{aligned} R_1(\hat{U}_h) &= \partial_t u_h + (u_h \cdot \nabla)u_h - \mu \Delta u_h + \nabla p_h - f,\\ R_2(\hat{U}_h) &= \nabla\!\cdot u_h. \end{aligned} </math>
+
+The linearized error equation can thus be written as
+
+<math> \left\{ \begin{aligned} \partial_t e_u + (u_h \cdot \nabla)e_u + (e_u \cdot \nabla)u_h - \mu \Delta e_u + \nabla e_p &= -\,R_1(\hat{U}_h) - (e_u \cdot \nabla)e_u,\\ \nabla \cdot e_u &= -\,R_2(\hat{U}_h),\\ e_u &= 0 \text{ on } \partial\Omega \times (0,T],\\ e_u(x,0) &= 0 \text{ in } \Omega. \end{aligned} \right. </math>
+==Adjoint Problem==
+
+To evaluate the error in a specific goal functional
+
+<math> J(u,p) = \int_0^T \!\!\int_\Omega \psi(x,t)\cdot u(x,t)\,dx\,dt, </math>
+
+we introduce adjoint variables <math>\hat{\varphi} = (\varphi_u, \varphi_p)</math> corresponding to the linearized operator.
+Integration by parts yields the formal adjoint relation
+
+<math> \langle A_{11}(u_h)e_u + A_{12}e_p,\,\varphi_u\rangle + \langle A_{21}e_u,\,\varphi_p\rangle = \langle e_u,\,A_{11}(u_h)^*\varphi_u + A_{21}^*\varphi_p\rangle + \langle e_p,\,A_{12}^*\varphi_u\rangle. </math>
+
+The corresponding adjoint problem is
+
+<math> \left\{ \begin{aligned} -\,\partial_t \varphi_u - (u_h \cdot \nabla)\varphi_u - (\nabla\!\cdot u_h)\varphi_u + (\nabla u_h)^{T}\varphi_u - \mu \Delta \varphi_u - \nabla \varphi_p &= \psi(x,t), \\ -\nabla \cdot \varphi_u &= 0, \\ \varphi_u &= 0 \text{ on } \partial\Omega \times (0,T], \\ \varphi_u(x,T) &= 0 \text{ in } \Omega. \end{aligned} \right. </math>
+==Goal-Oriented Error Representation==
+
+The error in the goal functional satisfies
+
+<math> J(u,p) - J(u_h,p_h) = \int_0^T\!\!\int_\Omega (u - u_h)\cdot \psi\,dx\,dt = \langle e_u,\,\psi\rangle. </math>
+
+Using the adjoint identity and the adjoint PDE, one finds
+
+<math> \langle e_u,\,\psi\rangle = \langle A_{11}(u_h)e_u + A_{12}e_p,\,\varphi_u\rangle + \langle A_{21}e_u,\,\varphi_p\rangle. </math>
+
+From the nonlinear error equation,
+
+<math> A_{11}(u_h)e_u + A_{12}e_p = -\,R_1(\hat{U}_h) - (e_u\!\cdot\!\nabla)e_u, \qquad A_{21}e_u = -\,R_2(\hat{U}_h). </math>
+
+Neglecting the quadratic term <math>(e_u!\cdot!\nabla)e_u</math> yields the first-order approximation
+
+<math> A_{11}(u_h)e_u + A_{12}e_p \approx -\,R_1(\hat{U}_h), \qquad A_{21}e_u \approx -\,R_2(\hat{U}_h). </math>
+
+Hence,
+
+<math> \langle e_u,\,\psi\rangle \approx -\,\langle R_1(\hat{U}_h),\,\varphi_u\rangle -\,\langle R_2(\hat{U}_h),\,\varphi_p\rangle = -\,\langle R(\hat{U}_h),\,\hat{\varphi}\rangle. </math>
+
+'''Goal-Oriented Error Bound'''
+
+Applying the Cauchy–Schwarz inequality over space–time gives
+
+<math> |J(u,p) - J(u_h,p_h)| \approx |\langle R(\hat{U}_h),\,\hat{\varphi}\rangle| \le \|R(\hat{U}_h)\|\,\|\hat{\varphi}\|. </math>
+
+Thus, the error in the goal functional is bounded by the product of the residual norm and the norm of the adjoint (dual weight) solution:
+
+<math> |J(u,p) - J(u_h,p_h)| \;\lesssim\; \text{Residual of NSE} \times \text{Dual weight}. </math>
+
+This relation forms the basis of goal-oriented adaptive methods, in which the dual solution identifies regions of the computational domain that most strongly influence the functional of interest.
+
+==References==
+<references />
+
+{{DEFAULTSORT:Streamline upwind Petrov-Galerkin pressure-stabilizing Petrov-Galerkin formulation for incompressible Navier-Stokes equations}}
+[[Category:Finite element method]]
+[[Category:Navier–Stokes]]

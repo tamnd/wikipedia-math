@@ -1,0 +1,203 @@
+<!-- wikipedia: en
+     page: 81182761
+     title: ODE filter
+     revision: 1338010706
+     timestamp: 2026-02-12T18:17:53Z
+     history: https://en.wikipedia.org/w/index.php?curid=81182761&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1338010706 -->
+{{orphan|date=January 2026}}
+{{Short description|Probabilistic numerical ODE solver}}
+
+{{More footnotes needed|date=December 2025}}
+[[File:Logistig full-2.svg|thumb|397x397px|Visualization of the filtering procedure for the logistic ordinary differential equation. The first column shows the prior, which is a two-times-integrated Wiener process. The last row shows the residual, which is equal to the measurement operator (i.e., x(t) − f(x(t))). The second column shows the prior after being initialized by the initial condition. The third row shows the posterior distribution obtained by running an extended Kalman filter of order one for the ODE. All subplots display the mean (solid, thick line) and the 95% confidence interval (shaded area), as well as ten samples from the corresponding distribution (solid lines). The dashed black line shows the ground truth solution of the logistic ODE. The blue dots represent the observed measurements.]]
+'''ODE filters''' are a class of [[Probabilistic numerics|probabilistic numerical methods]] for solving [[Ordinary differential equation|ordinary differential equations]] (ODEs) that frame the problem of finding a solution to an [[initial value problem]] as a [[Bayesian inference]] task. Solutions are modeled as [[Probability distribution|probability distributions]] that also account for the discretization error introduced through the numerical approximation. This probabilistic treatment provides an computation-aware alternative to classical [[Numerical methods for ordinary differential equations|numerical ODE-solvers]], which typically only provide point-wise error bounds. It further enables sampling of joint trajectories from the posterior, as well as quantifying uncertainty about the underlying ODE itself. ODE filters offer a flexible framework for incorporating additional information, such as measurements or [[Conservation law|conservation laws]]. 
+
+The general ODE filtering procedure consists of two steps: The first is the definition of a [[Prior probability|Prior distribution]], for the ODE solution, in the form of a [[Stochastic process|stochastic processes]], more specifically, as [[Gauss–Markov process|Gauss–Markov processes]]. Discretization results in nonlinear Gaussian [[State-space representation|state space models]]. Second, use a general Bayesian [[Kalman filter|filtering]] and [[smoothing]] algorithm, from the field of [[recursive Bayesian estimation]], to find numerical solutions to the ODE. The naming convention of ODE filters typically reflects the underlying filtering algorithm: For instance, combining the [[particle filter]] with this framework yields the particle ODE filter. Since smoothers are extensions of filters, the literature often refers to both under the umbrella term "ODE filters".
+
+== Theory ==
+
+=== Problem setup ===
+Consider a first-order [[ordinary differential equation]] (ODE) initial value problem (IVP) of the form
+
+<math display="block">\dot{y}(t) = f(y(t),t), \quad t\in [0,T], \quad y(0) = y_0 \in \mathbb{R}^d.</math>
+
+The vector field <math display="inline">f: \mathbb{R}^d \times [0,T] \rightarrow \mathbb{R}^d</math> is assumed to be [[Lipschitz continuity|Lipschitz-continuous]] such that a unique global solution to this ODE-IVP exists according to the [[Picard–Lindelöf theorem|Pickard-Lindelöf theorem]]:<ref name=":1">{{Cite book |last1=Hennig |first1=Philipp |url=https://www.cambridge.org/core/books/probabilistic-numerics/0EBFF0B15E2481099F6EED1F62EE1ABE |title=Probabilistic Numerics: Computation as Machine Learning |last2=Osborne |first2=Michael A. |last3=Kersting |first3=Hans P. |date=2022 |publisher=Cambridge University Press |isbn= 978-1-316-68141-1|location=Cambridge |doi=10.1017/9781316681411}}</ref>. Classical Numerical ODE Solvers, are algorithms that compute approximate solutions <math display="inline">\hat{y}(t) \approx y(t)</math> on a discrete mesh <math display="inline">\{t_n\}_{n=0}^N,\quad 0 = t_0<\cdots <t_N=T,\quad n \in \mathbb{N}</math><ref name=":5">{{Cite journal |last1=Tronarp |first1=Filip |last2=Särkkä |first2=Simo |last3=Hennig |first3=Philipp |date=2021 |title=Bayesian ODE solvers: the maximum a posteriori estimate |url=https://doi.org/10.1007/s11222-021-09993-7 |journal=Statistics and Computing |language=en |volume=31 |issue=3 |pages=23 |doi=10.1007/s11222-021-09993-7 |issn=}}</ref>. Probabilistic ODE Solvers additionally estimate the uncertainty introduced through the discretization. ODE Filters are a type of probabilistic ODE solvers, that adopt a [[Bayesian inference|Bayesian Inference]] framework to compute a posterior<ref name=":4" />
+
+<math display="block">p\left(y(t) \mid y(0), \{ \dot{y}(t_n) = f(y(t_n), t_n) \}_{n=0}^N\right).</math>
+
+This is done in two steps. First, prior data and likelihood is defined by modeling solutions to the ODE as a [[Gauss–Markov process|Gauss-Markov process]]. Second, the posterior is computed with Bayesian filtering and smoothing algorithms.<ref name=":4" />
+
+=== Step 1: Gauss-Markov process ===
+
+==== Prior ====
+The prior is specified by a linear time invariant (LTI) [[stochastic differential equation]] (SDE) of the form
+
+<math display="block">X(0) \sim \mathcal{N}(\mu_0, \Sigma_0) </math>
+
+<math display="block">\mathrm{d}X(t) = FX(t)\mathrm{d}t + L \mathrm{d}B_t.</math>
+
+It describes a [[stochastic process]] ("the system"):
+
+<math display="block">X(t) = \left[\left(X^{(0)}(t)\right)^T, \cdots, \left(X^{(q)}(t)\right)^T\right]^T \in \mathbb{R}^{(q+1)d}.</math> 
+
+The state of the system are realizations <math>x(t) \sim X(t)</math>, where <math>X^{(0)}(t)</math> and <math>X^{(1)}(t)</math> model ,<math>y(t)</math> and <math>\dot{y}(t)</math> respectively. Te remaining <math>q-1</math> sub-vectors may be used to model higher-order derivatives. <math>F</math> is a state transition matrix, <math>L</math> a diffusion matrix, and <math>B(t)</math> is a vector standard [[Wiener process]]. Note that <math>F</math> and <math>L</math> need to be chosen such that <math>\mathrm{d}X^{(0)}(t) = X^{(1)}(t)\mathrm{d}t</math> holds<ref name=":0" />. Solutions to LTI-SDEs are [[Gauss–Markov process|Gauss-Markov processes]] (GMP).<ref>{{Cite book |last1=Särkkä |first1=Simo |url=https://www.cambridge.org/core/books/applied-stochastic-differential-equations/6BB1B8B0819F8C12616E4A0C78C29EAA |title=Applied Stochastic Differential Equations |last2=Solin |first2=Arno |date=2019 |publisher=Cambridge University Press |isbn= 978-1-108-18673-5|series=Institute of Mathematical Statistics Textbooks |location=Cambridge |doi=10.1017/9781108186735}}</ref>, of the form: 
+
+<math display="block">p\left(x(t) \mid X^{(0)}(0) = x_0 = y_0\right) = GP\left(x(t) \mid \mu(t), k(t,t')\right)</math>
+
+<math display="block">\mu(t) = exp(Ft)x_0</math>
+
+<math display="block">k(t,t') = \int_0^{\mathrm{min(t,t')}}exp(F(t-\tau))LL^Texp(F(t'-\tau))^T\mathrm{d}\tau.</math>
+
+Where <math>\mu: [0,T] \rightarrow \mathbb{R}^{(q+1)d}</math> and <math>k: [0,T]\times[0,T]\rightarrow \mathbb{R}^{(q+1)d \times (q+1)d}</math>. [[Gauss–Markov process|Gauss-Markov processes]] are computationally favorable over generic [[Gaussian process]] priors, as they allow for inference with linear time complexity <math>\mathcal{O}(N)</math> compared to the general GP inference complexity of <math>\mathcal{O}(N^3)</math><ref>{{Cite journal |last=Øksendal |first=Bernt |date=2003 |title=Stochastic Differential Equations |url=https://link.springer.com/book/10.1007/978-3-642-14394-6 |journal=Universitext |language=en |doi=10.1007/978-3-642-14394-6 |isbn=978-3-540-04758-2 |issn=0172-5939}}</ref><ref name=":0">{{Cite journal |last1=Tronarp |first1=Filip |last2=Kersting |first2=Hans |last3=Särkkä |first3=Simo |last4=Hennig |first4=Philipp |date=2019 |title=Probabilistic solutions to ordinary differential equations as nonlinear Bayesian filtering: a new perspective |url=https://doi.org/10.1007/s11222-019-09900-1 |journal=Statistics and Computing |language=en |volume=29 |issue=6 |pages=1297–1315 |doi=10.1007/s11222-019-09900-1 |issn=}}</ref>. Discretization of the GMP results in a linear Gaussian [[State-space representation|state space model]] (LGSSM):
+
+<math display="block">x(t_0) \sim \mathcal{N}(\mu_0, \Sigma_0)</math>
+
+<math display="block">x(t_{n+1}) \mid x(t_n) \sim \mathcal{N}(A(t_{n+1}-t_n)x(t_n), Q(t_{n+1}-t_n)) </math>
+
+<math display="block">A(h) = exp(Fh)</math>
+
+<math display="block">Q(h) = \int_0^{h} e^{F\tau}LL^Te^{F^T\tau} \mathrm{d}\tau.</math>
+
+==== Data ====
+Information about the ODE is introduced through a measurement operator (i.e. state misalignment), known as an ''information operator'' in this context<ref name=":0" />,
+
+<math display="block">Z(t) = g(X(t)) = X^{(1)}(t) - f(X^{(0)}(t), t).</math>
+
+If it were possible to condition <math>X(t)</math> on the event <math>0 = z(t) \sim Z(t)</math>''for all'' <math>t\in[0,T]</math>, this would result in a point-mass on the true solution<ref>{{Cite journal |last1=Cockayne |first1=Jon |last2=Oates |first2=Chris J. |last3=Sullivan |first3=T. J. |last4=Girolami |first4=Mark |date=2019 |title=Bayesian Probabilistic Numerical Methods |url=https://epubs.siam.org/doi/10.1137/17M1139357 |journal=SIAM Review |language=en |volume=61 |issue=3 |pages=756–789 |doi=10.1137/17M1139357 |issn=0036-1445}}</ref> . This is computationally intractable (just like for all other forms of numerical simulation), which motivates the discretization of the problem and conditioning the state on discrete observations <math display="inline">\{z(t_n)=0\}_{n=0}^N. </math> The information operator can be modified to solve higher-order ODEs. Multiple information operators can be added to incorporate additional information, such as conservation laws or measurement data<ref>{{Citation |last1=Schmidt |first1=Jonathan |title=A Probabilistic State Space Model for Joint Inference from Differential Equations and Data |date=2022-07-05 |arxiv=2103.10153 |last2=Krämer |first2=Nicholas |last3=Hennig |first3=Philipp}}</ref><ref>{{Citation |last1=Bosch |first1=Nathanael |title=Pick-and-Mix Information Operators for Probabilistic ODE Solvers |date=2021-10-20 |arxiv=2110.10770 |last2=Tronarp |first2=Filip |last3=Hennig |first3=Philipp}}</ref>
+
+==== Likelihood ====
+The likelihood of the observations given the GMP prior is:
+
+<math display="block">z_n \mid x(t_n) \sim \delta(z_n - g(x(t_n))).</math>
+
+To improve the model's generality and account for numerical errors introduced by discretization, a measurement variance <math>R_n</math> can be added to <math>z_n</math> <ref name=":0" /><ref>{{Citation |last=Kersting |first=Hans |title=Uncertainty-Aware Numerical Solutions of ODEs by Bayesian Filtering |date=2021-03-11 |url=https://publikationen.uni-tuebingen.de/xmlui/handle/10900/113263 |access-date=2025-09-25 |others=Universitaet Tuebingen, Hennig, Philipp (Prof Dr.) |publisher=Universität Tübingen |language=en |doi=10.15496/PUBLIKATION-54639}}</ref>. The observations can be incorporated into the LGSSM as a nonlinear measurement model, yielding the final nonlinear Gaussian state space model (NLGSSM), that is the basis of all ODE filters:
+
+<math display="block">x_0 \sim \mathcal{N}(\mu_0, \Sigma_0)</math>
+
+<math display="block">x_{n+1} \mid x_n \sim \mathcal{N}(A(h_{n+1})x_n, Q(h_{n+1}))  </math>
+
+<math display="block">z_n \mid x_n \sim \mathcal{N}(g_n(x_n), R_n). </math>
+
+Here <math>h_{n+1} = t_{n+1} - t_n</math>, <math>x_n = x(t_n)</math>, <math>z_n = z(t_n)</math>, and <math>g_n(x_n) = x_n^{(1)} - f(x_n^{(0)},t_n)</math>. The desired posterior <math>p\left(x(t) \mid x_0,\{z_n\}_{n=0}^N\right)</math> can now be computed iteratively by any filtering and smoothing algorithms  known from [[signal processing]] or [[recursive Bayesian estimation]].
+
+=== Step 2: Bayesian filter and smoother ===
+The most general ODE filter and smoother algorithms to solve the NLGSSM are equivalent to the general [[Recursive Bayesian estimation|recursive Beyesian estimation]] algorithms:
+ <code>'''Algorithm:''' ODE Filter<math>(f, x_0, p(x_{n+1}\mid x_n))</math></code>
+  1: Initialize <math>p(x_0)</math>
+  2: '''for''' <math display="inline">n=0,1,\cdots,N-1 </math> '''do''':
+  3:     ''optional:'' adapt dynamic model <math display="inline">p(x_{n+1} \mid x_n) </math>
+  4:     ''optional:'' choose step size <math>h_n > 0 </math>
+  5:     '''predict''' <math display="inline">p(x_{n+1} \mid z_{1:n}) = \int p(x_{n+1}\mid x_n)p(x_n\mid z_{1:n})\mathrm{d}x_n </math>
+  6:     '''observe''' the ODE <math>z_{n+1} = 0 </math>
+  7:     '''update''' <math>p(x_{n+1} \mid z_{1:n+1}) = p(z_{n+1} \mid x_{n+1})p(x_{n+1} \mid z_{1:n})p(z_{n+1})^{-1} </math>
+  8:     ''optional:'' backward transition <math>p(x_n|x_{n+1}, z_{1:n}) = p(x_{n+1}|x_n)p(x_n|z_{1:n})p(x_{n+1}|z_{1:n})^{-1} </math>
+  9: '''end for'''
+ 10: '''return''' <math display="inline">\{ p(x_n \mid z_{1:n}), p(x_n \mid z_{1:n-1})\}_{n=0,\dots,N} </math>
+
+ <code>'''Algorithm:''' ODE Smoother<math>(f, x_0, p(x_{n+1}\mid x_n))</math></code>
+  1: <math display="inline">\{p(x_n \mid z_{1:n}), p(x_n \mid z_{1:n-1})\}_{n=0,\dots,N} \;=\; \text{ODE filter}(f, x_0, p(x_{n+1}\mid x_n)) </math> 
+  2: '''for''' <math>n = N-1,N-2, \cdots, 0 </math> '''do:'''
+  3:     '''compute''' <math display="inline">p(x_n \mid z_{1:N}) = p(x_{n} \mid z_{1:n})\int p(x_{n+1} \mid x_n) p(x_{n+1} \mid z_{1:N}) p(x_{n+1} \mid z_{1:n})^{-1}\mathrm{d}x_{n+1} </math>
+  4: '''end for'''
+  5: '''return''' <math>\{ p(x_n \mid z_{1:N}) \}_{n=0,\dots,N} </math> 
+For nonlinear observation models, the probability distributions become non-Gaussian, rendering the above equations intractable. Therefore, to define a specific ODE filter and smoother, the predict, update, and compute steps must be specified in a tractable form. The full posterior can be computed from 
+
+<math display="block">p(x_{0:N} \mid z_{1:N}) = p(x_N \mid z_{1:N})\prod_{n=0}^{N-1}p(x_n \mid x_{n+1},z_{n}). </math>
+
+Having access to the full posterior enables sampling of joint trajectories that classical numerical methods do not allow. 
+
+== Implementation Details ==
+
+=== Choice of prior ===
+The choice of a prior distribution is replaced by choosing the free parameters of the GMP. That is choosing <math>\mu_0, \Sigma_0, F, L, q </math>, however, under some constraints. One of the most popular and most widely used GMPs is the q-times integrated Wiener process (i.e. [[integrated Brownian motion]]) <ref name=":2">{{Citation |last=Bosch |first=Nathanael |title=A Flexible and Efficient Framework for Probabilistic Numerical Simulation and Inference |date=2025-05-15 |url=https://publikationen.uni-tuebingen.de/xmlui/handle/10900/165521 |access-date=2025-09-25 |others=Universitaet Tuebingen, Hennig, Philipp (Prof Dr.) |publisher=Universität Tübingen |language=en |doi=10.15496/PUBLIKATION-106849}}</ref>. For simplicity we can set w.l.o.g. <math>d=1 </math><ref name=":1" /><ref name=":3">{{Cite journal |last1=Kersting |first1=Hans |last2=Sullivan |first2=T. J. |last3=Hennig |first3=Philipp |date=2020 |title=Convergence rates of Gaussian ODE filters |url=https://doi.org/10.1007/s11222-020-09972-4 |journal=Statistics and Computing |language=en |volume=30 |issue=6 |pages=1791–1816 |doi=10.1007/s11222-020-09972-4 |issn=1573-1375 |pmc=7527376 |pmid=33088027}}</ref>. The q-times Integrated Wiener process (IWP) is defined such that the sub-coordinates model the first q-derivatives of <math>X^{(0)}(t), </math> i.e.<math>dX^{(n-1)} = X^{(n)}dt \quad \forall n \in [1, q] </math>. Further, <math>X^{
+(q)} </math> is a standard Wiener Process. This is equivalent to the drift and dispersion matrices:
+
+<math display="block">\breve{F}_{\mathrm{IWP}} = \left[\begin{array}{cccc}0 & 1 & \cdots & 0 \\ \vdots & \vdots & \ddots & \vdots \\ 0 & 0 & \cdots & 1 \\ 0 & 0 & \cdots & 0\end{array}\right], \quad \breve{L}_{\mathrm{IWP}} = \sigma \left[\begin{array}{cccc}0 \\ \vdots \\ 0 \\ 1\end{array}\right]. </math>
+
+Note that for <math>d>1 </math> the full drift and dispersion matrices follow from the one-dimensional versions with a [[Kronecker product]] <math>F_\mathrm{IWP} = \breve{F}_{\mathrm{IWP}} \otimes I_d </math>, and <math>L_\mathrm{IWP} = \breve{L}_{\mathrm{IWP}} \otimes I_d </math>:<ref name=":2" />. This yields the following known closed form solutions for the transition matrices<ref name=":3" />
+
+<math display="block">[A(h)]_{i j} = [\exp (F h)]_{i j}=\mathbb{I}(j \geq i) \frac{h^{j-i}}{(j-i)!}, </math>
+
+<math display="block">[Q(h)]_{i j} = \sigma^2 \frac{h^{2 q+3-i-j}}{(2 q+3-i-j)(q+1-i)!(q+1-j)!}. </math>
+
+The ideal initialization of the IWP that considers all available information from the ODE with initial value <math>x_0 </math> is to evaluate all derivatives at <math>x_0 </math>:
+
+<math display="block">\mu_0 = [x_0, f(x_0), f^{<2>}(x_0), \cdots , f^{<q>}(x_0)]^T, \quad \Sigma_0 = \boldsymbol{0}. </math>
+
+Here <math>f^{<i>}(a) = [\nabla_x f^{<i-1>}\odot f](a) </math> is recursively defined from <math>f^{<0>}(a)= a </math> and <math>f^{<1>}(a) = f(a) </math>, and <math>\odot </math> is the elementwise product. Computationally this can be efficiently computed via Taylor mode [[automatic differentiation]].<ref name=":1" /><ref name=":4" />
+
+=== Choice of filter and smoother ===
+One possible approach to building efficient inference algorithms for nonlinear measurement operators <math>g(X(t))</math> is via linearization. This results in a Gaussian inference framework, which is computationally desirable because it allows efficient closed-form inference. [[Taylor approximation]] provides one viable linearization technique, whereas the degree and the locality/globality result in different subcategories of [[Extended Kalman filter|extended Kalman filters]]. Choosing a local, first order Taylor expansion corresponds to the extended Kalman filter of order 1 (EKF1). Other options are a Taylor approximation of order 0, leading to the EKF0 algorithm, or a global linearization, known as the iterated extended Kalman smoother (IEKS).<ref name=":1" />
+
+==== Example: EKF1 ====
+The first-order [[Taylor expansion]] of <math>g</math> around a point <math>\xi \in \mathbb{R}^{(q+1)d}</math> is:
+
+<math display="block">\hat{g}(X) = g(\xi) + J_g(\xi)(X-\xi),</math>
+
+where <math>J_g(\xi) \in \mathbb{R}^{d\times (q+1)d}</math> is the [[Jacobian matrix and determinant|Jacobian]] of <math>g</math>. This leads to an [[Affine transformation|affine]] observation model 
+
+<math display="block">z_n \mid x_n \sim g(z_n \mid x_n) = \mathcal{N}(H_nx_n+c_n, R_n), \quad H_n = J_g(\xi_n), \quad c_n=g(\xi_n) - J_g(\xi_n)\xi_n.</math>
+
+The linearization point is chosen as the predicted mean from the previous observation <math>\xi_n = m_n^- = \mathbb{E}[p(x_n \mid z_{1:n-1})]</math>. With this, the predict, update, and compute equations all take on Gaussian form, for which closed form inference is possible. See [[extended Kalman filter]] for more details.
+
+<math display="block">\mathrm{\textbf{predict}}: p(x_{n+1} \mid z_{1:n}) = \mathcal{N}(x_{n+1} \mid m_{n+1}^-, P_{n+1}^-) </math>
+
+<math display="block">\mathrm{\textbf{update}}: p(x_{n+1} \mid z_{1:n+1}) = \mathcal{N}(x_{n+1} \mid m_{n+1}, P_{n+1})</math>
+
+<math display="block">\mathrm{\textbf{compute}}: p(x_n \mid z_{1:N}) = \mathcal{N}(x_n \mid m_n^s, P_n^s).</math>
+
+== Examples ==
+[[File:ODE filter logistic ODE - fast.gif|thumb|374x374px|Visualisation of the ODE filtering and smoothing procedure for the logistic ordinary differential equation using a two-times integrated Wiener process prior and an extended Kalman filter of order one. First, iterative forward filtering (brown) with forward prediction (black), then iterative smoothing (rose), and finally sampling from the full posterior distribution. The thick line shows the mean, with the shaded area showing the 95% confidence interval. The blue dots represent the observed data and the dashed line represents the ground truth.]]
+
+=== Logistic ODE ===
+As a one dimensional example, consider the following [[logistic differential equation]] IVP:
+
+<math display="block">\dot{y}(t) = y(t) (1-y(t)),\quad t \in [0,10] \quad y(0)=y_0=0.01,</math>
+
+for which a analytical solution exists:
+
+<math display="block">y(t) = \frac{1}{1+\left(\frac{1+y_0}{y_0}\right)y_0}.</math>
+
+To solve this ODE-IVP with a PDE filter,  the prior, discretization, as well as the predict, update, and compute steps need to be specified.
+
+==== Prior ====
+2-times IWP:
+
+<math display="block">A(h) = \left[\begin{array}{ccc}1 & h & h^2/2 \\ 0 & 1 & h\\ 0 & 0 & 1 \\ \end{array}\right], \quad \sigma = 1, \quad Q(h) = \left[\begin{array}{ccc} h^5/20 & h^4/8 & h^3/6 \\ h^4/8 & h^3/3 & h^2/2\\ h^3/6 & h^2/2 & h \\ \end{array}\right],
+ </math>
+
+with Taylor mode initialization:
+
+<math display="block">X(0) = \left[ y_0, y_0(1-y_0), y_0(1-y_0)(1-2y_0) \right]^T.
+ </math>
+
+==== Data and lielihood ====
+We discretized the time domain uniformly with <math>N = 20 \rightarrow h=0.5 \rightarrow t_n = n*h
+ </math> and observe data <math>\{ z(t_n)=0 \}_{n=1}^N
+ </math> without any noise, hence <math>R_n=0
+ </math>.
+
+==== Filter and smoother ====
+As filtering algorithm we use the EKF1 algorithm with the Jacobian is <math>J_g(X) = [-X^{(0)}(1-2X^{(0)}), 1, 0]
+ </math>.
+
+== Software ==
+
+* [https://github.com/pnkraemer/probdiffeq probdiffeq] [[JAX (software)|JAX]] based ODE filter library.<ref name=":4">{{Citation |last=Krämer |first=Peter Nicholas |title=Implementing Probabilistic Numerical Solvers for Differential Equations |date=2024-04-11 |url=https://publikationen.uni-tuebingen.de/xmlui/handle/10900/152754 |access-date=2025-09-26 |others=Universitaet Tuebingen, Hennig, Philipp (Prof Dr.) |publisher=Universität Tübingen |language=en |doi=10.15496/PUBLIKATION-94093}}</ref>.
+* [https://github.com/nathanaelbosch/ProbNumDiffEq.jl ProbNumDiffEq.jl] ODE filter library in [[Julia (programming language)|Julia]]<ref>{{Cite journal |last=Bosch |first=Nathanael |date=2024-09-30 |title=ProbNumDiffEq.jl: Probabilistic Numerical Solvers for Ordinary Differential Equations in Julia |url=https://joss.theoj.org/papers/10.21105/joss.07048 |journal=Journal of Open Source Software |language=en |volume=9 |issue=101 |pages=7048 |doi=10.21105/joss.07048  |doi-access=free|bibcode=2024JOSS....9.7048B |issn=2475-9066}}</ref>.
+* [https://github.com/probabilistic-numerics/probnum probnum] [[Probabilistic numerics|Probabilistic Numerics]] in [[Python (programming language)|Python]]<ref>{{Citation |last1=Wenger |first1=Jonathan |title=ProbNum: Probabilistic Numerics in Python |date=2021-12-03 |arxiv=2112.02100 |last2=Krämer |first2=Nicholas |last3=Pförtner |first3=Marvin |last4=Schmidt |first4=Jonathan |last5=Bosch |first5=Nathanael |last6=Effenberger |first6=Nina |last7=Zenn |first7=Johannes |last8=Gessner |first8=Alexandra |last9=Karvonen |first9=Toni}}</ref>
+
+== See also ==
+
+* [[Probabilistic numerics]]
+* [[Stochastic differential equation|Stochastic differential equations]]
+* [[Gauss–Markov process|Gauss-Markov process]]
+* [[Recursive Bayesian estimation]]
+* [[Extended Kalman filter]]
+
+==  References ==
+
+{{reflist}}
+
+[[Category:Ordinary differential equations]]

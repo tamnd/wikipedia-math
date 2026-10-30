@@ -1,0 +1,192 @@
+<!-- wikipedia: en
+     page: 9524572
+     title: M8 (cipher)
+     revision: 1243184462
+     timestamp: 2024-08-31T00:44:07Z
+     history: https://en.wikipedia.org/w/index.php?curid=9524572&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1243184462 -->
+{{Short description|Block cipher}}{{More sources needed|date=August 2024}}{{Infobox block cipher
+| name          = M8
+| designers     = [[Hitachi, Ltd.|Hitachi]]
+| publish date  = 1999
+| derived from  = [[M6 (cipher)|M6]]
+| derived to    =
+| related to    =
+| key size      =
+| block size    = 64 bits
+| structure     = [[Feistel cipher|Feistel network]]
+| rounds        = Variable
+| cryptanalysis = 
+}}
+In [[cryptography]], '''M8''' is a [[block cipher]] designed by [[Hitachi, Ltd.|Hitachi]] in 1999. It is a modification of Hitachi's earlier [[M6 (cipher)|M6]] algorithm, designed for greater security and high performance in both hardware and 32-bit software implementations. M8 was registered by Hitachi in March 1999 as ISO/IEC 9979-0020.<ref>{{cite web
+|url=http://www.chrismitchell.net/ISO-register/0020.pdf
+|title=ISO/IEC9979-0020 Register Entry
+|publisher=ISO/IEC 9979 Register of Cryptographic Algorithms
+|website=Professor Chris Mitchell, Information Security Group, [[Royal Holloway, University of London]]
+}} </ref>
+
+Like M6, M8 is a [[Feistel cipher]] with a [[block size (cryptography)|block size]] of 64 bits. The round function can include 32-bit [[bit rotation|rotation]]s, [[XOR]]s, and [[modular arithmetic|modular addition]], making it an early example of an [[ARX cipher]].
+
+The cipher features a variable number of rounds (any positive integer N), each of which has a structure determined by a round-specific "algorithm decision [[key (cryptography)|key]]". Making the rounds key-dependent is intended to make [[cryptanalysis]] more difficult (see [[FROG]] for a similar design philosophy).
+
+==Cipher description==
+
+The round count can be set to any positive integer N, but a round count of at least 10 is recommended. The key consists of four components: a 64-bit data key, 256-bit key expansion key, a set of N 24-bit algorithm decision keys, and a set of N 96-bit algorithm expansion keys.
+
+The round function is used for both key expansion and encryption/decryption. The key expansion process transforms the 64-bit data key and 256-bit key expansion key into a 256-bit execution key, consisting of 4 pairs of 32-bit numbers <math>K_{R_0}, K_{L_0}, ..., K_{R_3}, K_{L_3}</math>.
+
+The cipher has a typical [[Feistel cipher]] design. First, the 64-bit input block is split into two 32-bit halves. In each round, the left half undergoes a key-dependent transformation, and is then combined with the right half. Finally, the halves are swapped. In total, the round function consists of a sequence of nine customizable operations and three bitwise rotations:
+
+<math>
+\begin{align}
+R_{i+1}&=L_i \\
+x&=L_{i} \operatorname{op}_1 K_{L_{i\bmod 4}}\\
+y&=((x <<< S_1) \operatorname{op}_2 x) \operatorname{op}_3 \alpha \\
+z&=(((y <<< S_2) \operatorname{op}_4 y) \operatorname{op}_5 \beta) \operatorname{op}_6 K_{R_{i\bmod 4}} \\
+L_{i+1}&=(((z <<< S_3) \operatorname{op}_7 z) \operatorname{op}_8 \gamma) \operatorname{op}_9 R_i
+\end{align}
+</math>
+
+<math>i</math> denotes the round number, which takes inputs <math>L_i</math> and <math>R_i</math>. <math>\alpha, \beta, \gamma</math> are the three 32-bit words of the round's algorithm expansion key. <math>K_{R_{i\bmod 4}}, K_{L_{i\bmod 4}}</math> are words from the execution key. <math> <<< </math> denotes a left bitwise rotation. <math>\operatorname{op}_j</math> and <math>S_k</math> are defined by the 24-bit algorithm decision key as follows:
+
+<pre>
+MSB                                      LSB
+op1 op2 op3 op4 op5 op6 op7 op8 op9 S1 S2 S3
+</pre>
+
+where op1 to op9 are each one bit (0 = addition mod 2<sup>32</sup>, 1 = XOR) and S1 to S3 are five bits each.
+
+Key expansion consists of eight cipher rounds, using the first eight algorithm decision and expansion keys, the key expansion key as the execution key, and the data key as the input block. The eight intermediate outputs, <math>L_1, L_2, ..., L_7, L_8</math> are used as the eight components of the execution key <math>K_{R_0}, K_{L_0}, ..., K_{R_3}, K_{L_3}</math>.
+
+==Cipher implementation==
+The following is an implementation of the cipher in [[Python (programming language)|Python]].
+
+<syntaxhighlight lang="python">
+# https://en.wikipedia.org/wiki/M8_(cipher)
+
+M = 0xffffffff
+
+def add(x, y):
+    return (x + y) & M
+
+def xor(x, y):
+    return x ^ y
+
+def rol(x, s):
+    return ((x << s) | (x >> (32 - s))) & M
+
+def m8_round(L, R, ri, k, adk, aek):
+    """
+    One round of the algorithm.
+
+    L, R: input
+    ri: round index
+    k: 256-bit execution key
+    adk: 24-bit algorithm decision key
+    aek: 96-bit algorithm expansion key
+    """
+
+    op = [[add, xor][(adk >> (23 - i)) & 1] for i in range(9)]
+    S1 = (adk >> 10) & 0x1f
+    S2 = (adk >> 5) & 0x1f
+    S3 = (adk >> 0) & 0x1f
+    A = (aek >> 64) & M
+    B = (aek >> 32) & M
+    C = (aek >> 0) & M
+    KR = (k >> (32 + 64 * (3 - ri % 4))) & M
+    KL = (k >> (0 + 64 * (3 - ri % 4))) & M
+
+    x = op[0](L, KL)
+    y = op[2](op[1](rol(x, S1), x), A)
+    z = op[5](op[4](op[3](rol(y, S2), y), B), KR)
+    return op[8](op[7](op[6](rol(z, S3), z), C), R), L
+
+def m8_keyexpand(dk, kek, adks, aeks):
+    """
+    Key expansion.
+
+    dk: 64-bit data key
+    kek: 256-bit key expansion key
+    adks: algorithm decision keys
+    aeks: algorithm expansion keys
+    """
+
+    L = (dk >> 32) & M
+    R = (dk >> 0) & M
+    k = 0
+    for i in range(8):
+        L, R = m8_round(L, R, i, kek, adks[i], aeks[i])
+        k |= (L << (32 * (7 - i)))
+    return k
+
+def m8_encrypt(data, N, dk, kek, adks, aeks):
+    """
+    Encrypt one block with M8.
+
+    data: 64-bit input block
+    N: number of rounds (must be >= 8)
+    dk: 64-bit data key
+    kek: 256-bit key expansion key
+    adks: a list of N 24-bit algorithm decision keys
+    aeks: a list of N 96-bit algorithm expansion keys
+    """
+
+    ek = m8_keyexpand(dk, kek, adks, aeks)
+    L = (data >> 32) & M
+    R = (data >> 0) & M
+    for i in range(N):
+        L, R = m8_round(L, R, i, ek, adks[i], aeks[i])
+    return (L << 32) | R
+
+# Published test vector from ISO/IEC 9979/0020
+result = m8_encrypt(
+    0x0000_0000_0000_0001,
+    126,
+    0x0123_4567_89AB_CDEF,
+    0,
+    [0x848B6D, 0x8489BB, 0x84B762, 0x84EDA2] * 32,
+    [0x0000_0001_0000_0000_0000_0000] * 126,
+)
+assert result == 0xFE4B_1622_E446_36C0
+</syntaxhighlight>
+
+==Test vectors==
+The published version of ISO/IEC 9979-0020 includes the following test data:
+
+<blockquote>
+* Round number: 126
+* Key expansion key: 0<sup>256</sup> (an all-zeros vector)
+* Data key: 0123 4567 89AB CDEF in hex
+* Algorithm decision key:
+** rounds 1, 5, 9, ...: 848B6D hex
+** rounds 2, 6, 10, ...: 8489BB hex
+** rounds 3, 7, 11, ...: 84B762 hex
+** rounds 4, 8, 12, ...: 84EDA2 hex
+* Algorithm expansion key: 0000 0001 0000 0000 0000 0000 hex for all rounds
+
+* Plaintext: 0000 0000 0000 0001 hex
+* Ciphertext after 7 rounds: C5D6 FBAD 76AB A53B hex
+* Ciphertext after 14 rounds: 6380 4805 68DB 1895 hex
+* Ciphertext after 21 rounds: 2BFB 806E 1292 5B18 hex
+* Ciphertext after 28 rounds: F610 6A41 88C5 8747 hex
+* Ciphertext after 56 rounds: D3E1 66E9 C50A 10A2 hex
+* Final ciphertext after 126 rounds: FE4B 1622 E446 36C0 hex
+</blockquote>
+
+==Cryptanalysis==
+
+The key-dependent behaviour of the cipher results in a large class of [[weak key]]s which expose the cipher to a range of attacks, including [[differential cryptanalysis]], [[linear cryptanalysis]] and [[mod n cryptanalysis]].<ref>{{cite journal
+    |author1=Toshio Tokita |author2=Tsutomu Matsumoto | title = On Applicability of Differential Cryptanalysis, Linear Cryptanalysis and Mod n Cryptanalysis to an Encryption Algorithm M8 (ISO9979-20)
+    | journal = Ipsj Journal
+    | volume = 42
+    | issue = 8 }}</ref> 
+
+==References==
+{{reflist}}
+
+{{Hitachi}}
+{{Cryptography navbox | block}}
+
+[[Category:Feistel ciphers]]
+[[Category:Block ciphers]]

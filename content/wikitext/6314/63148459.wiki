@@ -1,0 +1,65 @@
+<!-- wikipedia: en
+     page: 63148459
+     title: Sliding DFT
+     revision: 1375073040
+     timestamp: 2026-09-15T18:09:42Z
+     history: https://en.wikipedia.org/w/index.php?curid=63148459&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375073040 -->
+{{Short description|Recursive algorithm in applied mathematics}}
+
+In [[digital signal processing]], the '''sliding discrete Fourier transform''' ('''sliding DFT''' or '''SDFT''') is a [[recursive]] algorithm for computing a sequence of [[discrete Fourier transform]]s on overlapping data windows. Successive windows differ by only one sample, so the transform for the new window can be obtained by updating the transform of the previous window rather than recomputing it from scratch.<ref name="JacobsenLyons2003">{{cite journal |last1=Jacobsen |first1=Eric |last2=Lyons |first2=Richard |title=The sliding DFT |journal=[[IEEE Signal Processing Magazine]] |volume=20 |issue=2 |year=2003 |pages=74–80 |doi=10.1109/MSP.2003.1184347}}</ref>
+
+The sliding DFT is useful in applications that require a new spectral estimate for every input sample, especially when only a subset of DFT frequency bins are needed. In these cases, the sliding DFT can require fewer computations than repeatedly evaluating a complete DFT or [[fast Fourier transform|FFT]].<ref name="JacobsenLyons2003" /> The sliding DFT's recursive structure is closely related to resonator based DFT methods such as the [[Goertzel algorithm]].<ref name="JacobsenLyons2003" />
+
+== Definition ==
+Assuming that the hop size between two consecutive DFTs is one sample, then<ref>{{cite book |last1=Lazzarini |first1=Victor |title=Spectral Music Design | publisher=Oxford Univ. Press |date=2021 }}</ref>
+
+<math display="block">
+\begin{align} 
+F_{t+1}(n) &=  \sum_{k=0}^{N-1} f_{k+t+1}e^{-j2\pi k n/N}\\
+&= \sum_{m=1}^N f_{m+t}e^{-j2\pi  (m-1) n/N} \\
+&= e^{j2\pi n/N} \left[ \sum_{m=0}^{N-1} f_{m+t}e^{-j2\pi m n /N} - f_t + f_{t+N} \right] \\
+&= e^{j2\pi n/N} \left[F_t(n) - f_t + f_{t+N} \right].
+\end{align}
+</math>
+
+From this definition above, the DFT can be computed recursively thereafter. For each frequency bin calculated, the recurrence updates the previous DFT value when a new input sample arrives, rather than needing to recompute the transform over the entire data frame. This makes the sliding DFT useful for applications requiring a new spectral estimate for every input sample, particularly when only a subset of the DFT bins is required.<ref name="JacobsenLyons2003" /> In such applications it can require fewer computations than repeatedly applying a [[fast Fourier transform|FFT]], for instance.<ref name="JacobsenLyons2003" />
+
+=== Implementation and computational cost ===
+
+A single DFT bin of the sliding DFT can be implemented as a [[comb filter]] followed by a complex resonator. When calculating multiple frequency bins, the same comb filter can be shared among the resonators for each individual bin.<ref name="JacobsenLyons2003" /> Each new input sample requires one complex multiplication and two real additions.<ref name="JacobsenLyons2003" />
+
+If all <math>N</math> frequency bins are calculated for every new input sample, each successive <math>N</math>-point spectrum has computational complexity <math>O(N)</math>, compared with <math>O(N^2)</math> for direct evaluation of the DFT and <math>O(N\log N)</math> for an FFT.<ref name="JacobsenLyons2003" /> This advantage depends on how frequently a new spectrum is required: if a complete spectrum is required only once every <math>N</math> samples, repeatedly updating the sliding DFT eliminates much of its computational advantage. The method is therefore particularly useful when spectra must be produced at closely spaced sample positions or when only selected frequency bins are required.<ref name="JacobsenLyons2003" />
+
+Because of its recursive nature, finite precision arithmetic can cause numerical errors to accumulate. In the conventional formulation, the complex coefficient in the feedback path corresponds to a pole on the [[unit circle]], so rounding errors in its representation can lead to inaccurate results or instability.<ref name="Duda2010">{{cite journal |last=Duda |first=Krzysztof |title=Accurate, Guaranteed Stable, Sliding Discrete Fourier Transform |journal=[[IEEE Signal Processing Magazine]] |volume=27 |issue=6 |year=2010 |pages=124–127 |doi=10.1109/MSP.2010.938088}}</ref> Modified forms of the algorithm, such as the ''modulated sliding DFT'', avoid this problem by removing the complex factor from the recursive feedback loop.<ref name="Duda2010" />
+
+However, implementing the [[window function]] on a sliding DFT is difficult due to its recursive nature, therefore it is done exclusively in a frequency domain.<ref>{{cite journal |last1=Rafii |first1=Zafar |title=Sliding Discrete Fourier Transform with Kernel Windowing |journal=IEEE Signal Processing Magazine |date=14 November 2018 |volume=35 |issue=6 |page=88 |doi=10.1109/MSP.2018.2855727 |bibcode=2018ISPM...35f..88R }}</ref>
+
+One approach to frequency domain windowing is to derive a kernel from the desired time domain window, and to apply that kernel to the output of the SDFT. Since the kernel depends on the window and not on the input signal, this means it can be computed in advance<ref name="Rafii2018">{{cite journal |last1=Rafii |first1=Zafar |title=Sliding Discrete Fourier Transform with Kernel Windowing |journal=[[IEEE Signal Processing Magazine]] |date=14 November 2018 |volume=35 |issue=6 |pages=88–92 |doi=10.1109/MSP.2018.2855727 |bibcode=2018ISPM...35f..88R }}</ref>
+
+For some commonly used windows, the resulting frequency domain kernel is sparse. For instance, the [[Hann function|Hann]] and [[Blackman window]] kernels are sparse, allowing the windowing operation to be implemented using a short convolution across neighboring DFT bins.<ref name="Rafii2018" /> Kernels for other windows, such as triangular, Gaussian, and Kaiser windows, contain more nonzero coefficients but can be approximated by discarding small values. This allows windowing to be applied while retaining the sample by sample recurrence of the SDFT.<ref name="Rafii2018" />
+
+=== Sliding windowed infinite Fourier transform ===
+The '''sliding windowed infinite Fourier transform''' (SWIFT) is an [[infinite impulse response]] alternative to the finite-window sliding DFT that uses an exponentially decaying window. A related variant, αSWIFT, combines two SWIFT transforms having different exponential decay rates, producing an effective window proportional to
+
+<math display="block"> w(x)=e^{-\alpha x}-e^{-\beta x}. </math>
+
+This permits a non-rectangular, asymmetric weighting of past samples while retaining recursive sample-by-sample updates.<ref name="SWIFT">{{cite magazine
+ | last1 = Grado | first1 = Logan L.
+ | last2 = Johnson | first2 = Matthew D.
+ | last3 = Netoff | first3 = Theoden I.
+ | date = September 2017
+ | doi = 10.1109/msp.2017.2718039
+ | issue = 5
+ | magazine = IEEE Signal Processing Magazine
+ | pages = 183–188
+ | publisher = Institute of Electrical and Electronics Engineers
+ | title = Tips & Tricks: The Sliding Windowed Infinite Fourier Transform
+ | url = https://par.nsf.gov/servlets/purl/10078055
+ | volume = 34}}</ref>
+
+==References==
+{{reflist}}
+
+[[Category:Fast Fourier transforms]]

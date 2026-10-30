@@ -1,0 +1,186 @@
+<!-- wikipedia: en
+     page: 434897
+     title: Hough transform
+     revision: 1367924421
+     timestamp: 2026-08-06T00:42:22Z
+     history: https://en.wikipedia.org/w/index.php?curid=434897&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1367924421 -->
+{{Short description|Method of detecting shapes within images}}
+{{FeatureDetectionCompVisNavbox}}
+
+The '''Hough transform''' ({{IPAc-en|h|ʌ|f}}) is a [[feature extraction]] technique used in [[image analysis]], [[computer vision]], [[pattern recognition]], and [[digital image processing]].<ref>[[Linda Shapiro|Shapiro, Linda]] and Stockman, George. "Computer Vision", Prentice-Hall, Inc. 2001</ref><ref>{{Cite journal |last1=Romanengo |first1=Chiara |last2=Falcidieno |first2=Bianca |last3=Biasotti |first3=Silvia |date=2024-09-01 |title=Extending the Hough transform to recognize and approximate space curves in 3D models |journal=Computer Aided Geometric Design |volume=113 |article-number=102377 |doi=10.1016/j.cagd.2024.102377 |issn=0167-8396 |doi-access=free }}</ref> The purpose of the technique is to find imperfect instances of objects within a certain class of shapes by a voting procedure. This voting procedure is carried out in a [[parameter space]], from which object candidates are obtained as local maxima in a so-called accumulator space that is explicitly constructed by the algorithm for computing the Hough transform.  Mathematically it is simply the  [[Radon transform]] in the plane, known since at least 1917, but the Hough transform refers to its use in image analysis. 
+
+The classical Hough transform was concerned with the identification of [[Line (mathematics)|lines]] in the image, but later the Hough transform has been extended to identifying positions of arbitrary shapes, most commonly [[circle]]s or [[ellipse]]s. The Hough transform as it is universally used today was invented by [[Richard Duda]] and [[Peter E. Hart|Peter Hart]] in 1972, who called it a "generalized Hough transform"<ref>Duda, R. O. and P. E. Hart, "Use of the Hough Transformation to Detect Lines and Curves in Pictures", ''Comm. ACM'', vol.&nbsp;15, pp.&nbsp;11–15 (January, 1972).</ref> after the related 1962 patent of Paul Hough.<ref>Hough, P. V. C. ''Method and means for recognizing complex patterns'', U.S. Patent 3,069,654, Dec.&nbsp;18, 1962.</ref><ref>P. V. C. Hough, ''[http://inspirehep.net/record/919922/files/HEACC59_598-602.pdf Machine Analysis of Bubble Chamber Pictures]'', Proc. Int. Conf. High Energy Accelerators and Instrumentation, 1959.</ref> The transform was popularized in the [[computer vision]] community by [[Dana H.&nbsp;Ballard]] through a 1981 journal article titled "[[Generalised Hough transform|Generalizing the Hough transform to detect arbitrary shapes]]".
+
+== History ==
+
+It was initially invented for machine analysis of [[bubble chamber]] photographs (Hough, 1959).
+
+The Hough transform was patented as {{US patent|3069654}} in 1962 and assigned to the U.S. Atomic Energy Commission with the name "Method and Means for Recognizing Complex Patterns". This patent uses a slope-intercept parametrization for straight lines, which awkwardly leads to an unbounded transform space, since the slope can go to infinity.
+
+The rho–theta parametrization universally used today was [[Species description|first described]] in
+: {{cite journal |last1=Duda |first1=R.O. |last2=Hart |first2=P. E. |title=Use of the Hough Transformation to Detect Lines and Curves in Pictures |journal=Comm. ACM |volume=15 |pages=11–15 |date=January 1972 |doi=10.1145/361237.361242|s2cid=1105637 |doi-access=free }}
+although it was already standard for the [[Radon transform]] since at least the 1930s.
+
+O'Gorman and Clowes' variation is described in
+: {{cite journal | last1 = O'Gorman | first1 = Frank | last2 = Clowes | first2 = MB | year = 1976 | title = Finding Picture Edges Through Collinearity of Feature Points | journal = IEEE Trans. Comput. | volume = 25 | issue = 4 | pages = 449–456 | doi = 10.1109/TC.1976.1674627 | bibcode = 1976ITCmp.100..449O | s2cid = 10851078 }}
+
+The story of how the modern form of the Hough transform was invented is given in
+: {{cite journal |last=Hart |first=P. E. |url=https://pdfs.semanticscholar.org/f7e8/cbca97de34fd3695e538e164a1b40d27b04e.pdf |archive-url=https://web.archive.org/web/20180516103712/https://pdfs.semanticscholar.org/f7e8/cbca97de34fd3695e538e164a1b40d27b04e.pdf |archive-date=2018-05-16 |title=How the Hough Transform was Invented |journal=IEEE Signal Processing Magazine |volume=26 |issue=6 |pages=18–22 |date=November 2009 |doi=10.1109/msp.2009.934181 |bibcode=2009ISPM...26...18H |s2cid=16245096 }}
+
+==Theory==
+
+In automated analysis of [[digital image]]s, a subproblem often arises of detecting simple shapes, such as straight lines, circles or ellipses. In many cases an [[edge detection|edge detector]] can be used as a pre-processing stage to obtain image points or image pixels that are on the desired curve in the image space. Due to imperfections in either the image data or the edge detector, however, there may be missing points or pixels on the desired curves as well as spatial deviations between the ideal line/circle/ellipse and the noisy edge points as they are obtained from the edge detector. For these reasons, it is often non-trivial to group the extracted edge features to an appropriate set of lines, circles or ellipses. The purpose of the Hough transform is to address this problem by making it possible to perform groupings of edge points into object candidates by performing an explicit voting procedure over a set of parameterized image objects (Shapiro and Stockman, 304).
+
+=== Detecting lines ===
+The simplest case of Hough transform is detecting straight lines. In general, the straight line {{nobr|''y'' {{=}} ''mx'' + ''b''}} can be represented as a point (''b'',&nbsp;''m'') in the parameter space. However, vertical lines pose a problem. They would give rise to unbounded values of the slope parameter ''m''. Thus, for computational reasons, Duda and Hart<ref>{{cite web |url=http://www.ai.sri.com/pubs/files/tn036-duda71.pdf  |title=Use of the Hough Transformation to Detect Lines and Curves in Pictures |author1=[[Richard O. Duda]] |author2=[[Peter E. Hart]] |publisher=[[Artificial Intelligence Center]] |date=April 1971}}</ref> proposed the use of the [[Hesse normal form]]
+
+: <math>r = x \cos\theta + y \sin\theta,</math>
+
+where <math>r</math> is the distance from the [[Origin (mathematics)|origin]] to the closest point on the straight line, and <math>\theta</math> is the angle between the <math>x</math> axis and the line connecting the origin with that closest point.
+
+The intuition for this form, similarly to the plane equation, is that every vector on the line must be perpendicular (orthogonal) to the line segment of length <math>r</math> that comes from the origin. The intersection point of the function line and the perpendicular line that comes from the origin is at <math>P_0 = (r \cos \theta, r \sin \theta)</math>. So, for any point <math>P = (x,y)</math> on the line, the vector <math>P - P_0</math> must be orthogonal to the vector <math>P_0 - 0 = P_0</math>. This enforces <math>(P - P_0) \cdot P_0 = 0</math>. Therefore, <math>P \cdot P_0 = P_0 \cdot P_0</math>. So, we get <math>r(x \cos \theta + y \sin \theta) = r^2 (\cos^2 \theta + \sin^2 \theta)</math>. Yet, as <math>\cos^2 \theta + \sin^2 \theta = 1</math>, we get the final form of <math>x \cos \theta + y \sin \theta = r</math>.
+
+[[File:R theta line.GIF|213px|left]]
+It is therefore possible to associate with each line of the image a pair <math>(r, \theta)</math>. The <math>(r, \theta)</math> plane is sometimes referred to as ''Hough space'' for the set of straight lines in two dimensions. This representation makes the Hough transform conceptually very close to the two-dimensional [[Radon transform]]. In fact, the Hough transform is mathematically equivalent to the Radon transform, but the two transformations have different computational interpretations traditionally associated with them.<ref>[http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.2.9419 A short introduction to the Radon and Hough transforms and how they relate to each other<!-- Bot generated title -->]. CiteSeerX.</ref>
+
+Given a ''single point'' in the plane, the set of ''all'' straight lines going through that point corresponds to a [[Sine wave|sinusoidal curve]] in the (''r'',&nbsp;''θ'') plane, which is unique to that point. A set of two or more points that form a straight line will produce sinusoids crossing at the (''r'',&nbsp;''θ'') for that line. Thus, the problem of detecting [[Line (geometry)#Collinear points|collinear points]] can be converted to the problem of finding [[Concurrent lines|concurrent curves]].
+
+=== Probabilistic interpretation ===
+Given a shape parametrized by <math>(a_1, ..., a_t)</math>, taking values in the set <math>S</math> called the shape space, one can interpret the Hough transform as the inverse transform of a [[probability distribution]] on the image space to the shape space <math>S</math>, and interpret shape detection as [[maximum likelihood estimation]].
+
+Explicitly, the Hough transform performs an approximate [[Naive Bayes classifier|naive Bayes]] inference. We start with a uniform prior on the shape space. We consider only the positive evidence, and ignore all negative evidence, so that we can detect partially occluded shapes. 
+
+We add up the [[log-likelihood]] in the shape space up to an additive constant. The assumption of ''naive Bayes'' means that all pixels in the image space provide independent evidence, so that their likelihoods multiply, that is, their log-likelihoods add. The freedom in additive constant allows us to perform no operation on the "background pixels" in shape space.
+
+Finally, we perform maximum likelihood estimation by picking out the peaks in the log-likelihood on the shape space.<ref>{{Cite book |last=Stephens |first=R. S. |chapter=A probabilistic approach to the Hough Transform |title=Proceedings of the British Machine Vision Conference 1990 |date=1990 |chapter-url=http://dx.doi.org/10.5244/c.4.12 |pages=12.1–12.6 |article-number=12 |publisher=British Machine Vision Association |doi=10.5244/c.4.12}}</ref>
+
+==<span lang="en" dir="ltr">Implementation</span>==
+
+The linear Hough transform [[algorithm]] estimates the two parameters that define a straight line. The transform space has two dimensions, and every point in the transform space is used as an accumulator to detect or identify a line described by <math>r = x \cos \theta + y\sin \theta</math>. Every point in the detected edges in the image contributes to the accumulators.
+
+The [[dimension]] of the accumulator equals the number of unknown parameters, i.e., two, considering quantized values of <math>r</math> and <math>\theta</math> in the pair <math>(r, \theta)</math>. For each pixel at <math>(x, y)</math> and its neighborhood, the Hough transform algorithm determines whether there is enough evidence of a straight line at that pixel. If so, it will calculate the parameters <math>(r, \theta)</math> of that line, then look for the accumulator's bin that the parameters fall into, and increment the value of that bin.
+
+By finding the bins with the highest values, typically by looking for local maxima in the accumulator space, the most likely lines can be extracted, and their (approximate) geometric definitions read off (Shapiro and Stockman, 304). The simplest way of finding these ''peaks'' is by applying some form of threshold, but other techniques may yield better results in different circumstances – determining which lines are found, as well as how many. Since the lines returned do not contain any length information, it is often necessary, in the next step, to find which parts of the image match up with which lines. Moreover, due to imperfection errors in the edge-detection step, there will usually be errors in the accumulator space, which may make it non-trivial to find the appropriate peaks, and thus the appropriate lines.
+
+The final result of the linear Hough transform is a two-dimensional array (matrix) similar to the accumulator—one dimension of this matrix is the quantized angle <math>\theta</math>, and the other dimension is the quantized distance <math>r</math>. Each element of the matrix has a value equal to the sum of the points or pixels that are positioned on the line represented by quantized parameters <math>(r, \theta)</math>. So the element with the highest value indicates the straight line that is most represented in the input image.<ref name="Jeppe Jensen 2007">{{cite web |last=Jensen |first=Jeppe |title=Hough Transform for Straight Lines |url=http://www.cvmt.dk/education/teaching/e07/MED3/IP/hough_lines.pdf |access-date=16 December 2011 |archive-url=https://web.archive.org/web/20120426054222/http://www.cvmt.dk/education/teaching/e07/MED3/IP/hough_lines.pdf |archive-date=26 April 2012}}</ref>
+
+==Examples==
+
+===Example 1===
+
+Consider three data points, shown here as black dots.
+
+[[File:Hough_transform_diagram.svg|center|800px|alt=Three graphs that show steps of the Hough transformation process|Example 1]]
+
+*For each data point, a number of lines are plotted going through it, all at different angles. These are shown here in different colours.
+*The Hough transform accumulates contributions from all pixels in the detected edge. To each line, a support line exists which is [[perpendicular]] to it and which intersects the [[Origin (mathematics)|origin]]. In each case, one of these is shown as an arrow.
+*The length (i.e. perpendicular distance to the origin) and angle of each support line is calculated. Lengths and angles are tabulated below the diagrams.
+From the calculations, it can be seen that in either case the support line at 60° has a similar length.
+Hence, it is understood that the corresponding lines (the blue ones in the above picture) are very similar.
+One can thus assume that all points lie close to the blue line.
+
+===Example 2===
+
+The following is a different example showing the results of a Hough transform on a raster image containing two thick lines.
+
+[[File:Hough-example-result-en.png|800px]]
+
+The results of this transform were stored in a matrix. Cell value represents the number of curves through any point. Higher cell values are rendered brighter. The two distinctly bright spots are the Hough parameters of the two lines. From these spots' positions, angle and distance from image center of the two lines in the input image can be determined.
+
+==Variations and extensions==
+
+===Using the gradient direction to reduce the number of votes===
+An improvement suggested by O'Gorman and Clowes can be used to detect lines if one takes into account that the local [[gradient]] of the image intensity will necessarily be orthogonal to the edge. Since [[edge detection]] generally involves computing the intensity gradient magnitude, the gradient direction is often found as a side effect. If a given point of coordinates (''x,y'') happens to indeed be on a line, then the local direction of the gradient gives the ''θ'' parameter corresponding to said line, and the ''r'' parameter is then immediately obtained. (Shapiro and Stockman, 305) The gradient direction can be estimated to within 20°, which shortens the sinusoid trace from the full 180° to roughly 45°. This reduces the computation time and has the interesting effect of reducing the number of useless votes, thus enhancing the visibility of the spikes corresponding to real lines in the image.
+
+===Kernel-based Hough transform (KHT) ===
+Fernandes and Oliveira <ref>{{cite journal | last1 = Fernandes | first1 = L.A.F. | last2 = Oliveira | first2 = M.M. | year = 2008 | title = Real-time line detection through an improved Hough transform voting scheme | doi = 10.1016/j.patcog.2007.04.003 | journal = Pattern Recognition | volume = 41 | issue = 1| pages = 299–314 | bibcode = 2008PatRe..41..299F | s2cid = 5996185 }}</ref> suggested an improved voting scheme for the Hough transform that allows a software implementation to achieve real-time performance even on relatively large images (e.g., 1280×960). The Kernel-based Hough transform uses the same <math>(r,\theta)</math> parameterization proposed by Duda and Hart but operates on clusters of approximately collinear pixels. For each cluster, votes are cast using an oriented elliptical-Gaussian kernel that models the uncertainty associated with the best-fitting line with respect to the corresponding cluster. The approach not only significantly improves the performance of the voting scheme, but also produces a much cleaner accumulator and makes the transform more robust to the detection of spurious lines.
+
+===3-D kernel-based Hough transform for plane detection (3DKHT)===
+Limberger and Oliveira<ref>{{cite journal | last1 = Limberger | first1 = F.&nbsp;A. | last2 = Oliveira | first2 = M.&nbsp;M. | year = 2015 | title = Real-Time Detection of Planar Regions in Unorganized Point Clouds | doi = 10.1016/j.patcog.2014.12.020 | journal = Pattern Recognition | volume = 48 | issue = 6 | pages = 2043–2053 | bibcode = 2015PatRe..48.2043L | hdl = 10183/97001 | url = https://lume.ufrgs.br/bitstream/10183/97001/1/000919556.pdf | hdl-access = free }}</ref> suggested a deterministic technique for plane detection in unorganized point clouds whose cost is <math>n \log(n)</math> in the number of samples, achieving real-time performance for relatively large datasets (up to <math>10^5</math> points on a 3.4&nbsp;GHz CPU). It is based on a fast Hough-transform voting strategy for planar regions, inspired by the Kernel-based Hough transform (KHT). This 3D kernel-based Hough transform (3DKHT) uses a fast and robust algorithm to segment clusters of approximately co-planar samples, and casts votes for individual clusters (instead of for individual samples) on a (<math>\theta, \phi, \rho</math>) spherical accumulator using a trivariate Gaussian kernel. The approach is several orders of magnitude faster than existing (non-deterministic) techniques for plane detection in point clouds, such as [[Randomized Hough transform|RHT]] and [[RANSAC]], and scales better with the size of the datasets. It can be used with any application that requires fast detection of planar features on large datasets.
+
+===Hough transform of curves, and its generalization for analytical and non-analytical shapes===
+Although the version of the transform described above applies only to finding straight lines, a similar transform can be used for finding any shape which can be represented by a set of parameters. A circle, for instance, can be transformed into a set of three parameters, representing its center and radius, so that the Hough space becomes three dimensional. Arbitrary ellipses and curves can also be found this way, as can any shape easily expressed as a set of parameters.
+
+The generalization of the Hough transform for detecting analytical shapes in spaces having any dimensionality was proposed by Fernandes and Oliveira.<ref>{{cite journal | last1 = Fernandes | first1 = L.A.F. | last2 = Oliveira | first2 = M.M. | year = 2012 | title = A general framework for subspace detection in unordered multidimensional data | doi = 10.1016/j.patcog.2012.02.033 | journal = Pattern Recognition | volume = 45 | issue = 9| pages = 3566–3579 | bibcode = 2012PatRe..45.3566F }}</ref> In contrast to other Hough transform-based approaches for analytical shapes, Fernandes' technique does not depend on the shape one wants to detect nor on the input [[data type]]. The detection can be driven to a type of analytical shape by changing the assumed model of geometry where data have been encoded (e.g., [[euclidean space]], [[projective space]], [[conformal geometry]], and so on), while the proposed formulation remains unchanged. Also, it guarantees that the intended shapes are represented with the smallest possible number of parameters, and it allows the concurrent detection of different kinds of shapes that best fit an input set of entries with different dimensionalities and different geometric definitions (e.g., the concurrent detection of planes and spheres that best fit a set of points, straight lines and circles).
+
+For more complicated shapes in the plane (i.e., shapes that cannot be represented analytically in some 2D space), the [[Generalised Hough transform]]<ref>{{cite journal | last1 = Ballard | first1 = D.H. | year = 1981 | title = Generalizing the Hough transform to detect arbitrary shapes | journal = Pattern Recognition | volume = 13 | issue = 2| pages = 111–122 | doi = 10.1016/0031-3203(81)90009-1 | bibcode = 1981PatRe..13..111B | hdl = 1802/13802 | hdl-access = free }}</ref> is used, which allows a [[Feature (computer vision)|feature]] to vote for a particular position, orientation and/or scaling of the shape using a predefined look-up table.The Hough transform accumulates contributions from all pixels in the detected edge.
+
+=== Circle detection process ===
+{{main|Circle Hough Transform}}
+Altering the algorithm to detect circular shapes instead of lines is relatively straightforward.
+
+* First, we create the accumulator space, which is made up of a cell for each pixel. Initially each cell is set to 0.
+* For each edge point (i, j) in the image, increment all cells which according to the equation of a circle <math>(i - a)^2 + (j - b)^2 = r^2</math> could be the center of a circle. These cells are represented by the letter <math>a</math> in the equation.
+* For each possible value of <math>a</math> found in the previous step, find all possible values of <math>b</math> which satisfy the equation.
+* Search for local maxima in the accumulator space. These cells represent circles that were detected by the algorithm.
+
+If we do not know the radius of the circle we are trying to locate beforehand, we can use a three-dimensional accumulator space to search for circles with an arbitrary radius. Naturally, this is more computationally expensive.
+
+This method can also detect circles that are partially outside of the accumulator space, as long as enough of the circle's area is still present within it.
+
+=== Detection of 3D objects (planes and cylinders) ===
+Hough transform can also be used for the detection of 3D objects in [[Range imaging|range data]] or 3D [[point cloud]]s. The extension of classical Hough transform for plane detection is quite straightforward. A plane is represented by its explicit equation <math>z = a_x x + a_y y + d</math> for which we can use a 3D Hough space corresponding to <math>a_x</math>, <math>a_y</math> and <math>d</math>. This extension suffers from the same problems as its 2D counterpart i.e., near horizontal planes can be reliably detected, while the performance deteriorates as planar direction becomes vertical (big values of <math>a_x</math> and <math>a_y</math> amplify the noise in the data). This formulation of the plane has been used for the detection of planes in the point clouds acquired from airborne laser scanning <ref>Vosselman, G., Dijkman, S: "[https://pdfs.semanticscholar.org/bb77/54f8e928bd79baf56a1da501484a4567d8ab.pdf 3D Building Model Reconstruction from Point Clouds and Ground Plans]", International Archives of the Photogrammetry, Remote Sensing and Spatial Information Sciences, vol 34, part 3/W4, October 22–24, 2001, Annapolis, MD, USA, pp. 37–44.</ref> and works very well because in that domain all planes are nearly horizontal.
+
+For generalized plane detection using Hough transform, the plane can be parametrized by its normal vector <math>n</math> (using spherical coordinates) and its distance from the origin <math>\rho</math> resulting in a three dimensional Hough space. This results in each point in the input data voting for a sinusoidal surface in the Hough space. The intersection of these sinusoidal surfaces indicates presence of a plane.<ref>Tahir Rabbani: [http://www.ncg.knaw.nl/Publicaties/Geodesy/62Rabbani.html "Automatic reconstruction of industrial installations – Using point clouds and images"] {{Webarchive|url=https://web.archive.org/web/20081201052227/http://www.ncg.knaw.nl/Publicaties/Geodesy/62Rabbani.html |date=2008-12-01 }}, pages 43–44, Publications on Geodesy 62, Delft, 2006. {{ISBN|978-90-6132-297-9}}.</ref> A more general approach for more than 3 dimensions requires search heuristics to remain feasible.<ref>{{cite journal | last1 = Achtert | first1 = Elke | last2 = Böhm | first2 = Christian | last3 = David | first3 = Jörn | last4 = Kröger | first4 = Peer | last5 = Zimek | first5 = Arthur |author-link5=Arthur Zimek| year = 2008 | title = Global Correlation Clustering Based on the Hough Transform | journal = Statistical Analysis and Data Mining | volume = 1 | issue = 3| pages = 111–127 | doi = 10.1002/sam.10012 | s2cid = 5111283 | citeseerx = 10.1.1.716.6006 }}</ref>
+
+Hough transform has also been used to find cylindrical objects in point clouds using a two step approach. The first step finds the orientation of the cylinder and the second step finds the position and radius.<ref>Tahir Rabbani and Frank van den Heuvel, "[https://pdfs.semanticscholar.org/d205/b6e6f743bc62e31257b47d18b36ada95f4f1.pdf Efficient hough transform for automatic detection of cylinders in point clouds]" in Proceedings of the 11th Annual Conference of the Advanced School for Computing and Imaging (ASCI '05), The Netherlands, June 2005.</ref>
+
+===Using weighted features===
+One common variation detail. That is, finding the bins with the highest count in one stage can be used to constrain the range of values searched in the next.
+
+=== Carefully chosen parameter space ===
+A high-dimensional parameter space for the Hough transform is not only slow, but if implemented without forethought can easily overrun the available memory. Even if the programming environment allows the allocation of an array larger than the available memory space through [[virtual memory]], the number of [[Page swapping|page swaps]] required for this will be very demanding because the accumulator array is used in a randomly accessed fashion, rarely stopping in contiguous memory as it skips from index to index.
+
+Consider the task of finding ellipses in an 800x600 image. Assuming that the radii of the ellipses are oriented along principal axes, the parameter space is four-dimensional. (''x'', ''y'') defines the center of the ellipse, and ''a'' and ''b'' denote the two radii. Allowing the center to be anywhere in the image, adds the constraint 0<x<800 and 0<y<600. If the radii are given the same values as constraints, what is left is a sparsely filled accumulator array of more than 230 billion values.
+
+A program thus conceived is unlikely to be allowed to allocate sufficient memory. This doesn't mean that the problem can't be solved, but only that new ways to constrain the size of the accumulator array are to be found, which makes it feasible. For instance:
+
+# If it is reasonable to assume that the ellipses are each contained entirely within the image, the range of the radii can be reduced. The largest the radii can be is if the center of the ellipse is in the center of the image, allowing the edges of the ellipse to stretch to the edges. In this extreme case, the radii can only each be half the magnitude of the image size oriented in the same direction. Reducing the range of a and b in this fashion reduces the accumulator array to 57 billion values.
+# Trade accuracy for space in the estimation of the center: If the center is predicted to be off by 3 on both the x and y axis this reduces the size of the accumulator array to about 6 billion values.
+# Trade accuracy for space in the estimation of the radii: If the radii are estimated to each be off by 5 further reduction of the size of the accumulator array occurs, by about 256 million values.
+# Crop the image to areas of interest. This is image dependent, and therefore unpredictable, but imagine a case where all of the edges of interest in an image are in the upper left quadrant of that image. The accumulator array can be reduced even further in this case by constraining all 4 parameters by a factor of 2, for a total reduction factor of 16.
+By applying just the first three of these constraints to the example stated about, the size of the accumulator array is reduced by almost a factor of 1000, bringing it down to a size that is much more likely to fit within a modern computer's memory.
+
+==== Efficient ellipse detection algorithm ====
+
+Yonghong Xie and Qiang Ji give an efficient way of implementing the Hough transform for ellipse detection by overcoming the memory issues.<ref name="XieJi2002">{{Cite book| doi = 10.1109/ICPR.2002.1048464| chapter = A new efficient ellipse detection method| year = 2002| volume = 2| last1 = Yonghong Xie| last2 = Qiang Ji| pages = 957–960| title = Object recognition supported by user interaction for service robots| isbn = 978-0-7695-1695-0| citeseerx = 10.1.1.1.8792| s2cid = 9276255}}</ref> As discussed in the algorithm (on page 2 of the paper), this approach uses only a one-dimensional accumulator (for the minor axis) in order to detect ellipses in the image. The complexity is O(N<sup>3</sup>) in the number of non-zero points in the image.
+
+==Limitations==
+The Hough transform is only efficient if a high number of votes fall in the right bin, so that the bin can be easily detected amid the background noise. This means that the bin must not be too small, or else some votes will fall in the neighboring bins, thus reducing the visibility of the main bin.<ref>{{cite web|url=http://homepages.inf.ed.ac.uk/rbf/HIPR2/hough.htm |title=Image Transforms - Hough Transform |publisher=Homepages.inf.ed.ac.uk |access-date=2009-08-17}}</ref>
+
+Also, when the number of parameters is large (that is, when we are using the Hough transform with typically more than three parameters), the average number of votes cast in a single bin is very low, and those bins corresponding to a real figure in the image do not necessarily appear to have a much higher number of votes than their neighbors. The complexity increases at a rate of <!--Big-O(A<sup>m - 2</sup>)--><math>\mathcal{O}\left({A^{m-2}}\right)</math> with each additional parameter, where <math>A</math> is the size of the image space and <math>m</math> is the number of parameters. (Shapiro and Stockman, 310) Thus, the Hough transform must be used with great care to detect anything other than lines or circles.
+
+Finally, much of the efficiency of the Hough transform is dependent on the quality of the input data: the edges must be detected well for the Hough transform to be efficient. Use of the Hough transform on noisy images is a very delicate matter and generally, a denoising stage must be used before. In the case where the image is corrupted by speckle, as is the case in radar images, the [[Radon transform]] is sometimes preferred to detect lines, because it attenuates the noise through summation.
+
+==See also==
+* [[Generalised Hough transform]]
+* [[Randomized Hough transform]]
+* [[Radon transform]]
+* [[Fourier transform]]
+
+==References==
+{{Reflist}}
+
+==External links==
+* [https://web.archive.org/web/20150503173405/http://cimg.sourceforge.net/screenshots.shtml hough_transform.cpp] – C++ code – example of CImg library ([[Open source software|open source]] library, [[C++]] source code, [[Grayscale]] images)
+* [https://web.archive.org/web/20200430031840/http://matlabtricks.com/post-39/understanding-the-hough-transform Interactive Demonstration on the Basics of the Hough Transform]
+* https://web.archive.org/web/20070827233423/http://www.rob.cs.tu-bs.de/content/04-teaching/06-interactive/Hough.html – [[Java Applet]] + Source for learning the Hough transformation in slope-intercept form
+* https://web.archive.org/web/20070827191440/http://www.rob.cs.tu-bs.de/content/04-teaching/06-interactive/HNF.html – [[Java Applet]] + Source for learning the Hough-Transformation in normal form
+* http://www.sydlogan.com/deskew.html {{Webarchive|url=https://web.archive.org/web/20100209090834/http://www.sydlogan.com/deskew.html |date=2010-02-09 }} – Deskew images using Hough transform ([[Grayscale]] images, [[C++]] source code)
+* https://web.archive.org/web/20070922090216/http://imaging.gmse.net/articledeskew.html – Deskew images using Hough transform ([[Visual Basic]] source code)
+* http://www.mitov.com/products/visionlab – [[Embarcadero Delphi|Delphi]], [[C++]] and [[.NET Framework|.NET]] free for educational purposes library containing Line, Circle and Line segment Hough transform components.
+* [http://www.isprs.org/proceedings/XXXVI/3-W52/final_papers/Tarsha-Kurdi_2007.pdf Tarsha-Kurdi, F., Landes, T., Grussenmeyer, P., 2007a. Hough-transform and extended RANSAC algorithms for automatic detection of 3d building roof planes from Lidar data.] ISPRS Proceedings. Workshop Laser scanning. Espoo, Finland, September 12–14, 2007.
+* [https://web.archive.org/web/20100709025652/http://intopii.com/into/ Into] contains open source implementations of linear and circular Hough transform in C++
+* http://www.vision.ime.usp.br/~edelgado/defesa/code/hough.html {{Webarchive|url=https://archive.today/20121205205612/http://www.vision.ime.usp.br/~edelgado/defesa/code/hough.html |date=2012-12-05 }} Hough-transform for Ellipse detection, implemented in [[C (programming language)|C]].
+* [http://scikit-image.org/docs/dev/api/skimage.transform.html scikit-image] Hough-transform for line, circle and ellipse, implemented in [[Python (programming language)|Python]].
+* [http://www.mathworks.com/matlabcentral/fileexchange/40537-wavelet-based-circular-hough-transform] Hough transform based on wavelet filtering, to detect a circle of a particular radius. ([[Matlab]] code.)
+* [http://www.mathworks.com/help/images/detect-lines-in-images.html Hough transform for lines using MATLAB] {{Webarchive|url=https://web.archive.org/web/20140413140540/http://www.mathworks.com/help/images/detect-lines-in-images.html |date=2014-04-13 }}
+* [http://www.mathworks.com/help/images/ref/imfindcircles.html Hough transform for circles in MATLAB]
+* [http://www2.ic.uff.br/~laffernandes/projects/kht/ KHT] – C++ source code.
+* [http://www.inf.ufrgs.br/~oliveira/pubs_files/HT3D/HT3D_page.html 3DKHT] – C++ source code and datasets.
+* [https://www.luigiselmi.eu/dip/hough_transform.html Straight line Hough transform in Python]
+
+{{DEFAULTSORT:Hough Transform}}
+[[Category:Feature detection (computer vision)]]

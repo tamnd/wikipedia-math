@@ -1,0 +1,645 @@
+<!-- wikipedia: en
+     page: 981655
+     title: Integer square root
+     revision: 1374012916
+     timestamp: 2026-09-09T07:56:36Z
+     history: https://en.wikipedia.org/w/index.php?curid=981655&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374012916 -->
+{{short description|Greatest integer less than or equal to square root}}{{use dmy dates|date=September 2025}}
+In [[number theory]], the '''integer square root''' (isqrt) of a [[non-negative integer]] {{mvar|n}} is the non-negative integer {{mvar|m}} which is the [[floor function|greatest integer less than or equal]] to the [[square root]] of {{mvar|n}},
+<math display="block">\operatorname{isqrt}(n) = \lfloor \sqrt n \rfloor.</math>
+
+For example, <math>\operatorname{isqrt}(27) = \lfloor \sqrt{27} \rfloor = \lfloor 5.19615242270663 ... \rfloor = 5.</math>
+
+== Introductory remark ==
+Let <math>y</math> and <math>k</math> be non-negative integers.
+
+Algorithms that compute (the [[decimal representation]] of) <math>\sqrt y</math> '''run forever''' on each input <math>y</math> which is not a [[square number|perfect square]].<ref group="note">[[Square root#As decimal expansions|The square roots of the perfect squares (e.g., 0, 1, 4, 9, 16) are integers. In all other cases, the square roots of positive integers are irrational numbers.]]</ref>
+
+Algorithms that compute <math>\lfloor \sqrt y \rfloor</math> '''do not run forever''', but are nevertheless capable of computing <math>\sqrt y</math> up to any desired accuracy <math>k</math>.
+
+Choose any <math>k</math> and compute <math display="inline">\lfloor \sqrt {y \times 100^k} \rfloor</math>.
+
+'''For example''' (setting <math>y = 2</math>):
+<math display="block">\begin{align}
+& k = 0: \lfloor \sqrt {2 \times 100^{0}} \rfloor = \lfloor \sqrt {2} \rfloor = 1 \\
+& k = 1: \lfloor \sqrt {2 \times 100^{1}} \rfloor = \lfloor \sqrt {200} \rfloor = 14 \\
+& k = 2: \lfloor \sqrt {2 \times 100^{2}} \rfloor = \lfloor \sqrt {20000} \rfloor = 141 \\
+& k = 3: \lfloor \sqrt {2 \times 100^{3}} \rfloor = \lfloor \sqrt {2000000} \rfloor = 1414 \\
+& \vdots \\
+& k = 8: \lfloor \sqrt {2 \times 100^{8}} \rfloor = \lfloor \sqrt {20000000000000000} \rfloor = 141421356 \\
+& \vdots \\
+\end{align}</math>
+
+Compare the results with <math>\sqrt {2} = 1.41421356237309504880168872420969807856967187537694 ...</math>
+
+It appears that the multiplication of the input by <math>100^k</math> gives an accuracy of {{mvar|k}} decimal digits.<ref group="note">It is no surprise that the repeated multiplication by {{math|100}} is a feature in {{harvtxt|Jarvis|2006}}</ref>
+
+To compute the (entire) decimal representation of <math>\sqrt y</math>, one can execute <math>\operatorname{isqrt}(y)</math> an infinite number of times, increasing <math>y</math> by a factor <math>100</math> at each pass.
+
+Assume that in the next program (<math>\operatorname{sqrtForever}</math>) the procedure <math>\operatorname{isqrt}(y)</math> is already defined and &mdash; for the sake of the argument &mdash; that all variables can hold integers of unlimited magnitude.
+
+Then <math>\operatorname{sqrtForever}(y)</math> will print the entire decimal representation of <math>\sqrt y</math>.<ref group="note">The fractional part of square roots of perfect squares is rendered as {{math|000...}}.</ref>
+
+:<syntaxhighlight lang="python">
+import math                             # assume isqrt computation as given here
+
+def sqrtForever(y: int):
+    """ Print sqrt(y), without halting """
+    result = math.isqrt(y)
+    print(str(result) + ".", end="")    # print result, followed by a decimal point
+
+    while True:                         # repeat forever ...
+        y *= 100                        # theoretical example: overflow is ignored
+        result = math.isqrt(y)
+        print(str(result % 10), end="") # print last digit of result
+</syntaxhighlight>
+
+The conclusion is that algorithms which compute {{code|isqrt()}} are computationally equivalent to [[Methods of computing square roots|algorithms which compute {{code|sqrt()}}]].
+
+Another derivation of <math>\sqrt y</math> from <math>\lfloor \sqrt y \rfloor</math> is given in section [[#Continued_fraction_of_√c_based_on_isqrt|Continued fraction of √c based on isqrt]] below.
+
+==Basic algorithms==
+The '''integer square root''' of a [[non-negative integer]] <math>y</math> can be defined as
+<math display="block">\lfloor \sqrt y \rfloor = \max \{ x : x^2 \leq y < (x+1)^2, x \in \mathbb{N} \}</math>
+
+For example, <math>\operatorname{isqrt}(27) = \lfloor \sqrt{27} \rfloor = 5</math> because <math>5^2 \leq 27 \text{ and } 27  < 6^2</math>.
+
+===Algorithm using linear search===
+The following [[Python (programming language)|Python]] programs are straightforward implementations.
+
+:{{flex columns
+|1=
+<syntaxhighlight lang="python">
+def isqrt(y: int) -> int:
+    """
+    Integer square root
+    (linear search, ascending)
+    """
+	# initial underestimate, L <= isqrt(y)   
+    L = 0
+    while (L + 1) * (L + 1) <= y:
+        L += 1
+
+    return L
+</syntaxhighlight>
+|2=
+<syntaxhighlight lang="python">
+def isqrt(y: int) -> int:
+    """
+    Integer square root
+    (linear search, descending)
+    """
+	# initial overestimate, isqrt(y) <= R   
+    R = y
+    while (R * R > y):
+        R -= 1
+
+    return R
+</syntaxhighlight>
+}}
+
+===Linear search using addition===
+In the program above (linear search, ascending) one can replace multiplication by addition, using the equivalence
+<math display="block">(L+1)^2 = L^2 + 2L + 1 = L^2 + 1 + \sum_{i=1}^L 2.</math>
+:<syntaxhighlight lang="python">
+def isqrt(y: int) -> int:
+    """
+    Integer square root
+    (linear search, ascending) using addition
+    """
+    L = 0
+    a = 1
+    d = 3
+
+    while a <= y:
+        a = a + d
+        d = d + 2
+        L = L + 1
+
+    return L
+</syntaxhighlight>
+
+===Algorithm using binary search===
+[[Binary search#Linear_search|Linear search]] sequentially checks every value until it hits the smallest <math>x</math> where <math>x^2 > y</math>.
+
+A speed-up is achieved by using [[Binary search#Procedure_for_finding_the_leftmost_element|binary search]] instead.
+:<syntaxhighlight lang="python">
+def isqrt(y: int) -> int:
+    """ Integer square root (binary search) """
+    L = 0                   # lower bound of the square root
+    R = y + 1               # upper bound of the square root
+
+    while (L != R - 1):
+        M = (L + R) // 2    # midpoint to test
+        if (M * M <= y):
+            L = M
+        else:
+            R = M
+
+    return L
+</syntaxhighlight>
+
+'''Numerical examples'''
+* <math>\operatorname{isqrt}(0) = 0</math>, <math>\operatorname{isqrt}(1) = 1</math>.
+* Using [[Binary search#Procedure_for_finding_the_leftmost_element|binary search]] the computation of <math>\operatorname{isqrt}(131072)</math> converges to <math>362</math> in <math>17</math> iteration steps via the <math>[L,R]</math> sequence
+:<math>\begin{aligned} &[0,131073] \to [0,65536] \to [0,32768] \to [0,16384] \to [0,8192] \to [0,4096] \rightarrow [0,2048] \to [0,1024] \to [0,512] \\& \to [256,512] \to [256,384] \to [320,384] \to [352,384] \to [352,368] \to [360,368] \to [360,364] \to [362,364] \to [362,363] \end{aligned}</math>
+* The computation of <math>\operatorname{isqrt}(2000000)</math> converges to <math>1414</math> in <math>21</math> steps via the <math>[L,R]</math> sequence
+:<math>\begin{aligned} & [0,2000001] \to [0,1000000] \to [0,500000] \to [0,250000] \to [0,125000] \to [0,62500] \to [0,31250] \to [0,15625] \\& \to [0,7812] \to [0,3906] \to [0,1953] \to [976,1953] \to [976,1464] \to [1220,1464] \to [1342,1464] \to [1403,1464] \\& \to [1403,1433] \to [1403,1418] \to [1410,1418] \to [1414,1418] \to [1414,1416] \to [1414,1415] \end{aligned}</math>
+: [[Binary search#Linear_search|Linear search]] (ascending, starting from <math>0</math>) needs {{val|1414}} steps.
+
+==Algorithm using Newton's method==
+One way of calculating <math>\sqrt{n}</math> and <math>\operatorname{isqrt}(n)</math> is to use [[Methods_of_computing_square_roots#Heron's method|Heron's method]], which is a special case of [[Newton's method]], to find a solution for the equation <math>x^2 - n = 0</math>, giving the iterative formula
+<math display="block">x_{k+1} = \frac{1}{2}\!\left(x_k + \frac{n}{x_k}\right), \quad k \ge 0, \quad x_0 > 0.</math>
+
+The [[sequence]] <math>\{x_k\}</math> [[limit of a sequence|converges]] [[Rate of convergence|quadratically]] to <math>\sqrt{n}</math> as <math>k\to\infty</math>.<ref>{{cite web| first = S. G. |last= Johnson | website = MIT Course 18.335: Introduction to Numerical Methods | title = Square Roots via Newton's Method| date = 2015-02-04 | url = https://math.mit.edu/~stevenj/18.335/newton-sqrt.pdf | access-date = 2025-10-12}}</ref><ref group="note">See [[Methods_of_computing_square_roots#Heron's method|Heron's method]].</ref>
+
+===Using only integer division===
+For computing <math>\lfloor \sqrt n \rfloor</math> one can use the quotient of [[Euclidean division]] for both of the division operations.  This has the advantage of only using integers for each intermediate value, thus making the use of [[floating point]] representations unnecessary.
+
+Let <math>n > 0</math> and initial guess <math>x_0 > 0</math>. Define the integer sequence:
+:<math>x_{k+1} = \left\lfloor \frac{x_k + \left\lfloor n / x_k \right\rfloor}{2} \right\rfloor, \quad k = 0, 1, 2, \dots</math>
+
+===Proof of convergence===
+1. ''Positivity:''  
+All terms are positive integers: <math>x_k > 0</math> for all <math>k</math>.
+
+2. ''Monotonicity:''  
+* If <math>x_k > \sqrt{n}</math>, then <math>\lfloor n / x_k \rfloor \le n / x_k</math>;
+: so <math>x_{k+1} = \left\lfloor \frac{x_k + \lfloor n / x_k \rfloor}{2} \right\rfloor < \frac{x_k + n / x_k}{2} < x_k</math>.
+:Hence the sequence decreases.
+
+* If <math>x_k < \sqrt{n}</math>, then <math>\lfloor n / x_k \rfloor \ge n / x_k - 1</math>;
+:so <math>x_{k+1} \ge \frac{x_k + n / x_k - 1}{2} > x_k - 1</math>.
+:Hence the sequence increases or stays the same.
+
+3. ''Boundedness:''  
+The sequence is bounded below by 1 and above by <math>x_0</math>, so it is bounded.
+
+4. ''Stabilization / Oscillation:''
+A bounded monotone integer sequence either stabilizes or oscillates between two consecutive integers:  
+: <math>x_{k+1} = x_k</math> or <math>x_{k+1} = x_k \pm 1</math>.
+
+5. ''Integer "Fixed-point" Condition:''  
+At stabilization or oscillation:  
+: <math>x_{k+1} = \lfloor (x_k + \lfloor n / x_k \rfloor)/2 \rfloor</math>.
+:This ensures that the sequence is either at <math>\lfloor \sqrt n \rfloor</math> or oscillating between the two nearest integers around <math>\sqrt n</math>.
+
+6. ''Conclusion:''  
+The sequence eventually stabilizes at <math>\lfloor \sqrt n \rfloor</math> or oscillates between <math>\lfloor \sqrt n \rfloor</math> and <math>\lceil \sqrt n \rceil</math>.
+
+'''Remark:'''  
+* <math>\lfloor \sqrt n \rfloor</math> is a strict fixed point unless <math>n + 1</math> is a perfect square.  
+* If <math>n + 1</math> is a perfect square, the sequence oscillates between <math>\lfloor \sqrt n \rfloor</math> and <math>\lceil \sqrt n \rceil</math>.
+
+=== Example implementation ===
+:<syntaxhighlight lang="python">
+def isqrt(n: int, x0: int = 1) -> int:
+    """
+    isqrt via Newton-Heron iteration with specified initial guess. 
+    Uses 2-cycle oscillation detection.
+
+    Preconditions:
+        n >= 0                    # isqrt(0) = 0
+        x0 > 0, defaults to 1     # initial guess
+
+    Output:
+        isqrt(n)
+    """
+    assert n >= 0 and x0 > 0, "Invalid input"
+
+	# isqrt(0) = 0; isqrt(1) = 1
+    if n < 2: return n
+
+    prev2 = -1   # x_{i-2}
+    prev1 = x0   # x_{i-1}
+
+    while True:
+        x1 = (prev1 + n // prev1) // 2
+
+        # Case 1: converged (steady value)
+        if x1 == prev1:
+            return x1
+
+        # Case 2: oscillation (2-cycle)
+        if x1 == prev2 and x1 != prev1:
+            # We’re flipping between prev1 and prev2
+            # Choose the smaller one (the true integer sqrt)
+            return min(prev1, x1)
+
+        # Move forward
+        prev2, prev1 = prev1, x1
+</syntaxhighlight>
+
+=== Numerical examples ===
+The call <code>isqrt(2000000)</code> converges to <math>1414</math> in 14 passes through <code>while</code>:
+:<math>\begin{aligned} & 1000000 \to 500001 \to 250002 \to 125004 \to 62509 \to 31270 \to 15666 \to 7896 \to 4074 \to 2282 \\& \to 1579 \to 1422 \to 1414 \rightarrow 1414\end{aligned}</math>.
+One iteration is gained by setting <code>x0</code> to <math>\lfloor n/2 \rfloor</math> with the call <code>isqrt(2000000, 1000000)</code>. Although Heron's method converges quadratically close to the solution, less than one bit precision per iteration is gained at the beginning. This means that the choice of the initial estimate is critical for the performance of the algorithm.<ref name="Newton2" group="note">Newton's method can be given as follows<br/>(with the initial guess set to <math>s</math>):
+<syntaxhighlight lang="python">
+def isqrt(s: int) -> int:
+    """isqrt via Newton/Heron iteration."""
+    L, R = 1, s
+    while L < R:
+        R = L + ((R - L) // 2)
+        L = s // R
+    return R
+</syntaxhighlight>
+'''Computations'''
+* <math>\operatorname{isqrt}(0) = 0</math>, <math>\operatorname{isqrt}(1) = 1</math>.
+* The computation of <math>\operatorname{isqrt}(2000000)</math> consists in <math>13 \; [L,R]</math> steps:
+:<math>\begin{aligned} &[1,2000000] \to [2,1000000] \to [3,500001] \\& \to [7,250002] \to [15,125004] \to [31,62509] \\& \to [63,31270] \to [127,15666] \to [253,7896] \\& \to [490,4074] \to [876,2282] \to [1266,1579] \\& \to [1406,1422] \to [1414,1414] \end{aligned}</math>
+:One sees that the performance gain of Newton's method over binary search is due to the fact that <math>\lfloor \sqrt s \rfloor</math> is approached simultaneously from '''L'''eft and '''R'''ight, whereas binary search adjusts only one side at each iteration.</ref> When a fast computation for the integer part of the [[binary logarithm]] or for the [[bit-length]] is available (like e.g. <code>n.bit_length()</code> in [[Python (programming language)|Python]]), one should better start at <math display="block">x_0 = 2^{\lfloor (\log_2 n) / 2 \rfloor + 1},</math> which is the least [[power of two]] bigger than <math>\sqrt n</math>. In the example of the integer square root of {{math|2000000}}, <math>\lfloor \log_2 n \rfloor = 20</math>, <math>x_0 = 2^{11} = 2048</math>, and the resulting sequence is
+<math display="block">2048 \rightarrow 1512 \rightarrow 1417 \rightarrow 1414 \rightarrow 1414.</math> In this case only four iteration steps are needed. This corresponds to the call <code>isqrt(2000000, 2048)</code>.
+
+==Digit-by-digit algorithm==
+
+The traditional [[Methods of computing square roots#Digit-by-digit calculation|pen-and-paper algorithm]] for computing the square root <math>\sqrt{n}</math> is based on working from higher digit places to lower, and as each new digit pick the largest that will still yield a square <math>\leq n</math>. If stopping after the one's place, the result computed will be the integer square root.
+
+===Using bitwise operations===
+
+If working in [[base 2]], the choice of digit is simplified to that between 0 (the "small candidate") and 1 (the "large candidate"), and digit manipulations can be expressed in terms of binary shift operations. With <code>*</code> being multiplication, <code>&lt;&lt;</code> being left shift, and <code>&gt;&gt;</code> being logical right shift, a [[Recursion (computer science)|recursive]] algorithm to find the integer square root of any [[natural number]] is:
+:<syntaxhighlight lang="python">
+def isqrt_recursive(n: int) -> int:
+    assert n >= 0, "n must be a non-negative integer"
+    if n < 2: return n
+
+    # Recursive call:
+    small_cand = isqrt_recursive(n >> 2) << 1 # same as 2 * isqrt(n // 4)
+    large_cand = small_cand + 1
+    if large_cand * large_cand > n: return small_cand
+    else: return large_cand
+</syntaxhighlight>
+Equivalent non-recursive program:<ref name="Guy">{{cite web | last= Guy | first= Martin | publisher = University of Kent at Canterbury (UKC) | url = http://medialab.freaknet.org/martin/src/sqrt/sqrt.c | archive-url=https://web.archive.org/web/20120306040058/http://medialab.freaknet.org/martin/src/sqrt/sqrt.c |archive-date = 2012-03-06 | url-status = live | title = Fast integer square root by Mr. Woo's abacus algorithm | date = 1985 | access-date = 2025-10-05}}</ref><ref group="note">The algorithm is explained in [[Square_root_algorithms#Binary numeral system (base 2)]]</ref>
+:<syntaxhighlight lang="python">
+def isqrt_iterative(x: int) -> int:
+    """ Guy, Martin (1985). "Fast integer square root by Mr. Woo's abacus algorithm" """
+    assert x >= 0, "x must be a non-negative integer"
+
+    op = x; res = 0
+
+    # note: i << 1 is 2 * i, i << 2 is 4 * i,
+    #       i >> 1 is i // 2, and i >> 2 is i // 4...
+
+    # "one" starts at the highest power of four <= x
+    one = 1
+    while one <= op: one <<= 2
+    one >>= 2
+
+    while one != 0:
+        dltasqr = res + one
+        if op >= dltasqr:
+            op -= dltasqr
+            res += one << 1
+        res >>= 1
+        one >>= 2
+
+    return res
+</syntaxhighlight>
+
+See {{section link|Methods of computing square roots|Binary numeral system (base 2)}} for an example.<ref name="Guy"/>
+
+== Karatsuba square root algorithm ==
+
+The '''Karatsuba square root algorithm''' applies the same ''[[Divide-and-conquer algorithm|divide-and-conquer principle]]'' as the [[Karatsuba algorithm|Karatsuba multiplication algorithm]] to compute integer square roots.  
+The method was formally analyzed by Paul Zimmermann (1999).<ref name="Zimmermann">{{cite web | last = Zimmermann | first = Paul | title = Karatsuba Square Root | date = 1999 <!-- Date finished --> | publisher = [[French Institute for Research in Computer Science and Automation|Inria]] | publication-date = 2006-05-24 | series = Research report #3805 | url = https://inria.hal.science/inria-00072854v1/file/RR-3805.pdf | archive-url = https://web.archive.org/web/20230511212802/https://inria.hal.science/inria-00072854v1/file/RR-3805.pdf | archive-date = 2023-05-11 |url-status=live}}</ref> It recursively splits the input number into high and low halves, computes the square root of the higher half, and then determines the lower half algebraically.
+
+=== Algorithm ===
+Paul Zimmermann (1999) gives the following algorithm.<ref name="Zimmermann"/>
+:<math>\text{Algorithm } \text{SqrtRem}(n = a_3 b^3 + a_2 b^2 + a_1 b + a_0)</math>
+:<math>\text{Input: } 0 \le a_i < b, \text{ with } a_3 \ge b/4</math>
+:<math>\text{Output: } (s,r) \text{ such that } s^2 \le n = s^2 + r < (s + 1)^2</math>
+:<math>\qquad (s', r') \gets \text{SqrtRem}(a_3 b + a_2)</math>
+:<math>\qquad (q, u) \gets \text{DivRem}(r' b + a_1, 2 s')</math>
+:<math>\qquad s \gets s' b + q</math>
+:<math>\qquad r \gets u b + a_0 - q^2</math>
+:<math>\qquad \text{if } r < 0 \text{ then }</math>
+:<math>\qquad \qquad r \gets r + 2s - 1</math>
+:<math>\qquad \qquad s \gets s - 1</math>
+:<math>\qquad \text{return } (s,r)</math>
+
+Because only one recursive call is made per level, the total complexity remains <math>O(n)</math> in the number of bits. Each level performs only linear-time arithmetic on half-size numbers.
+
+=== Comparison with Karatsuba multiplication ===
+{| class="wikitable"
+! Property !! Karatsuba multiplication !! Karatsuba-style square root
+|-
+| Recursive calls per level || 3 || 1
+|-
+| Recurrence || <math>T(n)=3T(n/2)+O(n)</math> || <math>T(n)=T(n/2)+O(n)</math>
+|-
+| Asymptotic complexity || <math>O(n^{\log_2 3})\!\approx\!O(n^{1.585})</math> || <math>O(n)</math>
+|-
+| Key operation || Three partial multiplications and recombination || One recursive square root and algebraic correction
+|}
+
+=== Use and history ===
+The Karatsuba-style square root is mainly used for [[arbitrary-precision arithmetic]] on very large integers, where it combines efficiently with {{ill|Burnikel–Ziegler division|de|Burnikel-Ziegler-Verfahren}} and [[Karatsuba algorithm|Karatsuba multiplication]]. It was first analyzed formally by Paul Zimmermann (1999).<ref name="Zimmermann"/> Earlier practical work includes Martin Guy (1985),<ref name="Guy"/> and recursive versions appear in [[Donald Knuth]] (1998).<ref>{{cite book| last = Knuth| first = Donald E. |author-link=Donald Knuth| title = The Art of Computer Programming, Volume 2: Seminumerical Algorithms | edition = 3rd| publisher = Addison–Wesley | year = 1998|isbn = 9780201896848}}</ref> Modern [[GNU Multiple Precision Arithmetic Library|GMP]] and [[MPIR (mathematics software)|MPIR]] libraries implement similar recursive techniques.
+
+=== Implementation in Python ===
+The [[Python (programming language)|Python]] program below implements Zimmermann’s algorithm. Given an integer <math>n \ge 0</math>, <code>SqrtRem</code> computes simultaneously its integer square root <math>s = \lfloor \sqrt{n} \rfloor</math> and the corresponding remainder <math>r = n - s^2</math>. The choice of <code>isqrt()</code> is ''ad libitum''.<ref name="Newton2" group="note"/>
+:<syntaxhighlight lang="python">
+def SqrtRem(n: int, word_bits: int = 32) -> tuple[int, int]:
+    """
+    Implementation based on Zimmermann's Karatsuba-style integer square root
+    algorithm [Zimmermann, 1999]. It recursively splits the input n into "limbs"
+    of size `word_bits` and combines partial results to compute the integer square root.
+
+    Args:
+        n (int): Non-negative integer to compute the square root of.
+        word_bits (int, optional): Number of bits per "limb" or chunk
+            used when recursively splitting n. Default is 32. Each
+            limb represents a fixed-size part of n for the algorithm.
+
+    Returns:
+        tuple[int, int]: s = integer square root of n, r = remainder (n - s*s).
+
+    Notes:
+        The limb size controls recursion granularity. Larger word_bits
+        reduces recursion depth but increases the size of subproblems;
+        smaller word_bits increases recursion depth but works on smaller chunks.
+
+    Reference:
+        Zimmermann, P. (1999). "Karatsuba Square Root", Research report #3805, Inria.
+        Archived: https://inria.hal.science/inria-00072854v1/file/RR-3805.pdf
+    """
+    if n < 0:
+        raise ValueError("n must be non-negative")
+    if n == 0:
+        return 0, 0  # trivial case
+
+    # Determine number of word-sized limbs (mimics “limb” splitting in Zimmermann)
+    limblen = (n.bit_length() + word_bits - 1) // word_bits
+
+    # Base case: single limb — compute directly
+    if limblen <= 1:
+        s = isqrt(n)  # any isqrt, e.g., math.isqrt or custom
+        r = n - s*s
+        return s, r
+
+    # --- Step 1: Split n into high and low parts ---
+    half_limbs = limblen // 2
+    shift = half_limbs * word_bits
+    hi = n >> shift              # high half, corresponds to a3*b + a2
+    lo = n & ((1 << shift) - 1)  # low half, corresponds to a1*b + a0
+
+    # --- Step 2: Recursive call on the high part ---
+    s_high, r_high = SqrtRem(hi, word_bits)  # approximate sqrt of high half
+
+    # --- Step 3: Recombine to approximate full sqrt ---
+    quarter = shift // 2
+    numerator = (r_high << quarter) | (lo >> quarter)   # simulate Zimmermann’s DivRem step
+    denominator = s_high << 1                           # 2*s' term
+
+    q = numerator // denominator if denominator else 0  # integer division
+    s_candidate = (s_high << quarter) + q               # recombine high and low
+
+    # --- Step 4: Verification and correction ---
+    # Ensure remainder is non-negative and s*s <= n < (s+1)*(s+1)
+    s = s_candidate
+    r = n - s*s
+
+    while r < 0:                 # overestimate correction
+        s -= 1
+        r = n - s*s
+    while (s + 1)*(s + 1) <= n:  # underestimate correction
+        s += 1
+        r = n - s*s
+
+    return s, r
+</syntaxhighlight>
+
+'''Example usage'''
+:<syntaxhighlight lang="python">
+    for n in [(2**32) + 5, 12345678901234567890, (1 << 1512) - 1]:
+        s, r = SqrtRem(n)
+        print(f"SqrtRem({n}) = {s}, remainder = {r}")
+</syntaxhighlight>
+{| class="wikitable"
+! Computation
+|-
+| <div style="word-break: break-all;">
+SqrtRem(4294967301) = 65536, remainder = 5
+</div>
+|-
+| <div style="word-break: break-all;">
+SqrtRem(12345678901234567890) = 3513641828, remainder = 5763386306
+</div>
+|-
+| <div style="word-break: break-all;">
+SqrtRem(143665816004337822710282600285310394341474369045835074863414468709543787931907367746179403311452034095731304066234112071267510472464260955153084575408147254672957261763907982395337943906645864229014250227057207826232751957053220218983971305018634078800548055251973907806245884614087189937340865371691338441989956445051526543084039211962387469415699218979531585795574920384684004258007709014706216763392717018544247025174258411677231986785008489302218244095) = 379032737378102767370356320425415662904513187772631008578870126471203845870697482014374611530431269030880793627229265919475483409207718357286202948008100864063587640630090308972232735749901964068667724412528434753635948938919935, remainder = 758065474756205534740712640850831325809026375545262017157740252942407691741394964028749223060862538061761587254458531838950966818415436714572405896016201728127175281260180617944465471499803928137335448825056869507271897877839870
+</div>
+|}
+
+==In programming languages==
+
+Some [[programming language]]s dedicate an explicit operation to the integer square root calculation in addition to the general case or can be extended by libraries to this end.
+
+{| class="wikitable"
+! Programming language !! Example use !! Version introduced
+|-
+| [[Chapel (programming language)|Chapel]] || <code>BigInteger.sqrt(result, n);</code><ref>{{cite web | url = https://chapel-lang.org/docs/modules/standard/BigInteger.html#BigInteger.sqrt | title = BigInteger - Chapel Documentation 2.1 | website = Chapel Documentation - Chapel Documentation 2.1}}</ref><br><code>BigInteger.sqrtRem(result, remainder, n);</code> || Unknown
+|-
+| [[Common Lisp]] || <code>(isqrt n)</code><ref>{{cite web | url = http://www.lispworks.com/documentation/lw50/CLHS/Body/f_sqrt_.htm | title = CLHS: Function SQRT, ISQRT | website = Common Lisp HyperSpec (TM)}}</ref> || Unknown
+|-
+| [[Crystal (programming language)|Crystal]] || <code>Math.isqrt(n)</code><ref>{{cite web | url = https://crystal-lang.org/api/1.13.2/Math.html#isqrt%28value%3AInt%3A%3APrimitive%29-instance-method | title = Math - Crystal 1.13.2 | website = The Crystal Programming Language API docs}}</ref> || 1.2
+|-
+| [[Java (programming language)|Java]] || <code>n.sqrt()</code><ref>{{cite web | url = https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/math/BigInteger.html#sqrt() | title = BigInteger (Java SE 21 & JDK 21) | website = JDK 21 Documentation}}</ref> (<code>BigInteger</code> only) || 9
+|-
+| [[Julia (programming language)|Julia]] || <code>isqrt(n)</code><ref>{{cite web | url = https://docs.julialang.org/en/v1/base/math/#Base.isqrt | title = Mathematics - The Julia Language | website = Julia Documentation - The Julia Language}}</ref> || 0.3
+|-
+| [[Maple (software)|Maple]] || <code>isqrt(n)</code><ref>{{cite web | url = https://www.maplesoft.com/support/help/maple/view.aspx?path=isqrt | title = iroot- Maple Help | website = Help - Maplesoft}}</ref> || Unknown
+|-
+| [[PARI/GP]] || <code>sqrtint(n)</code><ref>{{cite web | url = https://pari.math.u-bordeaux.fr/dochtml/html-stable/Arithmetic_functions.html#sqrtint | title = Catalogue of GP/PARI Functions: Arithmetic functions | website = PARI/GP Development Headquarters}}</ref> || 1.35a<ref>{{cite web | url = http://library.snls.org.sz/archive/science/math/multiplePrecision/pari/ | title = Index of /archive/science/math/multiplePrecision/pari/ | website = PSG Digital Resources | archive-url = https://web.archive.org/web/20241106111659/http://library.snls.org.sz/archive/science/math/multiplePrecision/pari/ | archive-date = 2024-11-06}}</ref> (as <code>isqrt</code>) or before
+|-
+| [[PHP]] || <code>sqrt($num)</code><ref>{{cite web | url = https://www.php.net/manual/en/function.sqrt.php | title = Mathematical functions | website = PHP Documentation}}</ref> || 4
+|-
+| [[Python (programming language)|Python]] || <code>math.isqrt(n)</code><ref>{{cite web | url = https://docs.python.org/3/library/math.html#math.isqrt | title = Mathematical functions | website = Python Standard Library documentation}}</ref> || 3.8
+|-
+| [[Racket (programming language)|Racket]] || <code>(integer-sqrt n)</code><ref>{{cite web | url = https://docs.racket-lang.org/reference/generic-numbers.html#%28def._%28%28quote._~23~25kernel%29._integer-sqrt%29%29 | title = 4.3.2 Generic Numerics | website = Racket Documentation}}</ref><br><code>(integer-sqrt/remainder n)</code> || Unknown
+|-
+| [[Ruby (programming language)|Ruby]] || <code>Integer.sqrt(n)</code><ref>{{cite web | url = https://docs.ruby-lang.org/en/master/Integer.html#method-c-sqrt | title = class Integer - RDoc Documentation | website = RDoc Documentation}}</ref> || 2.5.0
+|-
+| [[Rust (programming language)|Rust]] || <code>n.isqrt()</code><ref>{{cite web | url = https://doc.rust-lang.org/std/primitive.i32.html#method.isqrt | title = i32 - Rust | website = std - Rust }}</ref><br><code>n.checked_isqrt()</code><ref>{{cite web | url = https://doc.rust-lang.org/std/primitive.i32.html#method.checked_isqrt | title = i32 - Rust | website = std - Rust }}</ref> || 1.84.0
+|-
+| [[SageMath]] || <code>isqrt(n)</code><ref>{{cite web | url = https://doc.sagemath.org/html/en/reference/rings_standard/sage/rings/integer.html#sage.rings.integer.Integer.isqrt | title = Elements of the ring ℤ of integers - Standard Commutative Rings | website = SageMath Documentation}}</ref> || Unknown
+|-
+| [[Scheme (programming language)|Scheme]] || <code>(exact-integer-sqrt n)</code><ref>{{cite web | url = https://standards.scheme.org/corrected-r7rs/r7rs-Z-H-8.html#TAG:__tex2page_index_470 | title = Revised<sup>7</sup> Report on the Algorithmic Language Scheme | website = Scheme Standards}}</ref> || R<sup>6</sup>RS
+|-
+| [[Tcl (programming language)|Tcl]] || <code>isqrt($n)</code><ref>{{cite web | url = https://www.tcl.tk/man/tcl/TclCmd/mathfunc.htm#M22 | title = mathfunc manual page - Tcl Mathematical Functions | website = Tcl/Tk 8.6 Manual}}</ref> || 8.5
+|-
+| [[Zig (programming language)|Zig]] || <code>std.math.sqrt(n)</code><ref>{{cite web | url = https://ziglang.org/documentation/master/std/#std.math.sqrt.sqrt | title = std.math.sqrt.sqrt - Zig Documentation | website = Home &#x26A1; Zig Programming Language }}</ref> || Unknown
+|}
+
+== Continued fraction of √c based on isqrt ==
+The computation of the [[simple continued fraction]] of <math>\sqrt{c}</math> can be carried out using only integer operations, with <math>\operatorname{isqrt}(c)</math> serving as the initial term. The algorithm<ref>{{cite web
+|last= Beceanu
+|first= Marius
+|date= 2003-02-05
+|title= Period of the Continued Fraction of sqrt(n)
+|url= https://web.math.princeton.edu/mathlab/jr02fall/Periodicity/mariusjp.pdf
+|at= Theorem 2.3
+|access-date= 2025-10-05
+|archive-url= https://web.archive.org/web/20151221205104/http://web.math.princeton.edu/mathlab/jr02fall/Periodicity/mariusjp.pdf
+|url-status=live
+|archive-date=2015-12-21
+}}</ref> generates continued fraction expansion [[Periodic continued fraction#Canonical form and repetend|in canonical form]].
+
+Let <math>a_0 = \lfloor \sqrt{c} \rfloor</math>
+be the integer square root of <math>c</math>.
+
+If <math>c</math> is a perfect square, the continued fraction terminates immediately:
+:<math>\sqrt{c} = [a_0].</math>
+Otherwise, the continued fraction is periodic:
+:<math>\sqrt{c} = [a_0; \overline{a_1, a_2, \dots, a_m}]</math>,
+where the overline indicates the repeating part.
+
+The continued fraction can be obtained by the following recurrence, which uses only integer arithmetic:
+:<math>m_{0} = 0, \quad d_{0} = 1, \quad a_{0} = \lfloor \sqrt{c} \rfloor.</math>
+:For <math>k \geq 0</math>,
+:<math>
+m_{k+1} = d_{k} a_{k} - m_{k}, \quad
+d_{k+1} = \frac{c - m_{k+1}^{2}}{d_{k}}, \quad
+a_{k+1} = \left\lfloor \frac{a_{0} + m_{k+1}}{d_{k+1}} \right\rfloor.
+</math>
+
+Since there are only finitely many possible triples <math>(m_{k}, d_{k}, a_{k})</math>, eventually one repeats, and from that point onward the continued fraction becomes periodic.
+
+=== Implementation in Python ===
+{{anchor|continued_fraction_sqrt_Python}}
+On input <math>c</math>, a non-negative integer, the following program computes the [[simple continued fraction]] of <math>\sqrt{c}</math>. The integer square root <math>\lfloor \sqrt{c} \rfloor</math> is computed once.<ref name="Newton2" group="note"/> Only integer arithmetic is used. The program outputs <math>[a0, (a1, a2, ..., am)]</math>, where the second element is the periodic part.
+:<syntaxhighlight lang="python" start="0" highlight="7">
+def continued_fraction_sqrt(c: int) -> tuple[int, tuple[int, ...]]:
+    """
+    Compute the continued fraction of sqrt(c) using integer arithmetic.
+    Returns [a0, (a1, a2, ..., am)] where the second element is the periodic part.
+    For perfect squares, the period is empty.
+    """
+    a0 = isqrt(c)
+
+    # Perfect square: return period empty
+    if a0 * a0 == c:
+        return (a0, ())
+
+    m, d, a = 0, 1, a0
+    period = []
+    seen = set()
+
+    while True:
+        m_next = d * a - m
+        d_next = (c - m_next * m_next) // d
+        a_next = (a0 + m_next) // d_next
+
+        if (m_next, d_next, a_next) in seen:
+            break
+
+        seen.add((m_next, d_next, a_next))
+        period.append(a_next)
+        m, d, a = m_next, d_next, a_next
+
+    return (a0, tuple(period))
+</syntaxhighlight>
+
+'''Example usage'''
+:<syntaxhighlight lang="python" start="0" highlight="4">
+    for c in list(range(0, 18)) + [114] + [4097280036]:
+        cf = continued_fraction_sqrt(c)
+        print(f"sqrt({c}): {cf}")
+</syntaxhighlight>
+'''Output'''
+:{| class="wikitable"
+! Input (c)
+! Output (cf)
+! Continued fraction
+|-
+| 0 || [0] || <math>\sqrt{0} = 0</math>
+|-
+| 1 || [1] || <math>\sqrt{1} = 1</math>
+|-
+| 2|| [1; (2,)] || <math>\sqrt{2} = [1; \overline{2}]</math>
+|-
+| 3|| [1; (1, 2)] || <math>\sqrt{3} = [1; \overline{1,2}]</math>
+|-
+| 4 || [2] || <math>\sqrt{4} = 2</math>
+|-
+| 5 || [2; (4,)] || <math>\sqrt{5} = [2; \overline{4}]</math>
+|-
+| 6 || [2; (2, 4)] || <math>\sqrt{6} = [2; \overline{2,4}]</math>
+|-
+| 7 || [2; (1, 1, 1, 4)] || <math>\sqrt{7} = [2; \overline{1,1,1,4}]</math>
+|-
+| 8 || [2; (1, 4)] || <math>\sqrt{8} = [2; \overline{1,4}]</math>
+|-
+| 9 || [3] || <math>\sqrt{9} = 3</math>
+|-
+| 10 || [3; (6,)] || <math>\sqrt{10} = [3; \overline{6}]</math>
+|-
+| 11 || [3; (3, 6)] || <math>\sqrt{11} = [3; \overline{3,6}]</math>
+|-
+| 12 || [3; (2, 6)] || <math>\sqrt{12} = [3; \overline{2,6}]</math>
+|-
+| 13 || [3; (1, 1, 1, 1, 6)] || <math>\sqrt{13} = [3; \overline{1, 1, 1, 1, 6}]</math>
+|-
+| 14 || [3; (1, 2, 1, 6)] || <math>\sqrt{14} = [3; \overline{1, 2, 1, 6}]</math>
+|-
+| 15 || [3; (1, 6)] || <math>\sqrt{15} = [3; \overline{1,6}]</math>
+|-
+| 16 || [4] || <math>\sqrt{16} = 4</math>
+|-
+| 17 || [4; (8,)] || <math>\sqrt{17} = [4; \overline{8}]</math>
+|-
+| 114 || [10; (1, 2, 10, 2, 1, 20)] || <math>\sqrt{114} = [10; \overline{1,2,10,2,1,20}]</math><ref group="note">See the [[Periodic continued fraction#example-114|example]] in the article [[Periodic continued fraction]].</ref>
+|-
+| 4097280036 || colspan="2" | <div style="width:400px; white-space:normal;">[64009; (1, 1999, 3, 4, 1, 499, 3, 1, 3, 3, 1, 124, ...<br/>{{spaces|16}}..., 3, 1, 3, 499, 1, 4, 3, 1999, 1, 128018)]<br/>'''period: 13,032 terms'''<ref group="note">The continued fraction expansion of <math>\sqrt{4097280036}</math> has a period of 13,032 terms. While Python is unable to display the entire sequence on screen due to its length, writing the output to a file completes successfully.</ref></div>
+|}
+
+== See also ==
+* [[Square root algorithms]]
+* [[Periodic continued fraction]]
+
+==Notes==
+{{Reflist|group=note|2}}
+
+== References ==
+{{Reflist}}
+
+==External links==
+{{Refbegin}}
+
+*{{cite journal
+ |last= Jarvis
+ |first= Ashley Frazer
+ |journal= Mathematical Spectrum
+ |title= Square roots by subtraction
+ |year= 2006
+ |volume= 37
+ |pages= 119–122
+ |url= http://www.afjarvis.org.uk/maths/jarvisspec02.pdf
+}}
+*{{cite book
+ |last= Minsky
+ |first= Marvin
+ |author-link= Marvin Minsky
+ |title= Computation: Finite and Infinite Machines
+ |chapter= 9. The Computable Real Numbers
+ |url= https://archive.org/details/computationfinit0000mins
+ |url-access= registration
+ |publisher= Prentice-Hall
+ |year= 1967
+ |isbn= 0-13-165563-9
+ |oclc= 0131655639
+}}
+*{{cite web
+ |url= http://mathcentral.uregina.ca/RR/database/RR.09.95/grzesina1.html
+ |title= A geometric view of the square root algorithm
+}}
+
+{{Refend}}
+
+{{number theoretic algorithms}}
+[[Category:Number theoretic algorithms]]
+[[Category:Number theory]]
+[[Category:Root-finding algorithms]]
+[[Category:Articles with example C code]]
+[[Category:Articles with example Python (programming language) code]]
+[[Category:Articles with example Rust code]]

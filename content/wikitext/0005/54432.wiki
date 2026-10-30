@@ -1,0 +1,648 @@
+<!-- wikipedia: en
+     page: 54432
+     title: Unification (computer science)
+     revision: 1373667860
+     timestamp: 2026-09-07T05:20:51Z
+     history: https://en.wikipedia.org/w/index.php?curid=54432&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373667860 -->
+{{Short description|Algorithmic process of solving equations}}
+
+In [[logic]] and [[computer science]], specifically [[automated reasoning]], '''unification''' is an algorithmic process of [[solving equations]] between symbolic [[expression (mathematics)|expressions]], each of the form ''Left-hand side = Right-hand side''. For example, using ''x'',''y'' as variables, and taking ''f'' to be an [[uninterpreted function]], the [[Singleton (mathematics)|singleton]] equation set { ''f''(1,''y'') = ''f''(''x'',2) } is a syntactic first-order unification problem that has the substitution { ''x'' [[↦]] 1, ''y'' ↦ 2 } as its only solution.
+
+Conventions differ on what values variables may assume and which expressions are considered equivalent. In first-order syntactic unification, variables range over [[first-order terms]] and equivalence is syntactic. This version of unification has a unique "best" answer and is used in [[logic programming]] and programming language [[type system]] implementation, especially in [[Hindley–Milner]] based [[type inference]] algorithms. In higher-order unification, possibly restricted to '''higher-order pattern unification''', terms may include lambda expressions, and equivalence is up to beta-reduction. This version is used in [[proof assistant]]s and higher-order logic programming, for example [[Isabelle (theorem prover)|Isabelle]], [[Twelf]], and [[lambdaProlog]]. Finally, in semantic unification or E-unification, equality is subject to background knowledge and variables range over a variety of domains. This version is used in [[SMT solver]]s, [[term rewriting]] algorithms, and [[cryptographic protocol]] analysis.
+
+== Formal definition ==
+A ''unification problem'' is a finite set {{math|1=''E''={{mset| ''l''<sub>1</sub> ≐ ''r''<sub>1</sub>, ..., ''l''<sub>''n''</sub> ≐ ''r''<sub>''n''</sub> }}}} of equations to solve, where {{math|''l''<sub>''i''</sub>, ''r''<sub>''i''</sub>}} are in the set <math>T</math> of ''terms'' or ''expressions''. Depending on which expressions or terms are allowed to occur in an equation set or unification problem, and which expressions are considered equal, several frameworks of unification are distinguished. If higher-order variables, that is, variables representing [[function (mathematics)|function]]s, are allowed in an expression, the process is called '''higher-order unification''', otherwise ''first-order unification''. If a solution is required to make both sides of each equation literally equal, the process is called '''syntactic''' or ''free'' '''unification''', otherwise ''semantic'' or ''equational unification'', or '''E-unification''', or ''unification modulo theory''.
+
+If the right side of each equation is closed (no free variables), the problem is called (pattern) ''matching''. The left side (with variables) of each equation is called the ''pattern''.<ref>{{cite book |last1=Dowek |first1=Gilles |title=Handbook of automated reasoning |date=1 January 2001 |publisher=Elsevier Science Publishers B. V. |isbn=978-0-444-50812-6 |pages=1009–1062 |url=http://www.lsv.fr/~dowek/Publi/unification.ps |chapter=Higher-order unification and matching |access-date=15 May 2019 |archive-date=15 May 2019 |archive-url=https://web.archive.org/web/20190515113555/http://www.lsv.fr/~dowek/Publi/unification.ps |url-status=dead }}</ref>
+
+===Prerequisites===
+Formally, a unification approach presupposes
+* An infinite set <math>V</math> of ''variables''. For higher-order unification, it is convenient to choose <math>V</math> disjoint from the set of [[lambda-term bound variables]].
+* A set <math>T</math> of ''terms'' such that <math>V \subseteq T</math>. For first-order unification, <math>T</math> is usually the set of [[first-order terms]] (terms built from variable and function symbols).  For higher-order unification <math>T</math> consists of first-order terms and [[lambda terms]] (terms containing some higher-order variables).
+* A mapping <math>\text{vars}\colon T \rightarrow</math> [[power set|<math>\mathbb{P}</math>]]<math>(V)</math>, assigning to each term <math>t</math> the set <math>\text{vars}(t) \subsetneq V</math> of ''free variables'' occurring in <math>t</math>.
+* A theory or [[equivalence relation]] <math>\equiv</math> on <math>T</math>, indicating which terms are considered equal. For first-order E-unification, <math>\equiv</math> reflects the background knowledge about certain function symbols; for example, if <math>\oplus</math> is considered commutative, <math>t\equiv u</math> if <math>u</math> results from <math>t</math> by swapping the arguments of <math>\oplus</math> at some (possibly all) occurrences. <ref group=note>E.g. ''a'' ⊕ (''b'' ⊕ ''f''(''x'')) ≡ ''a'' ⊕ (''f''(''x'') ⊕ ''b'') ≡ (''b'' ⊕ ''f''(''x'')) ⊕ ''a'' ≡ (''f''(''x'') ⊕ ''b'') ⊕ ''a''</ref> In the most typical case that there is no background knowledge at all, then only literally, or syntactically, identical terms are considered equal. In this case, ≡ is called the ''[[free theory]]'' (because it is a [[free object]]), the ''[[empty theory]]'' (because the set of equational [[sentence (mathematical logic)|sentences]], or the background knowledge, is empty), the ''theory of [[uninterpreted function]]s'' (because unification is done on uninterpreted [[term (logic)|terms]]), or the ''theory of [[Algebraic specification|constructors]]'' (because all function symbols just build up data terms, rather than operating on them). For higher-order unification, usually <math>t\equiv u</math> if <math>t</math> and <math>u</math> are [[alpha equivalent]].
+
+As an example of how the set of terms and theory affects the set of solutions, the syntactic first-order unification problem { ''y'' = ''cons''(2,''y'') } has no solution over the set of [[finite terms]]. However, it has the single solution { ''y'' ↦ ''cons''(2,''cons''(2,''cons''(2,...))) } over the set of [[Tree (set theory)|infinite tree]] terms. Similarly, the semantic first-order unification problem { ''a''⋅''x'' = ''x''⋅''a'' } has each substitution of the form { ''x'' ↦ ''a''⋅...⋅''a'' } as a solution in a [[semigroup]], i.e. if (⋅) is considered [[associative]]. But the same problem, viewed in an [[abelian group]], where  (⋅) is considered also [[commutative]], has any substitution at all as a solution.
+
+As an example of higher-order unification, the singleton set { ''a'' = ''y''(''x'') } is a syntactic second-order unification problem, since ''y'' is a function variable. One solution is { ''x'' ↦ ''a'', ''y'' ↦ ([[identity function]]) }; another one is { ''y'' ↦ ([[constant function]] mapping each value to ''a''), ''x'' ↦ ''(any value)'' }.
+
+===Substitution===
+{{main|Substitution (logic)}}
+A ''substitution'' is a mapping <math>\sigma: V\rightarrow T</math> from variables to terms; the notation <math> \{x_1\mapsto t_1, ..., x_k \mapsto t_k\}</math> refers to a substitution mapping each variable <math>x_i</math> to the term <math>t_i</math>, for <math>i=1,...,k</math>, and every other variable to itself; the <math>x_i</math> must be pairwise distinct. ''Applying'' that substitution to a term <math>t</math> is written in [[Reverse Polish notation]] as <math>t \{x_1 \mapsto t_1, ..., x_k \mapsto t_k\}</math>; it means to (simultaneously) replace every occurrence of each variable <math>x_i</math> in the term <math>t</math> by <math>t_i</math>. The result <math>t\tau</math> of applying a substitution <math>\tau</math> to a term <math>t</math> is called an ''instance'' of that term <math>t</math>.
+As a first-order example, applying the substitution {{math|{{mset| ''x'' ↦ ''h''(''a'',''y''), ''z'' ↦ ''b'' }}}} to the term 
+{|
+|-
+|
+| <math>f(</math>
+| align="center" | <math>\textbf{x}</math>
+| <math>, a, g(</math>
+| <math>\textbf{z}</math>
+| <math> ), y)</math>
+|-
+| yields &nbsp;
+|-
+|
+| <math>f(</math>
+| <math>\textbf{h}(\textbf{a}, \textbf{y})</math>
+| <math>, a, g(</math>
+| <math>\textbf{b}</math>
+| <math>), y).</math>
+|}
+
+===Generalization, specialization===
+If a term <math>t</math> has an instance equivalent to a term <math>u</math>, that is, if <math>t\sigma \equiv u</math> for some substitution <math>\sigma</math>, then <math>t</math> is called ''more general'' than <math>u</math>, and <math>u</math> is called ''more special'' than, or ''subsumed'' by, <math>t</math>. For example, <math>x\oplus a</math> is more general than <math>a\oplus b</math> if ⊕ is [[Commutative property|commutative]], since then <math>(x\oplus a) \{x\mapsto b\} = b\oplus a\equiv a\oplus b</math>.
+
+If ≡ is literal (syntactic) identity of terms, a term may be both more general and more special than another one only if both terms differ just in their variable names, not in their syntactic structure; such terms are called ''variants'', or ''renamings'' of each other.
+For example, 
+<math>f(x_1, a, g(z_1), y_1)</math>
+is a variant of 
+<math>f(x_2, a, g(z_2), y_2)</math>,
+since
+<math display="block">f(x_1, a, g(z_1), y_1) \{x_1 \mapsto x_2, y_1 \mapsto y_2, z_1 \mapsto z_2\} = f(x_2, a, g(z_2), y_2) </math>
+and
+<math display="block">f(x_2, a, g(z_2), y_2) \{x_2 \mapsto x_1, y_2 \mapsto y_1, z_2 \mapsto z_1\} = f(x_1, a, g(z_1), y_1).</math>
+However, <math>f(x_1, a, g(z_1), y_1)</math> is ''not'' a variant of  <math>f(x_2, a, g(x_2), x_2)</math>, since no substitution can transform the latter term into the former one.
+The latter term is therefore properly more special than the former one.
+
+For arbitrary <math>\equiv</math>, a term may be both more general and more special than a structurally different term.
+For example, if ⊕ is [[idempotent]], that is, if always <math>x \oplus x \equiv x</math>, then the term <math>x\oplus y</math> is more general than <math>z</math>,<ref group=note>since <math>(x\oplus y) \{x\mapsto z, y \mapsto z\} = z\oplus z \equiv z</math></ref> and vice versa,<ref group=note>since {{math|1=''z'' {{mset|''z'' ↦ ''x'' ⊕ ''y''}} = ''x'' ⊕ ''y''}}</ref> although <math>x\oplus y</math> and <math>z</math> are of different structure.
+
+A substitution <math>\sigma</math> is ''more special'' than, or ''subsumed'' by, a substitution <math>\tau</math> if <math>t\sigma</math> is subsumed by <math>t\tau</math> for each term <math>t</math>.  We also say that <math>\tau</math> is more general than <math>\sigma</math>. More formally, take a nonempty infinite set <math>V</math> of auxiliary variables such that no equation <math>l_i \doteq r_i</math> in the unification problem contains variables from <math>V</math>. Then a substitution <math>\sigma</math> is subsumed by another substitution <math>\tau</math> if there is a substitution <math>\theta</math> such that for all terms <math>X\notin V</math>, <math>X\sigma \equiv X\tau\theta</math>.<ref name=Vukmirovic/>
+For instance <math> \{x \mapsto a, y \mapsto a \}</math> is subsumed by <math>\tau = \{x\mapsto y\}</math>, using <math>\theta=\{y\mapsto a\}</math>, but 
+<math>\sigma = \{x\mapsto a\}</math> is not subsumed by <math>\tau = \{x\mapsto y\}</math>, as <math>f(x, y)\sigma = f(a, y)</math> is not an instance of
+<math>f(x, y) \tau = f(y, y)</math>.<ref>{{cite book |last1=Apt |first1=Krzysztof R. |title=From logic programming to Prolog |date=1997 |publisher=Prentice Hall |location=London Munich |isbn=013230368X |edition=1. publ |url=https://homepages.cwi.nl/~apt/book.ps|page=24}}</ref>
+
+===Solution set===
+
+A substitution σ is a ''solution'' of the unification problem ''E'' if {{math|''l''<sub>''i''</sub>σ ≡ ''r''<sub>''i''</sub>σ}} for <math>i = 1, ..., n</math>. Such a substitution is also called a ''unifier'' of ''E''.
+For example, if ⊕ is [[associative]], the unification problem { ''x'' ⊕ ''a'' ≐ ''a'' ⊕ ''x'' } has the solutions {''x'' ↦ ''a''}, {''x'' ↦ ''a'' ⊕ ''a''}, {''x'' ↦ ''a'' ⊕ ''a'' ⊕ ''a''}, etc., while the problem { ''x'' ⊕ ''a'' ≐ ''a'' } has no solution.
+
+For a given unification problem ''E'', a set ''S'' of unifiers is called ''complete'' if each solution substitution is subsumed by some substitution in ''S''. A complete substitution set always exists (e.g. the set of all solutions), but in some frameworks (such as unrestricted higher-order unification) the problem of determining whether any solution exists (i.e., whether the complete substitution set is nonempty) is undecidable.
+
+The set ''S'' is called ''minimal'' if none of its members subsumes another one. Depending on the framework, a complete and minimal substitution set may have zero, one, finitely many, or infinitely many members, or may not exist at all due to an infinite chain of redundant members.<ref>{{cite journal|first1=François|last1=Fages|first2=Gérard|last2=Huet|title=Complete Sets of Unifiers and Matchers in Equational Theories|journal=Theoretical Computer Science|volume=43|pages=189–200|year=1986|doi=10.1016/0304-3975(86)90175-1|doi-access=free}}</ref> Thus, in general, unification algorithms compute a finite approximation of the complete set, which may or may not be minimal, although most algorithms avoid redundant unifiers when possible.<ref name=Vukmirovic/> For first-order syntactical unification, Martelli and Montanari<ref name="Martelli.Montanari.1982">{{cite journal|first1=Alberto|last1=Martelli|first2=Ugo|last2=Montanari|title=An Efficient Unification Algorithm|journal=ACM Trans. Program. Lang. Syst.|volume=4|number=2|pages=258–282|date=Apr 1982|doi=10.1145/357162.357169|s2cid=10921306}}</ref> gave an algorithm that reports unsolvability or computes a single unifier that by itself forms a complete and minimal substitution set, called the '''most general unifier'''.
+
+==Syntactic unification of first-order terms==
+[[File:Triangle diagram of syntactic unification svg.svg|thumb|Schematic triangle diagram of syntactically unifying terms ''t''<sub>1</sub> and ''t''<sub>2</sub> by a substitution σ]]
+''Syntactic unification of first-order terms'' is the most widely used unification framework.
+It is based on ''T'' being the set of ''first-order terms'' (over some given set ''V'' of variables, ''C'' of constants and ''F''<sub>''n''</sub> of ''n''-ary function symbols) and on ≡ being ''syntactic equality''.
+In this framework, each solvable unification problem {{math|{{mset|''l''<sub>1</sub> ≐ ''r''<sub>1</sub>, ..., ''l''<sub>''n''</sub> ≐ ''r''<sub>''n''</sub>}}}} has a complete, and obviously minimal, [[Singleton (mathematics)|singleton]] solution set {{math|1={{mset|''σ''}}}}.
+Its member {{mvar|σ}} is called the '''most general unifier''' (''mgu'') of the problem.
+The terms on the left and the right hand side of each potential equation become syntactically equal when the mgu is applied i.e. {{math|1=''l''<sub>1</sub>''σ'' = ''r''<sub>1</sub>''σ'' ∧ ... ∧ ''l''<sub>''n''</sub>''σ'' = ''r''<sub>''n''</sub>''σ''}}.
+Any unifier of the problem is subsumed<ref group=note>formally: each unifier τ satisfies {{math|1=∀''x'': ''xτ'' = (''xσ'')''ρ''}} for some substitution ρ</ref> by the mgu {{mvar|σ}}.
+The mgu is unique up to variants: if ''S''<sub>1</sub> and ''S''<sub>2</sub> are both complete and minimal solution sets of the same syntactical unification problem, then ''S''<sub>1</sub> = { ''σ''<sub>1</sub> } and ''S''<sub>2</sub> = { ''σ''<sub>2</sub> } for some substitutions {{math|1=''σ''<sub>1</sub>}} and {{math|1=''σ''<sub>2</sub>,}} and {{math|1=''xσ''<sub>1</sub>}} is a variant of {{math|1=''xσ''<sub>2</sub>}} for each variable ''x'' occurring in the problem.
+
+For example, the unification problem { ''x'' ≐ ''z'', ''y'' ≐ ''f''(''x'') } has a unifier { ''x'' ↦ ''z'', ''y'' ↦ ''f''(''z'') }, because
+:{|
+|-
+| align="right" | ''x''
+| { ''x'' ↦ ''z'', ''y'' ↦ ''f''(''z'') }
+| =
+| align="center" | ''z''
+| =
+| align="right" | ''z''
+| { ''x'' ↦ ''z'', ''y'' ↦ ''f''(''z'') }
+|, and
+|-
+| align="right" | ''y''
+| { ''x'' ↦ ''z'', ''y'' ↦ ''f''(''z'') }
+| =
+| align="center" | ''f''(''z'')
+| =
+| align="right" | ''f''(''x'')
+| { ''x'' ↦ ''z'', ''y'' ↦ ''f''(''z'') }
+| .
+|}
+
+This is also the most general unifier.
+Other unifiers for the same problem are e.g. { ''x'' ↦ ''f''(''x''<sub>1</sub>), ''y'' ↦ ''f''(''f''(''x''<sub>1</sub>)), ''z'' ↦ ''f''(''x''<sub>1</sub>) }, { ''x'' ↦ ''f''(''f''(''x''<sub>1</sub>)), ''y'' ↦ ''f''(''f''(''f''(''x''<sub>1</sub>))), ''z'' ↦ ''f''(''f''(''x''<sub>1</sub>)) }, and so on; there are infinitely many similar unifiers.
+
+As another example, the problem ''g''(''x'',''x'') ≐ ''f''(''y'') has no solution with respect to ≡ being literal identity, since any substitution applied to the left and right hand side will keep the outermost ''g'' and ''f'', respectively, and terms with different outermost function symbols are syntactically different.
+
+===Unification algorithms===
+{{Quote box|title=Robinson's 1965 unification algorithm
+|quote={{hidden begin}}
+Symbols are ordered such that variables precede function symbols.
+Terms are ordered by increasing written length; equally long terms 
+are ordered [[lexicographically]].{{refn|{{harvtxt|Robinson|1965}} nr.2.5, 2.14, p.25}} For a set ''T'' of terms, its disagreement 
+path ''p'' is the lexicographically least path where two member terms   
+of ''T'' differ. Its disagreement set is the set of [[subterms]] starting at ''p'', 
+formally: {{math|{ ''t''[[term (logic)#Operations with terms|{{pipe}}<sub>''p''</sub>]] : ''t'' &isin; ''T'' }}}.{{refn|{{harvtxt|Robinson|1965}} nr.5.6, p.32}}
+
+''Algorithm:''{{refn|{{harvtxt|Robinson|1965}} nr.5.8, p.32}}
+{{pre|
+Given a set ''T'' of terms to be unified
+Let {{mvar|&sigma;}} initially be the [[identity substitution]]
+do forever
+&nbsp; &nbsp; if {{mvar|T&sigma;}} is a [[singleton set]] then
+&nbsp; &nbsp; &nbsp; &nbsp; return {{mvar|&sigma;}}
+&nbsp; &nbsp; fi
+&nbsp; &nbsp; let ''D'' be the disagreement set of {{mvar|T&sigma;}}
+&nbsp; &nbsp; let ''s'', ''t'' be the two lexicographically least terms in ''D''
+&nbsp; &nbsp; if ''s'' is not a variable or ''s'' occurs in ''t'' then
+&nbsp; &nbsp; &nbsp; &nbsp; return "NONUNIFIABLE"
+&nbsp; &nbsp; fi
+&nbsp; &nbsp;  <math>\sigma := \sigma \{ s \mapsto t \}</math>
+done
+}}
+{{hidden end}}
+}}
+[[Jacques Herbrand]] discussed the basic concepts of unification and sketched an algorithm in 1930.<ref>J. Herbrand: Recherches sur la théorie de la démonstration. ''Travaux de la société des Sciences et des Lettres de Varsovie'', Class III, Sciences Mathématiques et Physiques, 33, 1930.</ref><ref>{{cite thesis | type=Ph.D. thesis | url=http://www.numdam.org/issue/THESE_1930__110__1_0.pdf | author=Jacques Herbrand | title=Recherches sur la théorie de la demonstration | institution=Université de Paris | series=A | volume=1252 | year=1930 }} Here: p.96-97</ref><ref name="HerbrandLectures">{{cite report | author1=Claus-Peter Wirth |  author2=Jörg Siekmann | author3= Christoph Benzmüller | author4= Serge Autexier | title=Lectures on Jacques Herbrand as a Logician | institution=DFKI | type=SEKI Report | number=SR-2009-01 | year=2009 | arxiv=0902.4682 }} Here: p.56</ref> But most authors attribute the first unification algorithm to [[John Alan Robinson]] (cf. box).<ref name="Robinson.1965">{{cite journal | first1=J.A.|last1=Robinson | title=A Machine-Oriented Logic Based on the Resolution Principle | journal=Journal of the ACM | volume=12 | number=1 | pages=23–41 |date=Jan 1965 | doi=10.1145/321250.321253| s2cid=14389185 | doi-access=free }}; Here: sect.5.8, p.32</ref><ref>{{cite journal | author=J.A. Robinson | title=Computational logic: The unification computation | journal=Machine Intelligence | volume=6 | pages=63–72 | url=https://aitopics.org/download/classics:E35191E8 | year=1971 }}</ref>{{#tag:ref|Robinson used first-order syntactical unification as a basic building block of his [[Resolution (logic)|resolution]] procedure for first-order logic, a great step forward in [[automated reasoning]] technology, as it eliminated one source of [[combinatorial explosion]]: searching for instantiation of terms.<ref>{{cite book | author=David A. Duffy | title=Principles of Automated Theorem Proving | location=New York | publisher=Wiley | year=1991 | isbn=0-471-92784-8}} Here: Introduction of sect.3.3.3 ''"Unification"'', p.72.</ref>|group=note}} Robinson's algorithm had worst-case exponential behavior in both time and space.<ref name="HerbrandLectures"/><ref name="Champeaux">{{cite journal | url=https://raw.githubusercontent.com/ddccc/Unification/a5975a47bca1be3f7bf0afe9ad3595a707a29ea4/LinUnify3.pdf | doi=10.1007/s10817-022-09635-1 | first1=Dennis|last1=de Champeaux | title=Faster Linear Unification Algorithm | journal=Journal of Automated Reasoning | volume=66 | pages=845&ndash;860 | date=Aug 2022 | issue=4 }}</ref> Numerous authors have proposed more efficient unification algorithms.<ref>Per {{harvtxt|Martelli|Montanari|1982}}:
+* {{cite report | author=Lewis Denver Baxter | title=A practically linear unification algorithm | publisher=Univ. of Waterloo, Ontario | type=Res. Report | volume=CS-76-13 | url=https://cs.uwaterloo.ca/research/tr/1976/CS-76-13.pdf |date=Feb 1976 }}
+* {{cite thesis | author=Gérard Huet | title=Resolution d'Equations dans des Langages d'Ordre 1,2,...ω | publisher=Universite de Paris VII | type=These d'etat |date=Sep 1976 | author-link=Gérard Huet }}
+* {{cite report | first1=Alberto|last1=Martelli | first2=Ugo|last2=Montanari | name-list-style=amp | title=Unification in linear time and space: A structured presentation | publisher=Consiglio Nazionale delle Ricerche, Pisa | type=Internal Note | volume=IEI-B76-16 | url=http://puma.isti.cnr.it/publichtml/section_cnr_iei/cnr_iei_1976-B4-041.html | archive-url=https://web.archive.org/web/20150115070153/http://puma.isti.cnr.it/publichtml/section_cnr_iei/cnr_iei_1976-B4-041.html | url-status=dead | archive-date=2015-01-15 | date=Jul 1976 }}
+* {{cite conference | doi=10.1145/800113.803646 | url= | first1=M.S. |last1=Paterson |first2= M.N. |last2= Wegman | title=Linear unification | editor1-first=Ashok K. |editor1-last=Chandra |editor2-first= Detlef |editor2-last= Wotschke  |editor3-first= Emily P. |editor3-last=Friedman  |editor4-first= Michael A.|editor4-last= Harrison  | conference=Proceedings of the eighth annual ACM [[Symposium on Theory of Computing]] (STOC) | publisher=ACM | pages=181&ndash;186 | date=May 1976 |doi-access=free }}
+* {{cite journal | first1=M.S. |last1=Paterson |author1-link=Michael Stewart Paterson |first2= M.N. |last2= Wegman | title=Linear unification | journal=J. Comput. Syst. Sci. | volume=16 | number=2 | pages=158–167 |date=Apr 1978 | doi = 10.1016/0022-0000(78)90043-0 | doi-access=free }}
+* {{cite book | author=J.A. Robinson | chapter=Fast unification | editor=[[Woodrow W. Bledsoe]], Michael M. Richter | title=Proc. Theorem Proving Workshop Oberwolfach | series=Oberwolfach Workshop Report | volume=1976/3 | date=Jan 1976 | author-link=J.A. Robinson }}
+* {{cite journal | author=M. Venturini-Zilli | title=Complexity of the unification algorithm for first-order expressions |journal= Calcolo | volume=12 |number=4 |pages= 361–372 |date= Oct 1975 | doi=10.1007/BF02575754| s2cid=189789152 }}</ref> Algorithms with worst-case linear-time behavior were discovered independently by {{harvtxt|Martelli|Montanari|1976}} and {{harvtxt|Paterson|Wegman|1976}}{{refn|Independent discovery is stated in {{harvtxt|Martelli|Montanari|1982}} sect.1, p.259. The journal publisher received {{harvtxt|Paterson|Wegman|1978}} in Sep.1976.|group=note}} {{harvtxt|Baader|Snyder|2001}} uses a similar technique as Paterson-Wegman, hence is linear,<ref>{{cite book |last1=Baader |first1=Franz |last2=Snyder |first2=Wayne |chapter=Unification Theory |title=Handbook of Automated Reasoning|title-link=Handbook of Automated Reasoning |date=2001 |pages=445–533 |doi=10.1016/B978-044450813-3/50010-2|isbn=978-0-444-50813-3 |chapter-url=https://www.cs.bu.edu/fac/snyder/publications/UnifChapter.pdf}}</ref> but like most linear-time unification algorithms is slower than the Robinson version on small sized inputs due to the overhead of preprocessing the inputs and postprocessing of the output, such as construction of a [[directed acyclic graph|DAG]] representation. {{harvtxt|de Champeaux|2022}} is also of linear complexity in the input size but is competitive with the Robinson algorithm on small size inputs. The speedup is obtained by using an [[object-oriented programming|object-oriented]] representation of the predicate calculus that avoids the need for pre- and post-processing, instead making variable objects responsible for creating a substitution and for dealing with aliasing. de Champeaux claims that the ability to add functionality to predicate calculus represented as programmatic [[Object (computer science)|object]]s provides opportunities for optimizing other logic operations as well.<ref name="Champeaux"/>
+
+The following algorithm is commonly presented and originates from {{harvtxt|Martelli|Montanari|1982}}.<ref group=note>Alg.1, p.261. Their rule ''(a)'' corresponds to rule ''swap'' here, ''(b)'' to ''delete'', ''(c)'' to both ''decompose'' and ''conflict'', and ''(d)'' to both ''eliminate'' and ''check''.</ref> Given a finite set <math>G = \{ s_1 \doteq t_1, ..., s_n \doteq t_n \}</math> of potential equations,
+the algorithm applies rules to transform it to an equivalent set of equations of the form
+{ ''x''<sub>1</sub> ≐ ''u''<sub>1</sub>, ..., ''x''<sub>''m''</sub> ≐ ''u''<sub>''m''</sub> }
+where ''x''<sub>1</sub>, ..., ''x''<sub>''m''</sub> are distinct variables and ''u''<sub>1</sub>, ..., ''u''<sub>''m''</sub> are terms containing none of the ''x''<sub>''i''</sub>.
+A set of this form can be read as a substitution.
+If there is no solution the algorithm terminates with ⊥; other authors use "Ω",  or "''fail''" in that case.
+The operation of substituting all occurrences of variable ''x'' in problem ''G'' with term ''t'' is denoted ''G'' {''x'' ↦ ''t''}.
+For simplicity, constant symbols are regarded as function symbols having zero arguments.
+
+:{|
+| align="right" | <math>G \cup \{ t \doteq t \}</math>
+| <math>\Rightarrow</math>
+| <math>G</math>
+|
+| &nbsp; ||  ''delete''
+|-
+| align="right" | <math>G \cup \{ f(s_0, ..., s_k) \doteq f(t_0, ..., t_k) \}</math>
+| <math>\Rightarrow</math> 
+| <math>G \cup \{ s_0 \doteq t_0, ..., s_k \doteq t_k \}</math>
+|
+| &nbsp; ||  ''decompose''
+|-
+| align="right" | <math>G \cup \{ f(s_0, \ldots,s_k) \doteq g(t_0,...,t_m) \}</math>
+| <math>\Rightarrow</math>
+| <math>\bot</math>
+| align="right" | if <math>f \neq g</math> or <math>k \neq m</math>
+| &nbsp; ||  ''conflict''
+|-
+| align="right" | <math>G \cup \{ f(s_0,...,s_k) \doteq x \}</math>
+| <math>\Rightarrow</math>
+| <math>G \cup \{ x \doteq f(s_0,...,s_k) \}</math>
+|
+| &nbsp; ||  ''swap''
+|-
+| align="right" | <math>G \cup \{ x \doteq t \}</math>
+| <math>\Rightarrow</math>
+| <math>G\{x \mapsto t\} \cup \{ x \doteq t \}</math>
+| align="right" | if <math>x \not\in \text{vars}(t)</math> and <math>x \in \text{vars}(G)</math>
+| &nbsp; ||  ''eliminate''<ref group="note">Although the rule keeps ''x'' ≐ ''t'' in ''G'', it cannot loop forever since its precondition ''x''∈''vars''(''G'') is invalidated by its first application. More generally, the algorithm is guaranteed to terminate always, see [[#Proof of termination|below]].</ref>
+|-
+| align="right" | <math>G \cup \{ x \doteq f(s_0,...,s_k) \}</math>
+| <math>\Rightarrow</math>
+| <math>\bot</math>
+| align="right" | if <math>x \in \text{vars}(f(s_0,...,s_k))</math>
+| &nbsp; ||  ''check''
+|}
+
+====Occurs check====
+{{main|Occurs check}}
+An attempt to unify a variable ''x'' with a term containing ''x'' as a strict subterm ''x'' ≐ ''f''(..., ''x'', ...) would lead to an infinite term as solution for ''x'', since ''x'' would occur as a subterm of itself.
+In the set of (finite) first-order terms as defined above, the equation ''x'' ≐ ''f''(..., ''x'', ...) has no solution; hence the ''eliminate'' rule may only be applied if ''x'' ∉ ''vars''(''t'').
+Since that additional check, called ''occurs check'', slows down the algorithm, it is omitted e.g. in most Prolog systems.
+From a theoretical point of view, omitting the check amounts to solving equations over infinite trees, see [[#Unification of infinite terms]] below.
+
+====Proof of termination====
+For the proof of termination of the algorithm consider a triple <math>\langle n_{var}, n_{lhs}, n_{eqn}\rangle</math>
+where {{math|''n''<sub>''var''</sub>}} is the number of variables that occur more than once in the equation set, {{math|''n''<sub>''lhs''</sub>}} is the number of function symbols and constants
+on the left hand sides of potential equations, and {{math|''n''<sub>''eqn''</sub>}} is the number of equations.
+When rule ''eliminate'' is applied, {{math|''n''<sub>''var''</sub>}} decreases, since ''x'' is eliminated from ''G'' and kept only in { ''x'' ≐ ''t'' }.
+Applying any other rule can never increase {{math|''n''<sub>''var''</sub>}} again.
+When rule ''decompose'', ''conflict'', or ''swap'' is applied, {{math|''n''<sub>''lhs''</sub>}} decreases, since at least the left hand side's outermost ''f'' disappears.
+Applying any of the remaining rules ''delete'' or ''check'' can't increase {{math|''n''<sub>''lhs''</sub>}}, but decreases {{math|''n''<sub>''eqn''</sub>}}.
+Hence, any rule application decreases the triple <math>\langle n_{var}, n_{lhs}, n_{eqn}\rangle</math> with respect to the [[lexicographical order]], which is possible only a finite number of times.
+
+[[Conor McBride]] observes<ref>{{cite journal|last=McBride|first=Conor|title=First-Order Unification by Structural Recursion|journal=Journal of Functional Programming|date=October 2003|volume=13|issue=6|pages=1061–1076|doi=10.1017/S0956796803004957|url=http://strictlypositive.org/unify.ps.gz|access-date=30 March 2012|issn=0956-7968|s2cid=43523380 }}</ref> that "by expressing the structure which unification exploits" in a [[dependently typed]] language such as [[Epigram (programming language)|Epigram]], [[Robinson's unification algorithm]] can be made [[recursive on the number of variables]], in which case a separate termination proof becomes unnecessary.
+
+===Examples of syntactic unification of first-order terms===
+In the Prolog syntactical convention a symbol starting with an upper case letter is a variable name; a symbol that starts with a lowercase letter is a function symbol; the comma is used as the logical ''and'' operator.
+For [[mathematical notation]], ''x,y,z'' are used as variables, ''f,g'' as function symbols, and ''a,b'' as constants.
+{| class="wikitable"
+|-
+! Prolog notation !! Mathematical notation !! Unifying substitution !! Explanation
+|-
+| <code> a = a </code> || { ''a'' = ''a'' } ||  {}  || Succeeds. ([[Tautology (logic)|tautology]])
+|-
+| <code> a = b </code> || { ''a'' = ''b'' }  || ⊥ || ''a'' and ''b'' do not match
+|-
+| <code> X = X </code> || { ''x'' = ''x'' } || {} || Succeeds. ([[Tautology (logic)|tautology]])
+|-
+| <code> a = X </code> || { ''a'' = ''x'' }  || { ''x'' ↦ ''a'' } || ''x'' is unified with the constant ''a''
+|-
+| <code> X = Y </code> || { ''x'' = ''y'' }  || { ''x'' ↦ ''y'' } || ''x'' and ''y'' are aliased
+|-
+| <code> f(a,X) = f(a,b) </code> || { ''f''(''a'',''x'') = ''f''(''a'',''b'') } ||  { ''x'' ↦ ''b'' } || function and constant symbols match, ''x'' is unified with the constant ''b''
+|-
+| <code> f(a) = g(a) </code> || { ''f''(''a'') = ''g''(''a'') }  || ⊥ || ''f'' and ''g'' do not match
+|-
+| <code> f(X) = f(Y) </code> || { ''f''(''x'') = ''f''(''y'') } || { ''x'' ↦ ''y'' } || ''x'' and ''y'' are aliased
+|-
+| <code> f(X) = g(Y) </code> || { ''f''(''x'') = ''g''(''y'') } || ⊥ || ''f'' and ''g'' do not match
+|-
+| <code> f(X) = f(Y,Z) </code> || { ''f''(''x'') = ''f''(''y'',''z'') } || ⊥ || Fails. The ''f'' function symbols have different arity
+|-
+| <code> f(g(X)) = f(Y) </code> || { ''f''(''g''(''x'')) = ''f''(''y'') } || { ''y'' ↦ ''g''(''x'') } || Unifies ''y'' with the term {{tmath|g(x)}}
+|-
+| <code> f(g(X),X) = f(Y,a) </code> || { ''f''(''g''(''x''),''x'') = ''f''(''y'',''a'') } || { ''x'' ↦ ''a'', ''y'' ↦ ''g''(''a'') } || Unifies ''x'' with constant ''a'', and ''y'' with the term {{tmath|g(a)}}
+|-
+| <code> X = f(X) </code> || { ''x'' = ''f''(''x'') } || should be ⊥ || Returns ⊥ in first-order logic and many modern Prolog dialects (enforced by the ''[[occurs check]]'').
+Succeeds in traditional Prolog and in Prolog II, unifying ''x'' with infinite term <code>x=f(f(f(f(...))))</code>.
+|-
+| <code> X = Y, Y = a </code> || { ''x'' = ''y'', ''y'' = ''a'' } || { ''x'' ↦ ''a'', ''y'' ↦ ''a'' } || Both ''x'' and ''y'' are unified with the constant ''a''
+|-
+| <code> a = Y, X = Y </code> || { ''a'' = ''y'', ''x'' = ''y'' } || { ''x'' ↦ ''a'', ''y'' ↦ ''a'' } || As above (order of equations in set doesn't matter)
+|-
+| <code> X = a, b = X </code> || { ''x'' = ''a'', ''b'' = ''x'' }  || ⊥ || Fails. ''a'' and ''b'' do not match, so ''x'' can't be unified with both
+|}
+
+[[File:Unification exponential blow-up svg.svg|thumb|Two terms with an exponentially larger tree for their least common instance. Its [[directed acyclic graph|dag]] representation (rightmost, orange part) is still of linear size.]]
+The most general unifier of a syntactic first-order unification problem of [[Term (logic)#Operations with terms|size]] {{mvar|n}} may have a size of {{math|2<sup>''n''</sup>}}. For example, the problem {{tmath| (((a*z)*y)*x)*w \doteq w*(x*(y*(z*a))) }} has the most general unifier {{tmath| \{ z \mapsto a,  y \mapsto a*a,  x \mapsto (a*a)*(a*a),  w \mapsto ((a*a)*(a*a))*((a*a)*(a*a)) \} }}, cf. picture. In order to avoid exponential time complexity caused by such blow-up, advanced unification algorithms work on [[directed acyclic graph]]s (dags) rather than trees.{{refn|e.g. {{harvtxt|Paterson|Wegman|1978}} sect.2, p.159}}
+
+===Application: unification in logic programming===
+The concept of unification is one of the main ideas behind [[logic programming]]. Specifically, unification is a basic building block of [[Resolution (logic)|resolution]], a rule of inference for determining formula satisfiability. In [[Prolog]], the equality symbol <code>=</code> implies first-order syntactic unification. It represents the mechanism of binding the contents of variables and can be viewed as a kind of one-time assignment.
+
+In Prolog:
+# A [[variable (programming)|variable]] can be unified with a constant, a term, or another variable, thus effectively becoming its alias. In many modern Prolog dialects and in [[first-order logic]], a variable cannot be unified with a term that contains it; this is the so-called ''[[occurs check]]''.
+# Two constants can be unified only if they are identical.
+# Similarly, a term can be unified with another term if the top function symbols and [[arities]] of the terms are identical and if the parameters can be unified simultaneously. Note that this is a recursive behavior.
+# Most operations, including <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, are not evaluated by <code>=</code>. So for example <code>1+2 = 3</code> is not satisfiable because they are syntactically different. The use of integer arithmetic constraints <code>#=</code> introduces a form of E-unification for which these operations are interpreted and evaluated.<ref>{{cite web |title=Declarative integer arithmetic |url=https://www.swi-prolog.org/pldoc/man?section=clpfd-integer-arith |website=SWI-Prolog |access-date=18 February 2024}}</ref>
+
+=== Application: type inference ===
+[[Type inference]] algorithms are typically based on unification, particularly [[Hindley–Milner type system|Hindley-Milner]] type inference which is used by the functional languages [[Haskell (programming language)|Haskell]] and [[ML (programming language)|ML]]. For example, when attempting to infer the type of the Haskell expression <code>True : ['x']</code>, the compiler will use the type <code>a -> [a] -> [a]</code> of the list construction function <code>(:)</code>, the type <code>Bool</code> of the first argument <code>True</code>, and the type <code>[Char]</code> of the second argument <code>['x']</code>. The polymorphic type variable <code>a</code> will be unified with <code>Bool</code> and the second argument <code>[a]</code> will be unified with <code>[Char]</code>. <code>a</code> cannot be both <code>Bool</code> and <code>Char</code> at the same time, therefore this expression is not correctly typed.
+
+Like for Prolog, an algorithm for type inference can be given:
+
+# Any type variable unifies with any type expression, and is instantiated to that expression.  A specific theory might restrict this rule with an occurs check.
+# Two type constants unify only if they are the same type.
+# Two type constructions unify only if they are applications of the same type constructor and all of their component types recursively unify.
+
+=== Application: Feature Structure Unification ===
+{{see also|Feature structure}}
+
+Unification has been used in different research areas of computational linguistics.<ref>Jonathan Calder, Mike Reape, and Hank Zeevat,, [https://www.aclweb.org/anthology/E89-1032 An algorithm for generation in unification categorial grammar]. In Proceedings of the 4th Conference of the European Chapter of the Association for Computational Linguistics, pages 233-240, Manchester, England (10–12 April), University of Manchester Institute of Science and Technology, 1989.</ref><ref>Graeme Hirst and David St-Onge, [http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.50.8426] Lexical chains as representations of context for the detection and correction of malapropisms, 1998.</ref>
+
+==Order-sorted unification==
+''[[Order-sorted logic]]'' allows one to assign a ''sort'', or ''type'', to each term, and to declare a sort ''s''<sub>1</sub> a ''subsort'' of another sort ''s''<sub>2</sub>, commonly written as ''s''<sub>1</sub> ⊆ ''s''<sub>2</sub>. For example, when reаsoning about biological creatures, it is useful to declare a sort ''dog'' to be a subsort of a sort ''animal''. Wherever a term of some sort ''s'' is required, a term of any subsort of ''s'' may be supplied instead.
+For example, assuming a function declaration ''mother'': ''animal'' → ''animal'', and a constant declaration ''lassie'': ''dog'', the term  ''mother''(''lassie'') is perfectly valid and has the sort ''animal''. In order to supply the information that the mother of a dog is a dog in turn, another declaration ''mother'': ''dog'' → ''dog'' may be issued; this is called ''function overloading'', similar to [[overloading in programming languages]].
+
+[[Christoph Walther|Walther]] gave a unification algorithm for terms in order-sorted logic, requiring for any two declared sorts ''s''<sub>1</sub>, ''s''<sub>2</sub> their intersection ''s''<sub>1</sub> ∩ ''s''<sub>2</sub> to be declared, too: if ''x''<sub>1</sub> and ''x''<sub>2</sub> is a variable of sort ''s''<sub>1</sub> and ''s''<sub>2</sub>, respectively, the equation ''x''<sub>1</sub> ≐ ''x''<sub>2</sub> has the solution { ''x''<sub>1</sub> = ''x'', ''x''<sub>2</sub> = ''x'' }, where ''x'': ''s''<sub>1</sub> ∩ ''s''<sub>2</sub>.
+<ref>{{cite journal|first1=Christoph|last1=Walther|author-link=Christoph Walther|title=A Mechanical Solution of Schubert's Steamroller by Many-Sorted Resolution|journal=Artif. Intell.|volume=26|number=2|pages=217–224|url=http://www.inferenzsysteme.informatik.tu-darmstadt.de/media/is/publikationen/Schuberts_Steamroller_by_Many-Sorted_Resolution-AIJ-25-2-1985.pdf|year=1985|doi=10.1016/0004-3702(85)90029-3|access-date=2013-06-28|archive-date=2011-07-08|archive-url=https://web.archive.org/web/20110708231225/http://www.inferenzsysteme.informatik.tu-darmstadt.de/media/is/publikationen/Schuberts_Steamroller_by_Many-Sorted_Resolution-AIJ-25-2-1985.pdf|url-status=dead}}</ref>
+After incorporating this algorithm into a clause-based automated theorem prover, he could solve a benchmark problem by translating it into order-sorted logic, thereby boiling it down an order of magnitude, as many unary predicates turned into sorts.
+
+Smolka generalized order-sorted logic to allow for [[parametric polymorphism]].
+<ref>{{cite conference|first1=Gert|last1=Smolka|title=Logic Programming with Polymorphically Order-Sorted Types|conference=Int. Workshop Algebraic and Logic Programming|publisher=Springer|series=LNCS|volume=343|pages=53–70|date=Nov 1988|url=https://link.springer.com/content/pdf/10.1007/3-540-50667-5_58.pdf|doi=10.1007/3-540-50667-5_58}}</ref>
+In his framework, subsort declarations are propagated to complex type expressions.
+As a programming example, a parametric sort ''list''(''X'') may be declared (with ''X'' being a type parameter as in a [[Template (C++)#Function templates|C++ template]]), and from a subsort declaration ''int'' ⊆ ''float'' the relation ''list''(''int'') ⊆ ''list''(''float'') is automatically inferred, meaning that each list of integers is also a list of floats.
+
+Schmidt-Schauß generalized order-sorted logic to allow for term declarations.
+<ref>{{cite book|first1=Manfred|last1=Schmidt-Schauß|title=Computational Aspects of an Order-Sorted Logic with Term Declarations|publisher=Springer|series=[[Lecture Notes in Artificial Intelligence]] (LNAI)|volume=395|date=Apr 1988}}</ref>
+As an example, assuming subsort declarations ''even'' ⊆ ''int'' and ''odd'' ⊆ ''int'', a term declaration like ∀ ''i'' : ''int''. (''i'' + ''i'') : ''even'' allows to declare a property of integer addition that could not be expressed by ordinary overloading.
+
+==Unification of infinite terms==
+{{expand section|date=December 2021}}
+Background on infinite trees:
+* {{cite journal| author=B. Courcelle| author-link=Bruno Courcelle| title=Fundamental Properties of Infinite Trees| journal=Theoret. Comput. Sci.| year=1983| volume=25| issue=2| pages=95–169| doi=10.1016/0304-3975(83)90059-2| doi-access=free}}
+* {{cite book| author=Michael J. Maher| chapter=Complete Axiomatizations of the Algebras of Finite, Rational and Infinite Trees| title=Proc. IEEE 3rd Annual Symp. on Logic in Computer Science, Edinburgh|date=Jul 1988| pages=348–357}}
+* {{cite journal|author1=Joxan Jaffar |author2=Peter J. Stuckey | title=Semantics of Infinite Tree Logic Programming| journal=Theoretical Computer Science| year=1986| volume=46| pages=141–158| doi=10.1016/0304-3975(86)90027-7| doi-access=free}}
+
+Unification algorithm, Prolog II:
+* {{cite book| author=A. Colmerauer| author-link=Alain Colmerauer|title=Prolog and Infinite Trees| year=1982| publisher=Academic Press|editor1=K.L. Clark |editor2=S.-A. Tarnlund }}
+* {{cite book| author=Alain Colmerauer| chapter=Equations and Inequations on Finite and Infinite Trees| title=Proc. Int. Conf. on Fifth Generation Computer Systems| year=1984| pages=85–99| editor=ICOT}}
+
+Applications:
+* {{cite journal|author1=Francis Giannesini |author2=Jacques Cohen | title=Parser Generation and Grammar Manipulation using Prolog's Infinite Trees| journal=Journal of Logic Programming| year=1984| volume=1|issue=3 | pages=253–265| doi=10.1016/0743-1066(84)90013-X| doi-access=free}}
+
+==E-unification==
+'''E-unification''' is the problem of finding solutions to a given set of [[equations]],
+taking into account some equational background knowledge ''E''.
+The latter is given as a set of universal [[equalities]].
+For some particular sets ''E'', equation solving [[algorithms]] (a.k.a. ''E-unification algorithms'') have been devised;
+for others it has been proven that no such algorithms can exist.
+
+For example, if {{mvar|a}} and {{mvar|b}} are distinct constants,
+the [[equation]] {{tmath|x * a \doteq y * b}} has no solution
+with respect to purely [[syntactic unification]],
+where nothing is known about the operator {{tmath|*}}.
+However, if the {{tmath|*}} is known to be [[commutative]],
+then the substitution {{math|{{mset|''x'' ↦ ''b'', ''y'' ↦ ''a''}}}} solves the above equation,
+since
+:{|
+|
+| {{tmath|x * a}}
+| {{math|{{mset|''x'' ↦ ''b'', ''y'' ↦ ''a''}}}}
+|-
+| {{=}}
+| {{tmath|b * a}}
+|
+| by [[#Substitution|substitution application]]
+|-
+| {{=}}
+| {{tmath|a * b}}
+|
+| by commutativity of {{tmath|*}}
+|-
+| {{=}}
+| {{tmath|y * b}}
+| {{math|{{mset|''x'' ↦ ''b'', ''y'' ↦ ''a''}}}}
+| by (converse) substitution application
+|}
+The background knowledge ''E'' could state the commutativity of {{tmath|*}} by the universal equality
+"{{tmath|1=u * v = v * u}} for all {{math|''u'', ''v''}}".
+
+===Particular background knowledge sets E===
+{|
+|+ '''Used naming conventions'''
+| {{math|∀ ''u'',''v'',''w'':}}
+| align="right" | {{tmath|u*(v*w)}}
+| {{=}}
+| {{tmath|(u*v)*w}}
+| align="center" | '''{{mvar|A}}'''
+| Associativity of {{tmath|*}}
+|-
+| {{math|∀ ''u'',''v'':}}
+| align="right" | {{tmath|u*v}}
+| =
+| {{tmath|v*u}}
+| align="center" | '''{{mvar|C}}'''
+| Commutativity of {{tmath|*}}
+|-
+| {{math|∀ ''u'',''v'',''w'':}}
+| align="right" | {{tmath|u*(v+w)}}
+| {{=}}
+| {{tmath|u*v+u*w}}
+| align="center" | '''{{mvar|D<sub>l</sub>}}'''
+| Left distributivity of {{tmath|*}} over {{tmath|+}}
+|-
+| {{math|∀ ''u'',''v'',''w'':}}
+| align="right" | {{tmath|(v+w)*u}}
+| {{=}}
+| {{tmath|v*u+w*u}}
+| align="center" | '''{{mvar|D<sub>r</sub>}}'''
+| Right distributivity of {{tmath|*}} over {{tmath|+}}
+|-
+| {{math|∀ ''u'':}}
+| align="right" | {{tmath|u*u}}
+| {{=}}
+| {{mvar|u}}
+| align="center" | '''{{mvar|I}}'''
+| Idempotence of {{tmath|*}}
+|-
+| {{math|∀ ''u'':}}
+| align="right" | {{tmath|n*u}}
+| {{=}}
+| {{mvar|u}}
+| align="center" | '''{{mvar|N<sub>l</sub>}}'''
+| Left neutral element {{mvar|n}} with respect to {{tmath|*}}
+|-
+| {{math|∀ ''u'':}}
+| align="right" | {{tmath|u*n}}
+| {{=}}
+| {{mvar|u}}
+| align="center" | &nbsp; &nbsp; '''{{mvar|N<sub>r</sub>}}''' &nbsp; &nbsp;
+| Right neutral element {{mvar|n}} with respect to {{tmath|*}}
+|}
+
+It is said that ''unification is decidable'' for a theory, if a unification algorithm has been devised for it that terminates for ''any'' input problem.
+It is said that ''unification is [[semi-decidable]]'' for a theory, if a unification algorithm has been devised for it that terminates for any ''solvable'' input problem, but may keep searching forever for solutions of an unsolvable input problem.
+
+''Unification is decidable'' for the following theories:
+* '''{{mvar|A}}'''<ref>[[Gordon D. Plotkin]], ''Lattice Theoretic Properties of Subsumption'', Memorandum MIP-R-77, Univ. Edinburgh, Jun 1970</ref>
+* '''{{mvar|A}}''','''{{mvar|C}}'''<ref>[[Mark E. Stickel]], ''A Unification Algorithm for Associative-Commutative Functions'', Journal of the Association for Computing Machinery, vol.28, no.3, pp. 423–434, 1981</ref>
+* '''{{mvar|A}}''','''{{mvar|C}}''','''{{mvar|I}}'''<ref name="Fages.1987"/>
+* '''{{mvar|A}}''','''{{mvar|C}}''','''{{mvar|N<sub>l</sub>}}'''<ref group=note name="LRequivC">in the presence of equality '''{{mvar|C}}''', equalities '''{{mvar|N<sub>l</sub>}}''' and '''{{mvar|N<sub>r</sub>}}''' are equivalent, similar for '''{{mvar|D<sub>l</sub>}}''' and '''{{mvar|D<sub>r</sub>}}'''</ref><ref name="Fages.1987"/>
+* '''{{mvar|A}}''','''{{mvar|I}}'''<ref>Franz Baader, ''Unification in Idempotent Semigroups is of Type Zero'', J. Automat. Reasoning, vol.2, no.3, 1986</ref>
+* '''{{mvar|A}}''','''{{mvar|N<sub>l</sub>}}'''{{mvar|,}}'''{{mvar|N<sub>r</sub>}}''' (monoid)<ref>J. Makanin, ''The Problem of Solvability of Equations in a Free Semi-Group'', Akad. Nauk SSSR, vol.233, no.2, 1977</ref>
+* '''{{mvar|C}}'''<ref name="Fages.1987">{{cite journal| author=F. Fages| title=Associative-Commutative Unification| journal=J. Symbolic Comput.| year=1987| volume=3| number=3| pages=257–275| doi=10.1016/s0747-7171(87)80004-4| s2cid=40499266| url=https://hal.inria.fr/inria-00076271/file/RR-0287.pdf}}</ref>
+* [[Boolean ring]]s<ref>{{cite book| author=Martin, U., Nipkow, T.| chapter=Unification in Boolean Rings| title=Proc. 8th CADE| year=1986| volume=230| pages=506–513| publisher=Springer| editor=Jörg H. Siekmann| series=LNCS}}</ref><ref>{{cite journal|author1=A. Boudet |author2=J.P. Jouannaud |author3=M. Schmidt-Schauß | title=Unification of Boolean Rings and Abelian Groups| journal=Journal of Symbolic Computation| year=1989| volume=8|issue=5 | pages=449–477 | doi=10.1016/s0747-7171(89)80054-9| doi-access=free}}</ref>
+* [[Abelian group]]s, even if the signature is expanded by arbitrary additional symbols (but not axioms)<ref name="Baader and Snyder 2001, p. 486">Baader and Snyder (2001), p. 486.</ref>
+* [[Kripke semantics#Correspondence and completeness|K4]] [[modal algebra]]s<ref>F. Baader and S. Ghilardi, ''[https://web.archive.org/web/20171223215706/https://pdfs.semanticscholar.org/492e/9f03ab7abd043ed0167dc7309552d21a88ef.pdf Unification in modal and description logics]'', Logic Journal of the IGPL 19 (2011), no.&nbsp;6, pp.&nbsp;705–730.</ref>
+
+''Unification is semi-decidable'' for the following theories:
+* '''{{mvar|A}}''','''{{mvar|D<sub>l</sub>}}'''{{mvar|,}}'''{{mvar|D<sub>r</sub>}}'''<ref>P. Szabo, ''Unifikationstheorie erster Ordnung'' (''First Order Unification Theory''), Thesis, Univ. Karlsruhe, West Germany, 1982</ref>
+* '''{{mvar|A}}''','''{{mvar|C}}''','''{{mvar|D<sub>l</sub>}}'''<ref group=note name="LRequivC"/><ref>Jörg H. Siekmann, ''Universal Unification'', Proc. 7th Int. Conf. on Automated Deduction, Springer LNCS vol.170, pp. 1–42, 1984</ref>
+* [[Commutative ring]]s<ref name="Baader and Snyder 2001, p. 486"/>
+
+===One-sided paramodulation===
+If there is a [[convergent term rewriting system]] ''R'' available for ''E'',
+the ''one-sided paramodulation'' algorithm<ref>N. Dershowitz and G. Sivakumar, ''Solving Goals in Equational Languages'', Proc. 1st Int. Workshop on Conditional Term Rewriting Systems, Springer LNCS vol.308, pp. 45–55, 1988</ref>
+can be used to enumerate all solutions of given equations.
+
+{| style="border: 1px solid darkgray;"
+|+ One-sided paramodulation rules
+|- border="0"
+| align="right" | ''G'' ∪ { ''f''(''s''<sub>1</sub>,...,''s''<sub>''n''</sub>) ≐ ''f''(''t''<sub>1</sub>,...,''t''<sub>''n''</sub>) }
+| ; ''S''
+| ⇒
+| align="right" | ''G'' ∪ { ''s''<sub>1</sub> ≐ ''t''<sub>1</sub>, ..., ''s''<sub>''n''</sub> ≐ ''t''<sub>''n''</sub> }
+| ; ''S''
+|
+| &nbsp; &nbsp; ''decompose''
+|-
+| align="right" | ''G'' ∪ { ''x'' ≐ ''t'' }
+| ; ''S''
+| ⇒
+| align="right" | ''G'' { ''x'' ↦ ''t'' }
+|; ''S''{''x''↦''t''} ∪ {''x''↦''t''}
+| align="right" | if the variable ''x'' doesn't occur in ''t''
+| &nbsp; &nbsp; ''eliminate''
+|-
+| align="right" | ''G'' ∪ { ''f''(''s''<sub>1</sub>,...,''s''<sub>''n''</sub>) ≐ ''t'' }
+| ; ''S''
+| ⇒
+| align="right" | ''G'' ∪ { ''s''<sub>1</sub> ≐ u<sub>1</sub>, ..., ''s''<sub>''n''</sub> ≐ u<sub>''n''</sub>, ''r'' ≐ ''t'' }
+| ; ''S''
+| align="right" | &nbsp; &nbsp; if ''f''(''u''<sub>1</sub>,...,''u''<sub>''n''</sub>) → ''r'' is a rule from ''R''
+| &nbsp; &nbsp; ''mutate''
+|-
+| align="right" | ''G'' ∪ { ''f''(''s''<sub>1</sub>,...,''s''<sub>''n''</sub>) ≐ ''y'' }
+| ; ''S''
+|⇒
+| align="right" | ''G'' ∪ { ''s''<sub>1</sub> ≐ ''y''<sub>1</sub>, ..., ''s''<sub>''n''</sub> ≐ ''y''<sub>''n''</sub>, ''y'' ≐ ''f''(''y''<sub>1</sub>,...,''y''<sub>''n''</sub>) }
+| ; ''S''
+| align="right" | if ''y''<sub>1</sub>,...,''y''<sub>''n''</sub> are new variables
+| &nbsp; &nbsp; ''imitate''
+|}
+
+Starting with ''G'' being the unification problem to be solved and ''S'' being the identity substitution, rules are applied nondeterministically until the empty set appears as the actual ''G'', in which case the actual ''S'' is a unifying substitution. Depending on the order the paramodulation rules are applied, on the choice of the actual equation from ''G'', and on the choice of ''R''{{'}}s rules in ''mutate'', different computations paths are possible. Only some lead to a solution, while others end at a ''G'' ≠ {} where no further rule is applicable (e.g. ''G'' = { ''f''(...) ≐ ''g''(...) }).
+
+{| style="border: 1px solid darkgray;"
+|+ Example term rewrite system ''R''
+|- border="0"
+| '''1'''
+| ''app''(''nil'',''z'')
+| → ''z''
+|-
+|'''2''' &nbsp; &nbsp;
+| ''app''(''x''.''y'',''z'')
+| → ''x''.''app''(''y'',''z'')
+|}
+
+For an example, a term rewrite system ''R'' is used defining the ''append'' operator of lists built from ''cons'' and ''nil''; where ''cons''(''x'',''y'') is written in infix notation as ''x''.''y'' for brevity; e.g. ''app''(''a''.''b''.''nil'',''c''.''d''.''nil'') → ''a''.''app''(''b''.''nil'',''c''.''d''.''nil'') → ''a''.''b''.''app''(''nil'',''c''.''d''.''nil'') → ''a''.''b''.''c''.''d''.''nil'' demonstrates the concatenation of the lists ''a''.''b''.''nil'' and ''c''.''d''.''nil'', employing the rewrite rule 2,2, and 1. The equational theory ''E'' corresponding to ''R'' is the [[congruence closure]] of ''R'', both viewed as binary relations on terms.
+For example, ''app''(''a''.''b''.''nil'',''c''.''d''.''nil'') ≡ ''a''.''b''.''c''.''d''.''nil'' ≡ ''app''(''a''.''b''.''c''.''d''.''nil'',''nil''). The paramodulation algorithm enumerates solutions to equations with respect to that ''E'' when fed with the example ''R''.
+
+A successful example computation path for the unification problem { ''app''(''x'',''app''(''y'',''x'')) ≐ ''a''.''a''.''nil'' } is shown below. To avoid variable name clashes, rewrite rules are consistently renamed each time before their use by rule ''mutate''; ''v''<sub>2</sub>, ''v''<sub>3</sub>, ... are computer-generated variable names for this purpose. In each line, the chosen equation from ''G'' is highlighted in red. Each time the ''mutate'' rule is applied, the chosen rewrite rule (''1'' or ''2'') is indicated in parentheses. From the last line, the unifying substitution ''S'' = { ''y'' ↦ ''nil'', ''x'' ↦  ''a''.''nil'' } can be obtained. In fact,
+''app''(''x'',''app''(''y'',''x'')) {''y''↦''nil'', ''x''↦ ''a''.''nil'' } = ''app''(''a''.''nil'',''app''(''nil'',''a''.''nil'')) ≡ ''app''(''a''.''nil'',''a''.''nil'') ≡ ''a''.''app''(''nil'',''a''.''nil'') ≡ ''a''.''a''.''nil'' solves the given problem.
+A second successful computation path, obtainable by choosing "mutate(1), mutate(2), mutate(2), mutate(1)" leads to the substitution ''S'' = { ''y'' ↦ ''a''.''a''.''nil'', ''x'' ↦ ''nil'' }; it is not shown here. No other path leads to a success.
+
+{| class="wikitable"
+|+ Example unifier computation
+|-
+! Used rule !!  !! ''G'' !! ''S''
+|-
+| ||
+| { {{color|red|''app''(''x'',''app''(''y'',''x'')) ≐ ''a''.''a''.''nil''}} }
+| {}
+|-
+| mutate(2) || ⇒
+| { ''x'' ≐ ''v''<sub>2</sub>.''v''<sub>3</sub>, ''app''(''y'',''x'') ≐ ''v''<sub>4</sub>, {{color|red|''v''<sub>2</sub>.''app''(''v''<sub>3</sub>,''v''<sub>4</sub>) ≐ ''a''.''a''.''nil''}} }
+| {}
+|-
+| decompose || ⇒
+| { {{color|red|''x'' ≐ ''v''<sub>2</sub>.''v''<sub>3</sub>}}, ''app''(''y'',''x'') ≐ ''v''<sub>4</sub>, ''v''<sub>2</sub> ≐ ''a'', ''app''(''v''<sub>3</sub>,''v''<sub>4</sub>) ≐ ''a''.''nil'' }
+| {}
+|-
+| eliminate || ⇒
+| { ''app''(''y'',''v''<sub>2</sub>.''v''<sub>3</sub>) ≐ ''v''<sub>4</sub>, {{color|red|''v''<sub>2</sub> ≐ ''a''}}, ''app''(''v''<sub>3</sub>,''v''<sub>4</sub>) ≐ ''a''.''nil'' }
+| { ''x'' ↦  ''v''<sub>2</sub>.''v''<sub>3</sub> }
+|-
+| eliminate || ⇒
+| { {{color|red|''app''(''y'',''a''.''v''<sub>3</sub>) ≐ ''v''<sub>4</sub>}}, ''app''(''v''<sub>3</sub>,''v''<sub>4</sub>) ≐ ''a''.''nil'' }
+| { ''x'' ↦  ''a''.''v''<sub>3</sub> }
+|-
+| mutate(1) || ⇒
+| { ''y'' ≐ ''nil'', ''a''.''v''<sub>3</sub> ≐ ''v''<sub>5</sub>, {{color|red|''v''<sub>5</sub> ≐ ''v''<sub>4</sub>}}, ''app''(''v''<sub>3</sub>,''v''<sub>4</sub>) ≐ ''a''.''nil'' }
+| { ''x'' ↦  ''a''.''v''<sub>3</sub> }
+|-
+| eliminate || ⇒
+| { {{color|red|''y'' ≐ ''nil''}}, ''a''.''v''<sub>3</sub> ≐ ''v''<sub>4</sub>, ''app''(''v''<sub>3</sub>,''v''<sub>4</sub>) ≐ ''a''.''nil'' }
+| { ''x'' ↦  ''a''.''v''<sub>3</sub> }
+|-
+| eliminate || ⇒
+| { ''a''.''v''<sub>3</sub> ≐ ''v''<sub>4</sub>, {{color|red|''app''(''v''<sub>3</sub>,''v''<sub>4</sub>) ≐ ''a''.''nil''}} }
+| { ''y'' ↦ ''nil'', ''x'' ↦  ''a''.''v''<sub>3</sub> }
+|-
+| mutate(1) || ⇒
+| { ''a''.''v''<sub>3</sub> ≐ ''v''<sub>4</sub>, ''v''<sub>3</sub> ≐ ''nil'', {{color|red|''v''<sub>4</sub> ≐ ''v''<sub>6</sub>}}, ''v''<sub>6</sub> ≐ ''a''.''nil'' }
+| { ''y'' ↦ ''nil'', ''x'' ↦  ''a''.''v''<sub>3</sub> }
+|-
+| eliminate || ⇒
+| { ''a''.''v''<sub>3</sub> ≐ ''v''<sub>4</sub>, {{color|red|''v''<sub>3</sub> ≐ ''nil''}}, ''v''<sub>4</sub> ≐ ''a''.''nil'' }
+| { ''y'' ↦ ''nil'', ''x'' ↦  ''a''.''v''<sub>3</sub> }
+|-
+| eliminate || ⇒
+| { ''a''.''nil'' ≐ ''v''<sub>4</sub>, {{color|red|''v''<sub>4</sub> ≐ ''a''.''nil''}} }
+| { ''y'' ↦ ''nil'', ''x'' ↦  ''a''.''nil'' }
+|-
+| eliminate || ⇒
+| { {{color|red|''a''.''nil'' ≐ ''a''.''nil''}} }
+| { ''y'' ↦ ''nil'', ''x'' ↦  ''a''.''nil'' }
+|-
+| decompose || ⇒
+| { {{color|red|''a'' ≐ ''a''}}, ''nil'' ≐ ''nil'' }
+| { ''y'' ↦ ''nil'', ''x'' ↦  ''a''.''nil'' }
+|-
+| decompose || ⇒
+| { {{color|red|''nil'' ≐ ''nil''}} }
+| { ''y'' ↦ ''nil'', ''x'' ↦  ''a''.''nil'' }
+|-
+| decompose &nbsp; &nbsp; || ⇒ &nbsp; &nbsp;
+| {}
+| { ''y'' ↦ ''nil'', ''x'' ↦  ''a''.''nil'' }
+|}
+
+===Narrowing===
+[[File:Triangle diagram of narrowing step svg.svg|thumb|Triangle diagram of narrowing step ''s'' ↝ ''t'' at position ''p'' in term ''s'', with unifying substitution σ (bottom row), using a rewrite rule {{math|1=''l'' → ''r''}} (top row)]]
+If ''R'' is a [[convergent term rewriting system]] for ''E'',
+an approach alternative to the previous section consists in successive application of "'''narrowing''' steps";
+this will eventually enumerate all solutions of a given equation.
+A narrowing step (cf. picture) consists in
+* choosing a nonvariable subterm of the current term,
+* [[syntactically unifying]] it with the left hand side of a rule from ''R'', and
+* replacing the instantiated rule's right hand side into the instantiated term.
+Formally, if {{math|''l'' → ''r''}} is a [[renamed copy]] of a rewrite rule from ''R'', having no variables in common with a term ''s'', and the [[subterm]] {{math|''s''{{!}}<sub>''p''</sub>}} is not a variable and is unifiable with {{mvar|l}} via the [[#Syntactic unification of first-order terms|mgu]] {{mvar|σ}}, then {{mvar|s}} can be ''narrowed'' to the term {{math|1=''t'' = ''sσ''[''rσ'']<sub>''p''</sub>}}, i.e. to the term {{mvar|sσ}}, with the subterm at ''p'' [[Term (logic)#Operations with terms|replaced]] by {{mvar|rσ}}. The situation that ''s'' can be narrowed to ''t'' is commonly denoted as ''s'' ↝ ''t''.
+Intuitively, a sequence of narrowing steps ''t''<sub>1</sub> ↝ ''t''<sub>2</sub> ↝ ... ↝ ''t''<sub>''n''</sub> can be thought of as a sequence of rewrite steps ''t''<sub>1</sub> → ''t''<sub>2</sub> → ... → ''t''<sub>''n''</sub>, but with the initial term ''t''<sub>1</sub> being further and further instantiated, as necessary to make each of the used rules applicable.
+
+The [[#One-sided paramodulation|above]] example paramodulation computation corresponds to the following narrowing sequence ("↓" indicating instantiation here):
+
+{|
+|-
+| ''app''( || ''x'' || ,''app''(''y'', || ''x'' || ))
+|-
+|     ||  ↓  ||  ||  ↓  ||   ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ||  ''x'' ↦ ''v''<sub>2</sub>.''v''<sub>3</sub>
+|-
+| ''app''( || ''v''<sub>2</sub>.''v''<sub>3</sub> || ,''app''(''y'', || ''v''<sub>2</sub>.''v''<sub>3</sub> || ))  ||  →  ||  ''v''<sub>2</sub>.''app''(''v''<sub>3</sub>,''app''( || ''y'' || ,''v''<sub>2</sub>.''v''<sub>3</sub>))
+|-
+|     ||         ||         ||         ||     ||                   ||                   ||  ↓  ||  ||  ||  ||  ||  ||  ||  ||    ||  ||  ''y'' ↦ ''nil''
+|-
+|     ||         ||         ||         ||     ||                   ||  ''v''<sub>2</sub>.''app''(''v''<sub>3</sub>,''app''( || ''nil'' || ,''v''<sub>2</sub>.''v''<sub>3</sub>))  ||  →  ||  ''v''<sub>2</sub>.''app''( || ''v''<sub>3</sub> || ,''v''<sub>2</sub>. || ''v''<sub>3</sub> || )
+|-
+|     ||         ||         ||         ||     ||                   ||                   ||     ||             ||                   ||           ||  ↓  ||   ||  ↓  ||  ||  ||  ||  ''v''<sub>3</sub> ↦ ''nil''
+|-
+|     ||         ||         ||         ||     ||                   ||                   ||     ||             ||                   ||  ''v''<sub>2</sub>.''app''( || ''nil'' || ,''v''<sub>2</sub>. || ''nil'' || )  ||  →  ||  ''v''<sub>2</sub>.''v''<sub>2</sub>.''nil''
+|}
+
+The last term, ''v''<sub>2</sub>.''v''<sub>2</sub>.''nil'' can be syntactically unified with the original right hand side term ''a''.''a''.''nil''.
+
+The ''narrowing lemma''<ref>{{cite book| author=Fay| chapter=First-Order Unification in an Equational Theory| title=Proc. 4th Workshop on Automated Deduction| year=1979| pages=161–167}}</ref> ensures that whenever an instance of a term ''s'' can be rewritten to a term ''t'' by a convergent term rewriting system, then ''s'' and ''t'' can be narrowed and rewritten to a term {{math|1={{prime|''s''}}}} and {{math|1={{prime|''t''}}}}, respectively, such that {{math|1={{prime|''t''}}}} is an instance of {{math|1={{prime|''s''}}}}.
+
+Formally: whenever {{math|1=''sσ'' {{underset|&lowast;|→}} ''t''}} holds for some substitution σ, then there exist terms {{math|{{prime|''s''}}, {{prime|''t''}}}} such that {{math|''s'' {{underset|&lowast;|↝}} {{prime|''s''}}}} and {{math|''t'' {{underset|&lowast;|→}} {{prime|''t''}}}} and {{math|1={{prime|''s''}} ''τ'' = {{prime|''t''}}}} for some substitution τ.
+
+==Higher-order unification==
+[[File:Goldfarb4a svg.svg|thumb|300px|In Goldfarb's<ref name="Goldfarb.1981"/> reduction of [[Hilbert's 10th problem]] to second-order unifiability, the equation <math>X_1 * X_2 = X_3</math> corresponds to the depicted unification problem, with function variables <math>F_i</math> corresponding to <math>X_i</math> and <math>G</math> [[fresh variable|fresh]].]] 
+Many applications require one to consider the unification of typed lambda-terms instead of first-order terms.  Such unification is often called ''higher-order unification''. Higher-order unification is [[Undecidable problem|undecidable]],<ref name="Goldfarb.1981">{{cite journal| author=Warren D. Goldfarb| author-link=Warren D. Goldfarb| title=The Undecidability of the Second-Order Unification Problem| journal=TCS| year=1981| volume=13| issue=2| pages=225–230| doi=10.1016/0304-3975(81)90040-2| doi-access=free}}</ref><ref>{{cite journal| author=Gérard P. Huet| title=The Undecidability of Unification in Third Order Logic| journal=Information and Control| year=1973| volume=22| issue=3| pages=257–267 |doi=10.1016/S0019-9958(73)90301-X| doi-access=free}}</ref><ref>Claudio Lucchesi: The Undecidability of the Unification Problem for Third Order Languages (Research Report CSRR 2059; Department of Computer Science, University of Waterloo, 1972)</ref> and such unification problems do not have most general unifiers. For example, the unification problem { ''f''(''a'',''b'',''a'') ≐ ''d''(''b'',''a'',''c'') }, where the only variable is ''f'', has the
+solutions {''f'' ↦ λ''x''.λ''y''.λ''z''. ''d''(''y'',''x'',''c'')  }, {''f'' ↦ λ''x''.λ''y''.λ''z''. ''d''(''y'',''z'',''c'')  },
+{''f'' ↦ λ''x''.λ''y''.λ''z''. ''d''(''y'',''a'',''c'')  }, {''f'' ↦ λ''x''.λ''y''.λ''z''. ''d''(''b'',''x'',''c'')  },
+{''f'' ↦ λ''x''.λ''y''.λ''z''. ''d''(''b'',''z'',''c'')  } and {''f'' ↦ λ''x''.λ''y''.λ''z''. ''d''(''b'',''a'',''c'')  }. A well studied branch of higher-order unification is the problem of unifying simply typed lambda terms modulo the equality determined by αβη conversions. [[Gérard Huet]] gave a [[semi-decidable]] (pre-)unification algorithm<ref>Gérard Huet: (1 June 1975) [https://www.semanticscholar.org/paper/A-Unification-Algorithm-for-Typed-lambda-Calculus-Huet/32b1b03b5450ac1f286933f44939e71e5068e8d3 A Unification Algorithm for typed Lambda-Calculus], ''[[Theoretical Computer Science (journal)|Theoretical Computer Science]]''</ref> that allows a systematic search of the space of unifiers (generalizing the unification algorithm of Martelli-Montanari<ref name="Martelli.Montanari.1982"/> with rules for terms containing higher-order variables) that seems to work sufficiently well in practice.  Huet<ref>[http://portal.acm.org/citation.cfm?id=695200 Gérard Huet: Higher Order Unification 30 Years Later]</ref> and Gilles Dowek<ref>Gilles Dowek: Higher-Order Unification and Matching. Handbook of Automated Reasoning 2001: 1009–1062</ref> have written articles surveying this topic.
+
+Several subsets of higher-order unification are well-behaved, in that they are decidable and have a most-general unifier for solvable problems. One such subset is the previously described first-order terms. '''Higher-order pattern unification''', due to Dale Miller,<ref>{{cite journal|first1=Dale|last1=Miller|title=A Logic Programming Language with Lambda-Abstraction, Function Variables, and Simple Unification|journal=Journal of Logic and Computation|volume=1|issue=4|year=1991|pages=497–536|url=http://www.lix.polytechnique.fr/Labo/Dale.Miller/papers/jlc91.pdf|doi=10.1093/logcom/1.4.497}}</ref> is another such subset. The higher-order logic programming languages [[λProlog]] and [[Twelf]] have switched from full higher-order unification to implementing only the pattern fragment; surprisingly pattern unification is sufficient for almost all programs, if each non-pattern unification problem is suspended until a subsequent substitution puts the unification into the pattern fragment. A superset of pattern unification called functions-as-constructors unification is also well-behaved.<ref>{{cite journal |last1=Libal |first1=Tomer |last2=Miller |first2=Dale |title=Functions-as-constructors higher-order unification: extended pattern unification |journal=Annals of Mathematics and Artificial Intelligence |date=May 2022 |volume=90 |issue=5 |pages=455–479 |doi=10.1007/s10472-021-09774-y|doi-access=free}}</ref> The Zipperposition theorem prover has an algorithm integrating these well-behaved subsets into a full higher-order unification algorithm.<ref name=Vukmirovic>{{cite journal |last1=Vukmirović |first1=Petar |last2=Bentkamp |first2=Alexander |last3=Nummelin |first3=Visa |title=Efficient Full Higher-Order Unification |journal=Logical Methods in Computer Science |date=14 December 2021 |volume=17 |issue=4 |pages=6919 |doi=10.46298/lmcs-17(4:18)2021|doi-access=free |arxiv=2011.09507 }}</ref>
+
+In computational linguistics, one of the most influential theories of [[elliptical construction]] is that ellipses are represented by free variables whose values are then determined using Higher-Order Unification. For instance, the semantic representation of "Jon likes Mary and Peter does too" is  {{math| like(''j'', ''m'') &and; R(''p'') }} and the value of R (the semantic representation of the ellipsis) is determined by the equation {{math| like(''j'', ''m'') {{=}} R(''j'')  }}. The process of solving such equations is called Higher-Order Unification.<ref>{{cite book| first1 = Claire | last1 = Gardent |author1-link=Claire Gardent| first2 = Michael | last2 = Kohlhase | first3 = Karsten | last3 = Konrad | author2-link=Michael Kohlhase| chapter=A Multi-Level, Higher-Order Unification Approach to Ellipsis| title=Submitted to European [[Association for Computational Linguistics]] (EACL)<!---according to http://page.mi.fu-berlin.de/cbenzmueller/papers/R8.pdf--->| year=1997}}</ref>
+
+[[Wayne Snyder]] gave a generalization of both higher-order unification and E-unification, i.e. an algorithm to unify lambda-terms modulo an equational theory.<ref>{{cite book | author=Wayne Snyder | contribution=Higher order E-unification | title=Proc. 10th Conference on Automated Deduction | publisher=Springer | series=LNAI | volume=449 | pages=573–587 |date=Jul 1990 | title-link=Conference on Automated Deduction }}</ref>
+
+==See also==
+*[[Rewriting]]
+*[[Admissible rule]]
+*[[Explicit substitution]] in [[lambda calculus]]
+*Mathematical [[equation solving]]
+*[[Dis-unification (computer science)|Dis-unification]]: solving inequations between symbolic expression
+*[[Anti-unification (computer science)|Anti-unification]]: computing a least general generalization (lgg) of two terms, dual to computing a most general instance (mgu)
+*[[Subsumption lattice]], a lattice having unification as meet and anti-unification as join
+*[[Ontology alignment]] (use ''unification'' with [[semantic equivalence]])
+
+==Notes==
+{{Reflist|group=note}}
+
+==References==
+{{reflist}}
+
+==Further reading==
+{{Wiktionary|unification}}
+
+*[[Franz Baader]] and [[Wayne Snyder]] (2001). [https://scholar.archive.org/work/lgc4iib23zgjvflvqw3bpuyprq "Unification Theory"]. In [[John Alan Robinson]] and [[Andrei Voronkov (computer scientist)|Andrei Voronkov]], editors, ''[[Handbook of Automated Reasoning]]'', volume I, pages 447–533. Elsevier Science Publishers.
+*[[Gilles Dowek]] (2001). [http://www.lsv.fr/~dowek/Publi/unification.ps "Higher-order Unification and Matching"] {{Webarchive|url=https://web.archive.org/web/20190515113555/http://www.lsv.fr/~dowek/Publi/unification.ps|date=2019-05-15}}. In ''Handbook of Automated Reasoning''.
+*Franz Baader and [[Tobias Nipkow]] (1998). [http://www.in.tum.de/~nipkow/TRaAT/ ''Term Rewriting and All That'']. Cambridge University Press.
+*Franz Baader and {{ill|Jörg H. Siekmann|de}} (1993). "Unification Theory". In ''Handbook of Logic in Artificial Intelligence and Logic Programming''.
+*Jean-Pierre Jouannaud and [[Claude Kirchner (computer scientist)|Claude Kirchner]] (1991). "Solving Equations in Abstract Algebras: A Rule-Based Survey of Unification". In ''Computational Logic: Essays in Honor of Alan Robinson''.
+*[[Nachum Dershowitz]] and [[Jean-Pierre Jouannaud]], ''Rewrite Systems'', in: [[Jan van Leeuwen]] (ed.), ''[[Handbook of Theoretical Computer Science]]'', volume B ''Formal Models and Semantics'', Elsevier, 1990, pp.&nbsp;243–320
+*Jörg H. Siekmann (1990). "Unification Theory". In [[Claude Kirchner (computer scientist)|Claude Kirchner]] (editor) ''Unification''. Academic Press.
+*{{cite journal|author=Kevin Knight|title=Unification: A Multidisciplinary Survey|journal=ACM Computing Surveys|date=Mar 1989|volume=21|number=1|pages=93–124|url=http://www.isi.edu/natural-language/people/unification-knight.pdf|doi=10.1145/62029.62030|s2cid=14619034}}
+*[[Gérard Huet]] and [[Derek C. Oppen]] (1980). [http://infolab.stanford.edu/pub/cstr/reports/cs/tr/80/785/CS-TR-80-785.pdf "Equations and Rewrite Rules: A Survey"]. Technical report. Stanford University.
+*{{cite journal|last1=Raulefs|first1=Peter|last2=Siekmann|first2=Jörg|last3=Szabó|first3=P.|last4=Unvericht|first4=E.|year=1979|title=A short survey on the state of the art in matching and unification problems|journal=ACM SIGSAM Bulletin|volume=13|issue=2|pages=14–20|doi=10.1145/1089208.1089210|s2cid=17033087}}
+*Claude Kirchner and Hélène Kirchner. ''Rewriting, Solving, Proving''. In preparation.
+
+[[Category:Unification (computer science)|Unification]]
+[[Category:Automated theorem proving]]
+[[Category:Logic in computer science]]
+[[Category:Logic programming]]
+[[Category:Rewriting systems]]
+[[Category:Type theory]]

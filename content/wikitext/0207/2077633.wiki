@@ -1,0 +1,85 @@
+<!-- wikipedia: en
+     page: 2077633
+     title: AES key schedule
+     revision: 1356608458
+     timestamp: 2026-05-28T20:13:42Z
+     history: https://en.wikipedia.org/w/index.php?curid=2077633&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1356608458 -->
+{{Short description|Method for expanding key to round keys in AES}}
+The [[Advanced Encryption Standard]] uses a [[key schedule]] to expand a short key into a number of separate round keys.  The three AES variants have a different number of rounds. Each variant requires a separate 128-bit round key for each round plus one more.<ref group="note">Non-AES Rijndael variants require up to 256 bits of expanded key per round</ref> The key schedule produces the needed round keys from the initial key.
+
+== Round constants ==
+{| class="wikitable floatright"
+|+ Values of {{mvar|rc<sub>i</sub>}} in hexadecimal
+|- style="text-align:right;"
+! {{mvar|i}}
+| 1 || 2 || 3 || 4 || 5 || 6 || 7 || 8 || 9 || 10
+|- style="text-align:right;"
+! {{mvar|rc<sub>i</sub>}}
+| 01 || 02 || 04 || 08 || 10 || 20 || 40 || 80 || 1B || 36 
+|}
+The round constant {{mvar|rcon<sub>i</sub>}} for round {{mvar|i}} of the key expansion is the 32-bit word:{{refn|group=note|In FIPS-197 the <math>rc_i</math> value is the least significant byte at index 0}}
+
+:<math>rcon_i = \begin{bmatrix} rc_i & 00_{16} & 00_{16} & 00_{16} \end{bmatrix}</math>
+
+where {{mvar|rc<sub>i</sub>}} is an eight-bit value defined as :
+:<math> rc_i =
+ \begin{cases}
+ 1 & \text{if } i = 1 \\
+ 2 \cdot rc_{i-1} & \text{if } i > 1 \text{ and } rc_{i-1} < 80_{16} \\
+ (((2 \cdot rc_{i-1})  \oplus \text {11B}_{16} ) \text{ mod } \text {100}_{16} ) & \text{if } i > 1 \text{ and } rc_{i-1} \ge 80_{16}
+ \end{cases} 
+</math>
+
+where <math>\oplus</math> is the [[bitwise XOR]] operator and constants such as {{math|00<sub>16</sub>}} and {{math|11B<sub>16</sub>}} are given in [[hexadecimal]]. Equivalently:
+
+:<math>rc_i = x^{i-1}</math>
+
+where the bits of {{mvar|rc<sub>i</sub>}} are treated as the coefficients of an element of the [[finite field]] <math>\rm{GF}(2)[x]/(x^8 + x^4 + x^3 + x + 1)</math>, so that e.g. <math>rc_{10} = 36_{16} = 00110110_2</math> represents the polynomial <math>x^5 + x^4 + x^2 + x</math>.
+
+AES uses up to {{math|''rcon''<sub>10</sub>}} for AES-128 (as 11 round keys are needed), up to {{math|''rcon''<sub>8</sub>}} for AES-192, and up to {{math|''rcon''<sub>7</sub>}} for AES-256.<!-- Please read the spec before "fixing" this. "Rounds" here does not refer to rounds of AES, but rounds of the key expansion. --><ref group="note">
+The Rijndael variants with larger block sizes use more of these constants, up to {{math|''rcon''<sub>29</sub>}} for Rijndael with 128-bit keys and 256 bit blocks (needs 15 round keys of each 256 bit, which means 30 full rounds of key expansion, which means 29 calls to the ''key schedule core'' using the round constants). The remaining constants for {{math|''i'' &ge; 11}} are: 6C, D8, AB, 4D, 9A, 2F, 5E, BC, 63, C6, 97, 35, 6A, D4, B3, 7D, FA, EF and C5</ref>
+
+== The key schedule ==
+[[File:AES-Key Schedule 128-bit key.svg|thumb|AES key schedule for a 128-bit key.]]
+
+Define:
+* {{mvar|N}} as the length of the key in 32-bit words: 4 words for AES-128, 6 words for AES-192, and 8 words for AES-256
+* {{math|''K''<sub>0</sub>}}, {{math|''K''<sub>1</sub>}}, ... {{math|''K''<sub>''N''-1</sub>}} as the 32-bit words of the original key
+* {{mvar|R}} as the number of round keys needed: 11 round keys for AES-128, 13 keys for AES-192, and 15 keys for AES-256<ref group="note">Other Rijndael variants require {{math|max(''N'', ''B'') + 7}} round keys, where {{mvar|B}} is the block size in words</ref>
+* {{math|''W''<sub>0</sub>}}, {{math|''W''<sub>1</sub>}}, ... {{math|''W''<sub>4''R''-1</sub>}} as the 32-bit words of the expanded key<ref group="note">Other Rijndael variants require {{math|''BR''}} words of expanded key, where {{mvar|B}} is the block size in words</ref>
+
+Also define {{Math|RotWord}} as a one-byte [[circular shift|left circular shift]]:{{refn|group=note|Rotation is opposite of byte order direction.  FIPS-197 byte addresses in arrays are increasing from left to right{{refn|group=ref|{{cite web|url=https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf#page=8|title=Federal Information Processing Standards Publication 197 November 26, 2001 Announcing the ADVANCED ENCRYPTION STANDARD (AES)|access-date=2020-06-16|page=8}}}} in little endian but rotation is from right to left.  In AES-NI{{refn|group=ref|{{cite web|title=Intel® Advanced Encryption Standard (AES) New Instructions Set|url=https://www.intel.com/content/dam/doc/white-paper/advanced-encryption-standard-new-instructions-set-paper.pdf#page=13|page=13}}}} and in the Linux kernel's lib/crypto/aes.c{{refn|group=ref|{{cite web|url=https://github.com/torvalds/linux/blob/master/lib/crypto/aes.c#L205|title=aes.c|website=[[GitHub]] |access-date=2020-06-15}}}}, the byte ordering is increasing from right to left in little endian but rotation is from left to right.}}
+
+:<math>\operatorname{RotWord}(\begin{bmatrix} b_0 & b_1 & b_2 & b_3 \end{bmatrix}) = \begin{bmatrix} b_1 & b_2 & b_3 & b_0 \end{bmatrix}</math>
+
+and {{Math|SubWord}} as an application of the [[Rijndael S-box|AES S-box]] to each of the four bytes of the word:
+
+:<math>\operatorname{SubWord}(\begin{bmatrix} b_0 & b_1 & b_2 & b_3 \end{bmatrix}) = \begin{bmatrix} \operatorname{S}(b_0) & \operatorname{S}(b_1) & \operatorname{S}(b_2) & \operatorname{S}(b_3) \end{bmatrix}</math>
+
+Then for <math>i = 0 \ldots 4R-1</math>:
+
+:<math>W_i =
+ \begin{cases}
+  K_i & \text{if } i < N \\
+  W_{i-N} \oplus \operatorname{SubWord}(\operatorname{RotWord}(W_{i-1})) \oplus rcon_{i/N} & \text {if } i \ge N \text{ and } i \equiv 0 \pmod{N} \\
+  W_{i-N} \oplus \operatorname{SubWord}(W_{i-1}) & \text{if } i \ge N \text{, } N > 6 \text{, and } i \equiv 4 \pmod{N} \\
+  W_{i-N} \oplus W_{i-1} & \text{otherwise.} \\
+ \end{cases}
+</math>
+
+== Notes ==
+{{reflist|group=note}}
+
+== References ==
+
+* [https://doi.org/10.6028/NIST.FIPS.197-upd1 FIPS PUB 197: the official AES standard] ([[Portable Document Format|PDF]] file)
+{{reflist|group=ref}}
+
+== External links ==
+* [http://www.samiam.org/key-schedule.html Description of Rijndael's key schedule]
+* schematic view of the key schedule [https://crypto.stackexchange.com/a/1527 for 128 and 256 bit keys] [https://crypto.stackexchange.com/a/2496 for 160-bit keys] on Cryptography [[Stack Exchange]]
+
+[[Category:Advanced Encryption Standard]]
+[[Category:Key management]]

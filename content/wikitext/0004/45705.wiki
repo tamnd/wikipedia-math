@@ -1,0 +1,150 @@
+<!-- wikipedia: en
+     page: 45705
+     title: Inverse transform sampling
+     revision: 1330078866
+     timestamp: 2025-12-29T09:38:42Z
+     history: https://en.wikipedia.org/w/index.php?curid=45705&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1330078866 -->
+{{Short description|Basic method for pseudo-random number sampling}}
+'''Inverse transform sampling''' (also known as '''inversion sampling''', the '''inverse probability integral transform''', the '''inverse transformation method''', or the '''[[Nikolai Smirnov (mathematician)|Smirnov]] transform''') is a basic method for [[pseudo-random number sampling]], i.e., for generating sample numbers at [[random]] from any [[probability distribution]] given its [[cumulative distribution function]].
+
+Inverse transformation sampling takes [[Continuous uniform distribution|uniform samples]] of a number <math>u</math> between 0 and 1, interpreted as a probability, and then returns the smallest number <math>x\in\mathbb R</math> such that <math>F(x)\ge u</math> for the [[cumulative distribution function]] <math>F</math> of a random variable.  For example, imagine that <math>F</math> is the standard [[normal distribution]] with mean zero and [[standard deviation]] one. The table below shows samples taken from the uniform distribution and their representation on the standard normal distribution.
+
+{| class="wikitable floatright"
+|+ Transformation from uniform sample to normal
+|-
+! <math>u</math> !! <math>F^{-1}(u)</math>
+|-
+| .5 || 0
+|-
+| .975 || 1.95996
+|-
+| .995 || 2.5758
+|-
+| .999999 || 4.75342
+|-
+| 1-2<sup>−52</sup> || 8.12589
+|}
+
+[[File:Inverse transform sampling.png|thumbnail|360px|right|Inverse transform sampling for normal distribution]]
+
+We are randomly choosing a proportion of the area under the curve and returning the number in the domain such that exactly this proportion of the area occurs to the left of that number.  Intuitively, we are unlikely to choose a number in the far end of tails because there is very little area in them which would require choosing a number very close to zero or one.
+
+Computationally, this method involves computing the [[quantile function]] of the distribution — in other words, computing the [[cumulative distribution function]] (CDF) of the distribution (which maps a number in the domain to a probability between 0 and 1) and then [[inverse function|inverting]] that function. This is the source of the term "inverse" or "inversion" in most of the names for this method. Note that for a [[discrete distribution]], computing the CDF is not in general too difficult: we simply add up the individual probabilities for the various points of the distribution. For a [[continuous distribution]], however, we need to integrate the [[probability density function]] (PDF) of the distribution, which is impossible to do analytically for most distributions (including the [[normal distribution]]). As a result, this method may be computationally inefficient for many distributions and other methods are preferred; however, it is a useful method for building more generally applicable samplers such as those based on [[rejection sampling]].
+
+For the [[normal distribution]], the lack of an [[Closed-form expression|analytical expression]] for the corresponding quantile function means that other methods (e.g. the [[Box–Muller transform]]) may be preferred computationally. It is often the case that, even for simple distributions, the inverse transform sampling method can be improved on:<ref>{{cite book |author=Luc Devroye |url=http://www.eirene.de/Devroye.pdf |title=Non-Uniform Random Variate Generation |publisher=Springer-Verlag |place=New York |year=1986 |access-date=2012-04-12 |archive-date=2014-08-18 |archive-url=https://web.archive.org/web/20140818200854/http://www.eirene.de/Devroye.pdf |url-status=dead }}</ref> see, for example, the [[ziggurat algorithm]] and [[rejection sampling]]. On the other hand, it is possible to approximate the quantile function of the normal distribution extremely accurately using moderate-degree polynomials, and in fact the method of doing this is fast enough that inversion sampling is now the default method for sampling from a normal distribution in the statistical package [[R (programming language)|R]].<ref>{{Cite web|url=https://stat.ethz.ch/R-manual/R-devel/library/base/html/Random.html|title = R: Random Number Generation}}</ref>
+
+==Formal statement==
+
+For any [[random variable]] <math>X </math> on <math>\mathbb R</math>, the random variable <math>F_X^{-1}(U)</math> has the same distribution as <math>X</math>, where <math>F_X^{-1}</math> is the [[Cumulative distribution function#Inverse_distribution_function_(quantile_function)|generalized inverse]] of the [[cumulative distribution function]] <math>F_X</math> of <math>X</math> and <math>U</math> is uniform on <math>[0,1]</math>.<ref name="mcneil2005">{{cite book | last1 = McNeil | first1 = Alexander J. | last2 = Frey | first2 = Rüdiger | last3 = Embrechts | first3 = Paul | title = Quantitative risk management | date=2005 | series=Princeton Series in Finance | publisher=Princeton University Press, Princeton, NJ | page=186 | isbn=0-691-12255-5}}</ref>
+
+For [[Random_variable#Continuous_random_variable|continuous random variables]], the [[inverse probability]] integral transform is indeed the inverse of the [[probability integral transform]], which states that for a [[continuous random variable]] <math>X</math> with [[cumulative distribution function]] <math>F_X</math>, the random variable <math>U=F_X(X)</math> is [[uniform distribution (continuous)|uniform]] on <math>[0,1]</math>.
+
+[[File:InverseFunc.png|thumb|360px|Graph of the inversion technique from <math>x</math> to <math>F(x)</math>. On the bottom right we see the regular function and in the top left its inversion.]]
+
+== Intuition ==
+From <math>U \sim \mathrm{Unif}[0,1]</math>, we want to generate <math>X</math> with [[Cumulative distribution function|CDF]] <math>F_X(x).</math> We assume <math>F_X(x)</math> to be a continuous, strictly [[Monotonic function|increasing function]], which provides good intuition.
+
+We want to see if we can find some strictly monotone transformation <math>T:[0,1]\mapsto \mathbb{R}</math>, such that <math>T(U)\overset{d}{=}X</math>. We will have
+
+<math>F_X(x)=\Pr(X\leq x)=\Pr(T(U)\leq x) = \Pr(U\leq T^{-1}(x))=T^{-1}(x), \text{ for } x\in \mathbb{R},</math>
+
+where the last step used that <math>\Pr(U \leq y) = y</math> when <math>U</math> is uniform on <math>[0,1]</math>.
+
+So we got <math>F_X</math> to be the inverse function of <math>T </math>, or, equivalently <math>T(u)=F_X^{-1}(u), u\in [0,1]. </math>
+
+Therefore, we can generate <math>X </math> from <math>F_X^{-1}(U). </math>
+
+==The method==
+[[File:Generalized inversion method.svg|thumb|360px|Schematic of the inverse transform sampling. The inverse function of <math>y=F_X(x)</math> can be defined by <math>F_X^{-1}(y)=\mathrm{inf}\{x| F_X(x)\geq y\}</math>.]]
+[[File:Inverse Transform Sampling Example.gif|thumb|360px|right|An animation of how inverse transform sampling generates normally distributed random values from uniformly distributed random values]]
+The problem that the inverse transform sampling method solves is as follows:
+
+*Let <math>X</math> be a [[random variable]] whose distribution can be described by the [[cumulative distribution function]] <math>F_X</math>.
+*We want to generate values of <math>X</math> which are distributed according to this distribution.
+
+The inverse transform sampling method works as follows:
+#[[pseudorandom number generator|Generate a random number]] <math>u</math> from the standard uniform distribution in the interval <math>[0,1]</math>, i.e. from <math>U \sim \mathrm{Unif}[0,1].</math>
+#Find the [[cumulative distribution function#Inverse_distribution_function_(quantile_function)|generalized inverse]] of the desired CDF, i.e. <math>F_X^{-1}(u)</math>.
+# Compute <math>X'(u)=F_X^{-1}(u)</math>. The computed random variable <math>X'(U)</math> has distribution <math>F_X</math> and thereby the same law as <math>X</math>.
+
+Expressed differently, given a cumulative distribution function <math>F_X</math> and a uniform variable <math>U\in[0,1]</math>, the random variable <math>X = F_X^{-1}(U)</math> has the distribution <math>F_X</math>.<ref name="mcneil2005" />
+
+In the continuous case, a treatment of such inverse functions as objects satisfying differential equations can be given.<ref>{{cite journal | last1 = Steinbrecher | first1 = György | last2 = Shaw | first2 = William T. | title = Quantile mechanics | journal = European Journal of Applied Mathematics | date = 19 March 2008 | volume = 19 | issue = 2 | pages = 87–112 | doi = 10.1017/S0956792508007341| s2cid = 6899308 }}</ref> Some such differential equations admit explicit [[power series]] solutions, despite their non-linearity.<ref>{{Cite journal |last1=Arridge |first1=Simon |last2=Maass |first2=Peter |last3=Öktem |first3=Ozan |last4=Schönlieb |first4=Carola-Bibiane |title=Solving inverse problems using data-driven models |journal=Acta Numerica |year=2019 |language=en |volume=28 |pages=1–174 |doi=10.1017/S0962492919000059 |s2cid=197480023 |issn=0962-4929|doi-access=free }}</ref>
+
+== Examples ==
+* As an example, suppose we have a random variable <math> U \sim \mathrm{Unif}(0,1)</math> and a [[cumulative distribution function]]
+: <math>
+\begin{align}
+ F(x)=1-\exp(-\sqrt{x})
+\end{align}
+</math>
+: In order to perform an inversion we want to solve for <math>F(F^{-1}(u))=u</math>
+: <math>
+\begin{align}
+ F(F^{-1}(u))&=u \\
+ 1-\exp\left(-\sqrt{F^{-1}(u)}\right) &= u \\
+ F^{-1}(u) &= (-\log(1-u))^2 \\
+&= (\log(1-u))^2
+\end{align}
+</math>
+: From here we would perform steps one, two and three.
+
+* As another example, we use the [[exponential distribution]] with <math>F_X(x)=1-e^{-\lambda x}</math> for x ≥ 0 (and 0 otherwise). By solving y=F(x) we obtain the inverse function
+: <math>x = F^{-1}(y) = -\frac{1}{\lambda}\ln(1-y).</math>
+:It means that if we draw some <math>y_0</math>from a <math> U \sim \mathrm{Unif}(0,1)</math> and compute <math>x_0 = F_X^{-1}(y_0) = -\frac{1}{\lambda}\ln(1-y_0),</math> This <math>x_0</math> has exponential distribution.
+: The idea is illustrated in the following graph:
+
+: [[File:Inverse transformation method for exponential distribution.jpg|thumb|none|400px|Random numbers y<sub>i</sub> are generated from a uniform distribution between 0 and 1, i.e. Y ~ U(0, 1). They are sketched as colored points on the y-axis. Each of the points is mapped according to x=F<sup>−1</sup>(y), which is shown with gray arrows for two example points. In this example, we have used an exponential distribution. Hence, for x ≥ 0, the probability density is <math>\varrho_X(x) = \lambda e^{-\lambda \, x}</math> and the cumulative distribution function is <math>F(x) = 1 - e^{-\lambda \, x}</math>. Therefore, <math>x = F^{-1}(y) = - \frac{\ln(1-y)}{\lambda}</math>. We can see that using this method, many points end up close to 0 and only few points end up having high x-values - just as it is expected for an exponential distribution.]]
+: Note that the distribution does not change if we start with 1-y instead of y. For computational purposes, it therefore suffices to generate random numbers y in [0, 1] and then simply calculate
+: <math>x = F^{-1}(y) = -\frac{1}{\lambda}\ln(y).</math>
+
+==Proof of correctness==
+Let <math>F</math> be a [[cumulative distribution function]], and let <math>F^{-1}</math> be its [[cumulative distribution function#Inverse_distribution_function_(quantile_function)|generalized inverse function]] (using the [[infimum]] because CDFs are weakly monotonic and [[Càdlàg|right-continuous]]):<ref>{{cite book |author=Luc Devroye |title=Non-Uniform Random Variate Generation |publisher=Springer-Verlag |place=New York |year=1986 |chapter=Section 2.2. Inversion by numerical solution of ''F''(''X'')&nbsp;=&nbsp;''U'' |chapter-url=https://luc.devroye.org/chapter_two.pdf}}</ref>
+
+:<math>F^{-1}(u) = \inf\;\{x \mid F(x)\geq u\} \qquad (0<u<1).</math>
+
+''Claim:'' If <math>U</math> is a [[uniform distribution (continuous)|uniform]] random variable on <math>[0,1]</math> then <math>F^{-1}(U)</math> has <math>F</math> as its CDF.
+
+''Proof:''
+
+:<math>
+\begin{align}
+& \Pr(F^{-1}(U) \leq x) \\
+& {} = \Pr(U \leq F(x)) \quad &(F\text{ is right-continuous, so }\{u:F^{-1}(u)\le x\}=\{u:u\le F(x)\}) \\
+& {} = F(x)             \quad &(\text{because }\Pr(U \leq u) = u,\text{ when } U \text{ is uniform on }[0,1]) \\
+\end{align}
+</math>
+
+== Truncated distribution ==
+
+Inverse transform sampling can be simply extended to cases of [[truncated distribution]]s on the interval <math>(a,b]</math> without the cost of rejection sampling: the same algorithm can be followed, but instead of  generating a random number <math>u</math> uniformly distributed between 0 and 1, generate <math>u</math> uniformly distributed between <math>F(a)</math> and <math>F(b)</math>, and then again take <math>F^{-1}(u)</math>.
+
+== Reduction of the number of inversions ==
+In order to obtain a large number of samples, one needs to perform the same number of inversions of the distribution. 
+One possible way to reduce the number of inversions while obtaining a large number of samples is the application of the so-called Stochastic Collocation Monte Carlo sampler (SCMC sampler) within a [[polynomial chaos]] expansion framework. This allows us to generate any number of Monte Carlo samples with only a few inversions of the original distribution with independent samples of a variable for which the inversions are analytically available, for example the standard normal variable.<ref>L.A. Grzelak, J.A.S. Witteveen, M. Suarez, and C.W. Oosterlee. The stochastic collocation Monte Carlo sampler: Highly efficient sampling from “expensive” distributions. https://ssrn.com/abstract=2529691</ref>
+
+== Software implementations ==
+There are software implementations available for applying the inverse sampling method by using numerical approximations of the inverse in the case that it is not available in closed form. For example, an approximation of the inverse can be computed if the user provides some information about the distributions such as the PDF <ref>
+{{cite journal | last1 = Derflinger | first1 = Gerhard | last2 = Hörmann | first2 = Wolfgang | last3 = Leydold | first3 = Josef | title = Random variate generation by numerical inversion when only the density is known | journal = ACM Transactions on Modeling and Computer Simulation | date = 2010 | volume = 20 | issue = 4 | doi = 10.1145/945511.945517| url = https://epub.wu.ac.at/664/1/document.pdf }}</ref> or the CDF.
+
+* C library UNU.RAN <ref>{{cite web | url=https://statmath.wu.ac.at/unuran/index.html | title=UNU.RAN - Universal Non-Uniform RANdom number generators }}</ref>
+* R library Runuran <ref>{{cite web | url=https://cran.r-project.org/package=Runuran | title=Runuran: R Interface to the 'UNU.RAN' Random Variate Generators | date=17 January 2023 }}</ref>
+* Python subpackage sampling in [[SciPy|scipy.stats]]<ref>{{cite web | url=https://docs.scipy.org/doc/scipy/reference/stats.sampling.html | title=Random Number Generators (Scipy.stats.sampling) — SciPy v1.12.0 Manual }}</ref><ref>
+{{cite book | last1 = Baumgarten | first1 = Christoph | last2 = Patel | first2 = Tirth | chapter = Automatic random variate generation in Python | title = Proceedings of the 21st Python in Science Conference | date = 2022 | pages = 46–51 | doi = 10.25080/majora-212e5952-007}}</ref>
+
+== See also ==
+* [[Probability integral transform]]
+* [[Copula (statistics)|Copula]], defined by means of probability integral transform.
+* [[Quantile function]], for the explicit construction of inverse CDFs.
+* [[Cumulative distribution function#Inverse_distribution_function_(quantile_function)|Inverse distribution function]] for a precise mathematical definition for distributions with discrete components.
+* [[Rejection sampling]] is another common technique to generate random variates that does not rely on inversion of the CDF.
+
+==References==
+
+<references/>
+
+{{DEFAULTSORT:Inverse Transform Sampling}}
+[[Category:Monte Carlo methods]]
+[[Category:Non-uniform random numbers]]

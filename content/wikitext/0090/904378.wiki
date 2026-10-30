@@ -1,0 +1,369 @@
+<!-- wikipedia: en
+     page: 904378
+     title: Montgomery modular multiplication
+     revision: 1369224273
+     timestamp: 2026-08-13T16:56:19Z
+     history: https://en.wikipedia.org/w/index.php?curid=904378&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1369224273 -->
+{{short description|Algorithm for fast modular multiplication}}
+In [[modular arithmetic]] computation, '''Montgomery modular multiplication''', more commonly referred to as '''Montgomery multiplication''', is a method for performing fast modular multiplication.  It was introduced in 1985 by the American mathematician [[Peter Montgomery (mathematician)|Peter L. Montgomery]].<ref name="montg1985">{{cite journal
+|author-link=Peter Montgomery (mathematician) |first=Peter |last=Montgomery
+|doi=10.1090/S0025-5718-1985-0777282-X |doi-access=free
+|title=Modular Multiplication Without Trial Division
+|journal=[[Mathematics of Computation]]
+|volume=44 |issue=170 |pages=519–521 |date=April 1985
+|url=https://www.ams.org/journals/mcom/1985-44-170/S0025-5718-1985-0777282-X/S0025-5718-1985-0777282-X.pdf
+}}</ref><ref name="kochanski">Martin Kochanski, [http://www.nugae.com/encryption/fap4/montgomery.htm "Montgomery Multiplication"] {{Webarchive|url=https://web.archive.org/web/20100327211550/http://www.nugae.com/encryption/fap4/montgomery.htm |date=2010-03-27 }} a colloquial explanation.</ref>
+
+Montgomery modular multiplication relies on a special representation of numbers called Montgomery form. The algorithm uses the Montgomery forms of {{mvar|a}} and {{mvar|b}} to efficiently compute the Montgomery form of {{math|''ab'' mod ''N''}}. The efficiency comes from avoiding expensive division operations. Classical modular multiplication reduces the double-width product {{math|''ab''}} using division by {{mvar|N}} and keeping only the remainder. This division requires quotient digit estimation and correction. The Montgomery form, in contrast, depends on a constant {{mvar|R > N}} which is [[Coprime integers|coprime]] to {{mvar|N}}, and the only division necessary in Montgomery multiplication is division by {{mvar|R}}. The constant {{mvar|R}} can be chosen so that division by {{mvar|R}} is easy, significantly improving the speed of the algorithm.  In binary computers, {{mvar|R}} is always a [[power of two]], since division by powers of two can be implemented by [[bit shifting]].
+
+The need to convert {{mvar|a}} and {{mvar|b}} into Montgomery form and their product out of Montgomery form means that computing a single product by Montgomery multiplication is slower than the conventional or [[Barrett reduction]] algorithms.  However, when performing many multiplications in a row, as in [[modular exponentiation]], intermediate results can be left in Montgomery form. Then the initial and final conversions become a negligible fraction of the overall computation.  Many important cryptosystems such as [[RSA (cryptosystem)|RSA]] and [[Diffie–Hellman key exchange]] are based on arithmetic operations modulo a large odd number, and for these cryptosystems, computations using Montgomery multiplication with {{mvar|R}} a power of two are faster than the available alternatives.<ref>[[Alfred J. Menezes]], Paul C. van Oorschot, and [[Scott A. Vanstone]]. [http://www.cacr.math.uwaterloo.ca/hac/about/chap14.pdf ''Handbook of Applied Cryptography'']. CRC Press, 1996. {{isbn|0-8493-8523-7}}, chapter 14.</ref>
+== Modular arithmetic ==
+
+Let {{mvar|N}} denote a positive [[integer]] modulus.  The [[quotient ring]] {{math|'''Z'''/''N'''''Z'''}} consists of residue classes modulo {{mvar|N}}, that is, its elements are sets of the form
+:<math>\{ a + kN \colon k \in \mathbf{Z} \},</math>
+where {{mvar|a}} ranges across the integers.  Each residue class is a set of integers such that the difference of any two integers in the set is divisible by {{mvar|N}} (and the residue class is maximal with respect to that property; integers aren't left out of the residue class unless they would violate the divisibility condition).  The residue class corresponding to {{mvar|a}} is denoted {{math|{{overline|''a''}}}}.  Equality of residue classes is called congruence and is denoted
+:<math>\bar a \equiv \bar b \pmod{N}.</math>
+Storing an entire residue class on a computer is impossible because the residue class has infinitely many elements.  Instead, residue classes are stored as representatives.  Conventionally, these representatives are the integers {{mvar|a}} for which {{math|0 &le; ''a'' &le; ''N'' &minus; 1}}.  If {{mvar|a}} is an integer, then the representative of {{math|{{overline|''a''}}}} is written {{math|''a'' mod ''N''}}.  When writing congruences, it is common to identify an integer with the residue class it represents.  With this convention, the above equality is written {{math|''a'' ≡ ''b'' mod ''N''}}.
+
+Arithmetic on residue classes is done by first performing integer arithmetic on their representatives.  The output of the integer operation determines a residue class, and the output of the modular operation is determined by computing the residue class's representative.  For example, if {{math|1=''N'' = 17}}, then the sum of the residue classes {{math|{{overline|7}}}} and {{math|{{overline|15}}}} is computed by finding the integer sum {{math|1=7 + 15 = 22}}, then determining {{math|22 mod 17}}, the integer between 0 and 16 whose difference with 22 is a multiple of 17.  In this case, that integer is 5, so {{math|{{overline|7}} + {{overline|15}} ≡ {{overline|5}} mod 17}}.
+== Montgomery form ==
+
+If {{mvar|a}} and {{mvar|b}} are integers in the range {{math|[0, ''N'' &minus; 1]}}, then their sum is in the range {{math|[0, 2''N'' &minus; 2]}} and their difference is in the range {{math|[&minus;''N'' + 1, ''N'' &minus; 1]}}, so determining the representative in {{math|[0, ''N'' &minus; 1]}} requires at most one [[subtraction]] or addition (respectively) of {{mvar|N}}.  However, the product {{math|''ab''}} is in the range {{math|[0, ''N''<sup>2</sup> &minus; 2''N'' + 1]}}.  Storing the intermediate integer product {{math|''ab''}} requires twice as many bits as either {{mvar|a}} or {{mvar|b}}, and efficiently determining the representative in {{math|[0, ''N'' &minus; 1]}} requires division.  Mathematically, the integer between 0 and {{math|''N'' &minus; 1}} that is congruent to {{math|''ab''}} can be expressed by applying the [[Euclidean division#Statement of the theorem|Euclidean division theorem]]:
+:<math>ab = qN + r,</math>
+where {{mvar|q}} is the quotient <math>\lfloor ab / N \rfloor</math> and {{mvar|r}}, the remainder, is in the interval {{math|[0, ''N'' &minus; 1]}}.  The remainder {{mvar|r}} is {{math|''ab'' mod ''N''}}.  Determining {{mvar|r}} can be done by computing {{mvar|q}}, then subtracting {{math|''qN''}} from {{math|''ab''}}.  For example, again with <math>N=17</math>, the product {{math|{{overline|7}} ⋅ {{overline|15}}}} is determined by computing <math>7 \cdot 15 = 105</math>, dividing <math>\lfloor 105 / 17 \rfloor = 6</math>, and subtracting <math>105 - 6 \cdot 17 = 105 - 102 = 3</math>.
+
+Because the computation of {{mvar|q}} requires division, it is undesirably expensive on most [[computer hardware]].  Montgomery form is a different way of expressing the elements of the ring in which modular products can be computed without expensive divisions.  While divisions are still necessary, they can be done with respect to a different divisor {{mvar|R}}.  This divisor can be chosen to be a power of two, for which division can be replaced by shifting, or a whole number of machine words, for which division can be replaced by omitting words.  These divisions are fast, so most of the cost of computing modular products using Montgomery form is the cost of computing ordinary products.
+
+The auxiliary modulus {{mvar|R}} must be a positive integer such that {{math|1=gcd(''R'', ''N'') = 1}}.  For computational purposes it is also necessary that division and reduction modulo {{mvar|R}} are inexpensive, and the modulus is not useful for modular multiplication unless {{math|''R'' &gt; ''N''}}.  The ''Montgomery form'' of the residue class {{math|{{overline|''a''}}}} with respect to {{mvar|R}} is {{math|''aR'' mod ''N''}}, that is, it is the representative of the residue class {{math|{{overline|''aR''}}}}.  For example, suppose that {{math|1=''N'' = 17}} and that {{math|1=''R'' = 100}}.  The Montgomery forms of 3, 5, 7, and 15 are {{math|1=300 mod 17 = 11}}, {{math|1=500 mod 17 = 7}}, {{math|1=700 mod 17 = 3}}, and {{math|1=1500 mod 17 = 4}}.
+
+Addition and subtraction in Montgomery form are the same as ordinary modular addition and subtraction because of the distributive law:
+:<math>aR + bR = (a + b)R,</math>
+:<math>aR - bR = (a - b)R.</math>
+Note that doing the operation in Montgomery form does not lose information compared to doing it in the quotient ring {{math|'''Z'''/''N'''''Z'''}}. This is a consequence of the fact that, because {{math|1=gcd(''R'', ''N'') = 1}}, multiplication by {{mvar|R}} is an [[isomorphism]] on the additive group {{math|'''Z'''/''N'''''Z'''}}.  For example, {{math|1=(7 + 15) mod 17 = 5}}, which in Montgomery form becomes {{math|1=(3 + 4) mod 17 = 7}}.
+
+Multiplication in Montgomery form, however, is seemingly more complicated.  The usual product of {{math|''aR''}} and {{math|''bR''}} does not represent the product of {{mvar|a}} and {{mvar|b}} because it has an extra factor of {{mvar|R}}:
+:<math>(aR \bmod N)(bR \bmod N) \bmod N = (abR)R \bmod N.</math>
+Computing products in Montgomery form requires removing the extra factor of {{mvar|R}}.  While division by {{mvar|R}} is cheap, the intermediate product {{math|(''aR'' mod ''N'')(''bR'' mod ''N'')}} is not divisible by {{mvar|R}} because the modulo operation has destroyed that property.  So for instance, the product of the Montgomery forms of 7 and 15 modulo 17, with {{math|1=''R'' = 100}}, is the product of 3 and 4, which is 12.  Since 12 is not divisible by 100, additional effort is required to remove the extra factor of {{mvar|R}}.
+
+Removing the extra factor of {{mvar|R}} can be done by multiplying by an integer {{math|''R''&prime;}} such that {{math|''RR''&prime; &equiv; 1 (mod ''N'')}}, that is, by an {{math|''R''&prime;}} whose residue class is the [[modular inverse]] of {{mvar|R}} mod {{mvar|N}}.  Then, working modulo {{mvar|N}},
+:<math>(aR \bmod N)(bR \bmod N)R' \equiv (aR)(bR)R^{-1} \equiv (ab)R \pmod{N}.</math>
+The integer {{math|''R''&prime;}} exists because of the assumption that {{mvar|R}} and {{mvar|N}} are coprime.  It can be constructed using the [[extended Euclidean algorithm]].  The extended Euclidean algorithm efficiently determines integers {{math|''R''&prime;}} and {{math|''N''&prime;}} that satisfy [[Bézout's identity]]:
+{{math|0 &lt; ''R''&prime; &lt; ''N''}}, {{math|0 &lt; ''N''&prime; &lt; ''R''}}, and:
+:<math>RR' - NN' = 1.</math>
+This shows that it is possible to do multiplication in Montgomery form.  A straightforward algorithm to multiply numbers in Montgomery form is therefore to multiply {{math|''aR'' mod ''N''}}, {{math|''bR'' mod ''N''}}, and {{math|''R''&prime;}} as integers and reduce modulo {{mvar|N}}.
+
+For example, to multiply 7 and 15 modulo 17 in Montgomery form, again with {{math|1=''R'' = 100}}, compute the product of 3 and 4 to get 12 as above.  The extended Euclidean algorithm implies that {{math|1=8⋅100 &minus; 47⋅17 = 1}}, so {{math|1=''R''&prime; = 8}}.  Multiply 12 by 8 to get 96 and reduce modulo 17 to get 11.  This is the Montgomery form of 3, as expected.
+
+== The REDC algorithm ==
+
+While the above algorithm is correct, it is slower than multiplication in the standard representation because of the need to multiply by {{math|''R''&prime;}} and divide by {{mvar|N}}.  ''Montgomery reduction'', also known as REDC, is an algorithm that simultaneously computes the product by {{math|''R''&prime;}} and reduces modulo {{mvar|N}} more quickly than the naïve method.  Unlike conventional modular reduction, which focuses on making the number smaller than {{mvar|N}}, Montgomery reduction focuses on making the number more divisible by {{mvar|R}}. It does this by adding a [[small multiple]] of {{mvar|N}} which is sophisticatedly chosen to cancel the residue modulo {{mvar|R}}. Dividing the result by {{mvar|R}} yields a much smaller number. This number is so much smaller that it is nearly the reduction modulo {{mvar|N}}, and computing the reduction modulo {{mvar|N}} requires only a final conditional subtraction. Because all computations are done using only reduction and divisions with respect to {{mvar|R}}, not {{mvar|N}}, the algorithm runs faster than a straightforward modular reduction by division.
+ '''function''' REDC '''is'''
+     '''input:''' Integers ''R'' and ''N'' with {{nowrap|1=gcd(''R'', ''N'') = 1}},
+            Integer ''N''&prime; in {{nowrap|[0, ''R'' &minus; 1]}} such that {{nowrap|''NN''&prime; ≡ &minus;1 mod ''R''}},
+            Integer ''T'' in the range {{nowrap|[0, ''RN'' &minus; 1]}}.
+     '''output:''' Integer ''S'' in the range {{nowrap|[0, ''N'' &minus; 1]}} such that {{nowrap|''S'' ≡ ''TR''<sup>&minus;1</sup> mod ''N''}}
+ 
+     ''m'' &larr; ((''T'' mod ''R'')''N''&prime;) mod ''R''
+     ''t'' &larr; (''T'' + ''mN'') / ''R''
+     '''if''' ''t'' &ge; ''N'' '''then'''
+         '''return''' {{nowrap|''t'' &minus; ''N''}}
+     '''else'''
+         '''return''' ''t''
+     '''end if'''
+ '''end function'''
+
+To see that this algorithm is correct, first observe that {{mvar|m}} is chosen precisely so that {{math|''T'' + ''mN''}} is divisible by {{mvar|R}}.  A number is divisible by {{mvar|R}} [[if and only if]] it is congruent to zero mod {{mvar|R}}, and we have:
+:<math>T + mN \equiv T + (((T \bmod R)N') \bmod R)N \equiv T + T N' N \equiv T - T \equiv 0 \pmod{R}.</math>
+Therefore, {{mvar|t}} is an integer.  Second, the output is either {{mvar|t}} or {{math|''t'' &minus; ''N''}}, both of which are congruent to {{math|''t'' mod ''N''}}, so to prove that the output is congruent to {{math|''TR''<sup>&minus;1</sup> mod ''N''}}, it suffices to prove that {{mvar|t}} is {{math|''TR''<sup>&minus;1</sup> mod ''N''}}, {{mvar|t}} satisfies:
+:<math>t \equiv (T + mN)R^{-1} \equiv TR^{-1} + (mR^{-1})N \equiv TR^{-1} \pmod{N}.</math>
+Therefore, the output has the correct residue class.  Third, {{mvar|m}} is in {{math|[0, ''R'' &minus; 1]}}, and therefore {{math|''T'' + ''mN''}} is between 0 and {{math|(''RN'' &minus; 1) + (''R'' &minus; 1)''N'' &lt; 2''RN''}}.  Hence {{mvar|t}} is less than {{math|2''N''}}, and because it's an integer, this puts {{mvar|t}} in the range {{math|[0, 2''N'' &minus; 1]}}.  Therefore, reducing {{mvar|t}} into the desired range requires at most a single subtraction, so the algorithm's output lies in the correct range.
+
+To use REDC to compute the product of 7 and 15 modulo 17, first convert to Montgomery form and multiply as integers to get 12 as above.  Then apply REDC with {{math|1=''R'' = 100}}, {{math|1=''N'' = 17}}, {{math|1=''N''&prime; = 47}}, and {{math|1=''T'' = 12}}.  The first step sets {{mvar|m}} to {{math|1=12 ⋅ 47 mod 100 = 64}}.  The second step sets {{mvar|t}} to {{math|(12 + 64 ⋅ 17) / 100}}.  Notice that {{math|12 + 64 ⋅ 17}} is 1100, a multiple of 100 as expected.  {{mvar|t}} is set to 11, which is less than 17, so the final result is 11, which agrees with the computation of the previous section.
+
+As another example, consider the product {{math|7 ⋅ 15 mod 17}} but with {{math|1=''R'' = 10}}.  Using the extended Euclidean algorithm, compute {{math|1=&minus;5 ⋅ 10 + 3 ⋅ 17 = 1}}, so {{math|''N''&prime;}} will be {{math|1=&minus;3 mod 10 = 7}}.  The Montgomery forms of 7 and 15 are {{math|1=70 mod 17 = 2}} and {{math|1=150 mod 17 = 14}}, respectively.  Their product 28 is the input {{mvar|T}} to REDC, and since {{math|1=28 &lt; ''RN'' = 170}}, the assumptions of REDC are satisfied.  To run REDC, set {{mvar|m}} to {{math|1=(28 mod 10) ⋅ 7 mod 10 = 196 mod 10 {{=}} 6}}.  Then {{math|1=28 + 6 ⋅ 17 = 130}}, so {{math|1=''t'' = 13}}.  Because {{math|1=30 mod 17 = 13}}, this is the Montgomery form of {{math|1=3 = 7 ⋅ 15 mod 17}}.
+
+== Interpretation via the Chinese Remainder Theorem ==
+Source:<ref>{{cite arXiv | eprint=2402.00675 | last1=Xu | first1=Guangwu | last2=Jia | first2=Yiran | last3=Yang | first3=Yanze | title=Chinese Remainder Theorem Approach to Montgomery-Type Algorithms | date=2024 | class=cs.CR }}</ref>
+
+Given the modulus {{mvar|N}} and the Montgomery radix {{mvar|R}} used in a Montgomery reduction, consider the [[Modular arithmetic|residue ring]]
+
+<math>\mathbb{Z}/(NR)\mathbb{Z}\;\cong\;\mathbb{Z}/N\mathbb{Z}\;\times\;\mathbb{Z}/R\mathbb{Z},</math>
+
+an [[isomorphism]] that follows from the [[Chinese remainder theorem|Chinese Remainder Theorem (CRT)]].
+
+=== CRT reconstruction for an intermediate product ===
+For an integer <math>T</math> with <math>0 \le T < NR</math> (as is typical when <math>T</math> arises from multiplying two residues), take its reductions
+
+<math>T_N = T \bmod N, \qquad
+
+T_R = T \bmod R .
+
+</math>
+
+The [[Chinese remainder theorem|CRT]] gives the explicit reconstruction formula
+
+<math>T \equiv
+
+T_N\bigl(R^{-1} \bmod N\bigr)\,R
+
+\;+
+
+T_R\bigl(N^{-1} \bmod R\bigr)\,N
+
+\pmod{NR}.
+
+</math>
+
+Because the right-hand side is already taken modulo <math>NR</math>, this may also be written as
+
+<math>T \equiv
+
+\bigl(T_N R^{-1} \bmod N\bigr) R
+
+\;+
+
+\bigl(T_R N^{-1} \bmod R\bigr) N
+
+\pmod{NR}.
+
+</math>
+
+Both summands lie in the half‑open interval <math>[0,NR)</math>:
+
+<math>0 \le \bigl(T_N R^{-1}\bmod N\bigr) R < NR,\qquad
+
+0 \le \bigl(T_R N^{-1}\bmod R\bigr) N < NR .
+
+</math>
+
+Hence, as '''integer''' equations (not merely congruences) we have
+
+<math>T =
+
+\bigl(T_N R^{-1} \bmod N\bigr) R
+
+\;+
+
+\bigl(T_R N^{-1} \bmod R\bigr) N ,
+
+</math>
+
+or,
+
+<math>T + NR =
+
+\bigl(T_N R^{-1} \bmod N\bigr) R
+
+\;+
+
+\bigl(T_R N^{-1} \bmod R\bigr) N .
+
+</math>
+
+=== Isolating the term containing T mod N ===
+To solve for <math>T_N</math>, isolate the first summand:
+
+<math>\bigl(T_N R^{-1} \bmod N\bigr) R
+
+=
+
+\begin{cases}
+
+T - \bigl(T_R N^{-1} \bmod R\bigr) N, \\
+
+T + NR - \bigl(T_R N^{-1} \bmod R\bigr) N .
+
+\end{cases}
+
+</math>
+
+Every quantity above is an integer, and the left‑hand side is a multiple of <math>R</math>; therefore each right‑hand side is divisible by <math>R</math>. Dividing by <math>R</math> yields
+
+<math>T_N R^{-1}\bmod N
+=\begin{cases}
+
+\dfrac{T - \bigl(T_R N^{-1} \bmod R\bigr) N}{R},\\[8pt]
+
+\dfrac{T + NR - \bigl(T_R N^{-1} \bmod R\bigr) N}{R}
+
+\,=\,\dfrac{T - \bigl(T_R N^{-1} \bmod R\bigr) N}{R} + N .
+
+\end{cases}
+
+</math>
+
+=== Resulting relations ===
+Consequently,
+
+<math>\dfrac{T - \bigl(T_R N^{-1} \bmod R\bigr) N}{R}
+
+=
+
+\begin{cases}
+
+T_N R^{-1}\bmod N,\\
+
+T_N R^{-1}\bmod N \; - \; N .
+
+\end{cases}
+
+
+
+</math>
+
+This gives two key facts:
+
+* '''Congruence'''
+<math>  \frac{T - \bigl(T_R N^{-1}\bmod R\bigr) N}{R}
+\;\equiv\;
+T_N R^{-1}
+\pmod{N}.</math>
+
+* '''Numeric bound'''
+<math> 
+  -N \;\le\;
+  \frac{T - \bigl(T_R N^{-1}\bmod R\bigr) N}{R}
+  \;<\;
+  N.
+  
+</math>
+
+Therefore, by reducing
+
+<math>
+\frac{T - \bigl(T_R N^{-1}\bmod R\bigr) N}{R}
+</math>
+
+once more modulo {{mvar|N}}, one obtains the non‑negative residue representing <math>T_{N} R^{-1}\bmod N</math>.
+
+== Arithmetic in Montgomery form ==
+
+Many operations of interest modulo {{mvar|N}} can be expressed equally well in Montgomery form.  Addition, subtraction, negation, comparison for equality, multiplication by an integer not in Montgomery form, and greatest common divisors with {{mvar|N}} may all be done with the standard algorithms.  The [[Jacobi symbol]] can be calculated as <math>\big(\tfrac{a}{N}\big) = \big(\tfrac{aR}{N}\big) / \big(\tfrac{R}{N}\big)</math> as long as <math>\big(\tfrac{R}{N}\big)</math> is stored.
+
+When {{math|''R'' &gt; ''N''}}, most other arithmetic operations can be expressed in terms of REDC.  This assumption implies that the product of two representatives mod {{mvar|N}} is less than {{mvar|RN}}, the exact hypothesis necessary for REDC to generate correct output.  In particular, the product of {{math|''aR'' mod ''N''}} and {{math|''bR'' mod ''N''}} is {{math|REDC((''aR'' mod ''N'')(''bR'' mod ''N''))}}.  The combined operation of multiplication and REDC is often called ''Montgomery multiplication''.
+
+Conversion into Montgomery form is done by computing {{math|REDC((''a'' mod ''N'')(''R''<sup>2</sup> mod ''N''))}}.  Conversion out of Montgomery form is done by computing {{math|REDC(''aR'' mod ''N'')}}.  The modular inverse of {{math|''aR'' mod ''N''}} is {{math|REDC((''aR'' mod ''N'')<sup>&minus;1</sup>(''R''<sup>3</sup> mod ''N''))}}.  Modular exponentiation can be done using [[exponentiation by squaring]] by initializing the initial product to the Montgomery representation of 1, that is, to {{math|''R'' mod ''N''}}, and by replacing the multiply and square steps by Montgomery multiplies.
+
+Performing these operations requires knowing at least {{math|''N''&prime;}} and {{math|''R''<sup>2</sup> mod ''N''}}.  When {{mvar|R}} is a power of a small positive integer {{mvar|b}}, {{math|''N''&prime;}} can be computed by [[Hensel's lemma]]: The inverse of {{mvar|N}} modulo {{mvar|b}} is computed by a naïve algorithm (for instance, if {{math|1=''b'' = 2}} then the inverse is 1), and Hensel's lemma is used repeatedly to find the inverse modulo higher and higher powers of {{mvar|b}}, stopping when the inverse modulo {{mvar|R}} is known; {{math|''N''&prime;}} is the negation of this inverse.  The constants {{math|''R'' mod ''N''}} and {{math|''R''<sup>3</sup> mod ''N''}} can be generated as {{math|REDC(''R''<sup>2</sup> mod ''N'')}} and as {{math|REDC((''R''<sup>2</sup> mod ''N'')(''R''<sup>2</sup> mod ''N''))}}.  The fundamental operation is to compute REDC of a product.  When standalone REDC is needed, it can be computed as REDC of a product with {{math|1 mod ''N''}}.  The only place where a direct reduction modulo {{mvar|N}} is necessary is in the [[precomputation]] of {{math|''R''<sup>2</sup> mod ''N''}}.
+
+== Montgomery arithmetic on multiprecision integers ==
+
+Most cryptographic applications require numbers that are hundreds or even thousands of bits long.  Such numbers are too large to be stored in a single machine word.  Typically, the hardware performs multiplication mod some base {{mvar|B}}, so performing larger multiplications requires combining several small multiplications.  The base {{mvar|B}} is typically 2 for microelectronic applications, 2<sup>8</sup> for 8-bit [[firmware]],<ref name="kizhvatov" /> or 2<sup>32</sup> or 2<sup>64</sup> for software applications.
+
+The REDC algorithm requires products modulo {{mvar|R}}, and typically {{math|''R'' &gt; ''N''}} so that REDC can be used to compute products.  However, when {{mvar|R}} is a power of {{mvar|B}}, there is a variant of REDC which requires products only of machine word sized integers.  Suppose that positive multi-precision integers are stored [[little endian]], that is, {{mvar|x}} is stored as an array {{math|''x''[0], ..., ''x''[ℓ - 1]}} such that {{math|0 &le; ''x''[''i''] &lt; ''B''}} for all {{mvar|i}} and {{math|1=''x'' = &sum; ''x''[''i''] ''B<sup>i</sup>''}}.  The algorithm begins with a multiprecision integer {{mvar|T}} and reduces it one word at a time.  First an appropriate multiple of {{mvar|N}} is added to make {{mvar|T}} divisible by {{mvar|B}}.  Then a multiple of {{mvar|N}} is added to make {{mvar|T}} divisible by {{math|''B''<sup>2</sup>}}, and so on.  Eventually {{mvar|T}} is divisible by {{mvar|R}}, and after division by {{mvar|R}} the algorithm is in the same place as REDC was after the computation of {{mvar|t}}.
+
+ '''function''' MultiPrecisionREDC '''is'''
+     '''Input:''' Integer ''N'' with {{nowrap|1=gcd(''B'', ''N'') = 1}}, stored as an array of ''p'' words,
+            Integer {{nowrap|1=''R'' = ''B''<sup>''r''</sup>}},     --thus, ''r'' = ''log''<sub>''B''</sub> ''R''
+            Integer ''N''&prime; in {{nowrap|[0, ''B'' &minus; 1]}} such that {{nowrap|''NN''&prime; ≡ &minus;1 (mod ''B'')}},
+            Integer ''T'' in the range {{nowrap|0 &le; ''T'' &lt; ''RN''}}, stored as an array of {{nowrap|''r'' + ''p''}} words.
+ 
+     '''Output:''' Integer ''S'' in {{nowrap|[0, ''N'' &minus; 1]}} such that {{nowrap|''TR''<sup>&minus;1</sup> ≡ ''S'' (mod ''N'')}}, stored as an array of ''p'' words.
+ 
+     Set {{nowrap|1=''T''[''r'' + ''p''] = 0}}  ''(extra carry word)''
+     '''for''' {{nowrap|0 &le; ''i'' &lt; ''r''}} '''do'''
+         ''--loop1- Make T divisible by {{nowrap|B<sup>i+1</sup>}}''
+ 
+         ''c'' &larr; 0
+         ''m'' &larr; {{nowrap|''T''[''i''] ⋅ ''N''&prime; mod ''B''}}
+         '''for''' {{nowrap|0 &le; ''j'' &lt; ''p''}} '''do'''
+             ''--loop2- Add the {{nowrap|m ⋅ N[j]}} and the carry from earlier, and find the new carry''
+ 
+             ''x'' &larr; {{nowrap|''T''[''i'' + ''j''] + ''m'' ⋅ ''N''[''j''] + ''c''}}
+             ''T''[''i'' + ''j''] &larr; {{nowrap|''x'' mod ''B''}}
+             ''c'' &larr; {{nowrap|⌊''x'' / ''B''⌋}}
+         '''end for'''
+         '''for''' {{nowrap|''p'' &le; ''j'' &le; ''r'' + ''p'' &minus; ''i''}} '''do'''
+             ''--loop3- Continue carrying''
+ 
+             ''x'' &larr; {{nowrap|''T''[''i'' + ''j''] + ''c''}}
+             ''T''[''i'' + ''j''] &larr; {{nowrap|''x'' mod ''B''}}
+             ''c'' &larr; {{nowrap|⌊''x'' / ''B''⌋}}
+         '''end for'''
+     '''end for'''
+ 
+     '''for''' {{nowrap|0 &le; ''i'' &le; ''p''}} '''do'''
+         ''S''[''i''] &larr; ''T''[''i'' + ''r'']
+     '''end for'''
+ 
+     '''if''' {{nowrap|''S'' &ge; ''N''}} '''then'''
+         '''return''' {{nowrap|''S'' &minus; ''N''}}
+     '''else'''
+         '''return''' {{var|S}}
+     '''end if'''
+ '''end function'''
+The final comparison and subtraction is done by the standard algorithms.
+
+The above algorithm is correct for essentially the same reasons that REDC is correct.  Each time through the {{mvar|i}} loop, {{mvar|m}} is chosen so that {{math|''T''[''i''] + ''mN''[0]}} is divisible by {{mvar|B}}.  Then {{mvar|mNB<sup>i</sup>}} is added to {{mvar|T}}.  Because this quantity is zero mod {{mvar|N}}, adding it does not affect the value of {{math|''T'' mod ''N''}}.  If {{mvar|m<sub>i</sub>}} denotes the value of {{mvar|m}} computed in the {{mvar|i}}th iteration of the loop, then the algorithm sets {{mvar|S}} to {{math|''T'' + (&sum; ''m<sub>i</sub> B<sup>i</sup>'')''N''}}.  Because MultiPrecisionREDC and REDC produce the same output, this sum is the same as the choice of {{mvar|m}} that the REDC algorithm would make.
+
+The last word of {{mvar|T}}, {{math|''T''[''r'' + ''p'']}} (and consequently {{math|''S''[''p'']}}), is used only to hold a carry, as the initial reduction result is bound to a result in the range of {{math|0 &le; ''S'' &lt; ''2N''}}.  It follows that this extra carry word can be avoided completely if it is known in advance that {{math|''R'' &ge; ''2N''}}.  On a typical binary implementation, this is equivalent to saying that this carry word can be avoided if the number of bits of {{mvar|N}} is smaller than the number of bits of {{mvar|R}}.  Otherwise, the carry will be either zero or one.  Depending upon the processor, it may be possible to store this word as a [[carry flag]] instead of a full-sized word.
+
+It is possible to combine multiprecision multiplication and REDC into a single algorithm.  This combined algorithm is usually called Montgomery multiplication.  Several different implementations are described by Koç, Acar, and Kaliski.<ref>{{cite journal |author1=Çetin K. Koç |author2=Tolga Acar |author3=Burton S. Kaliski, Jr. |title=Analyzing and Comparing Montgomery Multiplication Algorithms |journal=[[IEEE Micro]] |date=June 1996 |volume=16 |number=3 |pages=26–33 |doi=10.1109/40.502403 |url=https://www.microsoft.com/en-us/research/wp-content/uploads/1996/01/j37acmon.pdf}}</ref>  The algorithm may use as little as {{math|''p'' + 2}} words of storage (plus a carry bit).
+
+As an example, let {{math|1=''B'' = 10}}, {{math|1=''N'' = 997}}, and {{math|1=''R'' = 1000}}.  Suppose that {{math|1=''a'' = 314}} and {{math|1=''b'' = 271}}.  The Montgomery representations of {{mvar|a}} and {{mvar|b}} are {{math|1=314000 mod 997 = 942}} and {{math|1=271000 mod 997 = 813}}.  Compute {{math|1=942 ⋅ 813 = 765846}}.  The initial input {{mvar|T}} to MultiPrecisionREDC will be [6, 4, 8, 5, 6, 7].  The number {{mvar|N}} will be represented as [7, 9, 9].  The extended Euclidean algorithm says that {{math|1=&minus;299 ⋅ 10 + 3 ⋅ 997 = 1}}, so {{math|''N''&prime;}} will be 7.
+
+ i &larr; 0
+ m &larr; {{nowrap|1=6 ⋅ 7 mod 10 = 2}}
+ 
+ j T       c
+ - ------- -
+ 0 0485670 2    ''(After first iteration of first loop)''
+ 1 0485670 2
+ 2 0485670 2
+ 3 0487670 0    ''(After first iteration of second loop)''
+ 4 0487670 0
+ 5 0487670 0
+ 6 0487670 0
+ 
+ i &larr; 1
+ m &larr; {{nowrap|1=4 ⋅ 7 mod 10 = 8}}
+ 
+ j T       c
+ - ------- -
+ 0 0087670 6    ''(After first iteration of first loop)''
+ 1 0067670 8
+ 2 0067670 8
+ 3 0067470 1    ''(After first iteration of second loop)''
+ 4 0067480 0
+ 5 0067480 0
+ 
+ i &larr; 2
+ m &larr; {{nowrap|1=6 ⋅ 7 mod 10 = 2}}
+ 
+ j T       c
+ - ------- -
+ 0 0007480 2    ''(After first iteration of first loop)''
+ 1 0007480 2
+ 2 0007480 2
+ 3 0007400 1    ''(After first iteration of second loop)''
+ 4 0007401 0
+
+Therefore, before the final comparison and subtraction, {{math|1=''S'' = 1047}}.  The final subtraction yields the number 50.  Since the Montgomery representation of {{math|1=314 ⋅ 271 mod 997 = 349}} is {{math|1=349000 mod 997 = 50}}, this is the expected result.
+
+When working in base 2, determining the correct {{mvar|m}} at each stage is particularly easy: If the current working bit is even, then {{mvar|m}} is zero and if it's odd, then {{mvar|m}} is one.  Furthermore, because each step of MultiPrecisionREDC requires knowing only the lowest bit, Montgomery multiplication can be easily combined with a [[carry-save adder]].
+
+== Side-channel attacks ==
+
+Because Montgomery reduction avoids the correction steps required in conventional division when quotient digit estimates are inaccurate, it is mostly free of the conditional branches which are the primary targets of timing and power [[side-channel attack]]s; the sequence of instructions executed is independent of the input operand values.  The only exception is the final conditional subtraction of the modulus, but it is easily modified (to always subtract something, either the modulus or zero) to make it resistant.<ref name="kizhvatov">{{cite conference
+ |first1=Zhe |last1=Liu  |first2=Johann |last2=Großschädl  |first3=Ilya |last3=Kizhvatov
+ |url=https://www.nics.uma.es/seciot10/files/pdf/liu_seciot10_paper.pdf
+ |title=Efficient and Side-Channel Resistant RSA Implementation for 8-bit AVR Microcontrollers
+ |conference=1st International Workshop on the Security of the Internet of Things
+ |date=29 November 2010 |location=Tokyo
+ |conference-url=https://www.nics.uma.es/pub/seciot10/
+}}  ([https://www.nics.uma.es/pub/seciot10/files/ppt/liu_seciot10.pdf Presentation slides].)</ref>  It is of course necessary to ensure that the exponentiation algorithm built around the multiplication primitive is also resistant.{{r|kizhvatov}}<ref>Marc Joye and Sung-Ming Yen. [http://cr.yp.to/bib/2003/joye-ladder.pdf "The Montgomery Powering Ladder"]. 2002.</ref>
+
+== See also ==
+* [[Barrett reduction]]
+
+== References ==
+{{Reflist}}
+
+==External links==
+* {{cite CiteSeerX |title=Theory and practice of Montgomery multiplication |author=Henry S. Warren, Jr. |date=July 2012|citeseerx=10.1.1.450.6124 }}
+
+[[Category:Computer arithmetic]]
+[[Category:Cryptographic algorithms]]
+[[Category:Modular arithmetic]]

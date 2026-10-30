@@ -1,0 +1,103 @@
+<!-- wikipedia: en
+     page: 70662
+     title: Chaffing and winnowing
+     revision: 1334323606
+     timestamp: 2026-01-22T21:23:59Z
+     history: https://en.wikipedia.org/w/index.php?curid=70662&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1334323606 -->
+{{Short description|Cryptographic technique}}
+{{refimprove|date=October 2009}}
+'''Chaffing and winnowing''' is a [[cryptography|cryptographic]] technique to achieve [[confidentiality]] without using [[encryption]] when sending data over an [[insecure channel]]. The name is derived from agriculture: after grain has been harvested and [[threshing|threshed]], it remains mixed together with inedible fibrous [[chaff]].  The chaff and grain are then separated by [[winnowing]], and the chaff is discarded. The cryptographic technique was conceived by [[Ron Rivest]] and published in an on-line article on 18 March 1998.<ref name="ron">[https://people.csail.mit.edu/rivest/pubs/Riv98a.prepub.txt Rivest's article on chaffing and winnowing]</ref> Although it bears similarities to both traditional encryption and [[steganography]], it cannot be classified under either category.
+
+This technique allows the sender to deny responsibility for encrypting their message. When using chaffing and winnowing, the sender transmits the message unencrypted, in clear text. Although the sender and the receiver share a secret key, they use it only for [[authentication]]. However, a third party can make their communication confidential by simultaneously sending specially crafted messages through the same channel.
+
+== How it works ==
+
+{| class="infobox" style="text-align:center; width:1px"
+|
+|secure channel
+|
+|insecure channel
+|- style="font-size:150%;"
+! valign="bottom"|'''Alice'''
+| style="font-size:300%;line-height:0;"|→
+! valign="bottom"|'''Charles'''
+| style="font-size:300%;line-height:0;"|→
+! valign="bottom"|'''Bob'''
+|-
+| valign="top"|constructs 4 packets, each containing one bit of her message and a valid MAC
+|
+{| border="1" cellspacing="0"
+|-
+! Serial !! Bit !! MAC
+|-
+| '''1''' || '''1''' || '''234'''
+|-
+| '''2''' || '''0''' || '''890'''
+|-
+| '''3''' || '''0''' || '''456'''
+|-
+| '''4''' || '''1''' || '''678'''
+|}
+| valign="top"|adds 4 chaff packets with inverted bits and invalid MAC, shown in ''italics'' ('''chaffing''')
+|
+{| border="1" cellspacing="0"
+|-
+! Serial !! Bit !! MAC
+|-
+| ''1'' || ''0'' || ''321''
+|-
+| '''1''' || '''1''' || '''234'''
+|-
+| '''2''' || '''0''' || '''890'''
+|-
+| ''2'' || ''1'' || ''987''
+|-
+| '''3''' || '''0''' || '''456'''
+|-
+| ''3'' || ''1'' || ''543''
+|-
+| ''4'' || ''0'' || ''765''
+|-
+| '''4''' || '''1''' || '''678'''
+|}
+| valign="top"|discards packets with invalid MAC to recover the message ('''winnowing''')
+|-
+| colspan=5|<hr />In this example, Alice wishes to send the message "1001" to Bob. For simplicity, assume that all even MAC are valid and odd ones are invalid.
+|}
+
+The sender ([[Alice and Bob|Alice]]) wants to send a message to the receiver ([[Alice and Bob|Bob]]). In the simplest setup, Alice enumerates the symbols in her message and sends out each in a separate [[Packet (information technology)|packet]]. If the symbols are complex enough, such as natural-language text, an attacker may be able to distinguish the real symbols from poorly faked chaff symbols, posing a similar problem as steganography in needing to generate highly realistic fakes; to avoid this, the symbols can be reduced to just single 0/1 bits, and realistic fakes can then be simply randomly generated 50:50 and are indistinguishable from real symbols. In general, the method requires each symbol to arrive in-order and to be authenticated by the receiver. When implemented over networks that may change the order of packets, the sender places the symbol's serial number in the packet, the symbol itself (both unencrypted), and a [[message authentication code]] (MAC). Many MACs use a [[secret key]] Alice shares with Bob, but it is sufficient that the receiver has a method to authenticate the packets.
+
+Rivest notes an interesting property of chaffing-and-winnowing is that third parties (such as an ISP) can opportunistically add it to communications without needing permission or coordination with the sender/recipient. A third-party ([[Alice and Bob|Charles]]) who transmits Alice's packets to Bob, interleaves the packets with corresponding bogus packets (called "chaff") with corresponding serial numbers, arbitrary symbols, and a random number in place of the MAC. Charles does not need to know the key to do that (real MACs are large enough that it is extremely unlikely to generate a valid one by chance, unlike in the example). Bob uses the MAC to find the authentic messages and drops the "chaff" messages. This process is called "winnowing".
+
+An eavesdropper located between Alice and Charles can easily read Alice's message. But an eavesdropper between Charles and Bob would have to tell which packets are bogus and which are real (i.e. to winnow, or "separate the wheat from the chaff"). That is infeasible if the MAC used is secure and Charles does not leak any information on packet authenticity (e.g. via timing).
+
+If a fourth party joins the example (named [[Alice and Bob|Darth]]) who wants to send counterfeit messages to impersonate Alice, it would require Alice to disclose her secret key. If Darth cannot force Alice to disclose an authentication key (the knowledge of which would enable him to forge messages from Alice), then her messages will remain confidential. Charles, on the other hand, is no target of Darth's at all, since Charles does not even possess any secret keys that could be disclosed.
+
+== Variations ==
+
+The simple variant of the chaffing and winnowing technique described above adds many bits of overhead per bit of original message. To make the transmission more efficient, Alice can process her message with an [[all-or-nothing transform]] and then send it out in much larger chunks. The chaff packets will have to be modified accordingly. Because the original message can be reconstructed only by knowing all of its chunks, Charles needs to send only enough chaff packets to make finding the correct combination of packets computationally infeasible.
+
+Chaffing and winnowing lends itself especially well to use in [[packet-switched network]] environments such as the [[Internet]], where each message (whose payload is typically small) is sent in a separate network packet. In another variant of the technique, Charles carefully interleaves packets coming from multiple senders. That eliminates the need for Charles to generate and inject bogus packets in the communication. However, the text of Alice's message cannot be well protected from other parties who are communicating via Charles at the same time. This variant also helps protect against [[information leakage]] and [[traffic analysis]].{{Citation needed|date=November 2007}}
+
+==Implications for law enforcement==
+Ron Rivest suggests that laws related to cryptography, including export controls, would not apply to ''chaffing and winnowing'' because it does not employ any encryption at all.<ref name="ron"/>
+
+{{Quote|The power to authenticate is in many cases the power to control, and handing all authentication power to the government is beyond all reason|Ronald L. Rivest, 1998<ref name="ron"/>}}
+
+The author of the paper proposes that the security implications of handing everyone's authentication keys to the government for law-enforcement purposes would be far too risky, since possession of the key would enable someone to masquerade and communicate as another entity, such as an airline controller.  Furthermore, Ron Rivest contemplates the possibility of rogue law enforcement officials framing up innocent parties by introducing the chaff into their communications, concluding that drafting a law restricting ''chaffing and winnowing'' would be far too difficult.<ref name="ron"/>
+
+==Trivia==
+The term ''winnowing'' was suggested by Ronald Rivest's father.  Before the publication of Rivest's paper in 1998 other people brought to his attention a 1965 novel,  [[Rex Stout]]'s ''[[The Doorbell Rang]]'', which describes the same concept and was thus included in the paper's references.<ref name="ron"/>
+
+==See also==
+* {{annotated link|Null cipher}}
+* {{annotated link|Email spam}}
+
+==References==
+{{Reflist}}
+
+
+
+[[Category:Cryptography]]

@@ -1,0 +1,648 @@
+<!-- wikipedia: en
+     page: 16779711
+     title: Advanced Vector Extensions
+     revision: 1369717167
+     timestamp: 2026-08-16T18:12:26Z
+     history: https://en.wikipedia.org/w/index.php?curid=16779711&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1369717167 -->
+{{wikibooks|X86 Assembly/AVX, AVX2, FMA3, FMA4}}{{Short description|Instructions for the x86 microprocessors}}
+{{Use mdy dates|date=September 2018}}
+'''Advanced Vector Extensions''' ('''AVX''', also known as '''Gesher New Instructions''' and then '''Sandy Bridge New Instructions''') are [[Single instruction, multiple data|SIMD]] extensions to the [[x86]] [[instruction set architecture]] for [[microprocessor]]s from [[Intel]] and [[Advanced Micro Devices]] (AMD).  They were proposed by Intel in March 2008 and first supported by Intel with the [[Sandy Bridge]]<ref name="If1e5">{{Cite web|url=http://www.realworldtech.com/sandy-bridge/6/|title=Intel's Sandy Bridge Microarchitecture|last=Kanter|first=David|date=September 25, 2010|website=www.realworldtech.com|language=en-US|access-date=February 17, 2018|archive-date=August 16, 2019|archive-url=https://web.archive.org/web/20190816184542/https://www.realworldtech.com/sandy-bridge/6/|url-status=live}}</ref> microarchitecture shipping in Q1 2011 and later by AMD with the [[Bulldozer (microarchitecture)|Bulldozer]]<ref name="TSJKX">{{Cite news|url=https://www.extremetech.com/computing/100583-analyzing-bulldozers-scaling-single-thread-performance/4|title=Analyzing Bulldozer: Why AMD's chip is so disappointing - Page 4 of 5 - ExtremeTech|last=Hruska|first=Joel|date=October 24, 2011|work=ExtremeTech|access-date=February 17, 2018|language=en-US|archive-date=August 16, 2019|archive-url=https://web.archive.org/web/20190816184519/https://www.extremetech.com/computing/100583-analyzing-bulldozers-scaling-single-thread-performance/4|url-status=live}}</ref> microarchitecture shipping in Q4 2011. AVX provides new features, new instructions, and a new coding scheme.
+
+'''AVX2''' (also known as '''Haswell New Instructions''') expands most integer commands to 256 bits and introduces new instructions. They were first supported by Intel with the [[Haswell (microarchitecture)|Haswell]] microarchitecture, which shipped in 2013.
+
+[[AVX-512]] expands AVX to 512-bit support using a new [[EVEX prefix]] encoding proposed by Intel in July 2013 and first supported by Intel with the [[Knights Landing (microarchitecture)|Knights Landing]] co-processor, which shipped in 2016.<ref name="reinders512">{{citation |url= http://software.intel.com/en-us/blogs/2013/avx-512-instructions |title= AVX-512 Instructions |date= July 23, 2013 |author= James Reinders |publisher= [[Intel]] |access-date= August 20, 2013 |archive-date= March 31, 2015 |archive-url= https://web.archive.org/web/20150331174539/https://software.intel.com/en-us/blogs/2013/avx-512-instructions |url-status= live }}</ref><ref name="8JgOG">{{Cite news|url=http://ark.intel.com/products/94033/Intel-Xeon-Phi-Processor-7210-16GB-1_30-GHz-64-core|title=Intel Xeon Phi Processor 7210 (16GB, 1.30 GHz, 64 core) Product Specifications|access-date=March 16, 2018|newspaper=Intel ARK (Product Specs)|archive-date=September 7, 2017|archive-url=https://web.archive.org/web/20170907170421/http://ark.intel.com/products/94033/Intel-Xeon-Phi-Processor-7210-16GB-1_30-GHz-64-core|url-status=live}}</ref> In conventional processors, AVX-512 was introduced with [[Skylake (microarchitecture)|Skylake]] server and HEDT processors in 2017.
+
+== <span class="anchor" id="AVX1"></span>Advanced Vector Extensions ==
+AVX uses sixteen YMM registers to perform a single instruction on multiple pieces of data (see [[SIMD]]). Each YMM register can hold and do simultaneous operations (math) on:
+* eight 32-bit single-precision floating-point numbers or
+* four 64-bit double-precision floating-point numbers.
+
+The width of the SIMD registers is increased from 128 bits to 256 bits, and renamed from XMM0–XMM7 to YMM0–YMM7 (in [[x86-64]] mode, from XMM0–XMM15 to YMM0–YMM15). The legacy [[Streaming SIMD Extensions|SSE]] instructions can still be utilized via the [[VEX prefix]] to operate on the lower 128 bits of the YMM registers.
+
+{| class="wikitable floatright" style="margin-left: 1rem; text-align: center; line-height: normal"
+|+ style="margin-bottom: 0.2em; font-size: small;" | AVX-512 register scheme as extension from the AVX (YMM0-YMM15) and SSE (XMM0-XMM15) registers
+|-
+| style="width: 50%; border: none; font-size: xx-small;" | <span style="float: left">511</span> <span style="float: right">256</span>
+| style="width: 25%; border: none; font-size: xx-small;" | <span style="float: left">255</span> <span style="float: right">128</span>
+| style="width: 25%; border: none; font-size: xx-small;" | <span style="float: left">127</span> <span style="float: right">0</span>
+|-
+| style="border-top: none" |
+| style="border-top: none" |
+| style="border-top: none" |
+|-
+| style="padding: 0" | &nbsp;&nbsp;ZMM0&nbsp;&nbsp;
+| style="padding: 0; background: #ddd" | &nbsp;&nbsp;YMM0&nbsp;&nbsp;
+| style="padding: 0; background: #ccc" | &nbsp;&nbsp;XMM0&nbsp;&nbsp;
+|-
+| style="padding: 0" | ZMM1
+| style="padding: 0; background: #ddd" | YMM1
+| style="padding: 0; background: #ccc" | XMM1
+|-
+| style="padding: 0" | ZMM2
+| style="padding: 0; background: #ddd" | YMM2
+| style="padding: 0; background: #ccc" | XMM2
+|-
+| style="padding: 0" | ZMM3
+| style="padding: 0; background: #ddd" | YMM3
+| style="padding: 0; background: #ccc" | XMM3
+|-
+| style="padding: 0" | ZMM4
+| style="padding: 0; background: #ddd" | YMM4
+| style="padding: 0; background: #ccc" | XMM4
+|-
+| style="padding: 0" | ZMM5
+| style="padding: 0; background: #ddd" | YMM5
+| style="padding: 0; background: #ccc" | XMM5
+|-
+| style="padding: 0" | ZMM6
+| style="padding: 0; background: #ddd" | YMM6
+| style="padding: 0; background: #ccc" | XMM6
+|-
+| style="padding: 0" | ZMM7
+| style="padding: 0; background: #ddd" | YMM7
+| style="padding: 0; background: #ccc" | XMM7
+|-
+| style="padding: 0" | ZMM8
+| style="padding: 0; background: #ddd" | YMM8
+| style="padding: 0; background: #ccc" | XMM8
+|-
+| style="padding: 0" | ZMM9
+| style="padding: 0; background: #ddd" | YMM9
+| style="padding: 0; background: #ccc" | XMM9
+|-
+| style="padding: 0" | ZMM10
+| style="padding: 0; background: #ddd" | YMM10
+| style="padding: 0; background: #ccc" | XMM10
+|-
+| style="padding: 0" | ZMM11
+| style="padding: 0; background: #ddd" | YMM11
+| style="padding: 0; background: #ccc" | XMM11
+|-
+| style="padding: 0" | ZMM12
+| style="padding: 0; background: #ddd" | YMM12
+| style="padding: 0; background: #ccc" | XMM12
+|-
+| style="padding: 0" | ZMM13
+| style="padding: 0; background: #ddd" | YMM13
+| style="padding: 0; background: #ccc" | XMM13
+|-
+| style="padding: 0" | ZMM14
+| style="padding: 0; background: #ddd" | YMM14
+| style="padding: 0; background: #ccc" | XMM14
+|-
+| style="padding: 0" | ZMM15
+| style="padding: 0; background: #ddd" | YMM15
+| style="padding: 0; background: #ccc" | XMM15
+|-
+| style="padding: 0" | ZMM16
+| style="padding: 0" | YMM16
+| style="padding: 0" | XMM16
+|-
+| style="padding: 0" | ZMM17
+| style="padding: 0" | YMM17
+| style="padding: 0" | XMM17
+|-
+| style="padding: 0" | ZMM18
+| style="padding: 0" | YMM18
+| style="padding: 0" | XMM18
+|-
+| style="padding: 0" | ZMM19
+| style="padding: 0" | YMM19
+| style="padding: 0" | XMM19
+|-
+| style="padding: 0" | ZMM20
+| style="padding: 0" | YMM20
+| style="padding: 0" | XMM20
+|-
+| style="padding: 0" | ZMM21
+| style="padding: 0" | YMM21
+| style="padding: 0" | XMM21
+|-
+| style="padding: 0" | ZMM22
+| style="padding: 0" | YMM22
+| style="padding: 0" | XMM22
+|-
+| style="padding: 0" | ZMM23
+| style="padding: 0" | YMM23
+| style="padding: 0" | XMM23
+|-
+| style="padding: 0" | ZMM24
+| style="padding: 0" | YMM24
+| style="padding: 0" | XMM24
+|-
+| style="padding: 0" | ZMM25
+| style="padding: 0" | YMM25
+| style="padding: 0" | XMM25
+|-
+| style="padding: 0" | ZMM26
+| style="padding: 0" | YMM26
+| style="padding: 0" | XMM26
+|-
+| style="padding: 0" | ZMM27
+| style="padding: 0" | YMM27
+| style="padding: 0" | XMM27
+|-
+| style="padding: 0" | ZMM28
+| style="padding: 0" | YMM28
+| style="padding: 0" | XMM28
+|-
+| style="padding: 0" | ZMM29
+| style="padding: 0" | YMM29
+| style="padding: 0" | XMM29
+|-
+| style="padding: 0" | ZMM30
+| style="padding: 0" | YMM30
+| style="padding: 0" | XMM30
+|-
+| style="padding: 0" | ZMM31
+| style="padding: 0" | YMM31
+| style="padding: 0" | XMM31
+|}
+
+AVX introduces a three-operand SIMD instruction format called [[VEX coding scheme]], where the destination register is distinct from the two source operands. For example, an [[Streaming SIMD Extensions|SSE]] instruction using the conventional two-operand form {{nowrap|''a'' ← ''a'' + ''b''}} can now use a non-destructive three-operand form {{nowrap|''c'' ← ''a'' + ''b''}}, preserving both source operands. Originally, AVX's three-operand format was limited to the instructions with SIMD operands (YMM), and did not include instructions with general purpose registers (e.g. EAX). It was later used for coding new instructions on general purpose registers in later extensions, such as [[bit manipulation instruction set|BMI]]. VEX coding is also used for instructions operating on the k0-k7 mask registers that were introduced with [[AVX-512]].
+
+The [[data structure alignment|alignment]] requirement of SIMD memory operands is relaxed.<ref name="intel_vol1">{{cite book|title=Intel 64 and IA-32 Architectures Software Developer's Manual Volume 1: Basic Architecture|publisher=Intel Corporation|page=349|edition=-051US|url=http://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-1-manual.pdf|access-date=August 23, 2014|chapter=14.9|quote=Memory arguments for most instructions with VEX prefix operate normally without causing #GP(0) on any byte-granularity alignment (unlike Legacy SSE instructions).|archive-date=April 2, 2013|archive-url=https://web.archive.org/web/20130402233513/http://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-1-manual.pdf|url-status=live}}</ref> Unlike their non-VEX coded counterparts, most VEX coded vector instructions no longer require their memory operands to be aligned to the vector size. Notably, the <code>VMOVDQA</code> instruction still requires its memory operand to be aligned.
+
+The new [[VEX coding scheme]] introduces a new set of code prefixes that extends the [[opcode]] space, allows instructions to have more than two operands, and allows SIMD vector registers to be longer than 128 bits. The VEX prefix can also be used on the legacy SSE instructions giving them a three-operand form, and making them interact more efficiently with AVX instructions without the need for <code>VZEROUPPER</code> and <code>VZEROALL</code>.
+
+The AVX instructions support both 128-bit and 256-bit SIMD. The 128-bit versions can be useful to improve old code without needing to widen the vectorization, and avoid the penalty of going from SSE to AVX; they are also faster on some early AMD implementations of AVX. This mode is sometimes known as AVX-128.<ref name="XEwSu">{{cite web|url=https://gcc.gnu.org/onlinedocs/gcc-4.8.2/gcc/i386-and-x86-64-Options.html#i386-and-x86-64-Options|title=i386 and x86-64 Options - Using the GNU Compiler Collection (GCC)|access-date=February 9, 2014|archive-date=November 5, 2025|archive-url=https://web.archive.org/web/20251105003147/https://gcc.gnu.org/onlinedocs/gcc-4.8.2/gcc/i386-and-x86-64-Options.html#i386-and-x86-64-Options|url-status=live}}</ref>
+
+Compared to SSE series, AVX further enhanced performance for [[digital media]] playback, [[web browsing]], [[asymmetric encryption]], and others.
+
+=== New instructions ===
+These AVX instructions are in addition to the ones that are 256-bit extensions of the legacy 128-bit SSE instructions; most are usable on both 128-bit and 256-bit operands.
+
+{| class="wikitable"
+|-
+! Instruction
+! Description
+|-
+| <code>VBROADCASTSS</code>, <code>VBROADCASTSD</code>, <code>VBROADCASTF128</code>
+| Copy a 32-bit, 64-bit or 128-bit memory operand to all elements of a XMM or YMM vector register.
+|-
+| <code>VINSERTF128</code>
+| Replaces either the lower half or the upper half of a 256-bit YMM register with the value of a 128-bit source operand. The other half of the destination is unchanged.
+|-
+| <code>VEXTRACTF128</code>
+| Extracts either the lower half or the upper half of a 256-bit YMM register and copies the value to a 128-bit destination operand.
+|-
+| <code>VMASKMOVPS</code>, <code>VMASKMOVPD</code>
+| Conditionally reads any number of elements from a SIMD vector memory operand into a destination register, leaving the remaining vector elements unread and setting the corresponding elements in the destination register to zero. Alternatively, conditionally writes any number of elements from a SIMD vector register operand to a vector memory operand, leaving the remaining elements of the memory operand unchanged. On the AMD Jaguar processor architecture, this instruction with a memory source operand takes more than 300 clock cycles when the mask is zero, in which case the instruction should do nothing. This appears to be a design flaw.<ref name="wNTlH">{{cite web |url=http://www.agner.org/optimize/microarchitecture.pdf |title=The microarchitecture of Intel, AMD and VIA CPUs: An optimization guide for assembly programmers and compiler makers |access-date=October 17, 2016 |archive-date=March 28, 2017 |archive-url=https://web.archive.org/web/20170328065929/http://agner.org/optimize/microarchitecture.pdf |url-status=live }}</ref>
+|-
+| <code>VPERMILPS</code>, <code>VPERMILPD</code>
+| Permute In-Lane. Shuffle the 32-bit or 64-bit vector elements of one input operand. These are in-lane 256-bit instructions, meaning that they operate on all 256 bits with two separate 128-bit shuffles, so they can not shuffle across the 128-bit lanes.<ref name="sK2vQ">{{cite web |url=https://chessprogramming.wikispaces.com/AVX2 |title=Chess programming AVX2 |access-date=October 17, 2016 |archive-date=July 10, 2017 |archive-url=https://web.archive.org/web/20170710034021/http://chessprogramming.wikispaces.com/AVX2 |url-status=dead}}</ref>
+|-
+| <code>VPERM2F128</code>
+| Shuffle the four 128-bit vector elements of two 256-bit source operands into a 256-bit destination operand, with an immediate constant as selector.
+|-
+| <code>VTESTPS</code>, <code>VTESTPD</code>
+| Packed bit test of the packed single-precision or double-precision floating-point sign bits, setting or clearing the ZF flag based on AND and CF flag based on ANDN.
+|-
+| <code>VZEROALL</code>
+| Set all YMM registers to zero and tag them as unused. Used when switching between 128-bit use and 256-bit use.
+|-
+| <code>VZEROUPPER</code>
+| Set the upper half of all YMM registers to zero. Used when switching between 128-bit use and 256-bit use.
+|}
+
+=== CPUs with AVX ===
+* [[Intel Corporation|Intel]]
+** [[Sandy Bridge]] processors (Q1 2011) and newer, except models branded as Celeron and Pentium.<ref name="fh09g">{{Cite web |url= http://www.extremetech.com/computing/80772-intel-offers-peek-at-nehalem-and-larrabee |title= Intel Offers Peek at Nehalem and Larrabee |date= March 17, 2008 |publisher= ExtremeTech |access-date= January 10, 2012 |archive-date= December 3, 2022 |archive-url= https://web.archive.org/web/20221203100308/https://www.extremetech.com/computing/80772-intel-offers-peek-at-nehalem-and-larrabee |url-status= live }}</ref>
+** Pentium and Celeron branded processors starting with [[Tiger Lake]] (Q3 2020) and newer.<ref name="9r8b9">{{Cite web|title=Intel® Celeron® 6305 Processor (4M Cache, 1.80 GHz, with IPU) Product Specifications|url=https://ark.intel.com/content/www/us/en/ark/products/208646/intel-celeron-6305-processor-4m-cache-1-80-ghz-with-ipu.html|access-date=2020-11-10|website=ark.intel.com|language=en|archive-date=October 21, 2020|archive-url=https://web.archive.org/web/20201021194625/https://ark.intel.com/content/www/us/en/ark/products/208646/intel-celeron-6305-processor-4m-cache-1-80-ghz-with-ipu.html|url-status=live}}</ref>
+* [[Advanced Micro Devices|AMD]]:
+** [[Bulldozer (microarchitecture)|Bulldozer]] processors (Q4 2011) <ref>{{cite journal|title=Bulldozer: An Approach to Multithreaded Compute Performance|last1=Butler|first1=Michael|last2=Barnes|first2=Leslie|last3=Das Sarma|first3=Debjit|last4=Gelinas|first4=Bob|journal=[[IEEE Micro]]|date=March–April 2011|volume=31|issue=2|pages=6–15 |doi=10.1109/MM.2011.23|s2cid=28236214|url=https://pds.ucdenver.edu/document/hardware/AMDbulldozer-IEEE-Computer-2011.pdf|url-status=dead|archive-url=https://web.archive.org/web/20240519054159/https://pds.ucdenver.edu/document/hardware/AMDbulldozer-IEEE-Computer-2011.pdf|archive-date=May 19, 2024}}</ref> and newer, including [[Jaguar (microarchitecture)|Jaguar]] and [[Puma (microarchitecture)|Puma]].
+Issues regarding compatibility between future Intel and AMD processors are discussed under [[XOP instruction set#Compatibility issues|XOP instruction set]].
+* [[VIA Technologies|VIA]]:
+** Nano QuadCore
+** Eden X4
+* [[Zhaoxin]]:
+** WuDaoKou-based processors (KX-5000 and KH-20000)
+
+=== Compiler and assembler support ===
+* [[Absoft Fortran Compilers|Absoft]] supports with -{{Not a typo|mavx}} flag.
+* The [[Free Pascal]] compiler supports AVX and AVX2 with the -CfAVX and -CfAVX2 switches from version 2.7.1.
+* [[Delphi (software)|RAD studio]] (v11.0 Alexandria) supports AVX2 and AVX-512.<ref>{{Cite web|title=What's New - RAD Studio|url=https://docwiki.embarcadero.com/RADStudio/Alexandria/en/What%27s_New#Inline_assembler_support_for_AVX_instructions_.28AVX-512.29|access-date=2021-09-17|website=docwiki.embarcadero.com|archive-date=January 8, 2025|archive-url=https://web.archive.org/web/20250108124021/https://docwiki.embarcadero.com/RADStudio/Alexandria/en/What%27s_New#Inline_assembler_support_for_AVX_instructions_.28AVX-512.29|url-status=live}}</ref>
+* The [[GNU Assembler]] (GAS) inline assembly functions support these instructions (accessible via GCC), as do Intel primitives and the Intel inline assembler (closely compatible to GAS, although more general in its handling of local references within inline code). GAS supports AVX starting with binutils version 2.19.<ref name="gas-version-history">{{Cite web|title=GAS Changes|url=https://sourceware.org/git/gitweb.cgi?p=binutils-gdb.git;a=blob_plain;f=gas/NEWS;hb=refs/heads/binutils-2_42-branch|website=sourceware.org|access-date=2024-05-03|archive-date=May 12, 2024|archive-url=https://web.archive.org/web/20240512145635/https://sourceware.org/git/gitweb.cgi?p=binutils-gdb.git;a=blob_plain;f=gas/NEWS;hb=refs/heads/binutils-2_42-branch|url-status=live}}</ref>
+* [[GNU Compiler Collection|GCC]] starting with version 4.6 (although there was a 4.3 branch with certain support) and the Intel Compiler Suite starting with version 11.1 support AVX.
+* The [[Open64]] compiler version 4.5.1 supports AVX with -{{Not a typo|mavx}} flag.
+* [[PathScale]] supports via the -{{Not a typo|mavx}} flag.
+* The [[Vector Pascal]] compiler supports AVX via the -{{Not a typo|cpuAVX32}} flag.
+* The [[Visual Studio 2010]]/[[Visual Studio 2012|2012]] compiler supports AVX via intrinsic and {{Not a typo|/arch:AVX}} switch.
+* [[Netwide Assembler|NASM]] starting with version 2.03 and newer. There were numerous bug fixes and updates related to AVX in version 2.04.<ref name="nasm-version-history">{{Cite web|title=NASM - The Netwide Assembler, Appendix C: NASM Version History|url=https://nasm.us/doc/nasmdocc.html|website=nasm.us|access-date=2024-05-03|archive-date=January 18, 2025|archive-url=https://web.archive.org/web/20250118004826/https://nasm.us/doc/nasmdocc.html|url-status=live}}</ref>
+* Other assemblers such as [[MASM]] VS2010 version, [[YASM]],<ref name="uHguP">{{cite web|title=YASM 0.7.0 Release Notes|url=http://yasm.tortall.net/releases/Release0.7.0.html|website=yasm.tortall.net}}{{Dead link|date=August 2026 |bot=InternetArchiveBot }}</ref> [[FASM]] and [[JWASM]].
+
+=== Operating system support ===
+AVX adds new register-state through the 256-bit wide YMM register file, so explicit [[operating system]] support is required to properly save and restore AVX's expanded registers between [[context switch]]es. The following operating system versions support AVX:
+* [[DragonFly BSD]]: support added in early 2013.
+* [[FreeBSD]]: support added in a patch submitted on January 21, 2012,<ref name="lSP7Y">{{citation |url= http://svnweb.freebsd.org/base?view=revision&revision=230426 |title= Add support for the extended FPU states on amd64, both for native 64bit and 32bit ABIs |publisher= svnweb.freebsd.org |date= January 21, 2012 |access-date= January 22, 2012 |archive-date= January 23, 2025 |archive-url= https://web.archive.org/web/20250123171801/https://svnweb.freebsd.org/base?view=revision&revision=230426 |url-status= live }}</ref> which was included in the 9.1 stable release.<ref name="HIQRm">{{cite web |url= http://www.freebsd.org/releases/9.1R/announce.html |title= FreeBSD 9.1-RELEASE Announcement |access-date= May 20, 2013 |archive-date= December 22, 2020 |archive-url= https://web.archive.org/web/20201222035627/https://www.freebsd.org/releases/9.1R/announce.html |url-status= live }}</ref>
+* [[Linux]]: supported since kernel version 2.6.30,<ref name="etOsK">{{citation |url= https://git.kernel.org/linus/a30469e7921a6dd2067e9e836d7787cfa0105627 |title= x86: add linux kernel support for YMM state |access-date= July 13, 2009}}</ref> released on June 9, 2009.<ref name="XB18C">{{citation |url= http://kernelnewbies.org/Linux_2_6_30 |title= Linux 2.6.30 - Linux Kernel Newbies |access-date= July 13, 2009 |archive-date= April 2, 2012 |archive-url= https://web.archive.org/web/20120402142640/http://kernelnewbies.org/Linux_2_6_30 |url-status= live }}</ref>
+* [[macOS]]: support added in 10.6.8 ([[Mac OS X Snow Leopard|Snow Leopard]]) update<ref name="3qGKK">{{citation |url= https://twitter.com/comex/status/85401002349576192 |title= Twitter |access-date= June 23, 2010 |archive-date= August 23, 2024 |archive-url= https://web.archive.org/web/20240823185406/https://twitter.com/comex/status/85401002349576192 |url-status= live }}</ref>{{Unreliable source?|date=January 2012}} released on June 23, 2011.  In fact, [[macOS Ventura]] does not support x86 processors without the AVX2 instruction set.<ref>{{cite web | url=https://arstechnica.com/gadgets/2022/08/running-macos-ventura-on-old-macs-isnt-easy-but-some-devs-are-making-progress/ | title=Devs are making progress getting macOS Ventura to run on unsupported, decade-old Macs | date=August 23, 2022 | access-date=January 15, 2023 | archive-date=January 18, 2025 | archive-url=https://web.archive.org/web/20250118204809/https://arstechnica.com/gadgets/2022/08/running-macos-ventura-on-old-macs-isnt-easy-but-some-devs-are-making-progress/ | url-status=live }}</ref>
+* [[OpenBSD]]: support added on March 21, 2015.<ref name="K5BEr">{{citation |url= http://marc.info/?l=openbsd-cvs&m=142697057503802&w=2 |title= Add support for saving/restoring FPU state using the XSAVE/XRSTOR. |access-date= March 25, 2015 |archive-date= January 20, 2025 |archive-url= https://web.archive.org/web/20250120181409/https://marc.info/?l=openbsd-cvs&m=142697057503802&w=2 |url-status= live }}</ref>
+* [[Solaris (operating system)|Solaris]]: supported in Solaris 10 Update 10 and Solaris 11.
+* [[Microsoft Windows|Windows]]: supported since [[Windows 7]] SP1 and [[Windows Server 2008 R2]] SP1.<ref name="2kEEK">{{citation |url= http://msdn.microsoft.com/en-us/library/ff545910.aspx |title= Floating-Point Support for 64-Bit Drivers |access-date= December 6, 2009 |archive-date= August 15, 2016 |archive-url= https://web.archive.org/web/20160815211717/https://msdn.microsoft.com/en-us/library/ff545910.aspx |url-status= live }}</ref>
+** Windows Server 2008 R2 SP1 with Hyper-V requires a hotfix to support AMD AVX (Opteron 6200 and 4200 series) processors, [http://support.microsoft.com/kb/2568088 KB2568088]
+** [[Windows XP]] and [[Windows Server 2003]] do not support AVX in both kernel drivers and user applications.
+** Support for [[AVX-512]] was added in [[Windows 10]] and [[Windows Server 2016]].<ref>{{Cite web |last=Zhang |first=Rui |date=2020-02-27 |title=AVX-512 Auto-Vectorization in MSVC |url=https://devblogs.microsoft.com/cppblog/avx-512-auto-vectorization-in-msvc/ |access-date=2026-06-13 |website=C++ Team Blog |language=en-US |archive-date=May 13, 2026 |archive-url=https://web.archive.org/web/20260513152553/https://devblogs.microsoft.com/cppblog/avx-512-auto-vectorization-in-msvc/ |url-status=live }}</ref>
+
+== <span class="anchor" id="AVX2"></span>Advanced Vector Extensions 2 ==
+Advanced Vector Extensions 2 (AVX2), also known as '''Haswell New Instructions''',<ref name="avx2">{{citation |url= http://software.intel.com/en-us/blogs/2011/06/13/haswell-new-instruction-descriptions-now-available/ |title= Haswell New Instruction Descriptions Now Available |publisher= Software.intel.com |access-date= January 17, 2012 |archive-date= January 10, 2012 |archive-url= https://web.archive.org/web/20120110133006/http://software.intel.com/en-us/blogs/2011/06/13/haswell-new-instruction-descriptions-now-available/ |url-status= live }}</ref> is an expansion of the AVX instruction set introduced in Intel's [[Haswell (microarchitecture)|Haswell microarchitecture]]. AVX2 makes the following additions:
+* expansion of most vector integer SSE and AVX instructions to 256 bits
+* [[Gather-scatter (vector addressing)|Gather]] support, enabling vector elements to be loaded from non-contiguous memory locations
+* [[Word (computer architecture)#Size families|DWORD- and QWORD-]]granularity any-to-any permutes
+* vector shifts.
+Sometimes three-operand [[FMA instruction set|fused multiply-accumulate]] (FMA3) extension is considered part of AVX2, as it was introduced by Intel in the same processor microarchitecture. This is a separate extension using its own [[CPUID]] flag, described on [[FMA instruction set#FMA3 instruction set|its own page]] and not below.
+
+=== New instructions ===
+{| class="wikitable"
+|-
+! Instruction
+! Description
+|-
+| <code>VBROADCASTSS</code>, <code>VBROADCASTSD</code>
+| Copy a 32-bit or 64-bit register operand to all elements of a XMM or YMM vector register. These are register versions of the same instructions in AVX1. There is no 128-bit version, but the same effect can be simply achieved using VINSERTF128.
+|-
+| <code>VPBROADCASTB</code>, <code>VPBROADCASTW</code>, <code>VPBROADCASTD</code>, <code>VPBROADCASTQ</code>
+| Copy an 8, 16, 32 or 64-bit integer register or memory operand to all elements of a XMM or YMM vector register.
+|-
+| <code>VBROADCASTI128</code>
+| Copy a 128-bit memory operand to all elements of a YMM vector register.
+|-
+| <code>VINSERTI128</code>
+| Replaces either the lower half or the upper half of a 256-bit YMM register with the value of a 128-bit source operand. The other half of the destination is unchanged.
+|-
+| <code>VEXTRACTI128</code>
+| Extracts either the lower half or the upper half of a 256-bit YMM register and copies the value to a 128-bit destination operand.
+|-
+| <code>VGATHERDPD</code>, <code>VGATHERQPD</code>, <code>VGATHERDPS</code>, <code>VGATHERQPS</code>
+| [[Gather-scatter (vector addressing)|Gathers]] single- or double-precision floating-point values using either 32- or 64-bit indices and scale.
+|-
+| <code>VPGATHERDD</code>, <code>VPGATHERDQ</code>, <code>VPGATHERQD</code>, <code>VPGATHERQQ</code>
+| Gathers 32 or 64-bit integer values using either 32- or 64-bit indices and scale.
+|-
+| <code>VPMASKMOVD</code>, <code>VPMASKMOVQ</code>
+| Conditionally reads any number of elements from a SIMD vector memory operand into a destination register, leaving the remaining vector elements unread and setting the corresponding elements in the destination register to zero. Alternatively, conditionally writes any number of elements from a SIMD vector register operand to a vector memory operand, leaving the remaining elements of the memory operand unchanged.
+|-
+| <code>VPERMPS</code>, <code>VPERMD</code>
+| Shuffle the eight 32-bit vector elements of one 256-bit source operand into a 256-bit destination operand, with a register or memory operand as selector.
+|-
+| <code>VPERMPD</code>, <code>VPERMQ</code>
+| Shuffle the four 64-bit vector elements of one 256-bit source operand into a 256-bit destination operand, with a register or memory operand as selector.
+|-
+| <code>VPERM2I128</code>
+| Shuffle (two of) the four 128-bit vector elements of ''two'' 256-bit source operands into a 256-bit destination operand, with an immediate constant as selector.
+|-
+| <code>VPBLENDD</code>
+| Doubleword immediate version of the PBLEND instructions from [[SSE4]].
+|-
+| <code>VPSLLVD</code>, <code>VPSLLVQ</code>
+| Shift left logical. Allows variable shifts where each element is shifted according to the packed input.
+|-
+| <code>VPSRLVD</code>, <code>VPSRLVQ</code>
+| Shift right logical. Allows variable shifts where each element is shifted according to the packed input.
+|-
+| <code>VPSRAVD</code>
+| Shift right arithmetically. Allows variable shifts where each element is shifted according to the packed input.
+|}
+
+=== CPUs with AVX2 ===
+* [[Intel Corporation|Intel]]
+** [[Haswell (microarchitecture)|Haswell]] processors (Q2 2013) and newer, except models branded as Celeron and Pentium.
+** Celeron and Pentium branded processors starting with [[Tiger Lake]] (Q3 2020) and newer.<ref name="9r8b9" />
+* [[Advanced Micro Devices|AMD]]
+** [[Excavator (microarchitecture)|Excavator]] processors (Q2 2015) and newer.
+* [[VIA Technologies|VIA]]:
+** Nano QuadCore
+** Eden X4
+
+== AVX-512 ==
+{{Main article|AVX-512}}
+
+''AVX-512'' are 512-bit extensions to the 256-bit Advanced Vector Extensions SIMD instructions for x86 instruction set architecture proposed by [[Intel Corporation|Intel]] in July 2013.<ref name="reinders512" />
+
+AVX-512 instructions are encoded with the new [[EVEX prefix]]. It allows 4 operands, 8 new 64-bit [[AVX-512#Opmask registers|opmask registers]], scalar memory mode with automatic broadcast, explicit rounding control, and compressed displacement memory [[addressing mode]]. The width of the register file is increased to 512 bits and total register count increased to 32 (registers ZMM0-ZMM31) in x86-64 mode.
+
+AVX-512 consists of multiple instruction subsets, not all of which are meant to be supported by all processors implementing them. The instruction set consists of the following:
+* AVX-512 Foundation (F){{snd}} adds several new instructions and expands most 32- and 64-bit floating-point SSE-SSE4.1 and AVX/AVX2 instructions with [[EVEX prefix|EVEX coding scheme]] to support the 512-bit registers, operation masks, parameter broadcasting, and embedded rounding and exception control
+* AVX-512 Conflict Detection Instructions (CD){{snd}} efficient conflict detection to allow more loops to be vectorized, supported by Knights Landing<ref name="reinders512" />
+* AVX-512 Exponential and Reciprocal Instructions (ER){{snd}} exponential and reciprocal operations designed to help implement transcendental operations, supported by Knights Landing<ref name="reinders512" />
+* AVX-512 Prefetch Instructions (PF){{snd}} new prefetch capabilities, supported by Knights Landing<ref name="reinders512" />
+* AVX-512 Vector Length Extensions (VL){{snd}} extends most AVX-512 operations to also operate on XMM (128-bit) and YMM (256-bit) registers (including XMM16-XMM31 and YMM16-YMM31 in x86-64 mode)<ref name="reinders512b" />
+* AVX-512 Byte and Word Instructions (BW){{snd}} extends AVX-512 to cover 8-bit and 16-bit integer operations<ref name="reinders512b">{{cite web |url= https://software.intel.com/en-us/blogs/additional-avx-512-instructions |title= Additional AVX-512 instructions |date= July 17, 2014 |author= James Reinders |publisher= [[Intel]] |access-date= August 3, 2014 |archive-date= August 1, 2014 |archive-url= https://web.archive.org/web/20140801172937/https://software.intel.com/en-us/blogs/additional-avx-512-instructions |url-status= live }}</ref>
+* AVX-512 Doubleword and Quadword Instructions (DQ){{snd}} enhanced 32-bit and 64-bit integer operations<ref name="reinders512b" />
+* AVX-512 Integer [[Fused Multiply Add]] (IFMA){{snd}} fused multiply add for 512-bit integers.<ref name="newisa">{{cite web|url=https://software.intel.com/en-us/intel-architecture-instruction-set-extensions-programming-reference|title=Intel Architecture Instruction Set Extensions Programming Reference|publisher=[[Intel]]|format=PDF|access-date=January 29, 2014|archive-date=May 16, 2016|archive-url=http://arquivo.pt/wayback/20160516005910/https://software.intel.com/en-us/intel-architecture-instruction-set-extensions-programming-reference|url-status=live}}</ref>{{rp|746}}
+* AVX-512 Vector Byte Manipulation Instructions (VBMI) adds vector byte permutation instructions which are not present in AVX-512BW.
+* AVX-512 Vector Neural Network Instructions Word variable precision (4VNNIW){{snd}} vector instructions for deep learning.
+* AVX-512 Fused Multiply Accumulation Packed Single precision (4FMAPS){{snd}} vector instructions for deep learning.
+* VPOPCNTDQ{{snd}} count of bits set to 1.<ref name="iaiseaffpr">{{cite web|url=https://software.intel.com/en-us/intel-architecture-instruction-set-extensions-programming-reference|title=Intel® Architecture Instruction Set Extensions and Future Features Programming Reference|access-date=October 16, 2017|publisher=Intel|archive-date=May 16, 2016|archive-url=http://arquivo.pt/wayback/20160516005910/https://software.intel.com/en-us/intel-architecture-instruction-set-extensions-programming-reference|url-status=live}}</ref>
+* VPCLMULQDQ{{snd}} carry-less multiplication of quadwords.<ref name="iaiseaffpr" />
+* AVX-512 Vector Neural Network Instructions (VNNI){{snd}} vector instructions for deep learning.<ref name="iaiseaffpr" />
+* AVX-512 Galois Field New Instructions (GFNI){{snd}} vector instructions for calculating [[Galois field]].<ref name="iaiseaffpr" />
+* AVX-512 Vector AES instructions (VAES){{snd}} vector instructions for [[Advanced Encryption Standard|AES]] coding.<ref name="iaiseaffpr" />
+* AVX-512 Vector Byte Manipulation Instructions 2 (VBMI2){{snd}} byte/word load, store and concatenation with shift.<ref name="iaiseaffpr" />
+* AVX-512 Bit Algorithms (BITALG){{snd}} byte/word [[bit manipulation]] instructions expanding VPOPCNTDQ.<ref name="iaiseaffpr" />
+* AVX-512 [[Bfloat16 floating-point format|Bfloat16]] Floating-Point Instructions (BF16){{snd}} vector instructions for AI acceleration.
+* AVX-512 [[Half-precision floating-point format|Half-Precision]] Floating-Point Instructions (FP16){{snd}} vector instructions for operating on floating-point and complex numbers with reduced precision.
+* AVX-512 Bit Manipulation Instructions (BMM){{snd}} bit matrix multiply and bit reversal instructions.
+Only the core extension AVX-512F (AVX-512 Foundation) is required by all implementations, though all current implementations also support CD (conflict detection). All central processors with AVX-512 also support VL, DQ and BW. The ER, PF, 4VNNIW and 4FMAPS instruction set extensions are currently only implemented in Intel computing coprocessors.
+
+The updated SSE/AVX instructions in AVX-512F use the same mnemonics as AVX versions; they can operate on 512-bit ZMM registers, and will also support 128/256 bit XMM/YMM registers (with AVX-512VL) and byte, word, doubleword and quadword integer operands (with AVX-512BW/DQ and VBMI).<ref name="newisa" />{{rp|23}}
+
+Discontinued subsets include:
+* AVX-512 Vector Pair Intersection to a Pair of Mask Registers (VP2INTERSECT){{snd}} Compute intersection between doublewords/quadwords to a pair of mask registers. [[List_of_discontinued_x86_instructions#VP2Intersect_instructions|Discontinued by Intel]], but still supported by AMD.
+* Xeon Phi ER, PF, 4FMAPS, 4VNNIW.
+
+=== AVX-512 CPU compatibility table ===
+
+{| class="wikitable"
+! {{vert header|Subset}}
+! {{vert header|F}}
+! {{vert header|CD}}
+! {{vert header|ER}}
+! {{vert header|PF}}
+! {{vert header|4FMAPS}}
+! {{vert header|4VNNIW}}
+! {{vert header|VPOPCNTDQ}}
+! {{vert header|VL}}
+! {{vert header|DQ}}
+! {{vert header|BW}}
+! {{vert header|IFMA}}
+! {{vert header|VBMI}}
+! {{vert header|VBMI2}}
+! {{vert header|BITALG}}
+! {{vert header|VNNI}}
+! {{vert header|BF16}}
+! {{vert header|VPCLMULQDQ}}
+! {{vert header|GFNI}}
+! {{vert header|VAES}}
+! {{vert header|VP2INTERSECT}}
+! {{vert header|FP16}}
+! {{vert header|BMM}}
+|-
+|style=width:200px| Intel [[Xeon Phi#Knights Landing|Knights Landing]] (2016)
+|colspan="2" rowspan="9" {{Yes}}
+|colspan="2" rowspan="2" {{Yes}}
+|colspan="18" {{No}}
+|-
+| Intel [[Knights Mill]] (2017)
+|colspan="3" {{Yes}}
+|colspan="15" {{No}}
+|-
+| Intel [[Skylake (microarchitecture)|Skylake-SP]], [[Skylake (microarchitecture)|Skylake-X]] (2017)
+|colspan="4" rowspan="12" {{No}}
+|rowspan="4" {{No}}
+|colspan="3" rowspan="4" {{Yes}}
+|colspan="12" {{No}}
+|-
+| Intel [[Cannon Lake (microarchitecture)|Cannon Lake]] (2018)
+|colspan="2" {{Yes}}
+|colspan="10" {{No}}
+|-
+| Intel [[Cascade Lake (microarchitecture)|Cascade Lake-SP]] (2019)
+|colspan="4" {{No}}
+|colspan="1" {{Yes}}
+|colspan="7" {{No}}
+|-
+| Intel [[Cooper Lake (microarchitecture)|Cooper Lake]] (2020)
+|colspan="4" {{No}}
+|colspan="2" {{Yes}}
+|colspan="6" {{No}}
+|-
+| Intel [[Ice Lake (microarchitecture)|Ice Lake]] (2019)
+|colspan="9" rowspan="3" {{Yes}}
+|rowspan="3" {{No}}
+|colspan="3" rowspan="3" {{Yes}}
+|colspan="3" {{No}}
+|-
+| Intel [[Tiger Lake]] (2020)
+|{{Yes}}
+|colspan="2" {{No}}
+|-
+| Intel [[Rocket Lake]] (2021)
+|colspan="3" {{No}}
+|-
+| Intel [[Alder Lake]] (2021)
+|colspan="2" {{Partial|{{nowrap|Partial{{ref|adl-avx512-note|Note 1}}}}}}
+|colspan="15" {{Partial|{{nowrap|Partial{{ref|adl-avx512-note|Note 1}}}}}}
+|{{No}}
+|-
+| AMD [[Zen 4]] (2022)
+|colspan="2" rowspan="4" {{Yes}}
+|colspan="13" rowspan="3" {{Yes}}
+|colspan="3" {{No}}
+|-
+| Intel [[Sapphire Rapids]] (2023)
+|{{No}}
+|{{Yes}}
+|{{No}}
+|-
+| AMD [[Zen 5]] (2024)
+| colspan="1" {{Yes}}
+| colspan="2" {{No}}
+|-
+| AMD [[Zen 6]] (TBD)
+| colspan="16" {{Yes}}
+|}
+
+<ref name="gu9Hh">{{Cite web|url=https://software.intel.com/en-us/articles/intel-software-development-emulator|title=Intel® Software Development Emulator {{!}} Intel® Software|website=software.intel.com|access-date=June 11, 2016|archive-date=May 6, 2019|archive-url=https://web.archive.org/web/20190506004633/https://software.intel.com/en-us/articles/intel-software-development-emulator|url-status=live}}</ref>
+
+{{note|adl-avx512-note|Note 1}}: Intel does not officially support AVX-512 family of instructions on the [[Alder Lake]] microprocessors. In early 2022, Intel began disabling in silicon (fusing off) AVX-512 in Alder Lake microprocessors to prevent customers from enabling AVX-512.<ref>{{cite web |last=Alcorn |first=Paul |date=2022-03-02 |title=Intel Nukes Alder Lake's AVX-512 Support, Now Fuses It Off in Silicon |url=https://www.tomshardware.com/news/intel-nukes-alder-lake-avx-512-now-fuses-it-off-in-silicon |access-date=2022-03-07 |website=Tom's Hardware |language=en |archive-date=October 3, 2022 |archive-url=https://web.archive.org/web/20221003232114/https://www.tomshardware.com/news/intel-nukes-alder-lake-avx-512-now-fuses-it-off-in-silicon |url-status=live }}</ref>
+In older Alder Lake family CPUs with some legacy combinations of BIOS and microcode revisions, it was possible to execute AVX-512 family instructions when disabling all the efficiency cores which do not contain the silicon for AVX-512.<ref>{{cite web|url=https://www.anandtech.com/show/16881/a-deep-dive-into-intels-alder-lake-microarchitectures/5|archive-url=https://web.archive.org/web/20210825124841/https://www.anandtech.com/show/16881/a-deep-dive-into-intels-alder-lake-microarchitectures/5|url-status=dead|archive-date=August 25, 2021|title=Intel Architecture Day 2021: Alder Lake, Golden Cove, and Gracemont Detailed|date=2021-08-19|last1=Cutress|first1=Ian|last2=Frumusanu|first2=Andrei|website=AnandTech|language=en|access-date=2021-08-25}}</ref><ref>{{cite web|last=Alcorn|first=Paul|date=2021-08-19|title=Intel Architecture Day 2021: Alder Lake Chips, Golden Cove and Gracemont Cores|url=https://www.tomshardware.com/features/intel-architecture-day-2021-intel-unveils-alder-lake-golden-cove-and-gracemont-cores|access-date=2021-08-21|website=Tom's Hardware|language=en|archive-date=July 1, 2026|archive-url=https://web.archive.org/web/20260701084104/https://www.tomshardware.com/features/intel-architecture-day-2021-intel-unveils-alder-lake-golden-cove-and-gracemont-cores|url-status=live}}</ref><ref>{{cite web|first1=Ian|last1=Cutress|first2=Andrei|last2=Frumusanu|title=The Intel 12th Gen Core i9-12900K Review: Hybrid Performance Brings Hybrid Complexity |url=https://www.anandtech.com/show/17047/the-intel-12th-gen-core-i912900k-review-hybrid-performance-brings-hybrid-complexity/2 |archive-url=https://web.archive.org/web/20211104154506/https://www.anandtech.com/show/17047/the-intel-12th-gen-core-i912900k-review-hybrid-performance-brings-hybrid-complexity/2 |url-status=dead |archive-date=November 4, 2021 |website=www.anandtech.com |access-date=5 November 2021}}</ref>
+
+=== Compilers supporting AVX-512 ===
+* [[Clang]] 3.9 and newer<ref name="MLilb">{{Cite web|url=http://releases.llvm.org/3.9.0/docs/ReleaseNotes.html#id10|title=LLVM 3.9 Release Notes — LLVM 3.9 documentation|website=releases.llvm.org|access-date=April 3, 2017|archive-date=May 13, 2017|archive-url=https://web.archive.org/web/20170513133219/http://releases.llvm.org/3.9.0/docs/ReleaseNotes.html#id10|url-status=live}}</ref>
+* [[GNU Compiler Collection|GCC]] 4.9 and newer<ref name="ENvJZ">{{Cite web|url=https://gcc.gnu.org/gcc-4.9/changes.html#x86|title=GCC 4.9 Release Series — Changes, New Features, and Fixes{{snd}} GNU Project - Free Software Foundation (FSF)|website=gcc.gnu.org|language=en|access-date=April 3, 2017|archive-date=April 4, 2017|archive-url=https://web.archive.org/web/20170404044517/https://gcc.gnu.org/gcc-4.9/changes.html#x86|url-status=live}}</ref>
+* [[Intel C++ Compiler|ICC]] 15.0.1 and newer<ref name="ZZVZ5">{{Cite web|url=https://software.intel.com/en-us/articles/intel-parallel-studio-xe-2015-composer-edition-c-release-notes|title=Intel® Parallel Studio XE 2015 Composer Edition C++ Release Notes {{!}} Intel® Software|website=software.intel.com|language=en|access-date=April 3, 2017|archive-date=April 4, 2017|archive-url=https://web.archive.org/web/20170404045542/https://software.intel.com/en-us/articles/intel-parallel-studio-xe-2015-composer-edition-c-release-notes|url-status=live}}</ref>
+* Microsoft Visual Studio 2017 C++ Compiler<ref name="pZckG">{{Cite web|url=https://blogs.msdn.microsoft.com/vcblog/2017/07/11/microsoft-visual-studio-2017-supports-intel-avx-512/|language=en|title=Microsoft Visual Studio 2017 Supports Intel® AVX-512|date=July 11, 2017|access-date=September 11, 2017|archive-date=September 12, 2017|archive-url=https://web.archive.org/web/20170912012426/https://blogs.msdn.microsoft.com/vcblog/2017/07/11/microsoft-visual-studio-2017-supports-intel-avx-512/|url-status=live}}</ref>
+
+=== Assemblers supporting AVX-512 ===
+* [[FASM]]
+* [[Netwide Assembler|NASM]] 2.11 and newer<ref name="nasm-version-history"/>
+
+== <span class="anchor" id="AVX-VNNI"></span><span class="anchor" id="AVX-IFMA"></span>AVX-VNNI, AVX-IFMA ==
+AVX-VNNI is a [[VEX prefix|VEX]]-coded variant of the [[AVX-512#VNNI|AVX512-VNNI]] instruction set extension. Similarly, AVX-IFMA is a [[VEX prefix|VEX]]-coded variant of [[AVX-512#IFMA|AVX512-IFMA]]. These extensions provide the same sets of operations as their AVX-512 counterparts, but are limited to 256-bit vectors and do not support any additional features of [[EVEX prefix|EVEX]] encoding, such as broadcasting, opmask registers or accessing more than 16 vector registers. These extensions allow for supporting VNNI and IFMA operations even when [[AVX-512]] is not implemented in the processor.
+
+=== CPUs with AVX-VNNI ===
+* [[Intel Corporation|Intel]]
+** [[Alder Lake]] processors (Q4 2021) and newer.
+* [[AMD]]
+** [[Zen 5]] processors (Q3 2024) and newer.<ref>{{Cite web |title=AMD Zen 5 Compiler Support Posted For GCC - Confirms New AVX Features & More |url=https://www.phoronix.com/news/AMD-Zen-5-Znver-5-GCC |access-date=2024-02-10 |website=www.phoronix.com |language=en |archive-date=February 10, 2024 |archive-url=https://web.archive.org/web/20240210160032/https://www.phoronix.com/news/AMD-Zen-5-Znver-5-GCC |url-status=live }}</ref>
+
+=== CPUs with AVX-IFMA ===
+* [[Intel Corporation|Intel]]
+** [[Sierra Forest]] E-core-only Xeon processors (Q2 2024) and newer.
+** Grand Ridge special-purpose processors and newer.
+** [[Meteor Lake]] mobile processors (Q4 2023) and newer.
+** [[Arrow Lake (microprocessor)|Arrow Lake]] desktop processors (Q4 2024) and newer.
+* [[AMD]]
+** [[Zen 6]] processors and newer.<ref name="amd_zen6_binutils_patch">{{cite web|url=https://sourceware.org/pipermail/binutils/2025-November/145449.html|title=[PATCH] Add AMD znver6 processor support|date=19 November 2025|access-date=November 19, 2025|archive-date=November 17, 2025|archive-url=https://web.archive.org/web/20251117045340/https://sourceware.org/pipermail/binutils/2025-November/145449.html|url-status=live}}</ref>
+
+== AVX-NE-CONVERT ==
+AVX-NE-CONVERT introduces a set of instructions for converting between [[Bfloat16_floating-point_format|Bfloat16]] (BF16), [[Half-precision_floating-point_format|half-precision]] (FP16) and [[Single-precision_floating-point_format|single-precision]] (FP32) floating-point numbers. The new instructions are [[VEX prefix|VEX]]-coded, and therefore are limited to AVX2 vector registers and lack opmask support from AVX-512. Broadcast is only supported by means of two special instructions for loading numbers from memory, it is not supported as an instruction encoding feature.
+
+=== New instructions ===
+{| class="wikitable"
+|-
+! Instruction
+! Description
+|-
+| <code>VBCSTNEBF162PS</code>
+| Loads one BF16 element from memory, converts it to FP32, and broadcasts it to a vector register.
+|-
+| <code>VBCSTNESH2PS</code>
+| Loads one FP16 element from memory, converts it to FP32, and broadcasts it to a vector register.
+|-
+| <code>VCVTNEEBF162PS</code>, <code>VCVTNEOBF162PS</code>
+| Loads packed BF16 elements from memory, converts the even (for <code>VCVTNEEBF162PS</code>) or odd (for <code>VCVTNEOBF162PS</code>) elements to FP32, and writes the result to the destination vector register.
+|-
+| <code>VCVTNEEPH2PS</code>, <code>VCVTNEOPH2PS</code>
+| Loads packed FP16 elements from memory, converts the even (for <code>VCVTNEEPH2PS</code>) or odd (for <code>VCVTNEOPH2PS</code>) elements to FP32, and writes the result to the destination vector register.
+|-
+| <code>VCVTNEPS2BF16</code>
+| Loads packed FP32 elements from a vector register or memory, converts the elements to BF16, and writes the result to the destination vector register. The upper bits of the destination vector register are zeroed.
+|}
+
+=== CPUs with AVX-NE-CONVERT ===
+* [[Intel Corporation|Intel]]
+** [[Sierra Forest]] E-core-only Xeon processors (Q2 2024) and newer.
+** Grand Ridge special-purpose processors and newer.
+** [[Lunar Lake]] mobile processors (Q2 2024) and newer.
+** [[Arrow Lake (microprocessor)|Arrow Lake]] desktop processors (Q4 2024) and newer.
+** [[Diamond Rapids]] Xeon processors and newer.
+* [[AMD]]
+** [[Zen 6]] processors and newer.<ref name="amd_zen6_binutils_patch"/>
+
+== <span class="anchor" id="AVX-VNNI-INT8"></span><span class="anchor" id="AVX-VNNI-INT16"></span>AVX-VNNI-INT8, AVX-VNNI-INT16 ==
+These instruction sets further extend the [[AVX-VNNI]] extension by adding support for more combinations of input data types for the <code>VPDP*</code> series of instructions. Where <code>VPDPBUSD(S)</code> instructions from [[AVX-VNNI]] take a vector of unsigned bytes as the first input operand and a vector of signed bytes as the second input operand, AVX-VNNI-INT8 adds variants of these instructions that support signed and unsigned byte inputs at any position. Similarly, where <code>VPDPWSSD(S)</code> from [[AVX-VNNI]] take two vectors of signed 16-bit words as input operands, AVX-VNNI-INT16 adds support for signed and unsigned 16-bit word inputs at any position.
+
+For the instructions accepting signed and unsigned inputs, there are distinct instructions for the two possible orders of inputs (signed/unsigned and unsigned/signed) because [[VEX prefix|VEX]] encoding only supports the second input operand to be a memory operand. This allows any of the supported data types to be loaded from memory by the instruction.
+
+=== New instructions in AVX-VNNI-INT8 ===
+{| class="wikitable"
+|-
+! Instruction
+! Description
+|-
+| <code>VPDPBSSD</code>, <code>VPDPBSSDS</code>
+| Multiply groups of 4 pairs of signed bytes in the second input with corresponding signed bytes of the first input, summing those products and adding them to the doubleword result in the output. <code>VPDPBSSDS</code> performs signed saturation of the result.
+|-
+| <code>VPDPBSUD</code>, <code>VPDPBSUDS</code>
+| Multiply groups of 4 pairs of unsigned bytes in the second input with corresponding signed bytes of the first input, summing those products and adding them to the doubleword result in the output. <code>VPDPBSUDS</code> performs signed saturation of the result.
+|-
+| <code>VPDPBUUD</code>, <code>VPDPBUUDS</code>
+| Multiply groups of 4 pairs of unsigned bytes in the second input with corresponding unsigned bytes of the first input, summing those products and adding them to the doubleword result in the output. <code>VPDPBUUDS</code> performs signed saturation of the result.
+|}
+
+=== New instructions in AVX-VNNI-INT16 ===
+{| class="wikitable"
+|-
+! Instruction
+! Description
+|-
+| <code>VPDPWSUD</code>, <code>VPDPWSUDS</code>
+| Multiply groups of 2 pairs of unsigned words in the second input with corresponding signed words of the first input, summing those products and adding them to the doubleword result in the output. <code>VPDPWSUDS</code> performs signed saturation of the result.
+|-
+| <code>VPDPWUSD</code>, <code>VPDPWUSDS</code>
+| Multiply groups of 2 pairs of signed words in the second input with corresponding unsigned words of the first input, summing those products and adding them to the doubleword result in the output. <code>VPDPWUSDS</code> performs signed saturation of the result.
+|-
+| <code>VPDPWUUD</code>, <code>VPDPWUUDS</code>
+| Multiply groups of 2 pairs of unsigned words in the second input with corresponding unsigned words of the first input, summing those products and adding them to the doubleword result in the output. <code>VPDPWUSDS</code> performs signed saturation of the result.
+|}
+
+=== CPUs with AVX-VNNI-INT8 ===
+* [[Intel Corporation|Intel]]
+** [[Sierra Forest]] E-core-only Xeon processors (Q2 2024) and newer.
+** Grand Ridge special-purpose processors and newer.
+** [[Lunar Lake]] mobile processors (Q2 2024) and newer.
+** [[Arrow Lake (microprocessor)|Arrow Lake]] desktop processors (Q4 2024) and newer.
+** [[Diamond Rapids]] Xeon processors and newer.
+* [[AMD]]
+** [[Zen 6]] processors and newer.<ref name="amd_zen6_binutils_patch"/>
+
+=== CPUs with AVX-VNNI-INT16 ===
+* [[Intel Corporation|Intel]]
+** [[Clearwater Forest]] E-core-only Xeon processors and newer.
+** [[Lunar Lake]] mobile processors (Q2 2024) and newer.
+** [[Arrow Lake (microprocessor)|Arrow Lake]] desktop processors (Q4 2024) and newer.
+** [[Diamond Rapids]] Xeon processors and newer.
+
+== AVX10 ==
+AVX10, announced in July 2023,<ref>{{cite web |url=https://www.anandtech.com/show/18975/intel-unveils-avx10-and-apx-isas-unifying-avx512-for-hybrid-architectures- |archive-url=https://web.archive.org/web/20230725175415/https://www.anandtech.com/show/18975/intel-unveils-avx10-and-apx-isas-unifying-avx512-for-hybrid-architectures- |url-status=dead |archive-date=July 25, 2023 |title=Intel Unveils AVX10 and APX Instruction Sets: Unifying AVX-512 For Hybrid Architectures |last=Bonshor |first=Gavin |date=2023-07-25 |publisher=[[AnandTech]] |access-date=2024-08-21}}</ref> is a new, "converged" AVX instruction set. It addresses several issues of AVX-512; in particular, that it is split into too many parts<ref>{{Cite web|last=Mann|first=Tobias|title=Intel's AVX10 promises benefits of AVX-512 without baggage|url=https://www.theregister.com/2023/08/15/avx10_intel_interviews/|date=2023-08-15|access-date=2023-08-20|website=www.theregister.com|language=en|archive-date=August 20, 2023|archive-url=https://web.archive.org/web/20230820010729/https://www.theregister.com/2023/08/15/avx10_intel_interviews/|url-status=live}}</ref> (20 feature flags). The initial technical paper also made 512-bit vectors optional to support, but as of revision 3.0, vector length enumeration is removed and 512-bit vectors are mandatory.<ref>{{cite web |url=https://www.phoronix.com/news/Intel-AVX10-Drops-256-Bit |title=Intel AVX10 Drops Optional 512-bit: No AVX10 256-bit Only E-Cores In The Future |last=Larabel |first=Michael |date=2025-03-19 |access-date=2025-03-19 |website=Phoronix |archive-date=March 19, 2025 |archive-url=https://web.archive.org/web/20250319161734/https://www.phoronix.com/news/Intel-AVX10-Drops-256-Bit |url-status=live }}</ref>
+
+AVX10 presents a simplified CPUID interface to test for instruction support, consisting of the AVX10 version number (indicating the set of instructions supported, with later versions always being a superset of an earlier one).<ref name=avx10-wp>{{cite web |title=The Converged Vector ISA: Intel® Advanced Vector Extensions 10 Technical Paper |url=https://www.intel.com/content/www/us/en/content-details/784343/the-converged-vector-isa-intel-advanced-vector-extensions-10-technical-paper.html |website=Intel |access-date=August 28, 2023 |archive-date=August 28, 2023 |archive-url=https://web.archive.org/web/20230828113847/https://www.intel.com/content/www/us/en/content-details/784343/the-converged-vector-isa-intel-advanced-vector-extensions-10-technical-paper.html |url-status=live }}</ref> For example, AVX10.2 indicates that a CPU is capable of the second version of AVX10.<ref name=avx10-spec/> Initial revisions of the AVX10 technical specifications also included maximum supported vector length as part of the ISA extension name, e.g. AVX10.2/256 would mean a second version of AVX10 with vector length up to 256 bits, but later revisions made that unnecessary.
+
+The first version of AVX10, notated AVX10.1, does ''not'' introduce any instructions or encoding features beyond what is already in AVX-512 (specifically, in Intel [[Sapphire Rapids]]: AVX-512F, CD, VL, DQ, BW, IFMA, VBMI, VBMI2, BITALG, VNNI, GFNI, VPOPCNTDQ, VPCLMULQDQ, VAES, BF16, FP16). For CPUs supporting AVX10 and 512-bit vectors, all legacy AVX-512 feature flags will remain set to facilitate applications supporting AVX-512 to continue using AVX-512 instructions.<ref name=avx10-spec>{{cite web |title=Intel® Advanced Vector Extensions 10 (Intel® AVX10) Architecture Specification |url=https://www.intel.com/content/www/us/en/content-details/784267/intel-advanced-vector-extensions-10-intel-avx10-architecture-specification.html |website=Intel |access-date=August 28, 2023 |archive-date=August 28, 2023 |archive-url=https://web.archive.org/web/20230828113847/https://www.intel.com/content/www/us/en/content-details/784267/intel-advanced-vector-extensions-10-intel-avx10-architecture-specification.html |url-status=live }}</ref>
+
+AVX10.1 was first released in Intel [[Granite Rapids]]<ref name=avx10-spec/> (Q3 2024) and AVX10.2 will be available in [[Diamond Rapids]]<ref>{{cite web |url=https://www.phoronix.com/news/Intel-GCC-Diamond-Rapids-ISA |title=Intel Preps GCC Compiler For New AMX & ISA Features Ahead Of Diamond Rapids |last=Larabel |first=Michael |date=2024-10-23 |access-date=2024-10-23 |website=Phoronix |archive-date=October 22, 2024 |archive-url=https://web.archive.org/web/20241022121755/https://www.phoronix.com/news/Intel-GCC-Diamond-Rapids-ISA |url-status=live }}</ref> and [[Nova Lake]].<ref>{{Cite web |title=Intel Now Confirms Nova Lake Will Support AVX10.2 & APX Extensions |url=https://www.phoronix.com/news/Nova-Lake-Does-AVX10.2-APX |access-date=2025-11-13 |website=www.phoronix.com |language=en |archive-date=November 13, 2025 |archive-url=https://web.archive.org/web/20251113152207/https://www.phoronix.com/news/Nova-Lake-Does-AVX10.2-APX |url-status=live }}</ref>
+
+== Applications ==
+* Suitable for [[floating-point arithmetic|floating-point]]-intensive calculations in multimedia, scientific and financial applications (AVX2 adds support for [[integer]] operations).
+* Increases parallelism and throughput in floating-point [[SIMD]] calculations.
+* Reduces register load due to the non-destructive instructions.
+* Improves Linux RAID software performance (requires AVX2, AVX is not sufficient)<ref name="K5FHF">{{Cite web |url= https://git.kernel.org/?p=linux/kernel/git/torvalds/linux-2.6.git;a=commitdiff;h=2c935842bdb46f5f557426feb4d2bdfdad1aa5f9 |archive-url= https://archive.today/20130415065954/https://git.kernel.org/?p=linux/kernel/git/torvalds/linux-2.6.git;a=commitdiff;h=2c935842bdb46f5f557426feb4d2bdfdad1aa5f9 |url-status= dead |archive-date= April 15, 2013 |title= Linux RAID |date= February 17, 2013 |publisher= LWN}}</ref>
+
+=== Software ===
+* Cryptography
+** [[BSAFE]] C toolkits uses AVX and AVX2 where appropriate to accelerate various cryptographic algorithms.<ref>{{cite web|url=https://www.dell.com/support/kbdoc/000190141/comparison-of-bsafe-cryptographic-library-implementations|title=Comparison of BSAFE cryptographic library implementations|date=July 25, 2023}}</ref>
+** [[OpenSSL]] uses AVX- and AVX2-optimized cryptographic functions since version 1.0.2.<ref name="04fXZ">{{Cite web|title=Improving OpenSSL Performance|date=May 26, 2015|access-date=February 28, 2017|url=https://software.intel.com/en-us/articles/improving-openssl-performance|archive-date=March 1, 2017|archive-url=https://web.archive.org/web/20170301181913/https://software.intel.com/en-us/articles/improving-openssl-performance|url-status=live}}</ref> Support for AVX-512 was added in version 3.0.0.<ref>{{cite web|url=https://github.com/openssl/openssl/blob/openssl-3.0.0/CHANGES.md|title=OpenSSL 3.0.0 release notes|website=[[GitHub]]|date=September 7, 2021|access-date=July 9, 2022|archive-date=December 25, 2022|archive-url=https://web.archive.org/web/20221225012919/https://github.com/openssl/openssl/blob/openssl-3.0.0/CHANGES.md|url-status=live}}</ref> Some of these optimizations are also present in various clones and forks, like LibreSSL.
+
+* Multimedia
+** [[Blender (software)|Blender]] uses AVX, AVX2 and AVX-512 in the Cycles render engine.<ref>{{cite web |last1=Jaroš |first1=Milan |last2=Strakoš |first2=Petr |last3=Říha |first3=Lubomír |title=Rendering in Blender using AVX-512 Vectorization |url=https://www.ixpug.org/documents/1520629330Jaros-IXPUG-CINECABlender5.pdf |website=Intel eXtreme Performance Users Group |publisher=[[VSB – Technical University of Ostrava|Technical University of Ostrava]] |access-date=28 October 2022 |language=en |date=28 May 2022 |archive-date=July 3, 2021 |archive-url=https://web.archive.org/web/20210703165711/https://www.ixpug.org/documents/1520629330Jaros-IXPUG-CINECABlender5.pdf |url-status=live }}</ref>
+** [[Native Instruments]]' Massive X softsynth requires AVX.<ref name="BUArc">{{Cite web|url=http://support.native-instruments.com/hc/en-us/articles/360001544678-MASSIVE-X-Requires-AVX-Compatible-Processor|title=MASSIVE X Requires AVX Compatible Processor|website=Native Instruments|language=en-US|access-date=2019-11-29|archive-date=November 12, 2019|archive-url=https://web.archive.org/web/20191112230543/https://support.native-instruments.com/hc/en-us/articles/360001544678-MASSIVE-X-Requires-AVX-Compatible-Processor|url-status=live}}</ref>
+** [https://code.videolan.org/videolan/dav1d dav1d] [[AV1]] decoder can use AVX2 and AVX-512 on supported CPUs.<ref name="O9KLK">{{Cite web|title=dav1d: performance and completion of the first release|date=November 21, 2018|access-date=November 22, 2018|url=http://www.jbkempf.com/blog/post/2018/dav1d-toward-the-first-release|archive-date=January 20, 2019|archive-url=https://web.archive.org/web/20190120115018/http://www.jbkempf.com/blog/post/2018/dav1d-toward-the-first-release|url-status=live}}</ref><ref>{{cite web|url=https://code.videolan.org/videolan/dav1d/-/tags/0.6.0|title=dav1d 0.6.0 release notes|date=March 6, 2020|access-date=July 9, 2022|archive-date=July 9, 2022|archive-url=https://web.archive.org/web/20220709212118/https://code.videolan.org/videolan/dav1d/-/tags/0.6.0|url-status=live}}</ref>
+** [https://gitlab.com/AOMediaCodec/SVT-AV1 SVT-AV1] [[AV1]] encoder can use AVX2 and AVX-512 to accelerate video encoding.<ref>{{cite web|url=https://gitlab.com/AOMediaCodec/SVT-AV1/-/blob/078d27e0bdc52cad2dc28e630fdd6391857e044e/CHANGELOG.md#070-2019-09-26|title=SVT-AV1 0.7.0 release notes|date=September 26, 2019|access-date=July 9, 2022|archive-date=July 9, 2022|archive-url=https://web.archive.org/web/20220709213453/https://gitlab.com/AOMediaCodec/SVT-AV1/-/blob/078d27e0bdc52cad2dc28e630fdd6391857e044e/CHANGELOG.md#070-2019-09-26|url-status=live}}</ref>
+
+* Science, engineering and others
+** [[Esri]] [[ArcGIS]] Data Store uses AVX2 for graph storage.<ref>{{Cite web |title=ArcGIS Data Store 11.2 System Requirements |url=https://enterprise.arcgis.com/en/system-requirements/latest/windows/arcgis-data-store-system-requirements.htm#ESRI_SECTION1_40B68391470C40E0B06DFA2A4412C6E7 |access-date=2024-01-24 |website=ArcGIS Enterprise |archive-date=January 25, 2024 |archive-url=https://web.archive.org/web/20240125024604/https://enterprise.arcgis.com/en/system-requirements/latest/windows/arcgis-data-store-system-requirements.htm#ESRI_SECTION1_40B68391470C40E0B06DFA2A4412C6E7 |url-status=live }}</ref>
+** [[Prime95]]/MPrime, the software used for [[GIMPS]], started using the AVX instructions since version 27.1, AVX2 since 28.6 and AVX-512 since 29.1.<ref>{{cite web|url=https://www.mersenne.org/download/whatsnew_308b15.txt|title=Prime95 release notes|access-date=2022-07-10|archive-date=August 8, 2022|archive-url=https://web.archive.org/web/20220808081934/https://www.mersenne.org/download/whatsnew_308b15.txt|url-status=live}}</ref>
+** [[Einstein@Home]] uses AVX in some of their distributed applications that search for [[gravitational waves]].<ref name="GLExU">{{Cite web |title= Einstein@Home Applications |url= http://einsteinathome.org/apps.php |access-date= March 11, 2016 |archive-date= March 11, 2016 |archive-url= https://web.archive.org/web/20160311194149/http://einsteinathome.org/apps.php |url-status= live }}</ref>
+** [[TensorFlow]] since version 1.6 and tensorflow above versions requires CPU supporting at least AVX.<ref name="MDJ95">{{Cite web| title= Tensorflow 1.6| website= [[GitHub]]| url= https://github.com/tensorflow/tensorflow/releases/tag/v1.6.0| access-date= September 9, 2018| archive-date= July 3, 2018| archive-url= https://web.archive.org/web/20180703115523/https://github.com/tensorflow/tensorflow/releases/tag/v1.6.0| url-status= live}}</ref>
+** [[EmEditor]] 19.0 and above uses AVX2 to speed up processing.<ref name="L6yrb">{{Cite web |url=https://www.emeditor.com/text-editor-features/history/new-in-version-19-0/ |title=New in Version 19.0 – EmEditor (Text Editor) |access-date=August 16, 2019 |archive-date=August 21, 2019 |archive-url=https://web.archive.org/web/20190821181622/https://www.emeditor.com/text-editor-features/history/new-in-version-19-0/ |url-status=live }}</ref>
+** [[Microsoft Teams]] uses AVX2 instructions to create a blurred or custom background behind video chat participants,<ref name="nSmsk">{{Cite web|url=https://docs.microsoft.com/en-us/microsoftteams/hardware-requirements-for-the-teams-app|title=Hardware requirements for Microsoft Teams|website=Microsoft|language=en-US|access-date=2020-04-17|archive-date=April 18, 2020|archive-url=https://web.archive.org/web/20200418082754/https://docs.microsoft.com/en-us/microsoftteams/hardware-requirements-for-the-teams-app|url-status=live}}</ref> and for background noise suppression.<ref name="6JbHG">{{cite web |title=Reduce background noise in Teams meetings |url=https://support.microsoft.com/en-gb/office/reduce-background-noise-in-teams-meetings-1a9c6819-137d-4b3b-a1c8-4ab20b234c0d |website=Microsoft Support |access-date=5 January 2021 |archive-date=November 18, 2020 |archive-url=https://web.archive.org/web/20201118195853/https://support.microsoft.com/en-gb/office/reduce-background-noise-in-teams-meetings-1a9c6819-137d-4b3b-a1c8-4ab20b234c0d |url-status=live }}</ref>
+** [https://github.com/simdjson/simdjson {{Not a typo|simdjson}}], a [[JSON]] parsing library, uses AVX2 and AVX-512 to achieve improved decoding speed.<ref name="33car">{{cite journal |last1=Langdale |first1=Geoff |last2=Lemire |first2=Daniel |arxiv=1902.08318 |title=Parsing Gigabytes of JSON per Second |journal=The VLDB Journal |date=2019 |volume=28 |issue=6 |pages=941–960 |doi=10.1007/s00778-019-00578-5 |s2cid=67856679}}</ref><ref>{{cite web|url=https://github.com/simdjson/simdjson/releases/tag/v2.1.0|title={{Not a typo|simdjson}} 2.1.0 release notes|website=[[GitHub]]|date=June 30, 2022|access-date=July 9, 2022|archive-date=July 9, 2022|archive-url=https://web.archive.org/web/20220709212117/https://github.com/simdjson/simdjson/releases/tag/v2.1.0|url-status=live}}</ref>
+** [https://github.com/intel/x86-simd-sort x86-simd-sort], a library with sorting algorithms for 16, 32 and 64-bit numeric data types, uses AVX2 and AVX-512. The library is used in [[NumPy]] and [[OpenJDK]] to accelerate sorting algorithms.<ref>{{cite web|url=https://www.phoronix.com/news/Intel-x86-simd-sort-3.0|last=Larabel|first=Michael|website=Phoronix|title=OpenJDK Merges Intel's x86-simd-sort For Speeding Up Data Sorting 7~15x|date=October 6, 2023|access-date=October 17, 2023|archive-date=October 17, 2023|archive-url=https://web.archive.org/web/20231017090719/https://www.phoronix.com/news/Intel-x86-simd-sort-3.0|url-status=live}}</ref>
+** [[Tesseract (software)|Tesseract OCR]] engine uses AVX, AVX2 and AVX-512 to accelerate character recognition.<ref>{{cite web|url=https://www.phoronix.com/scan.php?page=news_item&px=Tesseract-OCR-5.2-Released|last=Larabel|first=Michael|website=Phoronix|title=Tesseract OCR 5.2 Engine Finds Success With AVX-512F|date=July 7, 2022|access-date=July 9, 2022|archive-date=July 9, 2022|archive-url=https://web.archive.org/web/20220709214025/https://www.phoronix.com/scan.php?page=news_item&px=Tesseract-OCR-5.2-Released|url-status=live}}</ref>
+** Video games and emulators, such as RPCS3 use AVX2 and AVX-512 for noticeable performance improvements.<ref>{{cite web |url=https://www.pcgamer.com/the-rpcs3-ps3-emulator-gets-a-hefty-boost-on-intel-alder-lake-cpus-with-avx-512-enabledenabled/ |title=The RPCS3 PS3 emulator gets a hefty boost on Intel Alder Lake CPUs with AVX-512 enabled |last=Szewczyk |first=Chris |date=2021-11-24 |publisher=[[PC Gamer]] |access-date=2023-10-11}}</ref>
+
+== Downclocking ==
+Since AVX instructions are wider, they consume more power and generate more heat. Executing heavy AVX instructions at high CPU clock frequencies may affect CPU stability due to excessive [[voltage droop]] during load transients. Some Intel processors have provisions to reduce the [[Intel Turbo Boost|Turbo Boost]] frequency limit when such instructions are being executed. This reduction happens even if the CPU hasn't reached its thermal and power consumption limits.
+
+On [[Skylake (microarchitecture)|Skylake]] and its derivatives, the throttling is divided into three levels:<ref name="lic">{{cite web |last1=Lemire |first1=Daniel |title=AVX-512: when and how to use these new instructions |url=https://lemire.me/blog/2018/09/07/avx-512-when-and-how-to-use-these-new-instructions/ |website=Daniel Lemire's blog |date=September 7, 2018 |access-date=May 10, 2020 |archive-date=June 12, 2020 |archive-url=https://web.archive.org/web/20200612195155/https://lemire.me/blog/2018/09/07/avx-512-when-and-how-to-use-these-new-instructions/ |url-status=live }}</ref><ref name="q41V7">{{cite web |author1=BeeOnRope |title=SIMD instructions lowering CPU frequency |url=https://stackoverflow.com/a/56861355 |website=Stack Overflow}}</ref>
+* L0 (100%): The normal turbo boost limit.
+* L1 (~85%): The "AVX boost" limit. Soft-triggered by 256-bit "heavy" (floating-point unit: FP math and integer multiplication) instructions. Hard-triggered by "light" (all other) 512-bit instructions.
+* L2 (~60%):{{Dubious|Re: Downclocking|date=July 2021}} The "AVX-512 boost" limit. Soft-triggered by 512-bit heavy instructions.
+
+The frequency transition can be soft or hard. Hard transition means the frequency is reduced as soon as such an instruction is spotted; soft transition means that the frequency is reduced only after reaching a threshold number of matching instructions. The limit is per-thread.<ref name="lic" />
+
+In [[Ice Lake (microarchitecture)|Ice Lake]], only two levels persist:<ref name="icl-avx512-freq">{{cite web |last1=Downs |first1=Travis |title=Ice Lake AVX-512 Downclocking |url=https://travisdowns.github.io/blog/2020/08/19/icl-avx512-freq.html |website=Performance Matters blog |date=August 19, 2020 |access-date=April 2, 2021 |archive-date=March 17, 2021 |archive-url=https://web.archive.org/web/20210317220043/https://travisdowns.github.io/blog/2020/08/19/icl-avx512-freq.html |url-status=live }}</ref>
+* L0 (100%): The normal turbo boost limit.
+* L1 (~97%): Triggered by any 512-bit instructions, but only when single-core boost is active; not triggered when multiple cores are loaded.
+
+[[Rocket Lake]] processors do not trigger frequency reduction upon executing any kind of vector instructions regardless of the vector size.<ref name="icl-avx512-freq" /> However, downclocking can still happen due to other reasons, such as reaching thermal and power limits.
+
+Downclocking means that using AVX in a mixed workload with an Intel processor can incur a frequency penalty. Avoiding the use of wide and heavy instructions help minimize the impact in these cases. AVX-512VL allows for using 256-bit or 128-bit operands in AVX-512 instructions, making it a sensible default for mixed loads.<ref name="LttMf">{{cite web |title=x86 - AVX 512 vs AVX2 performance for simple array processing loops |url=https://stackoverflow.com/a/52543573 |website=Stack Overflow}}</ref>
+
+On supported and unlocked variants of processors that down-clock, the clock ratio reduction offsets (typically called AVX and AVX-512 offsets) are adjustable and may be turned off entirely (set to 0x) via Intel's Overclocking / Tuning utility or in BIOS if supported there.<ref name="intelXTUGuide">{{cite web |title=Intel® Extreme Tuning Utility (Intel® XTU) Guide to Overclocking : Advanced Tuning |url=https://www.intel.com/content/www/us/en/gaming/resources/overclocking-xtu-guide.html#articleparagraph-14 |website=Intel |access-date=18 July 2021 |language=en |quote=See image in linked section, where AVX2 ratio has been set to 0. |archive-date=March 19, 2024 |archive-url=https://web.archive.org/web/20240319190648/https://www.intel.com/content/www/us/en/gaming/resources/overclocking-xtu-guide.html#articleparagraph-14 |url-status=live }}</ref>
+
+== See also ==
+* [[F16C]] instruction set extension
+* [[Memory Protection Extensions]]
+* [[AArch64#Scalable Vector Extension (SVE)|Scalable Vector Extension for ARM]] - a new vector instruction set (supplementing [[VFP (instruction set)|VFP]] and [[NEON (instruction set)|NEON]]) similar to AVX-512, with some additional features.
+* [[X86#APX|APX]] Advanced Performance Extensions
+
+== References ==
+{{reflist|1=30em}}
+
+== External links ==
+* [https://software.intel.com/sites/landingpage/IntrinsicsGuide/ Intel Intrinsics Guide]
+* [https://docs.oracle.com/cd/E36784_01/pdf/E36859.pdf x86 Assembly Language Reference Manual]
+
+{{AMD technology}}
+{{Intel technology}}
+{{Instruction set extensions|state=uncollapsed}}
+
+[[Category:X86 instructions]]
+[[Category:SIMD computing]]
+[[Category:AMD technologies]]
+[[Category:Instruction set extensions]]

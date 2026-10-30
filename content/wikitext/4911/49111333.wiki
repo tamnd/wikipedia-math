@@ -1,0 +1,140 @@
+<!-- wikipedia: en
+     page: 49111333
+     title: Double Ratchet Algorithm
+     revision: 1344980231
+     timestamp: 2026-03-23T17:07:07Z
+     history: https://en.wikipedia.org/w/index.php?curid=49111333&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1344980231 -->
+{{short description|Cryptographic key management algorithm}}
+{{Redirect|Double ratchet|the hand tool|Wrench}}
+[[File:Double Ratchet Algorithm.png|350px|thumb|right|Full ratchet step in the double ratchet algorithm. The Key Derivation Function (KDF) provides the ratcheting mechanism. The first "ratchet" is applied to the symmetric root key, the second ratchet to the asymmetric Diffie–Hellman (DH) key.<ref>Trevor Perrin (editor), Moxie Marlinspike, "[https://signal.org/docs/specifications/doubleratchet/ The Double Ratchet Algorithm]. Revision 1, 2016-11-20</ref>]]
+
+In [[cryptography]], the '''Double Ratchet Algorithm''' (previously referred to as the '''Axolotl Ratchet'''<ref name="Perrin-2016-03-30">{{cite web|last1=Perrin|first1=Trevor|title=Compare Revisions|url=https://github.com/trevp/double_ratchet/wiki/Home/_compare/6fa4a516b01327d736df1f52014d8b561a18189a...ab41721f9ed7ca0bdac3e24ce9fc573750e0614d|website=GitHub|access-date=9 April 2016|date=30 March 2016}}</ref><ref name="signal-inside-and-out">{{cite web|last1=Marlinspike|first1=Moxie|title=Signal on the outside, Signal on the inside|url=https://whispersystems.org/blog/signal-inside-and-out/|publisher=Open Whisper Systems|access-date=31 March 2016|date=30 March 2016}}</ref>) is a [[Key (cryptography)|key]] management [[algorithm]] that was developed by [[Trevor Perrin]] and [[Moxie Marlinspike]] in 2013. It can be used as part of a [[cryptographic protocol]] to provide [[end-to-end encryption]] for [[instant messaging]]. After an initial [[key-agreement protocol|key exchange]] it manages the ongoing renewal and maintenance of short-lived session keys. It combines a cryptographic so-called "ratchet" based on the [[Diffie–Hellman key exchange]] (DH) and a ratchet based on a [[key derivation function]] (KDF), such as a [[hash function]], and is therefore called a double ratchet.
+
+The algorithm provides forward secrecy for messages, and implicit renegotiation of forward keys; properties for which the protocol is named.<ref>{{cite book|last1=Cohn-Gordon|first1=K.|last2=Cremers|first2=C.|last3=Garratt|first3=L.|title=2016 IEEE 29th Computer Security Foundations Symposium (CSF) |chapter=On Post-compromise Security |year=2016|pages=164–178|doi=10.1109/CSF.2016.19|isbn=978-1-5090-2607-4|s2cid=5703986|chapter-url=https://ora.ox.ac.uk/objects/uuid:241da365-1c73-4b6a-826c-f122c4c1e1b8}}</ref>
+
+This has been extended as of October 2025 to the [[Sparse Post Quantum Ratchet]] (SPQR) with a [[CRYSTALS-Kyber]] quantum ratchet to provide post-quantum Forward Secrecy and Post-Compromise Security guarantees in what the Signal authors call a '''Triple Ratchet'''.<ref>https://signal.org/blog/spqr</ref>
+
+== History ==
+The Double Ratchet Algorithm was developed by Trevor Perrin and Moxie Marlinspike ([[Open Whisper Systems]]) in 2013 and introduced as part of the [[Signal Protocol]] in February 2014. The Double Ratchet Algorithm's design is based on the DH ratchet that was introduced by [[Off-the-Record Messaging]] (OTR) and combines it with a symmetric-key ratchet modeled after the [[Silent Circle Instant Messaging Protocol]] (SCIMP). The ratchet was initially named after the critically endangered aquatic salamander [[axolotl]], which has extraordinary self-healing capabilities.<ref>Ksenia Ermoshina, Francesca Musiani. "Standardising by running code": the Signal protocol and de facto standardisation in end-to-end encrypted messaging. Internet histories, 2019, pp.1-21.
+ 10.1080/24701475.2019.1654697 .  halshs-02319701 </ref> In March 2016, the developers renamed the Axolotl Ratchet as the Double Ratchet Algorithm to better differentiate between the ratchet and the full protocol,<ref name="signal-inside-and-out"/> because some had used the name Axolotl when referring to the Signal Protocol.<ref name="Cohn-Gordon-2016-p1">{{harvnb|Cohn-Gordon|Cremers|Dowling|Garratt|2016|p=1}}</ref><ref name="signal-inside-and-out"/>
+
+== Overview ==
+[[File:Ratchet example.gif|alt=A gif of a ratchet moving showing that the mechanism can only move in one direction|thumb|125px|A mechanical ratchet]]
+The Double Ratchet Algorithm features properties that have been commonly available in end-to-end encryption systems for a long time: encryption of contents on the entire way of transport as well as [[authentication]] of the remote peer and protection against manipulation of messages. As a hybrid of [[Diffie–Hellman key exchange|DH]] and [[Key derivation function|KDF]] ratchets, it combines several desired features of both principles. From [[Off-the-Record Messaging|OTR]] messaging it takes the properties of [[forward secrecy]] and automatically reestablishing secrecy in case of compromise of a session key, forward secrecy with a compromise of the secret persistent main key, and [[deniable encryption|plausible deniability]] for the authorship of messages. Additionally, it enables session key renewal without interaction with the remote peer by using secondary KDF ratchets. An additional key-derivation step is taken to enable retaining session keys for out-of-order messages without endangering the following keys.
+
+It is said{{By whom|date=April 2018}} to detect reordering, deletion, and replay of sent messages, and improve forward secrecy properties against passive eavesdropping in comparison to OTR messaging.
+
+Combined with [[public key infrastructure]] for the retention of pregenerated one-time keys (prekeys), it allows for the initialization of messaging sessions without the presence of the remote peer ([[asynchronous communication]]). The usage of [[Diffie–Hellman key exchange#Triple Diffie-Hellman (3-DH)|triple Diffie–Hellman key exchange (3-DH)]] as initial key exchange method improves the deniability properties. An example of this is the Signal Protocol, which combines the Double Ratchet Algorithm, prekeys, and a 3-DH handshake.<ref name="Unger-2015-p241">{{harvnb|Unger|Dechand|Bonneau|Fahl|2015|p=241}}</ref> The protocol provides confidentiality, integrity, authentication, participant consistency, destination validation, forward secrecy, backward secrecy (aka future secrecy), causality preservation, message unlinkability, message repudiation, participation repudiation, and asynchronicity.<ref name="Unger-2015-p239"/> It does not provide anonymity preservation, and requires servers for the relaying of messages and storing of public key material.<ref name="Unger-2015-p239">{{harvnb|Unger|Dechand|Bonneau|Fahl|2015|p=239}}</ref>
+
+== Functioning ==
+{{multiple image
+ | direction = vertical
+ | width     = 220
+ | image1    = Axolotl ratchet scheme, legend.svg
+ | caption1  = 
+ | image2    = Axolotl ratchet scheme.svg
+ | caption2  = Diagram of the working principle
+}}
+A client attempts to renew session key material interactively with the remote peer using a Diffie-Hellman (DH) ratchet. If this is impossible, the clients renew the session key independently using a hash ratchet. With every message, a client advances one of two hash ratchets—one for sending and one for receiving. These two hash ratchets get seeded with a common secret from a DH ratchet. At the same time it tries to use every opportunity to provide the remote peer with a new public DH value and advance the DH ratchet whenever a new DH value from the remote peer arrives. As soon as a new common secret is established, a new hash ratchet gets initialized.
+
+As cryptographic primitives, the Double Ratchet Algorithm uses
+; for the DH ratchet: Elliptic curve Diffie-Hellman (ECDH) with [[Curve25519]],
+; for [[message authentication code]]s (MAC, authentication): [[Hash-based message authentication code|Keyed-hash message authentication code]] (HMAC) based on [[SHA-256]],
+; for symmetric encryption: the [[Advanced Encryption Standard]] (AES), partially in cipher block chaining [[block cipher mode of operation|mode]] (CBC) with [[padding (cryptography)|padding]] as per [[PKCS]]&nbsp;#5 and partially in counter mode (CTR) without padding,
+; for the hash ratchet: HMAC.<ref name="Frosch-2014">{{harvnb|Frosch|Mainka|Bader|Bergsma|2014}}</ref>
+
+== Applications ==
+
+The following is a list of applications that use the Double Ratchet Algorithm or a custom implementation of it.
+
+===Federated networks===
+* Any client for the [[Matrix (protocol)|Matrix]] network: [[Element (software)|Element]],<ref>{{Cite web|url=https://techcrunch.com/2016/09/19/riot-wants-to-be-like-slack-but-with-the-flexibility-of-an-underlying-open-source-platform/|title=Riot wants to be like Slack, but with the flexibility of an underlying open source platform|last=Butcher|first=Mike|website=TechCrunch|publisher=AOL Inc.|date=19 September 2016|access-date=20 September 2016}}</ref> [[Fractal (software)|GNOME Fractal]]
+* Any client for the [[XMPP]] network with [[OMEMO]] support: [[ChatSecure]], [[Conversations (software)|Conversations]], [[Cryptocat]]<ref>{{Cite web|url=https://crypto.cat/security.html|title=Security|publisher=Cryptocat|access-date=14 July 2016|archive-url=https://web.archive.org/web/20160407125207/https://crypto.cat/security.html|archive-date=7 April 2016|url-status=dead}}</ref> (discontinued), [[Gajim]], [[Movim]], [[Psi (instant messaging client)|Psi]] via official plugin,<ref name="psi-omemo"/> [[Psi (instant messaging client)#History|Psi+]] via official plugin,<ref name="psi-omemo"/> [[libpurple]] clients such as [[Pidgin (software)|Pidgin]] or Finch via experimental plugin,<ref name="lurch"/> [[Adium]] via an Xtra based on the libpurple plugin,<ref name="Lurch4Adium"/> [[Profanity (instant messaging client)|Profanity]] via experimental plugin.<ref name="profanity-omemo"/>
+
+===Centralized networks===
+The Double Ratchet Algorithm does not attempt to solve the inherent vulnerability of centralized networks to [[Backdoor (computing)|backdoor]]s that introduce flaws in the algorithm implementation, the cryptographical protocol (which the algorithm is part of) or implementation thereof, or unrelated parts of the official application. It has been implemented nonetheless in a number of official clients for various centralized networks:
+<!-- PLEASE RESPECT ALPHABETICAL ORDER -->
+{{div col|colwidth=16em}}
+* [[Facebook Messenger]]{{efn|Only in "secret conversations"}}{{efn|name=SIGNAL|Via the [[Signal Protocol]]}}<ref>{{cite magazine|last1=Greenberg|first1=Andy|url=https://www.wired.com/2016/10/facebook-completely-encrypted-messenger-update-now/|title=You Can All Finally Encrypt Facebook Messenger, So Do It|magazine=Wired|publisher=Condé Nast|access-date=5 October 2016|date=4 October 2016}}</ref>
+* [[G Data CyberDefense|G Data]] Secure Chat{{efn|name=SIGNAL}}<ref name="G Data"/><ref>{{cite web|title=SecureChat|url=https://github.com/GDATASoftwareAG/SecureChat|website=GitHub|publisher=G Data|access-date=14 July 2016}}</ref>
+* [[Google Allo]]{{efn|Only in "incognito mode"}}{{efn|name=SIGNAL}}<ref name="Greenberg-2016-05-18">{{Cite magazine|last=Greenberg|first=Andy|url=https://www.wired.com/2016/05/allo-duo-google-finally-encrypts-conversations-end-end/|title=With Allo and Duo, Google Finally Encrypts Conversations End-to-End|magazine=Wired|publisher=Condé Nast|date=18 May 2016|access-date=14 July 2016}}</ref>
+* [[Google Messages]]{{efn|Only in one-to-one [[Rich Communication Services|RCS chats]]}}{{efn|name=SIGNAL|Via the [[Signal Protocol]]}}<ref>{{Cite web |last=Amadeo |first=Ron |date=2021-06-16 |title=Google enables end-to-end encryption for Android's default SMS/RCS app |url=https://arstechnica.com/gadgets/2021/06/google-enables-end-to-end-encryption-for-androids-default-sms-rcs-app/ |access-date=2022-03-03 |website=Ars Technica |language=en-us}}</ref>
+* [[Haven (software)|Haven]]{{efn|name=SIGNAL}}<ref>{{cite web|title=Haven Attributions|url=https://github.com/guardianproject/haven#attributions|website=GitHub|publisher=Guardian Project|access-date=22 December 2017}}</ref><ref>{{cite web|last1=Lee|first1=Micah|title=Snowden's New App Uses Your Smartphone To Physically Guard Your Laptop|url=https://theintercept.com/2017/12/22/snowdens-new-app-uses-your-smartphone-to-physically-guard-your-laptop/|website=The Intercept|publisher=First Look Media|access-date=22 December 2017|date=22 December 2017}}</ref>
+* Pond<ref name="Pond"/>
+* [[Signal (messaging app)|Signal]]{{efn|name=SIGNAL}}
+* [[Silent Circle (software)|Silent Phone]]{{efn|name=zina|Via the Zina protocol}}<ref name="libzina">{{cite web|title=Silent Circle/libzina |url=https://github.com/SilentCircle/libzina/ |website=Github|publisher=Silent Circle|access-date=19 December 2017}}</ref>
+* [[Skype]]{{efn|Only in "private conversations"}}{{efn|name=SIGNAL}}<ref>{{cite web|last1=Lund|first1=Joshua|title=Signal partners with Microsoft to bring end-to-end encryption to Skype|url=https://signal.org/blog/skype-partnership/|publisher=Open Whisper Systems|access-date=11 January 2018|date=11 January 2018}}</ref>
+* [[Viber]]{{efn|Viber "uses the same concepts of the "double ratchet" protocol used in Open Whisper Systems Signal application"}}<ref>{{cite web|title=Viber Encryption Overview|url=https://www.viber.com/app/uploads/viber-encryption-overview.pdf|publisher=Viber|date=25 July 2018|access-date=26 October 2018}}</ref>
+* [[WhatsApp]]{{efn|name=SIGNAL}}<ref name="Metz-2016-04-05">{{cite magazine|last1=Metz|first1=Cade|title=Forget Apple vs. the FBI: WhatsApp Just Switched on Encryption for a Billion People|url=https://www.wired.com/2016/04/forget-apple-vs-fbi-whatsapp-just-switched-encryption-billion-people/|magazine=Wired|publisher=Condé Nast|access-date=5 April 2016|date=5 April 2016}}</ref>
+* [[Wire (software)|Wire]]{{efn|name=Proteus|Via the Proteus protocol}}<ref name="Wire Security Whitepaper">{{Cite web|url=https://wire-docs.wire.com/download/Wire+Security+Whitepaper.pdf|title=Wire Security Whitepaper|publisher=Wire Swiss GmbH|date=17 August 2018|access-date=28 August 2020}}</ref>
+{{end div col}}
+
+== Notes ==
+{{notelist}}
+
+== References ==
+{{Reflist|colwidth=30em|refs=
+
+<ref name="Pond">{{cite web|url=https://github.com/agl/pond/commit/338395668fbb8a7819c0fccf54dccaa4d7f0ae9e |first= Adam|last=Langley|title=Wire in new ratchet system|type=GitHub contribution|date=9 November 2013|website=GitHub|access-date=16 January 2016}}</ref>
+
+<ref name="G Data">{{cite web
+|url=http://www.infosecurity-magazine.com/news/g-data-adds-encryption-for-secure/
+|title=G DATA Adds Encryption for Secure Mobile Chat
+|last=Seals
+|first=Tara
+|work=Infosecurity Magazine
+|publisher=Reed Exhibitions Ltd.
+|date=17 September 2015
+|access-date=16 January 2016}}</ref>
+
+<ref name="lurch">{{cite web
+|url=https://github.com/gkdr/lurch
+|title=lurch - OMEMO for libpurple
+|author= Richard Bayerle
+|website=[[GitHub]]
+|access-date=2017-02-12}}</ref>
+
+<ref name="Lurch4Adium">{{cite web
+|url=https://github.com/shtrom/Lurch4Adium
+|title=Lurch4Adium - OMEMO Xtra for Adium
+|author= Olivier Mehani
+|website=[[GitHub]]
+|access-date=2017-06-08}}</ref>
+
+<ref name="profanity-omemo">{{cite web
+|url=https://github.com/ReneVolution/profanity-omemo-plugin
+|title=profanity-omemo-plugin: A Python plugin to use (axolotl / Signal Protocol) encryption for the profanity XMPP messenger
+|author= René Calles
+|website=[[GitHub]]
+|access-date=2017-01-10}}</ref>
+
+<ref name="psi-omemo">{{cite web
+|url= https://github.com/psi-im/plugins/tree/master/generic/omemoplugin
+|title= OMEMO for Psi · GitHub
+|author= Vyacheslav Karpukhin
+|website= [[GitHub]]
+|access-date= 2018-03-04}}</ref>
+}}
+
+== Literature ==
+{{Refbegin|30em}}
+* {{cite web|last1=Cohn-Gordon|first1=Katriel|last2=Cremers|first2=Cas|last3=Dowling|first3=Benjamin|last4=Garratt|first4=Luke|last5=Stebila|first5=Douglas|title=A Formal Security Analysis of the Signal Messaging Protocol |url=https://eprint.iacr.org/2016/1013.pdf |website=Cryptology ePrint Archive |publisher=International Association for Cryptologic Research (IACR) |date=25 October 2016 }}
+* {{cite web|last1=Frosch |first1=Tilman |last2=Mainka |first2=Christian |last3=Bader |first3=Christoph |last4=Bergsma |first4=Florian |last5=Schwenk |first5=Jörg |last6=Holz |first6=Thorsten |title=How Secure is TextSecure? |website=Cryptology ePrint Archive |publisher= International Association for Cryptologic Research (IACR) |url=https://eprint.iacr.org/2014/904.pdf |year=2014 |access-date=16 January 2016}}
+* {{cite conference |first1 = Nik |last1=Unger |first2=Sergej |last2=Dechand |first3=Joseph |last3=Bonneau |first4=Sascha |last4=Fahl |first5= Henning |last5=Perl |first6=Ian Avrum |last6=Goldberg |first7= Matthew |last7= Smith |title = SoK: Secure Messaging |publisher = IEEE Computer Society's Technical Committee on Security and Privacy |conference = Proceedings of the 2015 IEEE Symposium on Security and Privacy |year = 2015 |pages = 232–249 |doi=10.1109/SP.2015.22 |url = http://ieee-security.org/TC/SP2015/papers-archived/6949a232.pdf}}
+{{Refend}}
+
+== External links ==
+* [https://signal.org/docs/specifications/doubleratchet/ Specification] by [[Open Whisper Systems]]
+* "[https://signal.org/blog/advanced-ratcheting/ Advanced cryptographic ratcheting]", abstract description by Moxie Marlinspike
+* [http://git.matrix.org/git/olm/about/docs/olm.rst Olm]: C++ implementation under the [[Apache license|Apache 2.0 license]]
+* [https://matrix-org.github.io/vodozemac/vodozemac/index.html Vodozemac]: Rust implementation of the Olm variation, under the [[Apache license|Apache 2.0 license]]
+* {{YouTube|id=7uEeE3TUqmU|title=Double ratchet algorithm: The ping-pong game encrypting Signal and WhatsApp}} (exposition)
+
+{{Cryptography navbox | public-key}}
+{{Cryptographic software}}
+{{FLOSS}}
+
+[[Category:Cryptographic algorithms]]
+[[Category:End-to-end encryption]]

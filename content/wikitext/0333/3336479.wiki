@@ -1,0 +1,534 @@
+<!-- wikipedia: en
+     page: 3336479
+     title: Division algorithm
+     revision: 1374147872
+     timestamp: 2026-09-10T03:20:36Z
+     history: https://en.wikipedia.org/w/index.php?curid=3336479&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374147872 -->
+{{Short description|Method for division with remainder}}
+{{about|algorithms for division of integers|the pencil-and-paper algorithm|Long division|the division algorithm for polynomials|Polynomial long division}}
+A '''division algorithm''' is an [[algorithm]] which, given two [[integer]]s ''N'' and ''D'' (respectively the numerator and the denominator), computes their [[quotient]] and/or [[remainder]], the result of [[Euclidean division]]. Some are applied by hand, while others are employed by digital circuit designs and software.
+
+Division algorithms fall into two main categories: slow division and fast division. Slow division algorithms produce one digit of the final quotient per iteration. Examples of slow division include [[#Restoring division|restoring]], non-performing restoring, [[#Non-restoring division|non-restoring]], and [[#SRT division|SRT]] division. Fast division methods start with a close approximation to the final quotient and produce twice as many digits of the final quotient on each iteration.<ref>{{cite tech report |title=Software Integer Division |first=Thomas L.| last=Rodeheffer| publisher= Microsoft Research, Silicon Valley|date=2008-08-26 |url=https://www.microsoft.com/en-us/research/wp-content/uploads/2008/08/tr-2008-141.pdf}}</ref> [[#Newton–Raphson division|Newton–Raphson]] and [[#Goldschmidt division|Goldschmidt]] algorithms fall into this category.
+
+Variants of these algorithms allow using fast [[multiplication algorithm]]s. It results that, for large integers, the [[computational complexity|computer time]] needed for a division is the same, up to a constant factor, as the time needed for a multiplication, whichever multiplication algorithm is used.
+
+Discussion will refer to the form <math>N/D = (Q, R)</math>, where
+* ''N'' = [[Fraction|numerator]] (dividend)
+* ''D'' = [[Fraction|denominator]] (divisor)
+is the input, and
+* ''Q'' = [[quotient]]
+* ''R'' = [[remainder]]
+
+is the output.
+
+== Division by repeated subtraction ==
+The simplest division algorithm, historically incorporated into a [[greatest common divisor]] algorithm presented in [[Euclid's Elements|Euclid's ''Elements'']], Book VII, Proposition 1, finds the remainder given two positive integers using only subtractions and comparisons:
+
+<syntaxhighlight lang="lua">function divide_unsigned(N, D)
+    if D = 0 then error(DivisionByZero) end
+    R := N
+    Q := 0
+    while R ≥ D do
+        R := R − D
+        Q := Q + 1
+    end
+    return (Q, R)
+end</syntaxhighlight>
+
+The proof that the quotient and remainder exist and are unique (described at [[Euclidean division]]) gives rise to a complete division algorithm, applicable to both negative and positive numbers, using additions, subtractions, and comparisons:
+
+<syntaxhighlight lang="lua">
+function divide(N, D)
+  if D = 0 then error(DivisionByZero) end
+  if D < 0 then 
+    (Q, R) := divide(N, −D)
+     return (−Q, R) 
+  end
+  if N < 0 then
+    (Q, R) := divide(−N, D)
+    if R = 0 then 
+        return (−Q, 0)
+    else
+        -- Example: N = -7, D = 3
+        -- divide(-N, D) = divide(7, 3) = (2, 1)
+        -- R ≠ 0, so return (-2 - 1, 3 - 1) = (-3, 2)
+        -- Check: (-3)*3 + 2 = -7
+        return (−Q − 1, D − R) 
+    end
+  end
+  -- At this point, N ≥ 0 and D > 0
+  return divide_unsigned(N, D)
+end
+</syntaxhighlight>
+
+This procedure always produces R ≥ 0. Although very simple, it takes &Omega;(Q) steps, and so is exponentially slower than even slow division algorithms like long division. It is useful if Q is known to be small (being an [[output-sensitive algorithm]]), and can serve as an executable specification.
+
+=== Alternative implementation ===
+{{anchor|divide_unsigned2}}
+An alternative implementation increments a remainder and resets it when it reaches the divisor.
+
+For <math>x, y \in \mathbb{N}_0</math>, the algorithm computes <math>q, r \,</math> such that <math>x = qy + r \,</math>, with <math>0 \le r < y </math>:
+:<math>\operatorname{div}(x, y) = \left\lfloor x / y \right\rfloor</math>
+:<math>x \bmod y = x - y \left\lfloor x / y \right\rfloor</math>
+Consider this code in [[Python (programming language)|Python]]:
+<syntaxhighlight lang="python">
+def divide_unsigned2(numerator: int, denominator: int) -> tuple[int, int]
+    quotient: int = 0
+    remainder: int = 0
+    for _ in range(numerator):
+        remainder += 1
+        if remainder == denominator:
+            quotient += 1
+            remainder = 0
+    return quotient, remainder
+</syntaxhighlight>
+
+'''Notes'''
+* Special cases are
+:: <math>x \bmod 1 = 0</math> and<br/><math>x \bmod 0 = x</math>.<ref>Compare: in procedure ''divide_unsigned'', <code>denominator</code> must be '''strictly''' positive.</ref>
+* Variable <code>quotient</code> is never read. So when its assignments {{mdash}}highlighted{{mdash}} are removed from the code and <code>quotient</code> is removed from the output list, ''divide_unsigned2'', like ''divide_unsigned'', still will compute <math>x \bmod y</math>.
+
+'''Alternative implementation as counter machine'''<br/>
+A simple [[counter machine]] (CM) can be based on the alternative implementation. The CM instructions are<ref>{{cite journal
+ |last1= Shepherdson
+ |first1= J.C.
+ |author-link1= John Shepherdson
+ |last2= Sturgis
+ |first2= H.E.
+ |year= 1963
+ |title= Computability of Recursive Functions 
+ |journal= Journal of the Association for Computing Machinery 
+ |volume= 10
+ |issue= 2
+ |pages = 217–255
+ |doi= 10.1145/321160.321170
+ |doi-access=free
+}}</ref><ref>{{cite book
+ |last= Cutland
+ |first= Nigel
+ |year= 1980
+ |title= Computability: An Introduction to Recursive Function Theory
+ |url= https://poincare.matf.bg.ac.rs/~zarkom/Book_Math__Cutland_Computability.pdf
+ |publisher= [[Cambridge University Press]]
+ |isbn= 978-0-521-22384-3
+ |access-date= 2025-09-16
+ |page=12
+}}</ref>
+* '''Z''' (n): Replace r<sub>n</sub> by 0.
+* '''S''' (n): Add 1 to r<sub>n</sub>.
+* '''J''' (m, n, q): If r<sub>m</sub> = r<sub>n</sub>, jump to the qth instruction; otherwise go on to the next instruction in the program.
+The counter machine program is{{refn|The code runs on {{cite web |url=https://sites.oxy.edu/rnaimi/home/URMsim.htm |title=URM Simulator |website= Occidental College, Los Angeles |quote=Unlimited Register Machine (URM) simulator (emulator) -- a "virtual URM". It is modeled after the URM specification in Nigel J. Cutland's book, Computability, An introduction to recursive function theory, by Cambridge Press.}}}}
+<syntaxhighlight lang="text">
+1: J(1,5,0)
+2: S(4)
+3: J(4,2,6)
+4: S(5)
+5: J(0,0,1)
+6: S(3)
+7: Z(4)
+8: S(5)
+9: J(0,0,1)
+</syntaxhighlight>
+
+After the CM finishes the computation on initial register values R1=N, R2=D (remaining registers = 0),
+:: register R3 holds the (integer part of the) quotient of the division N/D, and
+:: register R4 holds the remainder.
+
+== Long division ==
+{{Main|Long division#Algorithm for arbitrary base}}
+Long division is the standard algorithm used for pen-and-paper division of multi-digit numbers expressed in decimal notation. It shifts gradually from the left to the right end of the dividend, subtracting the largest possible multiple of the divisor (at the digit level) at each stage; the multiples then become the digits of the quotient, and the final difference is then the remainder.
+
+When used with a binary radix, this method forms the basis for the (unsigned) integer division with remainder algorithm below. [[Short division]] is an abbreviated form of long division suitable for one-digit divisors. [[Chunking (division)|Chunking]]{{snd}} also known as the partial quotients method or the hangman method{{snd}} is a less-efficient form of long division which may be easier to understand. By allowing one to subtract more multiples than what one currently has at each stage, a more freeform variant of long division can be developed as well.
+
+=== Integer division (unsigned) with remainder ===
+{{See also|Binary number#Division}}
+The following algorithm, the binary version of the famous [[long division]], will divide ''N'' by ''D'', placing the quotient in ''Q'' and the remainder in ''R''.  In the following pseudo-code, all values are treated as unsigned integers.
+
+<syntaxhighlight lang="lua">if D = 0 then error(DivisionByZeroException) end
+Q := 0                  -- Initialize quotient and remainder to zero
+R := 0                     
+for i := n − 1 .. 0 do  -- Where n is number of bits in N
+  R := R << 1           -- Left-shift R by 1 bit
+  R(0) := N(i)          -- Set the least-significant bit of R equal to bit i of the numerator
+  if R ≥ D then
+    R := R − D
+    Q(i) := 1
+  end
+end</syntaxhighlight>
+
+==== Example ====
+If we take N=1100<sub>2</sub> (12<sub>10</sub>) and D=100<sub>2</sub> (4<sub>10</sub>)
+
+''Step 1'':  Set R=0 and Q=0 <br />
+''Step 2'':  Take i=3 (one less than the number of bits in N) <br />
+''Step 3'':  R=00 (left shifted by 1) <br />
+''Step 4'':  R=01 (setting R(0) to N(i))  <br />
+''Step 5'':  R < D, so skip statement
+
+''Step 2'':  Set i=2  <br />
+''Step 3'':  R=010  <br />
+''Step 4'':  R=011  <br />
+''Step 5'':  R < D, statement skipped
+
+''Step 2'':  Set i=1  <br />
+''Step 3'':  R=0110  <br />
+''Step 4'':  R=0110  <br />
+''Step 5'':  R>=D, statement entered  <br />
+''Step 5b'':  R=10 (R−D)  <br />
+''Step 5c'':  Q=10 (setting Q(i) to 1)
+
+''Step 2'':  Set i=0  <br />
+''Step 3'':  R=100  <br />
+''Step 4'':  R=100  <br />
+''Step 5'':  R>=D, statement entered  <br />
+''Step 5b'':  R=0 (R−D)  <br />
+''Step 5c'':  Q=11 (setting Q(i) to 1)
+
+'''end'''  <br />
+Q=11<sub>2</sub> (3<sub>10</sub>) and R=0.
+
+== Slow division methods ==
+Slow division methods are all based on a standard recurrence equation<ref>{{Cite book|last1=Morris|first1=James E.| url=https://books.google.com/books?id=wAhEDwAAQBAJ&q=restoring+division+fixed-point+fractional+numbers&pg=PA243| title=Nanoelectronic Device Applications Handbook|last2=Iniewski|first2=Krzysztof|date=2017-11-22|publisher=CRC Press| isbn=978-1-351-83197-0|language=en}}</ref>
+:<math>R_{j+1} = B \times R_j - q_{n-(j+1)}\times D ,</math>
+where:
+* ''R''<sub>''j''</sub> is the ''j''-th partial remainder of the division (R(0) := N(i) step is included)
+* ''B'' is the [[radix]] (base, usually 2 internally in computers and calculators)
+* ''q''<sub> ''n'' − (''j'' + 1)</sub> is the digit of the quotient in position ''n''−(''j''+1), where the digit positions are numbered from least-significant 0 to most significant ''n''−1
+* ''n'' is number of digits in the quotient
+* ''D'' is the divisor
+
+=== Restoring division ===
+Restoring division operates on [[fixed point arithmetic|fixed-point]] fractional numbers and depends on the assumption 0 < ''D'' < ''N''.{{citation needed|date=February 2012}} <!-- see "Integer division (unsigned) with remainder" on talk -->
+
+The quotient digits ''q'' are formed from the digit set {0,1}.
+
+The basic algorithm for binary (radix 2) restoring division is:
+
+<syntaxhighlight lang="lua">
+R := N
+D := D << n            -- R and D need twice the word width of N and Q
+for i := n − 1 .. 0 do  -- For example 31..0 for 32 bits
+  R := 2 * R − D          -- Trial subtraction from shifted value (multiplication by 2 is a shift in binary representation)
+  if R >= 0 then
+    q(i) := 1          -- Result-bit 1
+  else
+    q(i) := 0          -- Result-bit 0
+    R := R + D         -- New partial remainder is (restored) shifted value
+  end
+end
+
+-- Where: N = numerator, D = denominator, n = #bits, R = partial remainder, q(i) = bit #i of quotient
+</syntaxhighlight>
+
+Non-performing restoring division is similar to restoring division except that the value of 2R is saved, so ''D'' does not need to be added back in for the case of R &lt; 0.
+
+=== Non-restoring division ===
+Non-restoring division uses the digit set {&minus;1, 1} for the quotient digits instead of {0, 1}.  The algorithm is more complex, but has the advantage when implemented in hardware that there is only one decision and addition/subtraction per quotient bit; there is no restoring step after the subtraction,<ref>{{Cite journal |last=Shaw |first=Robert F. |date=1950 |title=Arithmetic Operations in a Binary Computer |url=http://aip.scitation.org/doi/10.1063/1.1745692 |journal=Review of Scientific Instruments |language=en |volume=21 |issue=8 |page=690 |doi=10.1063/1.1745692 |bibcode=1950RScI...21..687S |issn=0034-6748 |access-date=2022-02-28 |archive-date=2022-02-28 |archive-url=https://web.archive.org/web/20220228182241/https://aip.scitation.org/doi/10.1063/1.1745692 |url-status=live |url-access=subscription }}</ref> which potentially cuts down the numbers of operations by up to half and lets it be executed faster.<ref>{{Cite web|url=https://web.stanford.edu/class/ee486/doc/chap5.pdf|title=Stanford EE486 (Advanced Computer Arithmetic Division){{snd}} Chapter 5 Handout (Division)|last=Flynn|website=Stanford University|access-date=2019-06-24|archive-date=2022-04-18|archive-url=https://web.archive.org/web/20220418044630/http://web.stanford.edu/class/ee486/doc/chap5.pdf|url-status=live}}</ref>  The basic algorithm for binary (radix 2) non-restoring division of non-negative numbers is:{{verify source|reason=See talk page|date=January 2025}}
+
+<syntaxhighlight lang="lua">
+-- Inputs: N (Numerator), D (Denominator)
+-- n = number of bits
+-- R and D are usually stored in registers of width 2n or similar to handle shifts
+
+R := N                      -- Initialize Remainder
+
+for i = n − 1 .. 0 do       -- for example 31..0 for 32 bits
+    -- Shift Remainder Left (Algebraically: 2 * R)
+    if R >= 0 then
+        R := 2 * R - D;    -- Subtract D
+        q(i) := 1;         -- Record quotient bit as 1
+    else
+        R := 2 * R + D;    -- Add D (restore)
+        q(i) := -1;        -- Record quotient bit as -1
+    end if
+end for
+</syntaxhighlight>
+
+Following this algorithm, the quotient is in a non-standard form consisting of digits of &minus;1 and +1. This form needs to be converted to binary to form the final quotient. Example:
+{| border="0" cellpadding="0"
+|-
+| colspan="2" | Convert the following quotient to the digit set {0,1}:
+|-
+| Start: || <math>Q = 111\bar{1}1\bar{1}1\bar{1}</math>
+|-
+| 1. Form the positive term: || <math>P = 11101010\,</math>
+|-
+| 2. Mask the negative term:{{NoteTag|Signed binary notation with [[ones' complement]] without [[two's complement]].}} || <math>M = 00010101\,</math>
+|-
+| 3. Subtract: <math>P - M</math>: || <math>Q = 11010101\,</math>
+|-
+| colspan="2" | {{reflist|group=note}}
+|}
+
+If the −1 digits of <math>Q</math> are stored as zeros (0) as is common, then <math>P</math> '''is''' <math>Q</math> and computing <math>M</math> is trivial: perform a ones' complement (bit by bit complement) on the original <math>Q</math>.
+<syntaxhighlight lang="lua">
+Q := Q − bit.bnot(Q)      -- Appropriate if −1 digits in Q are represented as zeros as is common.
+</syntaxhighlight>
+
+Finally, quotients computed by this algorithm are always odd, and the remainder in R is in the range −D &le; R &lt; D.  For example, 5 / 2 = 3 R −1.  To convert to a positive remainder, do a single restoring step ''after'' Q is converted from non-standard form to standard form:
+<syntaxhighlight lang="lua">
+if R < 0 then
+  Q := Q − 1
+  R := R + D  -- Needed only if the remainder is of interest.
+end if
+</syntaxhighlight>
+
+The actual remainder is R >> n. (As with restoring division, the low-order bits of R are used up at the same rate as bits of the quotient Q are produced, and it is common to use a single [[shift register]] for both.)
+
+===<span class="anchor" id="SRT"></span>SRT division===
+SRT division is a popular method for division in many [[microprocessor]] implementations.<ref>{{cite tech report |url=http://pages.hmc.edu/harris/research/srtlong.pdf |title=SRT Division: Architectures, Models, and Implementations |first1=David L. |last1=Harris |first2=Stuart F. |last2=Oberman |first3=Mark A. |last3=Horowitz |publisher=Stanford University |date=9 September 1998 |access-date=23 December 2016 |archive-date=24 December 2016 |archive-url=https://web.archive.org/web/20161224030439/http://pages.hmc.edu/harris/research/srtlong.pdf |url-status=live }}</ref><ref>{{cite journal |url=https://ieeexplore.ieee.org/document/614875 |title=SRT Division Algorithms as Dynamical Systems |first1=Mark |last1=McCann |first2=Nicholas |last2=Pippenger |journal=SIAM Journal on Computing |volume=34 |issue=6 |pages=1279–1301 |year=2005 |doi=10.1137/S009753970444106X |hdl=2429/12179 |access-date=2022-08-24 |archive-date=2022-08-24 |archive-url=https://web.archive.org/web/20220824213238/https://ieeexplore.ieee.org/document/614875 |url-status=live |hdl-access=free }}</ref> The algorithm is named after D. W. Sweeney of [[IBM]], James E. Robertson of [[University of Illinois]], and [[K. D. Tocher]] of [[Imperial College London]]. They all developed the algorithm independently at approximately the same time (published in February 1957, September 1958, and January 1958 respectively).<ref>{{Citation |title=High speed arithmetic in a parallel device |last1=Cocke |first1=John |page=20 |url=https://www.computerhistory.org/collections/catalog/102632302 |publication-date=11 February 1957 |last2=Sweeney |first2=D.W. |date=11 February 1957 |type=Company Memo |publication-place=IBM |access-date=24 August 2022 |archive-date=24 August 2022 |archive-url=https://web.archive.org/web/20220824212341/https://www.computerhistory.org/collections/catalog/102632302 |url-status=live }}</ref><ref>{{Cite journal |title=A New Class of Digital Division Methods |journal=IRE Transactions on Electronic Computers |last=Robertson |first=James |date=1958-09-01 |volume=EC-7 |issue=3 |pages=218–222 |publisher=IEEE |doi=10.1109/TEC.1958.5222579 |bibcode=1958IRTEC...7..218R |hdl=2027/uiuo.ark:/13960/t0gt7529c |hdl-access=free }}</ref><ref>{{Cite journal |journal=The Quarterly Journal of Mechanics and Applied Mathematics |url=https://academic.oup.com/qjmam/article-abstract/11/3/364/1883426 |last=Tocher |first=K.D. |title=Techniques of Multiplication and Division for Automatic Binary Computers |date=1958-01-01 |issue=3 |volume=11 |pages=364–384 |doi=10.1093/qjmam/11.3.364 |access-date=2022-08-24 |archive-date=2022-08-24 |archive-url=https://web.archive.org/web/20220824214400/https://academic.oup.com/qjmam/article-abstract/11/3/364/1883426 |url-status=live |url-access=subscription }}</ref>
+
+SRT division is similar to non-restoring division, but it uses a [[lookup table]] based on the dividend and the divisor to determine each quotient digit.
+
+The most significant difference is that a ''redundant representation'' is used for the quotient. For example, when implementing radix-4 SRT division, each quotient digit is chosen from ''five'' possibilities: −2, −1, 0, +1, or +2. Because of this, the choice of a quotient digit need not be perfect; later quotient digits can correct for slight errors. (For example, the quotient digit pairs (0,&nbsp;+2) and (1,&nbsp;−2) are equivalent, since {{nowrap|0 × 4 + 2 {{=}} 1 × 4 − 2}}.) This tolerance allows quotient digits to be selected using only a few most-significant bits of the dividend and divisor, rather than requiring a full-width subtraction. This simplification in turn allows a radix higher than 2 to be used.
+
+Like non-restoring division, the final steps are a final full-width subtraction to resolve the last quotient bit, and conversion of the quotient to standard binary form.
+
+The [[Pentium (original)|original Intel Pentium]] processor's [[Pentium FDIV bug|infamous floating-point division bug]] was caused by an incorrectly coded lookup table. Pentium processors used a 2048-cell table, of which 1066 cells were to be populated, and values from five cells were mistakenly omitted.<ref>{{cite web |url=http://www.intel.com/support/processors/pentium/sb/cs-012997.htm |title=Statistical Analysis of Floating Point Flaw |publisher=Intel Corporation |year=1994 |access-date=22 October 2013 |archive-date=23 October 2013 |archive-url=https://web.archive.org/web/20131023060231/http://www.intel.com/support/processors/pentium/sb/cs-012997.htm |url-status=live }}</ref><ref>{{cite tech report |url=http://i.stanford.edu/pub/cstr/reports/csl/tr/95/675/CSL-TR-95-675.pdf |title=An Analysis of Division Algorithms and Implementations |first1=Stuart F. |last1=Oberman |first2=Michael J. |last2=Flynn |id=CSL-TR-95-675 |date=July 1995 |publisher=Stanford University |access-date=2016-12-23 |archive-date=2017-05-17 |archive-url=https://web.archive.org/web/20170517133304/http://i.stanford.edu/pub/cstr/reports/csl/tr/95/675/CSL-TR-95-675.pdf |url-status=live }}</ref><ref>{{Cite web |last=Shirriff |first=Ken |date=28 Dec 2024 |title=Intel's $475 million error: the silicon behind the Pentium division bug |url=https://www.righto.com/2024/12/this-die-photo-of-pentium-shows.html |access-date=30 Dec 2024 |website=Righto}}</ref>
+
+== Fast division methods ==
+=== Newton–Raphson division ===
+Newton–Raphson uses [[Newton's method]] to find the [[Multiplicative inverse|reciprocal]] of <math>D</math> and multiply that reciprocal by <math>N</math> to find the {{nowrap|final quotient <math>Q</math>.}}
+
+The steps of Newton–Raphson division are:
+# Calculate an estimate <math>X_0</math> for the reciprocal <math>1/D</math> of the divisor <math>D</math>.
+# Compute successively more accurate estimates <math>X_1,X_2,\ldots,X_S</math> of the reciprocal. This is where one employs the Newton–Raphson method as such.
+# Compute the quotient by multiplying the dividend by the reciprocal of the divisor: <math>Q = N X_S</math>.
+
+In order to apply Newton's method to find the reciprocal of <math>D</math>, it is necessary to find a function <math>f(X)</math> that has a zero at <math>X=1/D</math>. The obvious such function is <math>f(X)=DX-1</math>, but the Newton–Raphson iteration for this is unhelpful, since it cannot be computed without already knowing the reciprocal of <math>D</math> (moreover it attempts to compute the exact reciprocal in one step, rather than allow for iterative improvements). A function that does work is <math>f(X)=(1/X)-D</math>, for which the Newton–Raphson iteration gives
+: <math display=block>X_{i+1} = X_i - {f(X_i)\over f'(X_i)} = X_i - {1/X_i - D\over -1/X_i^2} = X_i + X_i(1-DX_i) = X_i(2-DX_i),</math>
+which can be calculated from <math>X_i</math> using only multiplication and subtraction, or using two [[fused multiply–add]]s.
+
+From a computation point of view, the expressions <math>X_{i+1} = X_i + X_i(1-DX_i)</math> and <math>X_{i+1} = X_i(2-DX_i)</math> are not equivalent. To obtain a result with a precision of 2''n'' bits while making use of the second expression, one must compute the product between <math>X_i</math> and <math>(2-DX_i)</math> with double the given precision of <math>X_i</math>(''n'' bits).{{citation needed|date=February 2014}} In contrast, the product between <math>X_i</math> and <math>(1-DX_i)</math> need only be computed with a precision of ''n'' bits, because the leading ''n'' bits (after the binary point) of <math>(1-DX_i)</math> are zeros.
+
+If the error is defined as <math>\varepsilon_i = 1 - D X_i</math>, then:
+:<math>\begin{align}
+\varepsilon_{i+1} &= 1 - D X_{i+1} \\
+               &= 1 - D (X_i(2-DX_i)) \\
+               &= 1 - 2DX_i + D^2X_i^2 \\
+               &= (1 - DX_i)^2 \\
+               &= {\varepsilon_i}^2. \\
+\end{align}</math>
+This squaring of the error at each iteration step{{snd}} the so-called [[Newton's method#Practical considerations|quadratic convergence]] of Newton–Raphson's method{{snd}} has the effect that the number of correct digits in the result roughly ''doubles for every iteration'', a property that becomes extremely valuable when the numbers involved have many digits (e.g. in the large integer domain). But it also means that the initial convergence of the method can be comparatively slow, especially if the initial estimate <math>X_0</math> is poorly chosen.
+
+==== Initial estimate ====
+For the subproblem of choosing an initial estimate <math>X_0</math>, it is convenient to apply a bit-shift to the divisor ''D'' to scale it so that 0.5&nbsp;≤&nbsp;''D''&nbsp;≤&nbsp;1. Applying the same bit-shift to the numerator ''N'' ensures the quotient does not change.  Once within a bounded range, a simple polynomial [[approximation]] can be used to find an initial estimate.
+
+The linear [[approximation]] with minimum worst-case absolute error on the interval <math>[0.5,1]</math> is:
+:<math>X_0 = {48 \over 17} - {32 \over 17} D.</math>
+The coefficients of the [[linear approximation]] <math>T_0 +T_1 D</math> are determined as follows. The [[absolute value]] of the error is <math>|\varepsilon_0| = |1 - D(T_0 + T_1 D)|</math>. The minimum of the maximum absolute value of the error is determined by the [[Equioscillation theorem|Chebyshev equioscillation theorem]] applied to <math>F(D) = 1 - D(T_0 + T_1 D)</math>.  The local minimum of <math>F(D)</math> occurs when <math>F'(D) = 0</math>, which has solution <math>D = -T_0/(2T_1)</math>. The function at that minimum must be of opposite sign as the function at the endpoints, namely, <math>F(1/2) = F(1) = -F(-T_0/(2T_1))</math>.  The two equations in the two unknowns have a unique solution <math>T_0 = 48/17</math> and <math>T_1 = -32/17</math>, and the maximum error is <math>F(1) = 1/17</math>.  Using this approximation, the absolute value of the error of the initial value is less than
+:<math>\vert \varepsilon_0 \vert \leq {1 \over 17} \approx 0.059 .</math>
+
+The best quadratic fit to <math>1/D</math> in the interval is
+:<math> X := \frac{140}{33} - \frac{64}{11} D + \frac{256}{99} D^2.</math>
+It is chosen to make the error equal to a re-scaled third order [[Chebyshev polynomial]] of the first kind, and gives an absolute value of the error less than or equal to 1/99.  This improvement is equivalent to <math>\log_2(\log 99/\log 17) \approx 0.7</math> Newton–Raphson iterations, at a computational cost of less than one iteration.
+
+It is possible to generate a polynomial fit of degree larger than 2, computing the coefficients using the [[Remez algorithm]].  The trade-off is that the initial guess requires more computational cycles but hopefully in exchange for fewer iterations of Newton–Raphson.
+
+Since for this method the [[rate of convergence|convergence]] is exactly quadratic, it follows that, from an initial error <math>\varepsilon_0</math>, <math>S</math> iterations will give an answer accurate to
+:<math>P = -2^S \log_2 \varepsilon_0 - 1 = 2^S \log_2(1/\varepsilon_0) - 1</math>
+binary places.  Typical values are:
+
+{| class="wikitable" style="text-align: right;"
+|+ Binary digits of reciprocal accuracy
+|-
+! rowspan="2" | <math>\varepsilon_0</math> || colspan="5" | Iterations
+|-
+! 0 || 1 || 2 || 3 || 4
+|-
+! <math>1/17</math>
+| {{round|{{#expr:   (ln17/ln2) - 1}}|2}}
+| {{round|{{#expr: 2*(ln17/ln2) - 1}}|2}}
+| {{round|{{#expr: 4*(ln17/ln2) - 1}}|2}}
+| {{round|{{#expr: 8*(ln17/ln2) - 1}}|2}}
+| {{round|{{#expr:16*(ln17/ln2) - 1}}|2}}
+|-
+! <math>1/99</math>
+| {{round|{{#expr:   (ln99/ln2) - 1}}|2}}
+| {{round|{{#expr: 2*(ln99/ln2) - 1}}|2}}
+| {{round|{{#expr: 4*(ln99/ln2) - 1}}|2}}
+| {{round|{{#expr: 8*(ln99/ln2) - 1}}|2}}
+| {{round|{{#expr:16*(ln99/ln2) - 1}}|2}}
+|}
+
+A quadratic initial estimate plus two iterations is accurate enough for IEEE [[single precision]], but three iterations are marginal for [[double precision]].  A linear initial estimate plus four iterations is sufficient for both double and [[extended precision|double extended]] formats.
+
+==== Pseudocode ====
+The following computes the quotient of {{var|N}} and {{var|D}} with a precision of {{var|P}} binary places:
+
+<div style="font-family: monospace, monospace;">
+Express D as M × 2<sup>e</sup> where 1 &le; M < 2 (standard floating point representation)<br />
+D' := D / 2<sup>e+1</sup>   ''// scale between 0.5 and 1, can be performed with bit shift / exponent subtraction''<br />
+N' := N / 2<sup>e+1</sup><br />
+X := 48/17 − 32/17 × D'   ''// precompute constants with same precision as D''<br />
+{{nowrap|'''repeat''' <math>\left \lceil \log_2 \frac{P + 1}{\log_2 17} \right \rceil \,</math> '''times'''}}   ''// can be precomputed based on fixed P''<br />
+X := X + X × (1 - D' × X)<br />
+'''end'''<br />
+'''return''' N' × X<br />
+</div>
+
+For example, for a double-precision floating-point division, this method uses 10 multiplies, 9 adds, and 2 shifts.
+
+==== Cubic iteration ====
+There is an iteration which uses three multiplications to cube the error:
+:<math> \varepsilon_i = 1 - D X_i </math>
+:<math> Y_i = X_i \varepsilon_i </math>
+:<math> X_{i+1} = X_i + Y_i + Y_i \varepsilon_i .</math>
+The ''Y<sub>i</sub>ε<sub>i</sub>'' term is new.
+
+Expanding out the above, <math>X_{i+1}</math> can be written as
+:<math>\begin{align}
+ X_{i+1} &= X_i + X_i\varepsilon_i + X_i\varepsilon_i^2 \\
+         &= X_i + X_i(1-DX_i) + X_i(1-DX_i)^2 \\
+         &= 3X_i - 3DX_i^2 + D^2X_i^3 ,
+\end{align}</math>
+with the result that the error term
+:<math>\begin{align}
+ \varepsilon_{i+1} &= 1 - DX_{i+1} \\
+                   &= 1 - 3DX_i + 3D^2X_i^2 - D^3X_i^3 \\
+                   &= (1 - DX_i)^3 \\
+                   &= \varepsilon_i^3 .
+\end{align}</math>
+
+This is 3/2 the computation of the quadratic iteration, but achieves <math>\log 3 / \log 2 \approx 1.585</math> as much convergence, so is slightly more efficient.  Put another way, two iterations of this method raise the error to the ninth power at the same computational cost as three quadratic iterations, which only raise the error to the eighth power.
+
+The number of correct bits after <math>S</math> iterations is
+:<math>P = -3^S \log_2 \varepsilon_0 - 1 = 3^S \log_2(1/\varepsilon_0) - 1</math>
+binary places.  Typical values are:
+{| class="wikitable" style="text-align: right;"
+|+ Bits of reciprocal accuracy
+|-
+! rowspan="2" | <math>\varepsilon_0</math> || colspan="4" | Iterations
+|-
+! 0 || 1 || 2 || 3
+|-
+! <math>1/17</math>
+| {{round|{{#expr:   (ln17/ln2) - 1}}|2}}
+| {{round|{{#expr: 3*(ln17/ln2) - 1}}|2}}
+| {{round|{{#expr: 9*(ln17/ln2) - 1}}|2}}
+| {{round|{{#expr:27*(ln17/ln2) - 1}}|2}}
+|-
+! <math>1/99</math>
+| {{round|{{#expr:   (ln99/ln2) - 1}}|2}}
+| {{round|{{#expr: 3*(ln99/ln2) - 1}}|2}}
+| {{round|{{#expr: 9*(ln99/ln2) - 1}}|2}}
+| {{round|{{#expr:27*(ln99/ln2) - 1}}|2}}
+|}
+
+A quadratic initial estimate plus two cubic iterations provides ample precision for an IEEE double-precision result.  It is also possible to use a mixture of quadratic and cubic iterations.
+
+Using at least one quadratic iteration ensures that the error is positive, i.e. the reciprocal is underestimated.<ref name=DigitalArithmetic>{{cite book
+ |title=Digital Arithmetic
+ |chapter=Chapter 7: Reciprocal. Division, Reciprocal Square Root, and Square Root by Iterative Approximation
+ |first1=Miloš D. |last1=Ercegovac  |first2=Tomás |last2=Lang
+ |pages=367–395
+ |year=2004 |publisher=Morgan Kaufmann |isbn=1-55860-798-6
+}}</ref>{{rp|370}} This can simplify a following rounding step if an exactly-rounded quotient is required.
+
+Using higher degree polynomials in either the initialization or the iteration results in a degradation of performance because the extra multiplications required would be better spent on doing more iterations.{{citation needed|date=January 2025}}
+
+=== <span class="anchor" id="AEGP"></span>Goldschmidt division ===
+Goldschmidt division<ref>{{cite thesis |first=Robert E. |last=Goldschmidt |title=Applications of Division by Convergence |series=M.Sc. dissertation |publisher=M.I.T. |date=1964 |oclc=34136725 |url=http://dspace.mit.edu/bitstream/handle/1721.1/11113/34136725-MIT.pdf |access-date=2015-09-15 |archive-date=2015-12-10 |archive-url=https://web.archive.org/web/20151210223340/http://dspace.mit.edu/bitstream/handle/1721.1/11113/34136725-MIT.pdf |url-status=live }}</ref> (after Robert Elliott Goldschmidt)<ref>{{cite journal |title=Authors |url=https://ieeexplore.ieee.org/document/5392026 |journal=IBM Journal of Research and Development | year=1967 | volume=11 | pages=125–127 | doi=10.1147/rd.111.0125 |archive-url=https://web.archive.org/web/20180718114413/https://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=5392026 |archive-date=18 July 2018|url-access=subscription }}</ref> uses an iterative process of repeatedly multiplying both the dividend and divisor by a common factor ''F''<sub>''i''</sub>, chosen such that the divisor converges to 1. This causes the dividend to converge to the sought quotient ''Q'':
+
+:<math>Q = \frac{N}{D} \frac{F_1}{F_1} \frac{F_2}{F_2}  \frac{F_\ldots}{F_\ldots}.</math>
+
+The steps for Goldschmidt division are:
+# Generate an estimate for the multiplication factor ''F<sub>i</sub>'' .
+# Multiply the dividend and divisor by ''F<sub>i</sub>'' .
+# If the divisor is sufficiently close to 1, return the dividend, otherwise, loop to step 1.
+
+Assuming ''N''/''D'' has been scaled so that 0&nbsp;<&nbsp;''D''&nbsp;<&nbsp;1, each ''F<sub>i</sub>'' is based on ''D'':
+
+:<math>F_{i+1} = 2 - D_i.</math>
+
+Multiplying the dividend and divisor by the factor yields:
+:<math>\frac{N_{i+1}}{D_{i+1}} = \frac{N_i}{D_i}\frac{F_{i+1}}{F_{i+1}}.</math>
+
+After a sufficient number ''k'' of iterations <math>Q=N_k</math>.
+
+The Goldschmidt method is used in [[AMD]] Athlon CPUs and later models.<ref>{{cite book |first=Stuart F. |last=Oberman |title=Proceedings 14th IEEE Symposium on Computer Arithmetic (Cat. No.99CB36336) |chapter=Floating point division and square root algorithms and implementation in the AMD-K7 Microprocessor |pages=106&ndash;115 |date=1999 |doi=10.1109/ARITH.1999.762835 |isbn=0-7695-0116-8 |s2cid=12793819 |chapter-url=http://www.acsel-lab.com/arithmetic/arith14/papers/ARITH14_Oberman.pdf |access-date=2015-09-15 |archive-date=2015-11-29 |archive-url=https://web.archive.org/web/20151129095846/http://www.acsel-lab.com/arithmetic/arith14/papers/ARITH14_Oberman.pdf |url-status=live }}</ref><ref>{{cite journal |first1=Peter |last1=Soderquist |first2=Miriam |last2=Leeser |title=Division and Square Root: Choosing the Right Implementation |journal=IEEE Micro |volume=17 |issue=4 |pages=56&ndash;66 |date=July–August 1997 |url=https://www.researchgate.net/publication/2511700 |doi=10.1109/40.612224 |bibcode=1997IMicr..17d..56S }}</ref> It is also known as Anderson Earle Goldschmidt Powers (AEGP) algorithm and is implemented by various [[IBM]] processors.<ref>S. F. Anderson, J. G. Earle, R. E. Goldschmidt, D. M. Powers. ''The IBM 360/370 model 91: floating-point execution unit'', [[IBM Journal of Research and Development]], January 1997</ref><ref name="goldschmidt-analysis">{{cite journal |last1=Guy |first1=Even |last2=Peter |first2=Siedel |last3=Ferguson |first3=Warren |title=A parametric error analysis of Goldschmidt's division algorithm |journal=Journal of Computer and System Sciences |date=1 February 2005 |volume=70 |issue=1 |pages=118–139 |doi=10.1016/j.jcss.2004.08.004 |doi-access=free }}</ref> Although it converges at the same rate as a Newton–Raphson implementation, one advantage of the Goldschmidt method is that the multiplications in the numerator and in the denominator can be done in parallel.<ref name="goldschmidt-analysis" />
+
+==== Binomial theorem ====
+The Goldschmidt method can be used with factors that allow simplifications by the [[binomial theorem]].
+Assume {{tmath|N/D}} has been scaled by a [[power of two]] such that <math>D\in\left(\tfrac{1}{2},1\right]</math>.
+We choose <math>D = 1-x</math> and <math>F_{i} = 1+x^{2^i}</math>.
+This yields
+
+: <math display=block>
+\frac{N}{1-x}
+ = \frac{N\cdot(1+x)}{1-x^2}
+ = \frac{N\cdot(1+x)\cdot(1+x^2)}{1-x^4}
+ = \cdots
+ = Q' = \frac{N' = N\cdot(1+x)\cdot(1+x^2)\cdot\cdot\cdot(1+x^{2^{(n-1)}})}{D' = 1-x^{2^n} \approx 1}
+</math>.
+
+After {{mvar|n}} steps <math>\left( x\in\left[0,\tfrac{1}{2}\right) \right)</math>, the denominator <math>1-x^{2^n}</math> can be rounded to {{val|1}} with a [[relative error]]
+
+:<math>
+\varepsilon_n = \frac{Q' - N'}{Q'}  =  x^{2^n}
+</math>
+
+which is maximum at <math>2^{-2^n}</math> when <math>x = \tfrac{1}{2}</math>, thus providing a minimum precision of <math>2^n</math> binary digits.
+
+== Large-integer methods ==
+Methods designed for hardware implementation generally do not scale to integers with thousands or millions of decimal digits; these frequently occur, for example, in [[Modular arithmetic|modular]] reductions in [[cryptography]]. For these large integers, more efficient division algorithms transform the problem to use a small number of multiplications, which can then be done using an asymptotically efficient [[multiplication algorithm]] such as the [[Karatsuba algorithm]], [[Toom–Cook multiplication]] or the [[Schönhage–Strassen algorithm]]. The result is that the [[computational complexity]] of the division is of the same order (up to a multiplicative constant) as that of the multiplication. Examples include reduction to multiplication by [[Newton's method]] as [[#Newton–Raphson division|described above]],<ref>{{Cite thesis |degree=M.Sc. in Computer Science |title=Fast Division of Large Integers: A Comparison of Algorithms |url=https://treskal.com/s/masters-thesis.pdf |last=Hasselström |first=Karl |year=2003 |publisher=Royal Institute of Technology |access-date=2017-07-08 |archive-date=8 July 2017 |archive-url=https://web.archive.org/web/20170708221722/https://static1.squarespace.com/static/5692a9ad7086d724272eb00a/t/5692dbe6b204d50df79e577f/1452465127528/masters-thesis.pdf}}</ref> as well as the slightly faster [[Burnikel-Ziegler division]],<ref>{{citation |url=https://domino.mpi-inf.mpg.de/internet/reports.nsf/efc044f1568a0058c125642e0064c817/a8cfefdd1ac031bbc125669b00493127/$FILE/MPI-I-98-1-022.ps |title=Fast Recursive Division |first=Christoph Burnikel |last=Joachim Ziegler |year=1998 |location=Max-Planck-Institut für Informatik |access-date=2021-09-10 |archive-date=2011-04-26 |archive-url=https://web.archive.org/web/20110426221250/http://domino.mpi-inf.mpg.de/internet/reports.nsf/efc044f1568a0058c125642e0064c817/a8cfefdd1ac031bbc125669b00493127/$FILE/MPI-I-98-1-022.ps |url-status=live }}</ref> [[Barrett reduction]] and [[Montgomery reduction]] algorithms.<ref>{{cite conference |url=http://portal.acm.org/citation.cfm?id=36688 |title=Implementing the Rivest Shamir and Adleman public key encryption algorithm on a standard digital signal processor |first=Paul |last=Barrett |year=1987 |publisher=Springer-Verlag |book-title=Proceedings on Advances in cryptology---CRYPTO '86 |pages=311&ndash;323 |location=London, UK |isbn=0-387-18047-8 }}</ref>{{verify source|date=June 2015|reason=Barrett reduction is usually understood to be the algorithm for computing the remainder that one gets from having precomputed the inverse of the denominator. Rather than providing a solution to the problem of division, it requires that a separate solution is already available!}} Newton's method is particularly efficient in scenarios where one must divide by the same divisor many times, since after the initial Newton inversion only one (truncated) multiplication is needed for each division.
+
+== Division by a constant ==
+The division by a constant ''D'' is equivalent to the multiplication by its [[Multiplicative inverse|reciprocal]]. 
+Since the denominator is constant, so is its reciprocal (1/''D''). Thus it is possible to compute the value of (1/''D'') once at compile time, and at run time perform the multiplication ''N''·(1/''D'') rather than the division ''N/D''. In [[floating-point]] arithmetic the use of (1/''D'') presents little problem,{{efn|Despite how "little" problem the optimization causes, this reciprocal optimization is still usually hidden behind a "fast math" flag in modern [[compiler]]s as it is inexact.}} but in [[Integer (computer science)|integer]] arithmetic the reciprocal will always evaluate to zero (assuming |''D''| > 1).
+
+It is not necessary to use specifically (1/''D''); any value (''X''/''Y'') that reduces to (1/''D'') may be used.  For example, for division by 3, the factors 1/3, 2/6, 3/9, or 194/582 could be used. Consequently, if ''Y'' were a power of two the division step would reduce to a fast right bit shift. The effect of calculating ''N''/''D'' as (''N''·''X'')/''Y'' replaces a division with a multiply and a shift. Note that the parentheses are important, as ''N''·(''X''/''Y'') will evaluate to zero.
+
+However, unless ''D'' itself is a power of two, there is no ''X'' and ''Y'' that satisfies the conditions above. Fortunately, (''N''·''X'')/''Y'' gives exactly the same result as ''N''/''D'' in integer arithmetic even when (''X''/''Y'') is not exactly equal to 1/''D'', but "close enough" that the error introduced by the approximation is in the bits that are discarded by the division operation. ''Y'' is chosen to be a power of 2 to convert the division into a simple right shift.<ref>{{cite journal |title=Division by Invariant Integers using Multiplication |first1=Torbjörn |last1=Granlund |first2=Peter L. |last2=Montgomery |journal=SIGPLAN Notices |volume=29 |issue=6 |date=June 1994 |pages=61–72 |doi=10.1145/773473.178249 |url=http://gmplib.org/~tege/divcnst-pldi94.pdf |access-date=2015-12-08 |archive-date=2019-06-06 |archive-url=https://web.archive.org/web/20190606211506/https://gmplib.org/~tege/divcnst-pldi94.pdf |url-status=live }}</ref><ref>{{cite journal |title=Improved Division by Invariant Integers |first1=Niels |last1=Möller |first2=Torbjörn |last2=Granlund |journal=IEEE Transactions on Computers |date=February 2011 |volume=60 |issue=2 |pages=165–175 |doi=10.1109/TC.2010.143 |bibcode=2011ITCmp..60..165M |s2cid=13347152 |url=http://gmplib.org/~tege/division-paper.pdf |access-date=2015-12-08 |archive-date=2015-12-22 |archive-url=https://web.archive.org/web/20151222160554/https://gmplib.org/~tege/division-paper.pdf |url-status=live }}</ref><ref>{{cite web|last1=ridiculous_fish|url=https://ridiculousfish.com/blog/posts/labor-of-division-episode-iii.html|title=Labor of Division (Episode III): Faster Unsigned Division by Constant|archive-url=https://web.archive.org/web/20220108225258/http://ridiculousfish.com/files/faster_unsigned_division_by_constants.pdf |date=2011|archive-date=2022-01-08}}</ref>
+
+As a concrete [[fixed-point arithmetic]] example, for 32-bit unsigned integers, division by 3 can be replaced with a multiply by {{nobr|2863311531/2<sup>33</sup>}}, a widening multiplication by 2863311531 ([[hexadecimal]] 0xAAAAAAAB) followed by a 33 right bit shift.  The value of 2863311531 is calculated as {{nobr|2<sup>33</sup>/3}}, then rounded up. Likewise, division by 10 can be expressed as a multiplication by 3435973837 (0xCCCCCCCD) followed by division by 2<sup>35</sup> (or 35 right bit shift).<ref name="Hacker's Delight">{{Cite book |title=Hacker's Delight |first=Henry S. |last=Warren Jr. |date=2013 |edition=2 |publisher=[[Addison Wesley]] - [[Pearson Education, Inc.]] |isbn=978-0-321-84268-8|title-link=Hacker's Delight}} Shift-and-add companion code: [https://github.com/hcs0/Hackers-Delight/blob/master/divuc.c.txt divuc], [https://github.com/hcs0/Hackers-Delight/blob/master/divuc.c.txt divsc].</ref>{{rp|p230-234}} [[OEIS]] provides sequences of the constants for multiplication as {{OEIS link|A346495}} and for the right shift as {{OEIS link|A346496}}.
+
+For general {{mvar|x}}-bit unsigned integer division where the divisor {{mvar|D}} is not a power of 2, the following identity converts the division into two {{mvar|x}}-bit addition/subtraction, one {{mvar|x}}-bit by {{mvar|x}}-bit multiplication (where only the upper half of the result is used) and several shifts, after precomputing <math>k=x+\lceil\log_2{D}\rceil</math> and <math display=inline>a=\left\lceil 2^k/D\right\rceil-2^x</math>:
+
+: <math>\left\lfloor\frac{N}{D}\right\rfloor=\left\lfloor\frac{\left\lfloor\tfrac12(N-b)\right\rfloor+b}{2^{k-x-1}}\right\rfloor,</math>
+where {{nobr|<math>b=\left\lfloor Na / 2^x \right\rfloor</math>.}}
+
+Modern [[compilers]] commonly perform this integer multiply-and-shift optimization; for a constant only known at run-time, however, the program must implement the optimization itself. libdivide is a library for computing the constants and executing the multiply-shift operation.<ref>{{cite web |last1=ridiculous_fish |title=libdivide, optimized integer division |url=https://libdivide.com/ |access-date=6 July 2021 |archive-date=23 November 2021 |archive-url=https://web.archive.org/web/20211123015446/https://libdivide.com/ |url-status=live }}</ref>
+
+In some cases, division by a constant can be accomplished in even less time by converting the "multiply by a constant" into a [[Multiplication algorithm#Shift and add|series of shifts and adds or subtracts]].<ref>LaBudde, Robert A.; Golovchenko, Nikolai; Newton, James; and Parker, David; [http://techref.massmind.org/techref/method/math/divconst.htm ''Massmind: "Binary Division by a Constant"''] {{Webarchive|url=https://web.archive.org/web/20220109215748/http://techref.massmind.org/techref/method/math/divconst.htm |date=2022-01-09 }}</ref><ref name="Hacker's Delight">{{rp|241}} Of particular interest is division by 10, for which the exact quotient is obtained, with remainder if required.<ref>{{cite journal |first=R. A. |last=Vowels |title=Division by 10 |journal=Australian Computer Journal |volume=24 |issue=3 |year=1992 |pages=81–85 }}</ref>
+
+== Rounding error ==
+{{expand section|date=September 2012}}
+When a division operation is performed, the exact [[quotient]] <math>q</math> and [[remainder]] <math>r</math> are approximated to fit within the computer's precision limits. The Division Algorithm states:
+
+<math>[ a = bq + r ]</math>
+
+where <math>0 \leq r < |b|</math>.
+
+In [[floating-point arithmetic]], the quotient <math>q</math> is represented as <math>\tilde{q}</math> and the remainder <math>r</math> as <math>\tilde{r}</math>, introducing [[Round-off error|rounding errors]] <math>\epsilon_q</math> and <math>\epsilon_r</math>:
+
+<math>[ \tilde{q} = q + \epsilon_q ] [ \tilde{r} = r + \epsilon_r ]</math>
+
+This rounding causes a small error, which can propagate and accumulate through subsequent calculations. Such errors are particularly pronounced in iterative processes and when subtracting nearly equal values - is told [[Catastrophic cancellation|loss of significance]]. To mitigate these errors, techniques such as the use of [[guard digit]]s or higher precision (or [[Arbitrary-precision arithmetic|arbitrary precision]]) are employed.<ref>{{Cite journal |last=L. Popyack |first=Jeffrey |date=June 2000 |title=Rounding Error |url=https://www.cs.drexel.edu/~popyack/Courses/CSP/Fa17/extras/Rounding/index.html |journal=[[Drexel University]] |language=English}}</ref><ref>{{Cite journal |date=8 February 2021 |title=9. Machine Numbers, Rounding Error and Error Propagation |url=https://lemesurierb.people.charleston.edu/elementary-numerical-analysis-python/notebooks/machine-numbers-rounding-error-and-error-propagation-python.html |journal=[[College of Charleston]]}}</ref>
+
+{{further | Floating point}}
+
+== See also ==
+* [[Galley division]]
+* [[Multiplication algorithm]]
+* [[Pentium FDIV bug]]
+
+== Notes ==
+{{notelist}}
+
+== References ==
+{{reflist}}
+
+== Further reading ==
+* {{cite web |title=Advanced Arithmetic Techniques |author-first=John J. G. |author-last=Savard |date=2018 |orig-date=2006 |work=quadibloc |url=http://www.quadibloc.com/comp/cp0202.htm |access-date=2018-07-16 |url-status=live |archive-url=https://web.archive.org/web/20180703001722/http://www.quadibloc.com/comp/cp0202.htm |archive-date=2018-07-03}}
+
+{{Number-theoretic algorithms}}
+
+{{DEFAULTSORT:Division (Digital)}}
+[[Category:Binary arithmetic]]
+[[Category:Computer arithmetic]]
+[[Category:Division (mathematics)|Algorithm]]
+[[Category:Articles with example pseudocode]]
+[[Category:Computer arithmetic algorithms]]

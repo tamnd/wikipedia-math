@@ -1,0 +1,57 @@
+<!-- wikipedia: en
+     page: 53506401
+     title: Yo-yo (algorithm)
+     revision: 1229718876
+     timestamp: 2024-06-18T10:34:54Z
+     history: https://en.wikipedia.org/w/index.php?curid=53506401&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1229718876 -->
+{{Short description|Leader election algorithm}}
+'''Yo-Yo''' is a distributed algorithm aimed at minimum finding and leader election in generic connected undirected [[Graph (discrete mathematics)|graph]].<ref>{{Cite journal|last=Gallager|first=Robert|year=1983|title=A distributed algorithm for minimum spanning tree|url=http://www.cs.tau.ac.il/~afek/p66-gallager.pdf|journal=Massachusetts Institute of Technology}}</ref><ref>{{Cite journal|last=Awerbuch|first=Baruch|year=1987|title=Optimal Distributed Algorithm for Minimum Weight Spanning Tree, Counting, Leader Election and Other Problems|url=http://www.disco.ethz.ch/alumni/pascal/refs/mst_1987_awerbuch.pdf|journal=SIAM Journal on Computing}}</ref> Unlike [[Mega-Merger]] it has a trivial termination and cost analysis.
+
+== Introduction ==
+Yo-yo was introduced by Nicola Santoro.<ref>{{Cite web|url=http://people.scs.carleton.ca/~santoro/DADA.html|title=Design and Analysis of Distributed Algorithms|last=Santoro|first=Nicola|website=people.scs.carleton.ca|page=213|access-date=2017-03-13}}</ref> It proceeds by consecutive elimination and a graph-reduction technique called ''pruning''. The algorithm is divided in a pre-processing phase followed by a cyclic repetition of a forward phase, called "Yo-" and a backward one, called "-Yo".
+
+== Pre-requisites ==
+Yo-Yo builds elects a [[Leader election|minimum leader]] under the following premises:
+
+* Total reliability: No message is lost in transmission.
+* Initial Distinct Values (ID): Each node has a unique identifier.
+* Bi-directional communications channels: Each edge is bi-directional, communications can travel in both directions.
+No further restrictions are necessary.
+
+== Algorithm ==
+
+=== Preprocessing ===
+The preprocessing phase is started with a broadcast. At awake state, each node sends its id to all of its neighbors and orients the edge towards the higher-degree node. Note as this is just a logical step, the bi-directional channel is not lost in the procedure. By convergecast the initiator is notified of the preprocessing termination. This process creates three categories of nodes:
+* Sources: nodes with outgoing nodes, but no incoming nodes. These are the least nodes in each neighborhood.
+* Intermediate nodes: nodes with both outgoing and incoming edges. These are neither the least nor the greatest nodes in each neighborhood.
+* Sinks: nodes with incoming edges, but no outgoing edges. These are the greatest nodes in each neighborhood.
+
+=== Yo- ===
+[[File:Yo..svg|thumb|'''Yo-''' phase, the sources' values are pushed down towards the sink(s).|201x201px]]
+The "Yo-" phase is initiated by the sources. A source sends its id through its incoming edges, and waits. The intermediate nodes wait to receive the respective ids from each of their incoming edges. Once all of expected values are collected, a minimum computation is performed and the minimum id is forwarded through the outgoing edges. Sinks are passive in this phase.
+
+The messages are sent through the oriented edges and reach the sinks, which trigger the "-Yo" phase.
+
+=== -Yo ===
+[[File:-Yo phase.svg|thumb|The '''-Yo''' phase pulls up positive/negative answers.]]
+Sinks initiate the "-Yo" phase by computing the minimum id received and sending a positive ''YES'' or negative ''NO'' through their incoming edges. A ''YES'' is sent through the edges carrying the minimum computed id, a ''NO'' through the remaining edges. The messages walk up the structure to the sources: the sources with at least one incoming ''NO'' become ''dead'' and lose their candidate status.
+
+The "-Yo" phase also comprises a re-structuring phase where the sources-intermediates-sinks is accommodated for the non-candidate sources. The edges carrying a ''NO'' are reversed and the losers candidates of the current stage become either sinks or intermediate nodes.
+
+=== Pruning ===
+Pruning is an optimization technique applied in the "-Yo" phase, and its message is usually incorporated with the positive/negative response. It deletes useless edges and nodes. The former are edges that receive the same value from <math>u > 1</math> incoming edges: trivially <math>u</math> are useless and trimmed by the node. Such edges become ''dead'' and are ignored in the following iterations. The latter instead reduces the number of nodes by deleting unary sinks, that is sinks with <math>v = 1</math> incoming edge. These edges will be forced to send back the (only) received minimum with a ''YES'' reply, hence they do not perform any computation useful to the minimum finding.
+[[File:Pruning in the Yo-Yo algorithm..svg|none|thumb|Structure before and after pruning. First the top right-most node becomes a sink from receiving a NO. Being a sink with only one incoming edge, it is trimmed. Same goes for its parent and the central branch.]]
+
+== Cost ==
+The pre-processing phase is composed of an exchange through each edge of the two nodes incident on the edge. Thus we have a cost of <math>\sum_{v \in V} deg(v) = 2m</math>. The '''Yo-Yo''' phases consist of a forward and backward scan of the structure, hence <math>2m_i</math> messages, where <math>m_i</math> is the number of current active edges. The number of iterations is given by the number of iterations useful in order to delete each initial source. By hypothesis, each source is linked to at least another one by an intermediate node: if this was not the case then a disconnected component of the graph, but by definition the graph is connected. In the worst-case scenario intermediate <math>n_i</math> nodes are connected in pairs and at each iteration at most half of the sources are eliminated. By restructuring each of the surviving <math>n_{i+1}</math> sources will now be connected in pairs. As in the previous case, at most half will survive. Clearly the termination is met when only one source remains. The halving imposes a <math>log_2 n</math> number of iterations over the latest computation, i.e. the one between the two farthest away surviving sources, placed at <math>diam(G)</math>. The total cost amounts to <math>2m \log{n}</math>.
+
+== Termination ==
+Termination is guaranteed by the switch in directions performed in the ''YES''/''NO'' pull. The sources reduction in the "-Yo" phase is monotonic: by the previous observation each source is compared to at least one other source, and by uniqueness of the sources, one of them prevails while the others become dead. Since the number of initial sources is finite, the monotonic reduction will lead to a single source remaining.
+
+==References==
+<references />
+
+[[Category:Distributed computing]]
+[[Category:Distributed algorithms]]

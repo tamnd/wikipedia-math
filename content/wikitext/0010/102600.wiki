@@ -1,0 +1,198 @@
+<!-- wikipedia: en
+     page: 102600
+     title: RC5
+     revision: 1367609433
+     timestamp: 2026-08-04T02:54:31Z
+     history: https://en.wikipedia.org/w/index.php?curid=102600&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1367609433 -->
+{{Short description|Block cipher}}
+{{About|the block cipher|the infrared remote control protocol|RC-5}}
+{{Infobox block cipher
+| name          = RC5
+| image         = [[Image:RC5 InfoBox Diagram.svg|160px|center]]
+| caption       = One round (two half-rounds) of the RC5 block cipher
+| designers     = [[Ron Rivest]]
+| publish date  = 1994
+| derived from  = 
+| derived to    = [[RC6]], [[Akelarre (cipher)|Akelarre]]
+| key size      = 0 to 2040 bits (128 suggested)
+| block size    = 32, 64 or 128 bits (64 suggested)
+| structure     = [[Feistel cipher|Feistel]]-like network
+| rounds        = 1-255 (12 suggested originally)
+| cryptanalysis = 12-round RC5 (with 64-bit blocks) is susceptible to a [[differential cryptanalysis|differential attack]] using 2<sup>44</sup> chosen plaintexts.<ref name="Biryukov"/>
+}}
+In [[cryptography]], '''RC5''' is a [[Symmetric-key algorithm|symmetric-key]] [[block cipher]] notable for its simplicity. Designed by [[Ron Rivest|Ronald Rivest]] in 1994,<ref name="fse1994">{{cite conference|last=Rivest|first=R. L.|year=1994|title=The RC5 Encryption Algorithm|book-title=Proceedings of the Second International Workshop on Fast Software Encryption (FSE) 1994e|pages=86&ndash;96|url=http://theory.lcs.mit.edu/~rivest/Rivest-rc5rev.pdf|access-date=2004-12-18|archive-date=2007-04-17|archive-url=https://web.archive.org/web/20070417135716/http://theory.lcs.mit.edu/~rivest/Rivest-rc5rev.pdf|url-status=dead}}</ref> According to Ron Rivest, ''RC'' stands for "Ron's Code"<ref>{{cite web| url = http://people.csail.mit.edu/rivest/faq.html#Ron| title = Rivest FAQ at csail.mit.edu}}</ref> but its documentation gives only RC5 as its name.<ref name=fse1994 /> The [[Advanced Encryption Standard]] (AES) candidate [[RC6]] was based on RC5.
+
+==Description==
+Unlike many schemes, RC5 has a variable [[block size (cryptography)|block size]] (32, 64 or 128 [[bit]]s), [[key size]] (0 to 2040 bits), and number of rounds (0 to 255). The original suggested choice of parameters were a block size of 64 bits, a 128-bit key, and 12 rounds.
+
+A key feature of RC5 is the use of data-dependent rotations; one of the goals of RC5 was to prompt the study and evaluation of such operations as a [[cryptographic primitive]].{{citation needed|date=November 2016}} RC5 also consists of a number of [[modular arithmetic|modular]] additions and [[XOR|eXclusive OR (XOR)]]s. The general structure of the algorithm is a [[Feistel cipher|Feistel]]-like network, similar to RC2. The encryption and decryption routines can be specified in a few lines of code. The key schedule, however, is more complex, expanding the key using an essentially [[one-way function]] with the binary expansions of both [[e (mathematical constant)|e]] and the [[golden ratio]] as sources of "[[nothing-up-my-sleeve number]]s". The tantalising simplicity of the algorithm together with the novelty of the data-dependent rotations has made RC5 an attractive object of study for cryptanalysts.{{according to whom|date=November 2016}}
+RC5 is basically denoted as RC5-w/r/b where w=word size in bits, r=number of rounds, b=number of bytes in the key.
+
+==Algorithm==
+
+RC5 encryption and decryption both expand the random key into 2(r+1) words that will be used sequentially (and only once each) during the encryption and decryption processes. All of the below comes from Rivest's revised paper on RC5.<ref>{{Cite web|url=http://people.csail.mit.edu/rivest/Rivest-rc5rev.pdf|archiveurl=https://web.archive.org/web/20180921234702/http://people.csail.mit.edu/rivest/Rivest-rc5rev.pdf|url-status=dead |title=The RC5 Encryption Algorithm|archivedate=September 21, 2018|website=people.csail.mit.edu}}</ref>
+
+===Key expansion===
+
+The key expansion algorithm is illustrated below, first in [[pseudocode]], then example [[C (programming language)|C code]] copied directly from the reference paper's appendix.
+
+Following the naming scheme of the paper, the following variable names are used:
+* {{math|{{var|w}}}} – The length of a word in bits, typically 16, 32 or 64. Encryption is done in 2-word blocks.
+* {{math|1={{var|u}} = {{var|w}}/8}} – The length of a word in bytes.
+* {{math|{{var|b}}}} – The length of the key in bytes.
+* {{math|K[]}} – The key, considered as an array of bytes (using 0-based indexing).
+* {{math|{{var|c}}}} – The length of the key in words (or 1, if b = 0).
+* {{math|L[]}} – A temporary working array used during key scheduling, initialized to the key in words.
+* {{math|{{var|r}}}} – The number of rounds to use when encrypting data.
+* {{math|1={{var|t}} = 2({{var|r}}+1)}} – the number of round subkeys required.
+* {{math|S[]}} – The round subkey words.
+* {{math|P{{sub|{{var|w}}}}}} – The first magic constant, defined as {{math|Odd(({{var|e}} − 2) {{times}} 2{{sup|{{var|w}}}})}}, where {{math|Odd}} is the nearest odd integer to the given input, {{math|{{var|e}}}} is the [[e (mathematical constant)|base of the natural logarithm]], and {{math|{{var|w}}}} is defined above. For common values of {{math|{{var|w}}}}, the associated values of {{math|P{{sub|{{var|w}}}}}} are given here in hexadecimal:
+** For ''w'' = 16: 0xB7E1
+** For ''w'' = 32: 0xB7E15163
+** For ''w'' = 64: 0xB7E151628AED2A6B
+* {{math|Q{{sub|{{var|w}}}}}} – The second magic constant, defined as {{math|Odd(({{phi}} − 1) {{times}} 2{{sup|{{var|w}}}})}}, where {{math|Odd}} is the nearest odd integer to the given input, where {{math|{{phi}}}} is the [[golden ratio]], and {{math|{{var|w}}}} is defined above. For common values of {{math|{{var|w}}}}, the associated values of {{math|Q{{sub|{{var|w}}}}}} are given here in hexadecimal:
+** For ''w'' = 16: 0x9E37
+** For ''w'' = 32: 0x9E3779B9
+** For ''w'' = 64: 0x9E3779B97F4A7C15
+
+<syntaxhighlight lang="python">
+# Break K into words
+# u = w / 8
+c = ceiling(max(b, 1) / u)
+# L is initially a c-length list of 0-valued w-length words
+for i = b-1 down to 0 do:
+    L[i / u] = (L[i / u] <<< 8) + K[i]
+     
+# Initialize key-independent pseudorandom S array
+# S is initially a t=2(r+1) length list of undefined w-length words
+S[0] = P_w
+for i = 1 to t-1 do:
+    S[i] = S[i - 1] + Q_w
+    
+# The main key scheduling loop
+i = j = 0
+A = B = 0
+do 3 * max(t, c) times:
+    A = S[i] = (S[i] + A + B) <<< 3
+    B = L[j] = (L[j] + A + B) <<< (A + B)
+    i = (i + 1) % t
+    j = (j + 1) % c
+
+# return S
+</syntaxhighlight>
+
+The example source code is provided from the appendix of Rivest's paper on RC5. The implementation is designed to work with w = 32, r = 12, and b = 16.
+
+<syntaxhighlight lang="c">
+void RC5_SETUP(unsigned char *K)
+{
+   // w = 32, r = 12, b = 16
+   // c = max(1, ceil(8 * b/w))
+   // t = 2 * (r+1)
+   WORD i, j, k, u = w/8, A, B, L[c];
+   
+   for (i = b-1, L[c-1] = 0; i != -1; i--)
+      L[i/u] = (L[i/u] << 8) + K[i];
+   
+   for (S[0] = P, i = 1; i < t; i++)
+      S[i] = S[i-1] + Q;
+   
+   for (A = B = i = j = k = 0; k < 3 * t; k++, i = (i+1) % t, j = (j+1) % c)
+   {
+      A = S[i] = ROTL(S[i] + (A + B), 3);
+      B = L[j] = ROTL(L[j] + (A + B), (A + B));
+   }
+}
+</syntaxhighlight>
+
+===Encryption===
+
+Encryption involved several rounds of a simple function, with 12 or 20 rounds seemingly recommended, depending on security needs and time considerations. Beyond the variables used above, the following variables are used in this algorithm:
+
+* A, B - The two words composing the block of [[plaintext]] to be encrypted.
+
+<syntaxhighlight lang="python">
+A = A + S[0]
+B = B + S[1]
+for i = 1 to r do:
+    A = ((A ^ B) <<< B) + S[2 * i]
+    B = ((B ^ A) <<< A) + S[2 * i + 1]
+
+# The ciphertext block consists of the two-word wide block composed of A and B, in that order.
+return A, B
+</syntaxhighlight>
+
+The example C code given by Rivest is this.
+
+<syntaxhighlight lang="c">
+void RC5_ENCRYPT(WORD *pt, WORD *ct)
+{
+   WORD i, A = pt[0] + S[0], B = pt[1] + S[1];
+   
+   for (i = 1; i <= r; i++)
+   {
+      A = ROTL(A ^ B, B) + S[2*i];
+      B = ROTL(B ^ A, A) + S[2*i + 1];
+   }
+   ct[0] = A; ct[1] = B;
+}
+</syntaxhighlight>
+
+===Decryption===
+
+Decryption is a fairly straightforward reversal of the encryption process. The below pseudocode shows the process.
+
+<syntaxhighlight lang="python">
+for i = r down to 1 do:
+    B = ((B - S[2 * i + 1]) >>> A) ^ A
+    A = ((A - S[2 * i]) >>> B) ^ B
+B = B - S[1]
+A = A - S[0]
+
+return A, B
+</syntaxhighlight>
+
+The example C code given by Rivest is this.
+
+<syntaxhighlight lang="c">
+void RC5_DECRYPT(WORD *ct, WORD *pt)
+{
+   WORD i, B=ct[1], A=ct[0];
+   
+   for (i = r; i > 0; i--)
+   {
+      B = ROTR(B - S[2*i + 1], A) ^ A;
+      A = ROTR(A - S[2*i], B) ^ B;
+   }
+   
+   pt[1] = B - S[1]; pt[0] = A - S[0];
+}
+</syntaxhighlight>
+
+==Cryptanalysis==
+Twelve-round RC5 (with 64-bit blocks) is susceptible to a [[differential cryptanalysis|differential attack]] using 2<sup>44</sup> chosen plaintexts.<ref name="Biryukov">{{cite conference |last1=Biryukov |first1=Alex |authorlink1=Alex Biryukov  |last2=Kushilevitz |first2=Eyal |date=31 May 1998 |title=Improved Cryptanalysis of RC5 |conference=EUROCRYPT 1998 |doi=10.1007/BFb0054119 |doi-access=free |url=https://link.springer.com/content/pdf/10.1007/BFb0054119.pdf}}</ref> 18&ndash;20 rounds are suggested as sufficient protection.
+
+A number of these challenge problems have been tackled using [[distributed computing]], organised by [[Distributed.net]]. Distributed.net has [[Brute force attack|brute-forced]] RC5 messages encrypted with 56-bit and 64-bit keys and has been working on cracking a 72-bit key since November 3, 2002.<ref name="distributed.net: Project RC5">{{cite web |title=distributed.net: Project RC5 |url=http://www.distributed.net/RC5 |website=www.distributed.net |access-date=14 December 2019}}</ref> As of November 26, 2025, 14.971% of the keyspace has been searched and based on the rate recorded that day, it would take a little more than 43 years to complete 100% of the keyspace.<ref>{{Cite web|url=https://stats.distributed.net/projects.php?project_id=8|title=stats.distributed.net - RC5-72 Overall Project Stats|website=stats.distributed.net}}</ref> The task has inspired many new and novel developments in the field of cluster computing.<ref>{{cite press release|url=https://www.umassd.edu/news/2014/1-in-the-world-in-code-cracking-challenge-list.html |title=PlayStation 3 supercomputer places UMass Dartmouth #1 in the world in code cracking challenge list |publisher=[[University of Massachusetts Dartmouth]] |date=24 September 2014 |access-date=2024-01-24 |url-status=live |archive-url=https://web.archive.org/web/20220629064757/https://www.umassd.edu/news/2014/1-in-the-world-in-code-cracking-challenge-list.html |archive-date=2022-06-29 }}</ref>
+
+[[RSA Security]], which had a (now expired) patent on the algorithm,<ref>Rivest, R. L, "Block Encryption Algorithm With Data Dependent Rotation", {{US patent|5724428}}, issued on 3 March 1998, expired 1 November 2015.</ref> offered a series of US$10,000 prizes for breaking [[ciphertext]]s encrypted with RC5, but these contests were discontinued as of May 2007.<ref name="distributed.net: Project RC5"/> As a result, distributed.net decided to fund the monetary prize. The individual who discovers the winning key will receive US$1,000, their team (if applicable) will receive US$1,000, and the [[Free Software Foundation]] will receive US$2,000.<ref>{{cite web |title=distributed.net: staff blogs – 2008 – September – 08 |url=http://blogs.distributed.net/2008/09/08/02/09/bovine/ |access-date=15 December 2019}}</ref>
+
+==See also==
+* [[Madryga]]
+* [[Red Pike (cipher)|Red Pike]]
+
+== References ==
+{{reflist}}
+
+== External links ==
+* [https://people.csail.mit.edu/rivest/pubs/Riv94.revised-1997-03-20.pdf Rivests's revised paper describing the cipher]
+* [https://people.csail.mit.edu/rivest/pubs/Riv94.pdf Rivest's original paper]
+* [http://www.users.zetnet.co.uk/hopwood/crypto/scan/cs.html#RC5 SCAN's entry for the cipher]
+* [http://www.emc.com/emc-plus/rsa-labs/standards-initiatives/rc5-and-rc6.htm RSA Laboratories FAQ &mdash; What are RC5 and RC6?]
+* [https://web.archive.org/web/20081223185415/http://research.cyber.ee/~lipmaa/crypto/link/block/rc5.php Helger Lipmaa's links on RC5]
+
+{{Cryptography navbox | block}}
+
+{{DEFAULTSORT:Rc5}}
+[[Category:Broken block ciphers]]

@@ -1,0 +1,217 @@
+<!-- wikipedia: en
+     page: 17447039
+     title: DFA minimization
+     revision: 1373905391
+     timestamp: 2026-09-08T17:18:26Z
+     history: https://en.wikipedia.org/w/index.php?curid=17447039&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373905391 -->
+{{Short description|Task of transforming a deterministic finite automaton}}
+[[File:DFA to be minimized.svg|thumb|Example DFA. If in state <math>c</math>, it exhibits the same behavior for every input string as in state <math>d</math>, or in state <math>e</math>. Similarly, states <math>a</math> and <math>b</math> are nondistinguishable. The DFA has no unreachable states.]]
+[[File:Minimized DFA.svg|thumb|Equivalent minimal DFA. Nondistinguishable states have been merged into a single one.]]
+
+In [[automata theory]] (a branch of [[theoretical computer science]]), '''DFA minimization''' is the task of transforming a given [[deterministic finite automaton]] (DFA) into an equivalent DFA that has a minimum number of states. Here, two DFAs are called equivalent if they recognize the same [[regular language]]. Several different algorithms accomplishing this task are known and described in standard textbooks on automata theory.<ref>{{harvtxt|Hopcroft|Motwani|Ullman|2001}}, Section 4.4.3, "Minimization of DFA's".</ref>
+
+==Minimal DFA==
+For each regular language, there exists a minimal deterministic automaton that accepts it, that is, a DFA with a minimum number of states. By the [[Myhill-Nerode theorem]], this DFA is unique (except that states can be given different names).<ref>{{harvtxt|Hopcroft|Ullman|1979}}, Section 3.4, Theorem 3.10, p.67</ref><ref>{{harvtxt|Hopcroft|Motwani|Ullman|2001}}, Section 4.4.3, "Minimization of DFA's", p. 159, and p. 164 (remark after Theorem 4.26)</ref> The minimal DFA ensures minimal computational cost for tasks such as [[pattern matching]].
+
+There are three classes of states that can be removed or merged from the original DFA without affecting the language it accepts.
+* ''Unreachable states'' are the states that are not reachable from the initial state of the DFA, for any input string. These states can be removed.
+* ''Dead states'' are the states from which no final state is reachable. These states can be removed unless the automaton is required to be [[Deterministic finite automaton#Complete and incomplete|complete]].
+* ''Nondistinguishable states'' are those that cannot be distinguished from one another for any input string. These states can be merged.
+
+DFA minimization is usually done in three steps:
+# remove dead and unreachable states (this will accelerate the following step),
+# merge nondistinguishable states,
+# optionally, re-create a single dead state ("sink" state) if the resulting DFA is required to be complete.
+
+==Unreachable states==
+Given a DFA <math>M=(Q,\Sigma,\delta,q_0,F)</math>, a state <math>q \in Q</math> is reachable if there exists an input string <math>w \in \Sigma^*</math> that terminates at state {{mvar|q}}. That is, <math>\delta^*(q_0, w) = q</math>. A state {{mvar|q}} is unreachable if it is not a reachable state. In the definition above:
+
+* {{mvar|Q}} is the set of states,
+* <math>\Sigma</math> is the set of input symbols,
+* <math>\delta : Q \times \Sigma \to Q</math> is the transition function,
+* <math>\delta^* : Q \times \Sigma^* \to Q</math> is the extended transition function,
+* <math>q_0</math> is the initial state,
+* and {{mvar|F}} is the set of accepting (or final) states.
+
+Reachable states can be obtained with the following algorithm:<ref>{{harvtxt|Sipser|2013}}, Adapted from the proof of Theorem 7.14 in page 288.</ref>
+{{math proof|title=Algorithm|
+Given input (''Q'', Σ, ''δ'', ''q''{{sub|0}}, ''F''):
+{{Ordered list|
+| Place a mark on state ''q''{{sub|0}}.
+| Repeat the following until no previously unmarked states are marked.
+{{Ordered list|list_style_type=upper-alpha|For each marked node ''q'' and ''a'' in Σ, mark ''δ''(''q,a'').}}
+| Return the set of marked states.
+}}
+}}
+Assuming an efficient implementation of state sets and operations, this algorithm can be implemented with time complexity <math>O(n+m)</math>, where <math>n</math> is the number of states and <math>m</math> is the number of transitions of the input automaton.
+
+Let {{mvar|R}} be the set of reachable states. The set of unreachable states is <math>Q \setminus R</math>, that is, the states unmarked by the algorithm. Unreachable states can be removed from the DFA without affecting the language that it accepts.
+
+==Nondistinguishable states==
+
+The following algorithms present various approaches to merging nondistinguishable states.
+
+===Hopcroft's algorithm===
+One algorithm for merging the nondistinguishable states of a DFA, due to {{harvtxt|Hopcroft|1971}}, is based on [[partition refinement]], partitioning the DFA states into groups by their behavior. These groups represent [[equivalence class]]es of the [[Myhill–Nerode theorem|Nerode congruence]], whereby every two states are equivalent if they have the same behavior for every input sequence. That is, for every two states {{math|''p''<sub>1</sub>}} and {{math|''p''<sub>2</sub>}} that belong to the same block of the partition {{mvar|P}}, and every input word {{mvar|w}}, the transitions determined by {{mvar|w}} should always take states {{math|''p''<sub>1</sub>}} and {{math|''p''<sub>2</sub>}} to either states that both accept or states that both reject. It should not be possible for {{mvar|w}} to take {{math|''p''<sub>1</sub>}} to an accepting state and {{math|''p''<sub>2</sub>}} to a rejecting state or vice versa.
+
+The following [[pseudocode]] describes the form of the algorithm as given by Xu.<ref>{{cite web |last1=Xu |first1=Yingjie |title=Describing an n log n algorithm for minimizing states in deterministic finite automaton |page=5 |date=2009|s2cid=14461400 |url=https://www.irif.fr/~carton/Enseignement/Complexite/ENS/Redaction/2008-2009/yingjie.xu.pdf}}</ref>  Alternative forms have also been presented.<ref>{{harvtxt|Knuutila|2001}}</ref><ref name="bbcf">{{harvtxt|Berstel|Boasson|Carton|Fagnot|2010}}.</ref>
+
+<syntaxhighlight lang="ocaml">
+P := {F, Q \ F}
+W := {F, Q \ F}
+
+while (W is not empty) do
+    choose and remove a set A from W
+    for each c in Σ do
+        let X be the set of states for which a transition on c leads to a state in A
+        for each set Y in P for which X ∩ Y is nonempty and Y \ X is nonempty do
+            replace Y in P by the two sets X ∩ Y and Y \ X
+            if Y is in W
+                replace Y in W by the same two sets
+            else
+                if |X ∩ Y| <= |Y \ X|
+                    add X ∩ Y to W
+                else
+                    add Y \ X to W
+</syntaxhighlight>
+
+The algorithm starts with a partition that is too coarse: every pair of states that are equivalent according to the Nerode congruence belong to the same set in the partition, but pairs that are inequivalent might also belong to the same set. It gradually refines the partition into a larger number of smaller sets, at each step splitting sets of states into pairs of subsets that are necessarily inequivalent.
+The initial partition is a separation of the states into two subsets of states that clearly do not have the same behavior as each other: the accepting states and the rejecting states. The algorithm then repeatedly chooses a set {{mvar|A}} from the current partition and an input symbol {{mvar|c}}, and splits each of the sets of the partition into two (possibly empty) subsets: the subset of states that lead to {{mvar|A}} on input symbol {{mvar|c}}, and the subset of states that do not lead to {{mvar|A}}. Since {{mvar|A}} is already known to have different behavior than the other sets of the partition, the subsets that lead to {{mvar|A}} also have different behavior than the subsets that do not lead to {{mvar|A}}. When no more splits of this type can be found, the algorithm terminates.
+
+'''Lemma'''. Given a fixed character ''c'' and an equivalence class ''Y'' that splits into equivalence classes ''B'' and ''C'', only one of ''B'' or ''C'' is necessary to refine the whole partition.<ref>Based on Corollary 10 of {{harvtxt|Knuutila|2001}}</ref>
+
+Example: Suppose we have an equivalence class ''Y'' that splits into equivalence classes ''B'' and ''C''. Suppose we also have classes ''D'', ''E'', and ''F''; ''D'' and ''E'' have states with transitions into ''B'' on character ''c'', while ''F'' has transitions into ''C'' on character ''c''. By the Lemma, we can choose either ''B'' or ''C'' as the distinguisher, let's say ''B''. Then the states of ''D'' and ''E'' are split by their transitions into ''B''. But ''F'', which doesn't point into ''B'', simply doesn't split during the current iteration of the algorithm; it will be refined by other distinguisher(s).
+
+'''Observation'''. All of ''B'' or ''C'' is necessary to split referring classes like ''D'', ''E'', and ''F'' correctly—subsets won't do.
+
+The purpose of the outermost <code>if</code> statement (<code>if Y is in W</code>) is to patch up ''W'', the set of distinguishers. We see in the previous statement in the algorithm that ''Y'' has just been split. If ''Y'' is in ''W'', it has just become obsolete as a means to split classes in future iterations. So ''Y'' must be replaced by both splits because of the Observation above. If ''Y'' is not in ''W'', however, only one of the two splits, not both, needs to be added to ''W'' because of the Lemma above. Choosing the smaller of the two splits guarantees that the new addition to ''W'' is no more than half the size of ''Y''; this is the core of the Hopcroft algorithm: how it gets its speed, as explained in the next paragraph.
+
+The [[worst case]] running time of this algorithm is {{math|''O''(''ns'' log ''n'')}}, where {{mvar|n}} is the number of states and {{mvar|s}} is the size of the alphabet. This bound follows from the fact that, for each of the {{math|''ns''}} transitions of the automaton, the sets drawn from {{mvar|Q}} that contain the target state of the transition have sizes that decrease relative to each other by a factor of two or more, so each transition participates in {{math|''O''(log ''n'')}} of the splitting steps in the algorithm. The [[partition refinement]] data structure allows each splitting step to be performed in time proportional to the number of transitions that participate in it.<ref>{{harvtxt|Hopcroft|1971}}; {{harvtxt|Aho|Hopcroft|Ullman|1974}}</ref> This remains the most efficient algorithm known for solving the problem, and for certain distributions of inputs its [[average-case complexity]] is even better, {{math|''O''(''n'' log log ''n'')}}.<ref name="bbcf">{{harvtxt|Berstel|Boasson|Carton|Fagnot|2010}}.</ref>
+
+Once Hopcroft's algorithm has been used to group the states of the input DFA into equivalence classes, the minimum DFA can be constructed by forming one state for each equivalence class. If {{mvar|S}} is a set of states in {{mvar|P}}, {{mvar|s}} is a state in {{mvar|S}}, and {{mvar|c}} is an input character, then the transition in the minimum DFA from the state for {{mvar|S}}, on input  {{mvar|c}}, goes to the set containing the state that the input automaton would go to from state {{mvar|s}} on input {{mvar|c}}. The initial state of the minimum DFA is the one containing the initial state of the input DFA, and the accepting states of the minimum DFA are the ones whose members are accepting states of the input DFA.
+
+===Moore's algorithm===
+
+Moore's algorithm for DFA minimization is due to {{harvs|first=Edward F.|last=Moore|authorlink=Edward F. Moore|year=1956|txt}}. Like Hopcroft's algorithm, it maintains a partition that starts off separating the accepting from the rejecting states, and repeatedly refines the partition until no more refinements can be made. At each step, it replaces the current partition with the [[Partition of a set#Refinement of partitions|coarsest common refinement]] of {{math|''s'' + 1}} partitions, one of which is the current one and the rest of which are the preimages of the current partition under the transition functions for each of the input symbols. The algorithm terminates when this replacement does not change the current partition. Its worst-case time complexity is {{math|''O''(''n''<sup>2</sup>''s'')}}: each step of the algorithm may be performed in time {{math|''O''(''ns'')}} using a variant of [[radix sort]] to reorder the states so that states in the same set of the new partition are consecutive in the ordering, and there are at most {{mvar|n}} steps since each one but the last increases the number of sets in the partition. The instances of the DFA minimization problem that cause the worst-case behavior are the same as for Hopcroft's algorithm. The number of steps that the algorithm performs can be much smaller than {{mvar|n}}, so on average (for constant {{mvar|s}}) its performance is {{math|''O''(''n'' log ''n'')}} or even {{math|''O''(''n'' log log ''n'')}} depending on the [[probability distribution|random distribution]] on automata chosen to model the algorithm's average-case behavior.<ref name="bbcf"/>{{sfnp|David|2012}}
+
+===Brzozowski's algorithm===
+Reversing the transitions of a [[non-deterministic finite automaton]] (NFA) <math>M</math> and switching initial and final states<ref group=note>In case there are several final states in ''M'', we either must allow multiple initial states in the reversal of ''M''; or add an extra state with ε-transitions to all the initial states, and make only this new state initial.</ref> produces an NFA <math>M^R</math> for the reversal of the original language. Converting this NFA to a DFA using the standard [[powerset construction]] (keeping only the reachable states of the converted DFA) leads to a DFA <math>M^R_D</math> for the same reversed language. As {{harvtxt|Brzozowski|1963}} observed, repeating this reversal and determinization a second time, again keeping only reachable states, produces the minimal DFA for the original language.
+
+The intuition behind the algorithm is this: determinizing the reverse automaton merges states that are nondistinguishable in the original automaton, but may produce several accepting states. In such case, when we reverse the automaton for the second time, these accepting states become initial, and thus the automaton will not be deterministic due to having multiple initial states. That is why we need to determinize it again, obtaining the minimal DFA.
+
+====Proof of correctness====
+
+After we determinize <math>M^R</math> to obtain <math>M^R_D</math>, we reverse this <math>M^R_D</math> to obtain <math>(M^R_D)^R = M'</math>. Now <math>M'</math> recognises the same language as <math>M</math>, but there's one important difference: there are no two states in <math>M'</math> from which we can accept the same word. This follows from <math>M^R_D</math> being deterministic, viz. there are no two states in <math>M^R_D</math> that we can reach from the initial state through the same word. The determinization of <math>M'</math> then creates powerstates (sets of states of <math>M'</math>), where every two powerstates <math>\mathcal{R}, \mathcal{S}</math> differ ‒ naturally ‒ in at least one state <math>q</math> of <math>M'</math>. Assume <math>q \in \mathcal{R}</math> and <math>q \not\in \mathcal{S}</math>; then <math>q</math> contributes at least one word<ref group=note>Recall there are no dead states in ''M''<nowiki>'</nowiki>; thus, at least one word is accepted from each state.</ref> to the language of <math>\mathcal{R}</math>,<ref group=note>Language of a state is the set of words accepted from that state.</ref> which couldn't possibly be present in <math>\mathcal{S}</math>, since this word is unique to <math>q</math> (no other state accepts it). We see that this holds for each pair of powerstates, and thus each powerstate is distinguishable from every other powerstate. Therefore, after determinization of <math>M'</math>, we have a DFA with no indistinguishable or unreachable states; hence, the minimal DFA <math>\overline{M}</math> for the original <math>M</math>.
+
+====Complexity====
+
+The [[worst-case complexity]] of Brzozowski's algorithm is exponential in the number of states of the input automaton. This holds regardless of whether the input is a NFA or a DFA. In the case of DFA, the exponential explosion can happen during determinization of the reversal of the input automaton;<ref group=note>For instance, the language of binary strings whose {{mvar|n}}th symbol is a one requires only {{math|''n'' + 1}} states, but its reversal requires {{math|2<sup>''n''</sup>}} states. {{harvtxt|Leiss|1981}} provides a ternary {{mvar|n}}-state DFA whose reversal requires {{math|2<sup>''n''</sup>}} states, the maximum possible. For additional examples and the observation of the connection between these examples and the worst-case analysis of Brzozowski's algorithm, see {{harvtxt|Câmpeanu|Culik|Salomaa|Yu|2001}}.</ref> in the case of NFA, it can also happen during the initial determinization of the input automaton.<ref group=note>Exponential explosion will happen at most once, not in both determinizations. That is, the algorithm is at worst exponential, not doubly-exponential.</ref> However, the algorithm frequently performs better than this worst case would suggest.<ref name="bbcf"/>
+
+==NFA minimization==
+{{Main|NFA minimization}}
+While the above procedures work for DFAs, the method of partitioning does not work for [[non-deterministic finite automaton|non-deterministic finite automata]] (NFAs).<ref>{{harvtxt|Hopcroft|Motwani|Ullman|2001}}, Section 4.4, Figure labeled "Minimizing the States of an NFA", p. 163.</ref> While an exhaustive search may minimize an NFA, there is no [[polynomial-time algorithm]] to minimize general NFAs unless {{nowrap|[[P (complexity)|P]] {{=}} [[PSPACE]]}}, an unsolved [[conjecture]] in [[computational complexity theory]] that is widely believed to be false. However, there are methods of [[NFA minimization]] that may be more efficient than brute force search.{{sfnp|Kameda|Weiner|1970}}
+
+For a given language, several structurally different (i.e. non-[[Nondeterministic finite automaton#Isomorphism|isomorphic]]) state-minimal NFA may exist. They may have strictly less states than the unique minimal DFA (example [[:File:NFA and blown-up equivalent DFA 01.svg|here]]).
+
+==See also==
+* [[State encoding for low power]]
+
+==Notes==
+{{reflist}}
+
+{{reflist|group=note}}
+
+==References==
+*{{citation|pages=157–162|chapter=4.13 Partitioning|title=The Design and Analysis of Computer Algorithms|first1=Alfred V.|last1=Aho|author1-link=Alfred Aho|first2=John E.|last2=Hopcroft|author2-link=John Hopcroft|first3=Jeffrey D.|last3=Ullman|author3-link=Jeffrey D. Ullman|publisher=Addison-Wesley|year=1974}}.
+*{{citation | first1=Jean | last1=Berstel | first2=Luc | last2=Boasson | first3=Olivier | last3=Carton | first4=Isabelle | last4=Fagnot | contribution=Minimization of Automata | arxiv=1010.5318 | year=2010 | title=Automata: from Mathematics to Applications|publisher=[[European Mathematical Society]] | bibcode=2010arXiv1010.5318B }}
+*{{citation
+ | last = Brzozowski | first = J. A.
+ | author-link=Janusz Brzozowski (computer scientist)
+ | contribution = Canonical regular expressions and minimal state graphs for definite events
+ | mr = 0175719
+ | pages = 529–561
+ | publisher = Polytechnic Press of Polytechnic Inst. of Brooklyn, Brooklyn, N.Y.
+ | title = Proc. Sympos. Math. Theory of Automata (New York, 1962)
+ | year = 1963}}.
+*{{citation
+ | last1 = Câmpeanu | first1 = Cezar
+ | last2 = Culik | first2 = Karel II
+ | last3 = Salomaa | first3 = Kai
+ | last4 = Yu | first4 = Sheng
+ | title = Automata Implementation
+ | contribution = State Complexity of Basic Operations on Finite Languages
+ | doi = 10.1007/3-540-45526-4_6
+ | pages = 60–70
+ | publisher = Springer-Verlag
+ | series = Lecture Notes in Computer Science
+ | volume = 2214
+ | year = 2001| isbn = 978-3-540-42812-1
+ }}.
+*{{citation |title=Average complexity of Moore's and Hopcroft's algorithms |first=Julien |last=David |year=2012 |journal=[[Theoretical Computer Science (journal)|Theoretical Computer Science]]|volume=417 |pages=50–65 |doi=10.1016/j.tcs.2011.10.011|doi-access=free }}.
+*{{citation
+ | last = Hopcroft | first = John | author-link = John Hopcroft
+ | contribution = An {{math|''n'' log ''n''}} algorithm for minimizing states in a finite automaton
+ | mr = 0403320
+ | location = New York
+ | pages = 189–196
+ | publisher = Academic Press
+ | title = Theory of machines and computations (Proc. Internat. Sympos., Technion, Haifa, 1971)
+ | year = 1971}}. See also preliminary version, [http://i.stanford.edu/pub/cstr/reports/cs/tr/71/190/CS-TR-71-190.pdf Technical Report STAN-CS-71-190], Stanford University, Computer Science Department, January 1971.
+*{{citation | isbn=978-0-201-02988-8 | first1=John E. | last1=Hopcroft | first2=Jeffrey D. | last2=Ullman | title=Introduction to Automata Theory, Languages, and Computation | location=Reading/MA | publisher=Addison-Wesley | year=1979 | url-access=registration | url=https://archive.org/details/introductiontoau00hopc }} 
+*{{citation|title=Introduction to Automata Theory, Languages, and Computation | last1 = Hopcroft | first1 = John E. | author1-link = John Hopcroft | last2 = Motwani | first2 = Rajeev | author2-link = Rajeev Motwani | last3 = Ullman | first3 = Jeffrey D. | author3-link = Jeffrey D. Ullman | publisher = Addison-Wesley | edition = 2nd | year = 2001| title-link = Introduction to Automata Theory, Languages, and Computation }}.
+*{{citation
+ | last1 = Kameda | first1 = Tsunehiko
+ | last2 = Weiner | first2 = Peter
+ | doi = 10.1109/T-C.1970.222994
+ | issue = 7
+ | pages = 617–627
+ | journal = IEEE Transactions on Computers
+ | title = On the state minimization of nondeterministic finite automata
+ | volume = 100
+ | year = 1970| bibcode = 1970ITCmp.100..617K
+ | s2cid = 31188224
+ }}.
+*{{citation
+ | last = Knuutila | first = Timo
+ | doi = 10.1016/S0304-3975(99)00150-4
+ | issue = 1–2
+ | journal = Theoretical Computer Science
+ | mr = 1795249
+ | pages = 333–363
+ | title = Re-describing an algorithm by Hopcroft
+ | volume = 250
+ | year = 2001| doi-access = 
+ }}.
+*{{citation
+ | last = Leiss | first = Ernst
+ | doi = 10.1016/S0304-3975(81)80005-9
+ | mr = 603263
+ | issue = 3
+ | journal = Theoretical Computer Science
+ | pages = 323–330
+ | title = Succinct representation of regular languages by Boolean automata
+ | volume = 13
+ | year = 1981| doi-access = free
+ }}.
+*{{citation | last = Leiss | first = Ernst | title=Succinct representation of regular languages by Boolean automata II | journal=Theoretical Computer Science | volume=38 | pages=133–136 | year=1985 | doi=10.1016/0304-3975(85)90215-4| doi-access= }} 
+*{{citation
+ | last = Moore | first = Edward F. | author-link = Edward F. Moore
+ | contribution = Gedanken-experiments on sequential machines
+ | mr = 0078059
+ | location = Princeton, N. J.
+ | pages = 129–153
+ | publisher = Princeton University Press
+ | series = Annals of mathematics studies, no. 34
+ | title = Automata studies
+ | year = 1956}}.
+* {{citation | last=Sakarovitch | first=Jacques | title=Elements of automata theory | others=Translated from French by Reuben Thomas | publisher=[[Cambridge University Press]] | year=2009 | isbn=978-0-521-84425-3 | zbl=1188.68177 }}
+* {{citation |last=Sipser |first=Michael |title=Introduction to the Theory of Computation |url=https://cs.brown.edu/courses/csci1810/fall-2023/resources/ch2_readings/Sipser_Introduction.to.the.Theory.of.Computation.3E.pdf |publisher=[[Course Technology]] |year=2013}}
+
+== External links ==
+* [https://web.archive.org/web/20150621004621/http://www8.cs.umu.se/kurser/TDBC92/VT06/final/1.pdf DFA minimization using the Myhill–Nerode theorem]
+
+{{DEFAULTSORT:Dfa Minimization}}
+[[Category:Finite-state machines]]
+[[Category:Articles with example pseudocode]]

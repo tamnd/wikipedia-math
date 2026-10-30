@@ -1,0 +1,97 @@
+<!-- wikipedia: en
+     page: 46650501
+     title: Master Password (algorithm)
+     revision: 1251818978
+     timestamp: 2024-10-18T07:18:06Z
+     history: https://en.wikipedia.org/w/index.php?curid=46650501&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1251818978 -->
+{{Short description|Algorithm for creating unique passwords}}
+{{Infobox software
+| name                   = Master Password
+| logo                   = <!-- Image name is enough -->
+| logo alt               = 
+| screenshot             = <!-- Image name is enough -->
+| caption                = 
+| screenshot alt         = 
+| collapsible            = 
+| author                 = Maarten Billemont
+| developer              = 
+| released               = {{Start date and age|2012|6|15}}
+| discontinued           = 
+| latest release version = 2.3
+| latest release date    = {{Start date and age|2015|4|19}}
+| latest preview version = 
+| latest preview date    = <!-- {{Start date and age|YYYY|MM|DD|df=yes/no}} -->
+| repo                   = {{url|https://www.gitlab.com/MasterPassword/MasterPassword}}
+| programming language   = [[Java (programming language)|Java]], [[C (programming language)|C]], [[JavaScript]]
+| operating system       = [[Microsoft Windows]] and [[Unix-like]], including [[OS X]], [[iOS]] and [[Android (operating system)|Android]]
+| platform               = 
+| size                   = 
+| language               = English
+| language count         = <!-- Number only -->
+| language footnote      = 
+| genre                  = [[Random password generator|Password generator]]
+| license                = [[GNU General Public License]]
+| website                = {{URL|https://www.masterpassword.app/}}
+| standard               = 
+| AsOf                   = 
+}}
+
+'''Master Password''' is a type of [[algorithm]] first implemented by [[Maarten Billemont]] for creating unique [[password]]s in a reproducible manner. It differs from traditional [[password manager]]s in that the passwords are not stored on disk or in the cloud, but are regenerated every time from information entered by the user: Their name, a [[master password]], and a unique identifier for the service the password is intended for (usually the URL).<ref name=":0" />
+
+By not storing the passwords anywhere, this approach makes it harder for attackers to steal or intercept them. It also removes the need for synchronization between devices, backups of potential password databases and risks of [[data breach]]. This is sometimes called ''sync-less password management''.
+
+== Algorithm ==
+Billemont's implementation involves the following parameters:<ref name=":0">{{cite web |url=http://masterpasswordapp.com/algorithm.html |title=The Master Password Algorithm |last=Billemont |first=Maarten |access-date=8 May 2015|archive-url=https://web.archive.org/web/20171209003913/http://masterpasswordapp.com/algorithm.html|archive-date=December 9, 2017}}</ref>
+
+* '''name''': The username, used as a [[Salt (cryptography)|salt]]. The user's full name is chosen as it provides a sufficiently high level of entropy while being unlikely to be forgotten.
+* '''master_password''': The secret for generating the master key.
+* '''site_name''': A unique name for the service the password is intended for. Usually the bare domain name.
+* '''counter''': An integer that can be incremented when the service requests a new password. By default, it is 1.
+* '''password_type''': The password type defines the length and the constitution of the resulting password, see below.
+
+=== Master key generation ===
+In Billemont's implementation, the master key is a global 64-byte secret key generated from the user's secret [[master password]] and salted by their full name. The salt is used to avoid attacks based on [[rainbow tables]]. The [[scrypt]] algorithm, an intentionally slow [[key derivation function]], is used for generating the master key to make a [[brute-force attack]] infeasible.
+
+<syntaxhighlight lang="python">
+salt = "com.lyndir.masterpassword" + length(name) + name
+master_key = scrypt(master_password, salt, 32768, 8, 2, 64)
+</syntaxhighlight>
+
+=== Template seed generation ===
+The template seed is a site-specific secret in binary form, generated from the master key, the site name and the counter using the [[HMAC-SHA256]] algorithm. It is later converted to a character string using the password templates. The template seed makes every password unique to the website and to the user.
+
+<syntaxhighlight lang="python">
+seed = hmac_sha256(master_key, "com.lyndir.masterpassword" + length(site_name) + site_name + counter)
+</syntaxhighlight>
+
+=== Password generation ===
+The binary template seed is then converted to one of six available password types. The default type is the ''Maximum Security Password'', others can be selected if the service's password policy does not allow passwords of that format:
+
+* '''Maximum Security Password''' (20 [[ASCII printable characters]])
+* '''Long Password''' (14 ASCII printable characters)
+* '''Medium Password''' (8 ASCII printable characters)
+* '''Short Password''' (4 ASCII printable characters)
+* '''Basic Password''' (8 alphanumeric characters)
+* '''PIN''' (4 digits)
+
+== Implementations ==
+Billemont also created multiple [[free software]] implementations of the Master Password algorithm, licensed under the [[GPLv3]].:<ref>{{Cite web|url = https://github.com/Lyndir/MasterPassword/blob/master/LICENSE|title = License file of the MasterPassword repository|date = |accessdate = 15 May 2015|website = [[GitHub]]|publisher = |last = |first = }}</ref>
+
+* An app for [[iOS]]. The iOS implementation was first released in 2012.<ref>{{Cite web|url = https://github.com/Lyndir/MasterPassword/releases/tag/1.0.0|title = Release 1.0.0|date = |accessdate = 15 May 2015|website = [[GitHub]]|publisher = |last = Billemont|first = Maarten}}</ref>
+* An app for [[Mac OS X]]
+* An app for [[Android (operating system)|Android]]
+* A Graphical desktop application written in [[Java (programming language)|Java]]
+* A [[command-line application]] written in [[C (programming language)|C]]
+* A [[browser plugin]] for [[Firefox]] and [[Chromium (web browser)|Chromium]]-based browsers<ref>[https://addons.mozilla.org/nl/firefox/addon/masterpassword-firefox/?src=search Masterpassword's Firefox add-on]</ref><ref>[https://chrome.google.com/webstore/detail/masterpassword-for-chrome/hifbblnjfcimjnlhibannjoclibgedmd Masterpassword's Chrome plugin]</ref>
+* A web client written in [[JavaScript]].<ref>{{Cite web|url = http://masterpasswordapp.com/|title = Master Password Homepage|date = |accessdate = 15 May 2015|website = |publisher = |last = Billemont|first = Maarten}}</ref>
+
+== References ==
+{{reflist}}
+
+== External links ==
+{{Official website|http://masterpasswordapp.com/}}
+
+[[Category:Cryptographic algorithms]]
+[[Category:Free security software]]

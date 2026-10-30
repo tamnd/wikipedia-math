@@ -1,0 +1,216 @@
+<!-- wikipedia: en
+     page: 16577694
+     title: Alpha beta filter
+     revision: 1373376323
+     timestamp: 2026-09-05T17:12:26Z
+     history: https://en.wikipedia.org/w/index.php?curid=16577694&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373376323 -->
+{{Short description|Predictive filter}}
+{{Confusing|date=February 2009}}
+An '''alpha beta filter''' (also called alpha-beta filter, f-g filter or g-h filter<ref name="Brookner">{{cite book |first=Eli |last=Brookner |title=Tracking and Kalman Filtering Made Easy |language=en |publisher=Wiley-Interscience |edition=1st |date=April 1998 |doi=10.1002/0471224197 |isbn=978-0-471-18407-2 |url=https://archive.org/details/trackingkalmanfi0000broo |url-access=limited}}</ref>) is a simplified form of [[State observer|observer]] for estimation, data smoothing and control applications. It is closely related to [[Kalman filter]]s and to linear state observers used in [[control theory]]. Its principal advantage is that it does not require a detailed system model.
+
+==Filter equations==
+An alpha beta filter presumes that a system is adequately approximated by a model having two internal state variables, where the first variable is obtained by integrating the value of the second over time. Measured system output values correspond to observations of the first [[state variable]], plus disturbances. This very low order approximation is adequate for many simple systems, for example, mechanical systems where position is obtained as the time integral of velocity. Based on a mechanical system analogy, the two state variables can be called ''position x'' and ''velocity v''. Assuming that velocity remains approximately constant over the small time interval ''ΔT'' between measurements, the position state is projected forward to predict its value at the next [[sampling (signal processing)|sampling]] time using equation 1.
+
+:<math> \text{(1)} \quad \hat{\textbf{x}}_{k} \leftarrow \hat{\textbf{x}}_{k-1} + \Delta \textrm{T}\ \textbf{ } \hat{\textbf{v}}_{k-1} </math>
+
+Since velocity variable ''v'' is presumed constant, its projected value at the next sampling time equals the current value.
+
+:<math> \text{(2)} \quad \hat{\textbf{v}}_{k} \leftarrow  \hat{\textbf{v}}_{k-1}  </math>
+
+If additional information is known about how a driving function will change the ''v'' state during each time interval, equation 2 can be modified to include it.
+
+The output measurement is expected to deviate from the prediction because of noise and dynamic effects not included in the simplified dynamic model. This prediction error ''r'' is also called the ''[[residual (statistics)|residual]]'' or ''[[innovation (signal processing)|innovation]]'', based on statistical or Kalman filtering interpretations
+
+:<math> \text{(3)} \quad \hat{\textbf{r}}_{k} \leftarrow \textbf{x}_{k} - \hat{\textbf{x}}_{k} </math>
+
+Suppose that residual ''r'' is positive. This could result because the previous ''x'' estimate was low, the previous ''v'' was low, or some combination of the two. The alpha beta filter takes selected ''alpha'' and ''beta'' constants (from which the filter gets its name), uses ''alpha'' times the deviation ''r'' to correct the position estimate, and uses ''beta'' times the deviation ''r'' to correct the velocity estimate. An extra ''ΔT'' factor conventionally serves to normalize magnitudes of the multipliers.
+
+:<math> \text{(4)} \quad \hat{\textbf{x}}_{k} \leftarrow \hat{\textbf{x}}_{k} + (\alpha)\ \hat{\textbf{r}}_{k} </math>
+
+:<math> \text{(5)}\quad \hat{\textbf{v}}_{k} \leftarrow \hat{\textbf{v}}_{k} + ( \beta / [ \Delta \textrm{T} ] )\ \hat{\textbf{r}}_{k} </math>
+
+The corrections can be considered small steps along an estimate of the [[gradient]] direction. As these adjustments accumulate, error in the state estimates is reduced. For convergence and stability, the values of the ''alpha'' and ''beta'' multipliers should be positive and small:<ref>{{cite tech report |first=C. Frank |last=Asquith |title=Weight selection in first-order linear filters |language=en |publisher=Army Intertial Guidance and Control Laboratory Center |location=Redstone Arsenal, Alabama |year=1969 |doi=10.21236/AD0859332 |number=AD 859332 |url=https://archive.org/download/DTIC_AD0859332/DTIC_AD0859332.pdf}}</ref>
+
+:<math> \quad 0 < \alpha < 1 </math>
+:<math> \quad 0 < \beta \leq 2 </math>
+
+Noise is suppressed only if <math>0 < \beta < 1</math>, otherwise the noise is amplified.
+
+Values of ''alpha'' and ''beta'' typically are adjusted experimentally. In general, larger ''alpha'' and ''beta'' gains tend to produce faster response for tracking transient changes, while smaller ''alpha'' and ''beta'' gains reduce the level of noise in the state estimates. If a good balance between accurate tracking and noise reduction is found, and the algorithm is effective, filtered estimates are more accurate than the direct measurements.  This motivates calling the alpha-beta process a ''filter''.
+
+===Algorithm summary===
+'''Initialize.'''  
+# Set the initial values of state estimates ''x'' and ''v'', using prior information or additional measurements; otherwise, set the initial state values to zero. 
+# Select values of the ''alpha'' and ''beta'' correction gains.
+
+'''Update.''' Repeat for each time step ΔT:
+# Project state estimates x and v using equations 1 and 2
+# Obtain a current measurement of the output value
+# Compute the residual r using equation 3
+# Correct the state estimates using equations 4 and 5
+# Send updated x and optionally v as the filter outputs
+
+==Sample program==
+Alpha Beta filter can be implemented in [[C (programming language)|C]]<ref name="ReferenceA">{{cite tech report |title=Tremor Cancellation in Handheld Microsurgical Devices |number=TC83  |first1=Gaurav|last1=Mittal |first2=Deepansh |last2=Sehgal |first3=Harsimran Jit |last3=Singh |publisher=[[Punjab Engineering College]]}}</ref> as follows:
+
+<syntaxhighlight lang="c">
+#include <stdio.h>
+#include <stdlib.h>
+
+int main()
+{
+	float dt = 0.5;
+	float xk_1 = 0, vk_1 = 0, a = 0.85, b = 0.005;
+
+	float xk, vk, rk;
+	float xm;
+
+	while (1)
+	{
+		xm = rand() % 100; // input signal
+
+		xk = xk_1 + (vk_1 * dt);
+		vk = vk_1;
+
+		rk = xm - xk;
+
+		xk += a * rk;
+		vk += (b * rk) / dt;
+
+		xk_1 = xk;
+		vk_1 = vk;
+
+		printf("%f \t %f\n", xm, xk_1);
+		sleep(1);
+	}
+} 
+</syntaxhighlight>
+
+===Result===
+The following images depict the outcome of the above program in graphical format. In each image, the blue trace is the input signal; the output is red in the first image, yellow in the second, and green in the third. For the first two images, the output signal is visibly smoother than the input signal and has not as extreme spikes as seen in the input. Also, the output moves in an estimate of [[gradient]] direction of input.
+
+The higher the alpha parameter, the higher is the effect of input {{var|x}} and the less damping is seen. A low value of beta is effective in controlling sudden surges in velocity. Also, as alpha increases beyond unity, the output becomes rougher and more uneven than the input.<ref name="ReferenceA"/>
+
+{| cellpadding="2" style="border: 1px solid darkgray;"
+|- border="0"
+| [[File:alpha beta filter 0.85-0.005.jpg|320px|left|thumb|Results for alpha = 0.85 and beta = 0.005]]
+| [[File:alpha beta filter 0.5-0.1.jpg|320px|center|thumb|Results for alpha = 0.5 and beta = 0.1]]
+| [[File:alpha beta filter 1.5-.5.jpg|320px|right|thumb|Results for alpha = 1.5 and beta = 0.5]]
+|- align="center"
+|
+|}
+
+==Relationship to general state observers==
+More general state observers, such as the [[Luenberger observer]] for linear control systems, use a rigorous system model.  Linear observers use a gain matrix to determine state estimate corrections from multiple deviations between measured variables and predicted outputs that are linear combinations of state variables. In the case of alpha beta filters, this gain matrix reduces to two terms. There is no general theory for determining the best observer gain terms, and typically gains are adjusted experimentally for both.
+
+The linear Luenberger [[state observer|observer equations]] reduce to the alpha beta filter by applying the following specializations and simplifications.
+
+* The discrete state transition matrix '''A''' is a square matrix of dimension 2, with all [[main diagonal]] terms equal to 1, and the first super-diagonal terms equal to ''ΔT''.
+* The observation equation matrix '''C''' has one row that selects the value of the first state variable for output.
+* The filter correction gain matrix '''L''' has one column containing the alpha and beta gain values.
+* Any known driving signal for the second state term is represented as part of the input signal vector '''u''', otherwise the '''u''' vector is set to zero.
+* Input coupling matrix '''B''' has a non-zero gain term as its last element if vector '''u''' is non-zero.
+
+==Relationship to Kalman filters==
+A [[Kalman filter]] estimates the values of state variables and corrects them in a manner similar to an alpha beta filter or a state observer. However, a Kalman filter does this in a much more formal and rigorous manner. The principal differences between Kalman filters and alpha beta filters are the following.
+
+* Like state observers, Kalman filters use a detailed dynamic system model that is not restricted to two state variables.
+* Like state observers, Kalman filters in general use multiple observed variables to correct state variable estimates, and these do not have to be direct measurements of individual system states.
+* A Kalman filter uses covariance noise models for states and observations. Using these, a time-dependent estimate of state covariance is updated automatically, and from this the [[Kalman gain]] matrix terms are calculated. Alpha beta filter gains are manually selected and static.
+* For certain classes of problems, a Kalman filter is [[Wiener filter|Wiener optimal]], while alpha beta filtering is in general suboptimal.
+
+A Kalman filter designed to track a moving object using a constant-velocity target dynamics (process) model (i.e., constant velocity between measurement updates) with process noise covariance and measurement covariance held constant will converge to the same structure as an alpha-beta filter.  However, a Kalman filter's gain is computed recursively at each time step using the assumed process and measurement error [[statistic]]s, whereas the alpha-beta's gain is computed ad hoc.
+
+===Choice of parameters===
+The alpha-beta filter becomes a [[steady-state]] Kalman filter if filter parameters are calculated from the sampling interval <math>T</math>, the process variance <math>\sigma_w^2</math> and the noise variance <math>\sigma_v^2</math> like this<ref name="Kalata">{{cite journal |first=Paul R. |last=Kalata |title=The tracking index: A generalized parameter for α-β and α-β-γ target trackers |journal=IEEE Transactions on Aerospace and Electronic Systems |language=en |volume=AES-20 |issue=2 |pages=174–181 |date=March 1984 |doi=10.1109/TAES.1984.310438 |issn=0018-9251}}</ref><ref name="GrayMurray">{{cite journal |first1=J. E. |last1=Gray  |first2=W. J.|last2=Murray |title=A derivation of an analytic expression for the tracking index for the alpha-beta-gamma filter |journal=IEEE Trans. on Aerospace and Electronic Systems |language=en |volume=29 |pages=1064–1065 |year=1993 |doi=10.1109/7.220956 |issn=0018-9251 |url=https://www.researchgate.net/publication/3002144_A_derivation_of_an_analytic_expression_for_the_tracking_index_for_the_alpha-beta-gamma_filter}}</ref>
+
+:<math>\lambda = \frac{\sigma_w T^2}{\sigma_v}</math>
+:<math>r = \frac{4 + \lambda - \sqrt{8\lambda + \lambda^2}}{4}</math>
+:<math>\alpha = 1 - r^2</math>
+:<math>\beta = 2\left(2 - \alpha\right) - 4\sqrt{1 - \alpha}</math>
+
+This choice of filter parameters minimizes the mean square error.
+
+The steady state innovation variance  <math>s</math> can be expressed as:
+
+:<math>s = \frac{\sigma_v^2}{1-\alpha^2}</math>
+
+==Variations==
+===Alpha filter===
+A simpler member of this family of filters is the alpha filter which observes only one state:
+
+:<math>
+\hat{\textbf{x}}_{k} \leftarrow \hat{\textbf{x}}_{k} + (\alpha)\ \hat{\textbf{r}}_{k}
+</math>
+
+with the optimal parameter calculated like this:<ref name="Kalata" />
+
+:<math>
+\begin{align}
+\lambda & = \frac{\sigma_w T^2}{\sigma_v} \\
+\alpha & = \frac{-\lambda^2 + \sqrt{\lambda^4 + 16\lambda^2}}{8}
+\end{align}
+</math>
+
+This calculation is identical for a [[moving average]] and a [[low-pass filter]]. [[Exponential smoothing]] is mathematically identical to the purposed Alpha filter.
+
+===Alpha beta gamma filter===
+When the second state variable varies quickly, i.e. when the [[acceleration]] of the first state variable is large, it can be useful to extend the state variables of the alpha beta filter by one level. In this extension, the second state variable ''v'' is obtained from integrating a third ''acceleration'' state, analogous to the way that the first state is obtained by integrating the second. An equation for the ''a'' state is added to the equation system.  A third multiplier, ''gamma'', is selected for applying corrections to the new ''a'' state estimates. This yields the ''alpha beta gamma'' update equations.<ref name="Brookner" />
+
+:<math> \hat{\textbf{x}}_{k} \leftarrow \hat{\textbf{x}}_{k} + ( \alpha )\ \textbf{r}_{k} </math>
+
+:<math> \hat{\textbf{v}}_{k} \leftarrow \hat{\textbf{v}}_{k} + ( \beta / [ \Delta \textrm{T} ] )\ \textbf{r}_{k} </math>
+
+:<math> \hat{\textbf{a}}_{k} \leftarrow \hat{\textbf{a}}_{k} + ( 2\gamma / [ \Delta \textrm{T} ]^\textrm{2} )\ \textbf{r}_{k} </math>
+
+Similar extensions to additional higher orders are possible, but most systems of higher order tend to have significant interactions among the multiple state variables, {{citation needed|date=May 2013}} so approximating the [[system dynamics]] as a simple integrator chain is less likely to prove useful.
+
+Calculating optimal parameters for the alpha-beta-gamma filter is a bit more involved than for the alpha-beta filter:<ref name="GrayMurray" />
+
+:<math>
+\begin{align}
+\lambda & = \frac{\sigma_w T^2}{\sigma_v} \\[2ex]
+b & = \frac{\lambda}{2} - 3 \\
+c & = \frac{\lambda}{2} + 3 \\
+d & = -1 \\
+p & = c - \frac{b^2}{3} \\
+q & = \frac{2b^3}{27} - \frac{bc}{3} + d \\
+v & = \sqrt{q^2 + \frac{4p^3}{27}} \\
+z & = -\sqrt[3]{q + \frac{v}{2}} \\
+s & = z - \frac{p}{3z} - \frac{b}{3} \\[2ex]
+\alpha & = 1 - s^2 \\
+\beta & = 2(1 - s)^2 \\
+\gamma & = \frac{\beta^2}{2\alpha}
+\end{align}
+</math>
+
+==See also==
+* [[Kalman filter]]
+* [[Control theory]]
+* [[State space (controls)]]
+* [[Moving average]]
+
+==References==
+{{reflist}}
+
+;Sources
+*{{cite journal |url=http://www.pennelynn.com/Documents/CUJ/HTML/93HTML/199301CC.HTM |title=The Alpha-Beta Filter |last=Penoyer |first=Robert |journal=C Users Journal |language=en |date=July 1993 |volume=11 |issue=7 |pages=73–86 |url-status=dead |archive-url=https://web.archive.org/web/20260726000447/http://www.pennelynn.com/Documents/CUJ/HTML/93HTML/199301CC.HTM |archive-date=2026-07-26}}
+*{{cite web |url=http://www.mstarlabs.com/control/engspeed.html |title=Engine Speed Monitoring: The Alpha-Beta Filter |language=en |publisher=Microstar Laboratories}}
+*{{cite journal |title=Reconciling steady-state Kalman and alpha-beta filter design |last1=Painter |first1=J.H. |last2=Kerstetter |first2=D. |last3=Jowers |first3=S. |journal=IEEE Transactions on Aerospace and Electronic Systems |language=en |volume=26 |issue=6 |date=November 1990 |pages=986–991 |doi=10.1109/7.62250 |url=https://oaktrust.library.tamu.edu/bitstreams/83b1adac-eedd-409c-a84c-a5a88c823d49/download}}
+*{{cite journal |title=Fixed-lag alpha-beta filter for target trajectory smoothing |last1=Ogle |first1=T.L. |last2=Blair |first2=W.D. |journal=Aerospace and Electronic Systems, IEEE Transactions |language=en |volume=40 |issue=4 |date=October 2004 |pages=1417–1421 |doi=10.1109/TAES.2004.1386894 |issn=0018-9251}}
+*{{cite tech report |url=http://oai.dtic.mil/oai/oai?verb=getRecord&metadataPrefix=html&identifier=AD0759011 |url-status=dead |archive-url=https://web.archive.org/web/20160304054043/http://oai.dtic.mil/oai/oai?verb=getRecord&metadataPrefix=html&identifier=AD0759011 |archive-date=2016-03-04 |title=Description of an alpha-beta Filter in Cartesian Coordinates |language=en |last=Cantrell |first=Ben H. |publisher=NAVAL RESEARCH LAB |location=WASHINGTON DC |date=March 21, 1973 |number=NRL Report 7548}}
+*{{cite tech report |url=http://oai.dtic.mil/oai/oai?verb=getRecord&metadataPrefix=html&identifier=ADA329021 |url-status=dead |archive-url=https://web.archive.org/web/20160304051934/http://oai.dtic.mil/oai/oai?verb=getRecord&metadataPrefix=html&identifier=ADA329021 |archive-date=2016-03-04 |title=Comparison of Four Filtering Options for a Radar Tracking Problem |language=en |last1=Lawton |first1=John A. |last2=Jesionowski |first2=Robert J. |last3=Zarchan |first3=Paul |publisher=NAVAL SURFACE WARFARE CENTER DAHLGREN DIV |location=VA |year=1979 |number=ADA329021}}
+*{{cite book |section-url=https://books.google.com/books?id=HxjDMcJWLYwC&pg=PA160 |title=Mathematical Techniques in Multisensor Data Fusion |language=en |first1=David Lee |last1=Hall |last2=Sonya |first2=A. H. |publisher=Artech House |year=2004 |isbn=1-58053-335-3 |section=4.4.4 The Alpha-Beta Filter}}
+
+==External links==
+*[https://github.com/mikasjp/ins/blob/master/InertialNavigationSystem/AlphaBetaFilter.cs Alpha-Beta C# source code sample]
+*[https://adrianboeing.blogspot.com/2010/03/alpha-beta-filters.html Alpha-Beta C source code sample]
+*[http://www.advsolned.com/example_radar_tracking.html Tracking performance of the alpha-beta tracker versus the Kalman filter]
+*[https://www.kalmanfilter.net/alphabeta.html The alpha-beta-gamma Filter], A online Tutorial with many numerical examples and intuitive explanations by Alex Becker.
+
+[[Category:Filter theory]]
+[[Category:Signal processing]]
+[[Category:Statistical approximations]]
+[[Category:Articles with example C code]]

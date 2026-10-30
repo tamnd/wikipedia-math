@@ -1,0 +1,351 @@
+<!-- wikipedia: en
+     page: 477026
+     title: Kriging
+     revision: 1373716263
+     timestamp: 2026-09-07T14:57:21Z
+     history: https://en.wikipedia.org/w/index.php?curid=477026&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373716263 -->
+{{Short description|Method of interpolation}}
+[[File:Example_of_kriging_interpolation_in_1D.png|thumb|400px|Example of one-dimensional data interpolation by kriging, with [[credible interval]]s. Squares indicate the location of the data. The kriging interpolation, shown in red, runs along the means of the normally distributed credible intervals shown in gray. The dashed curve shows a spline that is smooth, but departs significantly from the expected values given by those means.]]
+
+In [[statistics]], originally in [[geostatistics]], '''kriging''' or '''Kriging''' ({{IPAc-en|ˈ|k|r|iː|ɡ|ɪ|ŋ}}), also known as '''Gaussian process regression''', is a method of [[interpolation]] based on [[Gaussian process]] governed by prior [[covariance]]s. Under suitable assumptions of the prior, kriging gives the [[best linear unbiased prediction]] (BLUP) at unsampled locations.<ref name="Chung2019">{{cite book | last1=Chung | first1=Sang Yong | last2=Venkatramanan | first2=S. | last3=Elzain | first3=Hussam Eldin | last4=Selvam | first4=S. | last5=Prasanna | first5=M. V. | title=GIS and Geostatistical Techniques for Groundwater Science | chapter=Supplement of Missing Data in Groundwater-Level Variations of Peak Type Using Geostatistical Methods | publisher=Elsevier | year=2019 | isbn=978-0-12-815413-7 | doi=10.1016/b978-0-12-815413-7.00004-3 | pages=33–41| s2cid=189989265 }}</ref> Interpolating methods based on other criteria such as [[smoothness]] (e.g., [[smoothing spline]]) may not yield the BLUP. The method is widely used in the domain of [[Spatial analysis#Sampling|spatial analysis]] and [[computer experiment]]s. The technique is also known as '''Wiener–Kolmogorov prediction''', after [[Norbert Wiener]] and [[Andrey Kolmogorov]].
+
+The theoretical basis for the method was developed by the French mathematician [[Georges Matheron]] in 1960, based on the master's thesis of [[Danie G. Krige]], the pioneering plotter of distance-weighted average gold grades at the [[Witwatersrand]] reef complex in [[South Africa]]. Krige sought to estimate the most likely distribution of gold based on samples from a few boreholes.  The English verb is ''to krige'', and the most common noun is ''kriging''. The word is sometimes capitalized as ''Kriging'' in the literature.
+
+Though computationally intensive in its basic formulation, kriging can be scaled to larger problems using various [[Gaussian process approximations|approximation methods]].
+
+==Main principles==
+
+===Related terms and techniques===
+Kriging predicts the value of a function at a given point by computing a weighted average of the known values of the function in the neighborhood of the point. The method is closely related to [[regression analysis]]. Both theories derive a [[best linear unbiased estimator]] based on assumptions on [[covariance]]s, make use of [[Gauss–Markov theorem]] to prove independence of the estimate and error, and use very similar formulae. Even so, they are useful in different frameworks: kriging is made for estimation of a single realization of a random field, while regression models are based on multiple observations of a multivariate data set.
+
+The kriging estimation may also be seen as a [[spline (mathematics)|spline]] in a [[reproducing kernel Hilbert space]], with the reproducing kernel given by the covariance function.<ref>{{cite book |first=Grace |last=Wahba |title=Spline Models for Observational Data |publisher=SIAM |volume=59 |year=1990 |doi=10.1137/1.9781611970128 |isbn=978-0-89871-244-5 }}</ref> The difference with the classical kriging approach is provided by the interpretation: while the spline is motivated by a minimum-norm interpolation based on a Hilbert-space structure, kriging is motivated by an expected squared prediction error based on a stochastic model.
+
+Kriging with ''polynomial trend surfaces'' is mathematically identical to [[generalized least squares]] polynomial [[curve fitting]].
+
+Kriging can also be understood as a form of [[Bayesian optimization]].<ref>{{Cite book |last1=Williams |first1=C. K. I. |chapter=Prediction with Gaussian Processes: From Linear Regression to Linear Prediction and Beyond |doi=10.1007/978-94-011-5014-9_23 |title=Learning in Graphical Models |pages=599–621 |year=1998 |isbn=978-94-010-6104-9}}</ref> Kriging starts with a [[prior probability distribution|prior]] [[probability distribution|distribution]] over [[Function (mathematics)|functions]]. This prior takes the form of a Gaussian process: <math>N</math> samples from a function will be [[normal distribution|normally distributed]], where the [[covariance]] between any two samples is the covariance function (or [[kernel (statistics)|kernel]]) of the Gaussian process evaluated at the spatial location of two points. A [[Set (mathematics)|set]] of values is then observed, each value associated with a spatial location. Now, a new value can be predicted at any new spatial location by combining the Gaussian prior with a Gaussian [[likelihood function]] for each of the observed values. The resulting [[Posterior probability|posterior]] distribution is also Gaussian, with a mean and covariance that can be simply computed from the observed values, their variance, and the kernel matrix derived from the prior.
+
+===Geostatistical estimator===
+In geostatistical models, sampled data are interpreted as the result of a random process. The fact that these models incorporate uncertainty in their conceptualization does not mean that the phenomenon – the forest, the aquifer, the mineral deposit – has resulted  from a random process, but rather it allows one to build a methodological basis for the spatial inference of quantities in unobserved locations and to quantify the uncertainty associated with the estimator.
+[[File:Kriging Grid.svg|thumb|A real-life [[Digital Elevation Model|DEM]] patch refined using ordinary kriging (visualized with [[matplotlib]])]]
+
+A [[stochastic process]] is, in the context of this model, simply a way to approach the set of data collected from the samples. The first step in geostatistical modulation is to create a random process that best describes the set of observed data.
+
+A value from location <math>x_1</math> (generic denomination of a set of [[Geographic coordinate system|geographic coordinates]]) is interpreted as a realization <math>z(x_1)</math> of the [[random variable]] <math>Z(x_1)</math>. In the space <math>A</math>, where the set of samples is dispersed, there are <math>N</math> realizations of the random variables <math>Z(x_1), Z(x_2), \ldots, Z(x_N)</math>, correlated between themselves.
+
+The set of random variables constitutes a random function, of which only one realization is known – the set <math>z(x_i)</math> of observed data. With only one realization of each random variable, it's theoretically impossible to determine any [[statistical parameter]] of the individual variables or the function. The proposed solution in the geostatistical formalism consists in ''assuming'' various degrees of ''stationarity'' in the random function, in order to make the inference of some statistic values possible.
+
+For instance, if one assumes, based on the homogeneity of samples in area <math>A</math> where the variable is distributed, the hypothesis that the [[Moment (mathematics)#Mean|first moment]] is stationary (i.e. all random variables have the same mean), then one is assuming that the mean can be estimated by the arithmetic mean of sampled values.
+
+The hypothesis of stationarity related to the [[Moment (mathematics)#Variance|second moment]] is defined in the following way: the correlation between two random variables solely depends on the spatial distance between them and is independent of their location.  Thus if <math>\mathbf{h} = x_2 - x_1</math> and <math>h = |\mathbf{h}|</math>, then:
+
+: <math>C\big(Z(x_1), Z(x_2)\big) = C\big(Z(x_i), Z(x_i + \mathbf{h})\big) = C(h),</math>
+
+: <math>\gamma\big(Z(x_1), Z(x_2)\big) = \gamma\big(Z(x_i), Z(x_i + \mathbf{h})\big) = \gamma(h).</math>
+
+For simplicity, we define <math>C(x_i, x_j) = C\big(Z(x_i), Z(x_j)\big)</math> and <math>\gamma(x_i, x_j) = \gamma\big(Z(x_i), Z(x_j)\big)</math>.
+
+This hypothesis allows one to infer those two measures – the [[variogram]] and the [[covariogram]]:
+
+: <math>\gamma(h) = \frac{1}{2|N(h)|} \sum_{(i,j)\in N(h)} \big(Z(x_i) - Z(x_j)\big)^2,</math>
+
+: <math>C(h) = \frac{1}{|N(h)|} \sum_{(i,j)\in N(h)} \big(Z(x_i) - m(h)\big)\big(Z(x_j) - m(h)\big),</math>
+
+where:
+: <math>m(h)=\frac{1}{2|N(h)|} \sum_{(i,j)\in N(h)} \left( Z(x_i) + Z(x_j) \right)</math>;
+: <math>N(h)</math> denotes the set of pairs of observations <math>i,\;j</math> such that <math>|x_i - x_j| = h</math>, and <math>|N(h)|</math> is the number of pairs in the set.
+In this set, <math>(i,\;j)</math> and <math>(j,\;i)</math> denote the same element. Generally an "approximate distance" <math>h</math> is used, implemented using a certain tolerance.
+
+===Linear estimation===
+Spatial inference, or estimation, of a quantity <math>Z \colon \mathbb{R}^n \to \mathbb{R}</math>, at an unobserved location <math>x_0</math>, is calculated from a linear combination of the observed values <math>z_i = Z(x_i)</math> and weights <math>w_i(x_0),\; i = 1, \ldots, N</math>:
+
+: <math>
+ \hat{Z}(x_0) =
+ \begin{bmatrix}
+   w_1 & w_2 & \cdots & w_N
+ \end{bmatrix}
+ \begin{bmatrix}
+  z_1 \\
+  z_2 \\
+  \vdots \\
+  z_N
+ \end{bmatrix} =
+ \sum_{i=1}^N w_i(x_0) Z(x_i).
+</math>
+
+The weights <math>w_i</math> are intended to summarize two extremely important procedures in a spatial inference process:
+* reflect the structural "proximity" of samples to the estimation location <math>x_0</math>;
+* at the same time, they should have a desegregation effect, in order to avoid bias caused by eventual sample ''clusters''.
+
+When calculating the weights <math>w_i</math>, there are two objectives in the geostatistical formalism: ''unbias'' and ''minimal variance of estimation''.
+
+If the cloud of real values <math>Z(x_0)</math> is plotted against the estimated values <math>\hat{Z}(x_0)</math>, the criterion for global unbias, ''intrinsic stationarity'' or [[stationary process|wide sense stationarity]] of the field, implies that the mean of the estimations must be equal to mean of the real values.
+
+The second criterion says that the mean of the squared deviations <math>\big(\hat{Z}(x) - Z(x)\big)</math> must be minimal, which means that when the cloud of estimated values ''versus'' the cloud real values is more disperse, the estimator is more imprecise.
+
+==Methods==
+Depending on the stochastic properties of the random field and the various degrees of stationarity assumed, different methods for calculating the weights can be deduced, i.e. different types of kriging apply. Classical methods are:
+* ''Ordinary kriging'' assumes constant unknown mean only over the search neighborhood of <math>x_0</math>.
+* ''Simple kriging'' assumes stationarity of the [[Moment (mathematics)#Mean|first moment]] over the entire domain with a known mean: <math>E\{Z(x)\} = E\{Z(x_0)\} = m</math>, where <math>m</math> is the known mean.
+* ''[[Universal kriging]]''{{anchor|Universal}} assumes a general polynomial trend model, such as linear trend model <math>\textstyle E\{Z(x)\} = \sum_{k=0}^p \beta_k f_k(x)</math>.
+* ''IRFk-kriging''{{anchor|IRFk}} assumes <math>E\{Z(x)\}</math> to be an unknown [[polynomial]] in <math>x</math>.
+* ''Indicator kriging''{{anchor|Indicator}} uses [[indicator function]]s instead of the process itself, in order to estimate transition probabilities.
+** ''Multiple-indicator kriging''{{anchor|Multiple-indicator}} is a version of indicator kriging working with a family of indicators. Initially, MIK showed considerable promise as a new method that could more accurately estimate overall global mineral deposit concentrations or grades. However, these benefits have been outweighed by other inherent problems of practicality in modelling due to the inherently large block sizes used and also the lack of mining scale resolution. Conditional simulation is fast, becoming the accepted replacement technique in this case.{{citation needed|date=March 2016}}
+* ''Disjunctive kriging''{{anchor|Disjunctive}} is a nonlinear generalisation of kriging.
+* ''[[Log-normal distribution|Log-normal]] kriging''{{anchor|Lognormal}} interpolates positive data by means of [[logarithm]]s.
+* ''Latent kriging'' assumes the various krigings on the latent level (second stage) of the [[nonlinear mixed-effects model]] to produce a spatial functional prediction.<ref>{{Cite journal |last1=Lee |first1=Se Yoon |first2=Bani |last2=Mallick |title=Bayesian Hierarchical Modeling: Application Towards Production Results in the Eagle Ford Shale of South Texas |journal=Sankhya B |year=2021 |volume=84 |pages=1–43 |doi=10.1007/s13571-020-00245-8 |doi-access=free}}</ref> This technique is useful when analyzing a spatial functional data <math>\{ (y_i, x_i, s_i) \}_{i=1}^n</math>, where <math>y_i = (y_{i1} ,y_{i2}, \cdots, y_{iT_i})^\top</math> is a [[time series]] data over <math>T_i</math> period, <math>x_i = (x_{i1}, x_{i2}, \cdots, x_{ip})^\top</math> is a vector of <math>p</math> covariates, and <math>s_i = (s_{i1}, s_{i2})^\top</math> is a spatial location (longitude, latitude) of the <math>i</math>-th subject.
+*''Co-kriging'' denotes the joint kriging of data from multiple sources with a relationship between the different data sources.<ref>{{Cite journal|last1=Le Gratiet|first1=Loic|last2=Garnier|first2=Josselin|title=Recursive Co-Kriging Model for Design of Computer Experiments with Multiple Levels of Fidelity|date=2014|url=http://www.dl.begellhouse.com/journals/52034eb04b657aea,2f7b99cc281f2702,4c83626c5e64207a.html|journal=International Journal for Uncertainty Quantification|language=en|volume=4|issue=5|pages=365–386|doi=10.1615/Int.J.UncertaintyQuantification.2014006914|s2cid=14157948|issn=2152-5080|doi-access=free}}</ref> Co-kriging is also possible in a [[List of things named after Thomas Bayes|Bayesian]] approach.<ref name=":0">{{Cite journal|last1=Ranftl|first1=Sascha|last2=Melito|first2=Gian Marco|last3=Badeli|first3=Vahid|last4=Reinbacher-Köstinger|first4=Alice|last5=Ellermann|first5=Katrin|last6=Linden|first6=Wolfgang von der|date=2019-12-09|title=On the Diagnosis of Aortic Dissection with Impedance Cardiography: A Bayesian Feasibility Study Framework with Multi-Fidelity Simulation Data|journal=Proceedings|volume=33|issue=1|page=24|doi=10.3390/proceedings2019033024|issn=2504-3900|doi-access=free}}</ref><ref name=":1">{{Cite journal|last1=Ranftl|first1=Sascha|last2=Melito|first2=Gian Marco|last3=Badeli|first3=Vahid|last4=Reinbacher-Köstinger|first4=Alice|last5=Ellermann|first5=Katrin|last6=von der Linden|first6=Wolfgang|date=2019-12-31|title=Bayesian Uncertainty Quantification with Multi-Fidelity Data and Gaussian Processes for Impedance Cardiography of Aortic Dissection|journal=Entropy|volume=22|issue=1|page=58|doi=10.3390/e22010058|issn=1099-4300|pmc=7516489|pmid=33285833|bibcode=2019Entrp..22...58R|doi-access=free}}</ref>
+*''Bayesian kriging'' departs from the optimization of unknown coefficients and hyperparameters, which is understood as a [[Maximum likelihood estimation|maximum likelihood estimate]] from the Bayesian perspective. Instead, the coefficients and hyperparameters are estimated from their [[expectation value]]s. An advantage of Bayesian kriging is, that it allows to quantify the evidence for and the uncertainty of the kriging [[Surrogate model|emulator]].<ref>{{Cite journal|last1=Ranftl|first1=Sascha|last2=von der Linden|first2=Wolfgang|date=2021-11-13|title=Bayesian Surrogate Analysis and Uncertainty Propagation|journal=Physical Sciences Forum|volume=3|issue=1|page=6|doi=10.3390/psf2021003006|arxiv=2101.04038|issn=2673-9984|doi-access=free}}</ref> If the emulator is employed to propagate uncertainties, the quality of the kriging emulator can be assessed by comparing the emulator uncertainty to the total uncertainty (see also [[Polynomial chaos#Bayesian polynomial chaos|Bayesian Polynomial Chaos]]). Bayesian kriging can also be mixed with co-kriging.<ref name=":0"/><ref name=":1"/>
+
+===Ordinary kriging{{anchor|Ordinary}}===
+The unknown value <math>Z(x_0)</math> is interpreted as a random variable located in <math>x_0</math>, as well as the values of neighbors samples <math>Z(x_i),\ i = 1, \ldots, N</math>. The estimator <math>\hat{Z}(x_0)</math> is also interpreted as a random variable located in <math>x_0</math>, a result of the linear combination of variables.
+
+Kriging seeks to minimize the mean square value of the following error in estimating <math>Z(x_0)</math>, subject to lack of bias:
+
+: <math>
+ \epsilon(x_0) = \hat{Z}(x_0) - Z(x_0) =
+ \begin{bmatrix}
+  W^T & -1
+ \end{bmatrix} \cdot
+ \begin{bmatrix}
+  Z(x_1) & \cdots & Z(x_N) & Z(x_0)
+ \end{bmatrix}^T =
+ \sum^N_{i=1} w_i(x_0) \times Z(x_i) - Z(x_0).
+</math>
+
+The two quality criteria referred to previously can now be expressed in terms of the mean and variance of the new random variable <math>\epsilon(x_0)</math>:
+
+; Lack of bias
+
+Since the random function is stationary, <math>E[Z(x_i)] = E[Z(x_0)] = m</math>, the weights must sum to 1 in order to ensure that the model is unbiased.  This can be seen as follows:
+
+: <math>E[\epsilon(x_0)] = 0 \Leftrightarrow \sum^N_{i=1} w_i(x_0) \times E[Z(x_i)] - E[Z(x_0)] = 0</math>
+
+::::: <math>\Leftrightarrow m \sum^N_{i=1} w_i(x_0) - m = 0 \Leftrightarrow \sum^N_{i=1} w_i(x_0) = 1 \Leftrightarrow \mathbf{1}^T \cdot W = 1.</math>
+
+; Minimum variance
+
+Two estimators can have <math>E[\epsilon(x_0)] = 0</math>, but the dispersion around their mean determines the difference between the quality of estimators. To find an estimator with minimum variance, we need to minimize <math>E[\epsilon(x_0)^2]</math>.
+
+: <math>
+ \begin{align}
+  \operatorname{Var}(\epsilon(x_0)) &= \operatorname{Var}\left(\begin{bmatrix} W^T & -1 \end{bmatrix} \cdot
+   \begin{bmatrix} Z(x_1) & \cdots & Z(x_N) & Z(x_0) \end{bmatrix}^T\right) \\
+  &= \begin{bmatrix} W^T & -1 \end{bmatrix} \cdot
+   \operatorname{Var}\left(\begin{bmatrix} Z(x_1) & \cdots & Z(x_N) & Z(x_0) \end{bmatrix}^T\right) \cdot
+   \begin{bmatrix} W \\ -1 \end{bmatrix}.
+ \end{align}
+</math>
+
+See [[Covariance matrix#As a linear operator|covariance matrix]] for a detailed explanation.
+
+: <math>
+ \operatorname{Var}(\epsilon(x_0)) = \begin{bmatrix} W^T & -1 \end{bmatrix} \cdot 
+ \begin{bmatrix}
+  \operatorname{Var}_{x_i} & \operatorname{Cov}_{x_ix_0} \\
+  \operatorname{Cov}_{x_i x_0}^T & \operatorname{Var}_{x_0}
+ \end{bmatrix} \cdot
+ \begin{bmatrix} W \\ -1 \end{bmatrix},
+</math>
+
+where the literals <math>\left\{\operatorname{Var}_{x_i}, \operatorname{Var}_{x_0}, \operatorname{Cov}_{x_ix_0}\right\}</math> stand for
+
+: <math>
+ \left\{\operatorname{Var}\left(\begin{bmatrix} Z(x_1) & \cdots & Z(x_N) \end{bmatrix}^T\right),
+ \operatorname{Var}\big(Z(x_0)\big),
+ \operatorname{Cov}\left(\begin{bmatrix} Z(x_1) & \cdots & Z(x_N) \end{bmatrix}^T,
+ Z(x_0)\right)\right\}.
+</math>
+
+Once defined the covariance model or [[variogram]], <math>C(\mathbf{h})</math> or <math>\gamma(\mathbf{h})</math>, valid in all field of analysis of <math>Z(x)</math>, then we can write an expression for the estimation variance of any estimator in function of the covariance between the samples and the covariances between the samples and the point to estimate:
+
+: <math>
+ \begin{cases}
+  \operatorname{Var}\big(\epsilon(x_0)\big) =
+   W^T \cdot \operatorname{Var}_{x_i} \cdot W -
+   \operatorname{Cov}_{x_ix_0}^T \cdot W -
+   W^T \cdot \operatorname{Cov}_{x_ix_0} +
+   \operatorname{Var}_{x_0}, \\
+  \operatorname{Var}\big(\epsilon(x_0)\big) =
+   \operatorname{Cov}(0) +
+   \sum_i \sum_j w_i w_j \operatorname{Cov}(x_i,x_j) -
+   2 \sum_iw_i C(x_i,x_0).
+ \end{cases}
+</math>
+
+Some conclusions can be asserted from this expression. The variance of estimation:
+* is not quantifiable to any linear estimator, once the stationarity of the mean and of the spatial covariances, or variograms, are assumed;
+* grows when the covariance between the samples and the point to estimate decreases. This means that, when the samples are farther away from <math>x_0</math>, the estimation becomes worse;
+* grows with the a priori variance <math>C(0)</math> of the variable <math>Z(x)</math>; when the variable is less disperse, the variance is lower in any point of the area <math>A</math>;
+* does not depend on the values of the samples, which means that the same spatial configuration (with the same geometrical relations between samples and the point to estimate) always reproduces the same estimation variance in any part of the area <math>A</math>; this way, the variance does not measure the uncertainty of estimation produced by the local variable.
+
+; System of equations
+
+: <math>
+ W = \underset{\mathbf{1}^T \cdot W = 1}{\operatorname{arg\,min}}\left( W^T \cdot \operatorname{Var}_{x_i} \cdot W - \operatorname{Cov}_{x_ix_0}^T \cdot W - W^T \cdot \operatorname{Cov}_{x_ix_0} + \operatorname{Var}_{x_0} \right).
+</math>
+
+Solving this optimization problem (see [[Lagrange multipliers]]) results in the ''kriging system'':
+
+: <math>\begin{bmatrix}\hat{W}\\\mu\end{bmatrix} = \begin{bmatrix}
+\operatorname{Var}_{x_i}& \mathbf{1}\\
+\mathbf{1}^T& 0
+\end{bmatrix}^{-1}\cdot \begin{bmatrix} \operatorname{Cov}_{x_ix_0}\\ 1\end{bmatrix} = \begin{bmatrix}
+\gamma(x_1,x_1) & \cdots & \gamma(x_1,x_n) &1 \\
+\vdots & \ddots & \vdots  & \vdots \\
+\gamma(x_n,x_1) & \cdots & \gamma(x_n,x_n) & 1 \\
+1 &\cdots& 1 & 0 
+\end{bmatrix}^{-1}
+\begin{bmatrix}\gamma(x_1,x^*) \\ \vdots \\ \gamma(x_n,x^*) \\ 1\end{bmatrix}.
+</math>
+
+The additional parameter <math>\mu</math> is a [[Lagrange multiplier]] used in the minimization of the kriging error <math>\sigma_k^2(x)</math> to honor the unbiasedness condition.
+
+===Simple kriging{{anchor|Simpler}}===
+{{cleanup section|reason=this section is very poor and needs to be improved|date=January 2021}}
+[[File:Gaussianprocess.gif|400px|thumb|right|Simple kriging can be seen as the mean and envelope of Brownian [[random walk]]s passing through the data points.]]
+Simple kriging is mathematically the simplest, but the least general.<ref>{{cite book |last=Olea |first=Ricardo A. |date=1999 |title=Geostatistics for Engineers and Earth Scientists |publisher= Kluwer Academic |isbn=978-1-4615-5001-3}}</ref> It assumes the [[expected value|expectation]] of the [[random field]] is known and relies on a [[covariance function]]. However, in most applications neither the expectation nor the covariance are known beforehand.
+
+The practical assumptions for the application of ''simple kriging'' are:
+* [[Stationary process|Wide-sense stationarity]] of the field (variance stationary).
+* The expectation is zero everywhere: <math>\mu(x) = 0</math>.
+* Known [[covariance function]] <math>c(x, y) = \operatorname{Cov}\big(Z(x), Z(y)\big)</math>.
+The covariance function is a crucial design choice, since it stipulates the properties of the Gaussian process and thereby the behaviour of the model. The covariance function encodes information about, for instance, smoothness and periodicity, which is reflected in the estimate produced. A very common covariance function is the squared exponential, which heavily favours smooth function estimates.<ref>{{Cite book |last1=Rasmussen |first1=Carl Edward |last2=Williams |first2=Christopher K. I. |date=2005-11-23 |title=Gaussian Processes for Machine Learning |url=https://direct.mit.edu/books/book/2320/Gaussian-Processes-for-Machine-Learning |language=en |doi=10.7551/mitpress/3206.001.0001|isbn=978-0-262-25683-4 }}</ref> For this reason, it can produce poor estimates in many real-world applications, especially when the true underlying function contains discontinuities and rapid changes.
+
+; System of equations
+The ''kriging weights'' of ''simple kriging'' have no unbiasedness condition and are given by the ''simple kriging equation system'':
+: <math>
+ \begin{pmatrix} w_1 \\ \vdots \\ w_n \end{pmatrix} =
+ \begin{pmatrix}
+  c(x_1, x_1) & \cdots & c(x_1, x_n) \\
+  \vdots & \ddots & \vdots \\
+  c(x_n, x_1) & \cdots & c(x_n, x_n) 
+ \end{pmatrix}^{-1}
+ \begin{pmatrix} c(x_1,x_0) \\ \vdots \\ c(x_n,x_0) \end{pmatrix}.
+</math>
+
+This is analogous to a linear regression of <math>Z(x_0)</math> on the other <math>z_1, \ldots, z_n</math>.
+
+; Estimation
+The interpolation by simple kriging is given by
+: <math>
+ \hat{Z}(x_0) =
+ \begin{pmatrix} z_1 \\ \vdots \\ z_n \end{pmatrix}'
+ \begin{pmatrix}
+  c(x_1, x_1) & \cdots & c(x_1, x_n) \\
+  \vdots & \ddots & \vdots \\
+  c(x_n, x_1) & \cdots & c(x_n, x_n)
+ \end{pmatrix}^{-1}
+ \begin{pmatrix} c(x_1,x_0) \\ \vdots \\ c(x_n,x_0)\end{pmatrix}.
+</math>
+
+The kriging error is given by
+: <math>
+ \operatorname{Var}\big(\hat{Z}(x_0) - Z(x_0)\big) =
+ \underbrace{c(x_0,x_0)}_{\operatorname{Var}\big(Z(x_0)\big)} -
+ \underbrace{\begin{pmatrix} c(x_1,x_0) \\ \vdots \\ c(x_n,x_0) \end{pmatrix}'
+ \begin{pmatrix}
+  c(x_1,x_1) & \cdots & c(x_1,x_n)  \\
+  \vdots & \ddots & \vdots  \\
+  c(x_n,x_1) & \cdots & c(x_n,x_n) 
+ \end{pmatrix}^{-1}
+ \begin{pmatrix} c(x_1,x_0) \\ \vdots \\ c(x_n,x_0) \end{pmatrix}}_{\operatorname{Var}\big(\hat{Z}(x_0)\big)},
+</math>
+which leads to the generalised least-squares version of the [[Gauss–Markov theorem]] (Chiles & Delfiner 1999, p.&nbsp;159):
+: <math>
+ \operatorname{Var}\big(Z(x_0)\big) = \operatorname{Var}\big(\hat{Z}(x_0)\big) + \operatorname{Var}\big(\hat{Z}(x_0) - Z(x_0)\big).
+</math>
+
+=== Bayesian kriging ===
+''See also [[Polynomial chaos#Bayesian polynomial chaos|Bayesian Polynomial Chaos]]''
+
+=== Properties ===
+{{cleanup section|reason=this section needs revision. Incorrect or confusing text should be removed.|date=January 2021}}
+
+* The kriging estimation is unbiased: <math>E[\hat{Z}(x_i)] = E[Z(x_i)]</math>.
+* The kriging estimation honors the actually observed value: <math>\hat{Z}(x_i) = Z(x_i)</math> (assuming no measurement error is incurred).
+* The kriging estimation <math>\hat{Z}(x)</math> is the [[best linear unbiased estimator]] of <math>Z(x)</math> if the assumptions hold. However (e.g. Cressie 1993):<ref>Cressie 1993, Chiles&Delfiner 1999, Wackernagel 1995.</ref>
+** As with any method, if the assumptions do not hold, kriging might be bad.
+** There might be better nonlinear and/or biased methods.
+** No properties are guaranteed when the wrong variogram is used. However, typically still a "good" interpolation is achieved.
+** Best is not necessarily good: e.g. in case of no spatial dependence the kriging interpolation is only as good as the arithmetic mean.
+* Kriging provides <math>\sigma_k^2</math> as a measure of precision. However, this measure relies on the correctness of the variogram.
+
+==Applications==
+{{cleanup section|reason=this section is very poor and needs to be improved|date=January 2021}}
+<!-- [[File:Syncline and anticline.jpg|thumb|300px|An illustrated depiction of a [[syncline]] and [[anticline]] commonly studied in [[Structural geology]] and [[Geomorphology]].]] -->
+
+Although kriging was developed originally for applications in geostatistics, it is a general method of statistical interpolation and can be applied within any discipline to sampled data from random fields that satisfy the appropriate mathematical assumptions. It can be used where spatially related data has been collected (in 2-D or 3-D) and estimates of "fill-in" data are desired in the locations (spatial gaps) between the actual measurements.
+
+To date kriging has been used in a variety of disciplines, including the following:
+* [[Environmental science]]<ref>{{cite journal | last1 = Bayraktar | first1 = Hanefi | last2 = Sezer | first2 = Turalioglu | year = 2005 | title = A Kriging-based approach for locating a sampling site—in the assessment of air quality | journal = SERRA | volume = 19 | issue = 4| pages = 301–305 | doi = 10.1007/s00477-005-0234-8 | bibcode = 2005SERRA..19..301B | s2cid = 122643497 }}</ref>
+* [[Hydrogeology]]<ref name="Chiles">Chiles, J.-P. and P. Delfiner (1999) ''Geostatistics, Modeling Spatial Uncertainty'', Wiley Series in Probability and statistics.</ref><ref>{{Cite journal | last1 = Zimmerman | first1 = D. A. | last2 = De Marsily | first2 = G. | last3 = Gotway | first3 = C. A. |author3-link= Carol A. Gotway Crawford | last4 = Marietta | first4 = M. G. | last5 = Axness | first5 = C. L. | last6 = Beauheim | first6 = R. L. | last7 = Bras | first7 = R. L. | last8 = Carrera | first8 = J. | last9 = Dagan | first9 = G. | last10 = Davies | first10 = P. B. | last11 = Gallegos | first11 = D. P. | last12 = Galli | first12 = A. | last13 = Gómez-Hernández | first13 = J. | last14 = Grindrod | first14 = P. | last15 = Gutjahr | first15 = A. L. | last16 = Kitanidis | first16 = P. K. | last17 = Lavenue | first17 = A. M. | last18 = McLaughlin | first18 = D. | last19 = Neuman | first19 = S. P. | last20 = Ramarao | first20 = B. S. | last21 = Ravenne | first21 = C. | last22 = Rubin | first22 = Y. | doi = 10.1029/98WR00003 | title = A comparison of seven geostatistically based inverse approaches to estimate transmissivities for modeling advective transport by groundwater flow | journal = Water Resources Research | volume = 34 | issue = 6 | pages = 1373–1413 | year = 1998 | url = http://web.mit.edu/dennism/www/Publications/M25_1998_Zimmerman_etal_WRR.pdf| bibcode=1998WRR....34.1373Z| doi-access = free }}</ref><ref>{{Cite journal | last1 = Tonkin | first1 = M. J. | last2 = Larson | first2 = S. P. | doi = 10.1111/j.1745-6584.2002.tb02503.x | title = Kriging Water Levels with a Regional-Linear and Point-Logarithmic Drift | journal = Ground Water | volume = 40 | issue = 2 | pages = 185–193 | year = 2002 | pmid =  11916123| bibcode = 2002GrWat..40..185T | s2cid = 23008603 }}</ref>
+* [[Mining]]<ref name="Journel">{{cite book |last1=Journel |first1=A. G. |first2=C. J. |last2=Huijbregts |year=1978 |title=Mining Geostatistics |publisher=Academic Press |location=London |isbn=0-12-391050-1 }}</ref><ref>{{Cite journal | last1 = Richmond | first1 = A. | journal = [[Mathematical Geology]]| title = Financially Efficient Ore Selections Incorporating Grade Uncertainty| volume = 35 | issue = 2 | pages = 195–215 | doi = 10.1023/A:1023239606028 | year = 2003 | bibcode = 2003MatG...35..195R | s2cid = 116703619 }}</ref>
+* [[Natural resource]]s<ref name="multiple">Goovaerts (1997) ''Geostatistics for natural resource evaluation'', OUP. {{ISBN|0-19-511538-4}}</ref><ref>{{Cite journal | last1 = Emery | first1 = X. | title = Simple and Ordinary Multigaussian Kriging for Estimating Recoverable Reserves | doi = 10.1007/s11004-005-1560-6 | journal = [[Mathematical Geology]]| volume = 37 | issue = 3 | pages = 295–319 | year = 2005 | bibcode = 2005MatGe..37..295E | s2cid = 92993524 }}</ref>
+* [[Remote sensing]]<ref>{{Cite book | last1 = Papritz | first1 = A. | last2 = Stein | first2 = A. | chapter = Spatial prediction by linear kriging | doi = 10.1007/0-306-47647-9_6 | title = Spatial Statistics for Remote Sensing | series = Remote Sensing and Digital Image Processing | volume = 1 | page = 83 | year = 2002 | isbn = 0-7923-5978-X }}</ref>
+* [[Real estate appraisal]]<ref>{{cite web |last1=Barris |first1=J. |last2=Garcia Almirall |first2=P. |year=2010 |title=A density function of the appraisal value |website=European Real Estate Society |url=https://eres.architexturez.net/system/files/pdf/eres2011_135.content.pdf }}</ref>
+* Integrated circuit analysis and optimization<ref>Oghenekarho Okobiah, [[Saraju Mohanty]], and Elias Kougianos (2013) ''[http://www.cse.unt.edu/~smohanty/Publications_Journals/2013/Mohanty_IET-CDS-2013Sep_Thermal-Sensor-Geostatistical.pdf Geostatistical-Inspired Fast Layout Optimization of a Nano-CMOS Thermal Sensor]''. {{webarchive|url=https://web.archive.org/web/20140714173450/http://www.cse.unt.edu/~smohanty/Publications_Journals/2013/Mohanty_IET-CDS-2013Sep_Thermal-Sensor-Geostatistical.pdf |date=2014-07-14 }}, IET Circuits, Devices and Systems (CDS), Vol.&nbsp;7, No.&nbsp;5, Sep.&nbsp;2013, pp.&nbsp;253–262.</ref>
+* Modelling of microwave devices<ref>{{cite journal |doi=10.1002/jnm.803 | volume=25 | title=Accurate modeling of microwave devices using kriging-corrected space mapping surrogates | year=2011 | journal=International Journal of Numerical Modelling: Electronic Networks, Devices and Fields | pages=1–14 | last1 = Koziel | first1 = Slawomir| s2cid=62683207 }}</ref>
+* [[Astronomy]]<ref>{{cite journal |doi=10.1093/mnras/stu937 | volume=442 | title=The SLUGGS survey: exploring the metallicity gradients of nearby early-type galaxies to large radii | year=2014 | journal=Monthly Notices of the Royal Astronomical Society | pages=1003–1039 | last1=Pastorello | first1=Nicola| issue=2 | doi-access=free | arxiv=1405.2338 | bibcode=2014MNRAS.442.1003P | s2cid=119221897 }}</ref><ref>{{cite journal|doi=10.1093/mnras/stv2947 | volume=457 | title=The SLUGGS survey: stellar kinematics, kinemetry and trends at large radii in 25 early-type galaxies | year=2016 | journal=Monthly Notices of the Royal Astronomical Society | pages=147–171 | last1=Foster | first1=Caroline| last2=Pastorello | first2=Nicola | last3=Roediger | first3=Joel | last4=Brodie | first4=Jean | last5=Forbes | first5=Duncan | last6=Kartha | first6=Sreeja | last7=Pota | first7=Vincenzo | last8=Romanowsky | first8=Aaron | last9=Spitler | first9=Lee | last10=Strader | first10=Jay | last11=Usher | first11=Christopher | last12=Arnold | first12=Jacob | issue=1 | doi-access=free | arxiv=1512.06130 | bibcode=2016MNRAS.457..147F | s2cid=53472235 }}</ref><ref>{{cite journal|doi=10.1093/mnras/stx418 | volume=467 | title=The SLUGGS survey: using extended stellar kinematics to disentangle the formation histories of low-mass S) galaxies | year=2017 | journal=Monthly Notices of the Royal Astronomical Society | pages=4540–4557 | last1=Bellstedt | first1=Sabine | last2=Forbes | first2=Duncan | last3=Foster | first3=Caroline | last4=Romanowsky | first4=Aaron | last5=Brodie | first5=Jean | last6=Pastorello | first6=Nicola | last7=Alabi | first7=Adebusola | last8=Villaume | first8=Alexa| issue=4 | doi-access=free | arxiv=1702.05099 | bibcode=2017MNRAS.467.4540B | s2cid=54521046 }}</ref>
+* Prediction of oil production curve of shale oil wells<ref>{{Cite journal |last1=Lee |first1=Se Yoon |first2=Bani |last2=Mallick |title = Bayesian Hierarchical Modeling: Application Towards Production Results in the Eagle Ford Shale of South Texas |journal=Sankhya B |year=2021 |volume=84 |pages=1–43 |doi=10.1007/s13571-020-00245-8 |doi-access=free}}</ref>
+
+===Design and analysis of computer experiments===
+Another very important and rapidly growing field of application, in [[engineering]], is the interpolation of data coming out as response variables of deterministic computer simulations,<ref>{{cite journal |last1=Sacks |first1=J. |last2=Welch |first2=W. J. |last3=Mitchell |first3=T. J. |last4=Wynn |first4=H. P. |title=Design and Analysis of Computer Experiments |journal=Statistical Science |volume=4 |number=4 |pages=409–435 |year=1989 |doi=10.1214/ss/1177012413 |jstor=2245858|doi-access=free }}</ref> e.g. [[finite element method]] (FEM) simulations. In this case, kriging is used as a [[metamodeling]] tool, i.e. a black-box model built over a designed set of [[computer experiment]]s. In many practical engineering problems, such as the design of a [[metal forming]] process, a single FEM simulation might be several hours or even a few days long. It is therefore more efficient to design and run a limited number of computer simulations, and then use a kriging interpolator to rapidly predict the response in any other design point. Kriging is therefore used very often as a so-called [[surrogate model]], implemented inside [[optimization]] routines.<ref name=sheetforming>{{Cite journal |last1=Strano |first1=M. |doi=10.1007/s12289-008-0001-8 |title=A technique for FEM optimization under reliability constraint of process variables in sheet metal forming |journal=International Journal of Material Forming |volume=1 |issue=1 |pages=13–20 |date=March 2008 |s2cid=136682565 }}</ref> Kriging-based surrogate models may also be used in the case of mixed integer inputs.<ref>{{Cite journal | doi=10.1016/j.neucom.2023.126472 | title=A mixed-categorical correlation kernel for Gaussian process| journal=Neurocomputing| volume=550| article-number=126472| year=2023| last1=Saves| first1=Paul | last2=Diouane| first2=Youssef |  last3=Bartoli| first3=Nathalie | last4=Lefebvre| first4=Thierry | last5=Morlier| first5=Joseph | arxiv=2211.08262}}</ref>
+
+==See also==
+* [[Bayes linear statistics]]
+* [[Gaussian process]]
+* [[Multivariate interpolation]]
+* [[Nonparametric regression]]
+* [[Radial basis function interpolation]]
+* [[Space mapping]]
+* [[Spatial dependence]]
+* [[Variogram]]
+* [[Gradient-enhanced kriging]] (GEK)
+* [[Surrogate model]]
+* [[Information field theory]]
+* [[Inverse distance weighting]]
+
+== References ==
+{{Reflist}}
+
+==Further reading==
+{{Commons category|Kriging}}
+{{further cleanup|date=November 2014}}
+
+===Historical references===
+# {{cite book | last1=Chilès | first1=Jean-Paul | last2=Desassis | first2=Nicolas | pages=589–612 | title=Handbook of Mathematical Geosciences | chapter=Fifty Years of Kriging | publisher=Springer International Publishing | location=Cham | year=2018 | isbn=978-3-319-78998-9 | doi=10.1007/978-3-319-78999-6_29 | s2cid=125362741 }}
+# Agterberg, F. P., ''Geomathematics, Mathematical Background and Geo-Science Applications'', Elsevier Scientific Publishing Company, Amsterdam, 1974.
+# Cressie, N. A. C., ''The origins of kriging, Mathematical Geology'', v.&nbsp;22, pp.&nbsp;239–252, 1990.
+# Krige, D. G., ''A statistical approach to some mine valuations and allied problems at the Witwatersrand'', Master's thesis of the University of Witwatersrand, 1951.
+# Link, R. F. and Koch, G. S., ''Experimental Designs and Trend-Surface Analysis, Geostatistics'', A colloquium, Plenum Press, New York, 1970.
+# Matheron, G., "Principles of geostatistics", ''Economic Geology'', 58, pp.&nbsp;1246–1266, 1963.
+# Matheron, G., "The intrinsic random functions, and their applications", ''Adv. Appl. Prob.'', 5, pp.&nbsp;439–468, 1973.
+# Merriam, D. F. (editor), ''Geostatistics'', a colloquium, Plenum Press, New York, 1970.
+# Mockus, J., "On Bayesian methods for seeking the extremum." Proceedings of the IFIP Technical Conference. 1974.
+
+===Books===
+* Abramowitz, M., and Stegun, I. (1972), Handbook of Mathematical Functions, [[Dover Publications]], New York.
+* Banerjee, S., Carlin, B. P. and Gelfand, A. E. (2004). Hierarchical Modeling and Analysis for Spatial Data. Chapman and Hall/CRC Press, Taylor and Francis Group.
+* Chiles, J.-P. and P. Delfiner (1999) ''Geostatistics, Modeling Spatial uncertainty'', Wiley Series in Probability and statistics.
+* Clark, I., and Harper, W. V., (2000) ''Practical Geostatistics 2000'', Ecosse North America, USA.
+* Cressie, N. (1993) ''Statistics for spatial data'', Wiley, New York.
+* David, M. (1988) ''Handbook of Applied Advanced Geostatistical Ore Reserve Estimation'', Elsevier Scientific Publishing
+* Deutsch, C. V., and Journel, A. G. (1992), GSLIB – Geostatistical Software Library and User's Guide, [[Oxford University Press]], New York, 338&nbsp;pp.
+* Goovaerts, P. (1997) ''Geostatistics for Natural Resources Evaluation'', Oxford University Press, New York, {{ISBN|0-19-511538-4}}.
+* Isaaks, E. H., and Srivastava, R. M. (1989), An Introduction to Applied Geostatistics, Oxford University Press, New York, 561&nbsp;pp.
+* Journel, A. G. and C. J. Huijbregts (1978) ''Mining Geostatistics'', Academic Press London.
+* Journel, A. G. (1989), Fundamentals of Geostatistics in Five Lessons, [[American Geophysical Union]], Washington D.C.
+* {{Citation |last1=Press |first1=W. H. |last2=Teukolsky |first2=S. A. |last3=Vetterling |first3=W. T. |last4=Flannery |first4=B. P. |year=2007 |title=Numerical Recipes: The Art of Scientific Computing |edition=3rd |publisher=Cambridge University Press |location=New York |isbn=978-0-521-88068-8 |chapter=Section 3.7.4. Interpolation by Kriging |chapter-url=http://apps.nrbook.com/empanel/index.html?pg=144}}. Also, [http://apps.nrbook.com/empanel/index.html?pg=836 "Section 15.9. Gaussian Process Regression"].
+* Stein, M. L. (1999), ''Statistical Interpolation of Spatial Data: Some Theory for Kriging'', Springer, New York.
+* Wackernagel, H. (1995) ''Multivariate Geostatistics - An Introduction with Applications'', Springer Berlin
+
+{{Authority control}}
+
+[[Category:Curve fitting]]
+[[Category:Geostatistics]]
+[[Category:Interpolation]]
+[[Category:Multivariate interpolation]]
+[[Category:Surveying]]
+[[Category:Digital elevation models]]

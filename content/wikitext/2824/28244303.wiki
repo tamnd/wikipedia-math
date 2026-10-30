@@ -1,0 +1,280 @@
+<!-- wikipedia: en
+     page: 28244303
+     title: Elliptic curve point multiplication
+     revision: 1368502046
+     timestamp: 2026-08-09T12:05:39Z
+     history: https://en.wikipedia.org/w/index.php?curid=28244303&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1368502046 -->
+{{short description|Mathematical operation on points on an elliptic curve}}
+'''Elliptic curve scalar multiplication''' is the operation of successively adding a point along an [[elliptic curve]] to itself repeatedly.  It is used in [[elliptic curve cryptography]] (ECC).
+The literature presents this operation as [[scalar multiplication]], as written in [[Hessian form of an elliptic curve]]. A widespread name for this operation is also '''elliptic curve point multiplication''', but this can convey the wrong impression of being a multiplication between two points.
+
+==Basics==
+Given a curve, ''E'', defined by some equation in a [[finite field]] (such as ''E'': {{math|''y''<sup>2</sup> {{=}} ''x''<sup>3</sup> + ''ax'' + ''b''}}), point multiplication is defined as the repeated addition of a point along that curve.  Denote as {{math|''nP'' {{=}} ''P'' + ''P'' + ''P'' + … + ''P''}} for some scalar (integer) ''n'' and a point {{math|''P'' {{=}} (''x'', ''y'')}} that lies on the curve, ''E''. This type of curve is known as a Weierstrass curve.
+
+The security of modern ECC depends on the intractability of determining ''n'' from {{math|''Q'' {{=}} ''nP''}} given known values of ''Q'' and ''P'' if ''n'' is large (known as the [[Discrete logarithm records#Elliptic curves|elliptic curve discrete logarithm]] problem by analogy to other [[Diffie–Hellman key exchange|cryptographic systems]]). This is because the addition of two points on an elliptic curve (or the addition of one point to itself) yields a third point on the elliptic curve whose location has no immediately obvious relationship to the locations of the first two, and repeating this many times over yields a point ''nP'' that may be essentially anywhere. Intuitively, this is not dissimilar to the fact that if you had a point ''P'' on a circle, adding 42.57 degrees to its angle may still be a point "not too far" from ''P'', but adding 1000 or 1001 times 42.57 degrees will yield a point that requires a bit more complex calculation to find the original angle. Reversing this process, i.e., given ''Q=nP'' and ''P'', and determining ''n'', can only be done by trying out all possible ''n''—an effort that is computationally intractable if ''n'' is large.
+
+==Point operations==
+[[Image:ECClines.svg|right|thumb|600px|Elliptic curve point operations: Addition (shown in facet 1), doubling (facets 2 and 4) and negation (facet 3).]]
+
+There are three commonly defined operations for elliptic curve points: addition, doubling and negation.
+
+===Point at infinity===
+Point at infinity {{tmath|\mathcal{O} }} is the [[identity element]] of elliptic curve arithmetic. Adding it to any point results in that other point, including adding point at infinity to itself.
+That is:
+:<math>\begin{align}
+\mathcal{O} + \mathcal{O} = \mathcal{O}\\
+\mathcal{O} + P = P
+\end{align}</math>
+
+Point at infinity is also written as {{math|0}}.
+
+===Point negation===
+Point negation is finding such a point, that adding it to the given point will result in point at infinity ({{tmath|\mathcal{O} }}).
+:<math>\begin{align}
+P + (-P) = \mathcal{O}
+\end{align}</math>
+
+For elliptic curves of the form ''E'': {{math|''y''<sup>2</sup> {{=}} ''x''<sup>3</sup> + ''ax'' + ''b''}}, negation is a point with the same ''x'' coordinate but negated ''y'' coordinate:
+:<math>\begin{align}
+(x, y) + (-(x, y)) &= \mathcal{O}\\
+(x, y) + (x, -y) &= \mathcal{O}\\
+         (x, -y) &= -(x, y) 
+\end{align}</math>
+
+===Point addition===
+
+With 2 distinct points, ''P'' and ''Q'', addition is defined as the negation of the point resulting from the intersection of the curve, ''E'', and the straight line defined by the points ''P'' and ''Q'', giving the point, ''R''.<ref name="crypto.stanford.edu">{{Cite web|url=https://crypto.stanford.edu/pbc/notes/elliptic/explicit.html|title=Elliptic Curves - Explicit Addition Formulae}}</ref>
+:<math>\begin{align}
+                    P + Q &= R \\
+  (x_p, y_p) + (x_q, y_q) &= (x_r, y_r)
+\end{align}</math>
+
+Assuming the elliptic curve, ''E'', is given by {{math|''y''<sup>2</sup> {{=}} ''x''<sup>3</sup> + ''ax'' + ''b''}}, this can be calculated as:
+:<math>\begin{align}
+  \lambda &= \frac{y_q - y_p}{x_q - x_p} \\
+      x_r &= \lambda^2 - x_p - x_q \\
+      y_r &= \lambda(x_p - x_r) - y_p \\
+\end{align}</math>
+These equations are correct when neither point is the point at infinity, {{tmath|\mathcal{O} }}, and if the points have different x coordinates (they're not mutual inverses). This is important for the [[Elliptic Curve Digital Signature Algorithm|ECDSA verification algorithm]] where the hash value could be zero.
+
+===Point doubling===
+Where the points ''P'' and ''Q'' are coincident (at the same coordinates), addition is similar, except that there is no well-defined straight line through ''P'', so the operation is closed using a limiting case, the tangent to the curve, ''E'', at ''P''.
+
+This is calculated as above, taking derivatives (dE/dx)/(dE/dy):<ref name="crypto.stanford.edu"/>
+:<math>\lambda = \frac{3x_p^2 + a}{2y_p}</math>
+
+where ''a'' is from the defining equation of the curve, ''E'', above.
+
+==Point multiplication==
+
+The straightforward way of computing a point multiplication is through repeated addition. However, there are more efficient approaches to computing the multiplication.
+
+===Double-and-add===
+The simplest method is the double-and-add method,<ref name="guide">{{cite book|last1=Hankerson|first1=Darrel|last2=Vanstone|first2=Scott|last3=Menezes|first3=Alfred|title=Guide to Elliptic Curve Cryptography|year=2004|publisher=Springer-Verlag|location=New York|isbn=0-387-95273-X|series=Springer Professional Computing|doi=10.1007/b97644|s2cid=720546}}</ref> similar to [[Exponentiation by squaring|square-and-multiply]] in [[modular exponentiation]].  The algorithm works as follows:
+
+To compute ''sP'', start with the binary representation for ''s'': {{tmath|s {{=}} s_0 + 2s_1 + 2^2s_2 + \cdots + 2^{n-1}s_{n-1} }}, where {{tmath|s_0  ~..~  s_{n-1} \in \{0, 1\}, n{{=}}\lceil \log_2{s} \rceil }}.
+
+* Iterative algorithm, index increasing:
+
+ '''let''' bits = bit_representation(s)  # the vector of bits (from LSB to MSB) representing s
+ '''let''' res = <math>\begin{align}\mathcal{O}\end{align}</math> # point at infinity
+ '''let''' temp = P  # track doubled P val
+ '''for''' bit '''in''' bits: 
+     '''if''' bit == 1:
+         res = res + temp  # point add
+     temp = temp + temp  # double
+ '''return''' res
+
+* Iterative algorithm, index decreasing:
+
+ '''let''' bits = bit_representation(s)  # the vector of bits (from LSB to MSB) representing s
+ '''let''' i = length(bits) - 2
+ '''let''' res = P
+ '''while''' (i >= 0):  # traversing from second MSB to LSB
+     res = res + res  # double
+     '''if''' bits[i] == 1:
+         res = res + P  # add
+     i = i - 1
+ '''return''' res
+
+Note that both of the iterative methods above are vulnerable to timing analysis. See Montgomery Ladder below for an alternative approach.
+
+* Recursive algorithm:
+
+ '''algorithm''' f(P, d) '''is'''
+     '''if''' d = 0 '''then'''
+         '''return''' 0                         # computation complete
+     '''else if''' d = 1 '''then'''
+         '''return''' P
+     '''else if''' d mod 2 = 1 '''then'''
+         '''return''' point_add(P, f(P, d - 1))  # addition when d is odd
+     '''else'''
+         '''return''' f(point_double(P), d / 2)   # doubling when d is even
+
+where ''f'' is the function for multiplying, ''P'' is the coordinate to multiply, ''d'' is the number of times to add the coordinate to itself. Example: ''100P'' can be written as ''{{nowrap|2(2[P + 2(2[2(P + 2P)])])}}'' and thus requires six point double operations and two point addition operations. ''100P'' would be equal to ''f(P, 100)''.
+
+This algorithm requires log<sub>2</sub>(''d'') iterations of point doubling and addition to compute the full point multiplication.  There are many variations of this algorithm such as using a window, sliding window, NAF, NAF-w, vector chains, and Montgomery ladder.
+
+===Windowed method===
+In the windowed version of this algorithm,<ref name="guide"/> one selects a window size ''w'' and computes all <math>2^w</math> values of <math>dP</math> for <math>d = 0, 1, 2, \dots, 2^w - 1</math>.  The algorithm now uses the representation <math>d = d_0 + 2^wd_1 + 2^{2w}d_2 + \cdots + 2^{mw}d_m</math> and becomes
+
+ Q ← 0
+ '''for''' i from m to 0 '''do'''
+     Q ← point_double_repeat(Q, w)
+     '''if''' d<sub>i</sub> &gt; 0 '''then'''
+         Q ← point_add(Q, d<sub>i</sub>P)  # using pre-computed value of d<sub>i</sub>P
+ '''return''' Q
+
+This algorithm has the same complexity as the double-and-add approach with the benefit of using fewer point additions (which in practice are slower than doubling).  Typically, the value of ''w'' is chosen to be fairly small making the [[pre-computation]] stage a trivial component of the algorithm.  For the NIST recommended curves, <math>w = 4</math> is usually the best selection.  The entire complexity for a ''n''-bit number is measured as <math>n + 1</math> point doubles and <math>2^w - 2 + \tfrac{n}{w}</math> point additions.
+
+===Sliding-window method===
+In the sliding-window version, we look to trade off point additions for point doubles.  We compute a similar table as in the windowed version except we only compute the points <math>dP</math> for <math>d = 2^{w-1}, 2^{w-1} + 1, \dots, 2^w - 1</math>.  Effectively, we are only computing the values for which the most significant bit of the window is set.  The algorithm then uses the original double-and-add representation of <math>d = d_0 + 2d_1 + 2^2d_2 + \cdots + 2^md_m</math>.
+
+ Q ← 0
+ '''for''' i from m downto 0 '''do'''
+     '''if''' d<sub>i</sub> = 0 '''then'''
+         Q ← point_double(Q)
+     '''else'''
+         t ← extract j (up to w − 1) additional bits from d (including d<sub>i</sub>)
+         i ← i − j
+         '''if''' j < w '''then'''
+             Perform double-and-add using t
+             '''return''' Q
+         '''else''' 
+             Q ← point_double_repeat(Q, w)
+             Q ← point_add(Q, tP)
+ '''return''' Q
+
+This algorithm has the benefit that the pre-computation stage is roughly half as complex as the normal windowed method while also trading slower point additions for point doublings.  In effect, there is little reason to use the windowed method over this approach, except that the former can be implemented in constant time.  The algorithm requires <math>w - 1 + n</math> point doubles and at most <math>2^{w-1} - 1 + \tfrac{n}{w}</math> point additions.
+
+==={{math|''w''}}-ary non-adjacent form ({{math|''w''}}NAF) method===
+In the [[non-adjacent form]] we aim to make use of the fact that point subtraction is just as easy as point addition to perform fewer (of either) as compared to a sliding-window method.  The NAF of the multiplicand <math>d</math> must be computed first with the following algorithm
+
+ i ← 0
+ '''while''' (d &gt; 0) '''do'''
+     '''if''' (d mod 2) = 1 '''then''' 
+         d<sub>i</sub> ← d mods 2<sup>w</sup>
+         d ← d − d<sub>i</sub>
+     '''else'''
+         d<sub>i</sub> = 0
+     d ← d/2
+     i ← i + 1
+ '''return''' (d<sub>i−1</sub>, d<sub>i-2</sub>, ..., d<sub>0</sub>)
+
+Where the signed modulo function ''mods'' is defined as 
+  
+ '''if''' (d mod 2<sup>w</sup>) &gt;= 2<sup>w−1</sup>
+     '''return''' (d mod 2<sup>w</sup>) − 2<sup>w</sup>
+ '''else'''
+     '''return''' d mod 2<sup>w</sup>
+
+This produces the NAF needed to now perform the multiplication.  This algorithm requires the pre-computation of the points <math> \lbrace 1, 3, 5, \dots, 2^{w-1} - 1 \rbrace P</math> and their negatives, where <math>P</math> is the point to be multiplied.  On typical Weierstrass curves, if <math>P = \lbrace x, y \rbrace</math> then <math>-P = \lbrace x, -y \rbrace</math>.  So in essence the negatives are cheap to compute. Next, the following algorithm computes the multiplication <math>dP</math>:
+
+ Q ← 0
+ '''for''' j ← i − 1 downto 0 '''do'''
+     Q ← point_double(Q)
+     '''if''' (d<sub>j</sub> != 0)
+         Q ← point_add(Q, d<sub>j</sub>P)
+ '''return''' Q
+
+The wNAF guarantees that on average there will be a density of <math>\tfrac{1}{w + 1}</math> point additions (slightly better than the unsigned window).  It requires 1 point doubling and <math>2^{w-2} - 1</math> point additions for precomputation.  The algorithm then requires <math>n</math> point doublings and <math>\tfrac{n}{w + 1}</math> point additions for the rest of the multiplication.
+
+One property of the NAF is that we are guaranteed that every non-zero element <math>d_i</math> is followed by at least <math>w - 1</math> additional zeroes.  This is because the algorithm clears out the lower <math>w</math> bits of <math>d</math> with every subtraction of the output of the ''mods'' function.  This observation can be used for several purposes. After every non-zero element the additional zeroes can be implied and do not need to be stored.  Secondly, the multiple serial divisions by 2 can be replaced by a division by <math>2^w</math> after every non-zero <math>d_i</math> element and divide by 2 after every zero.
+
+It has been shown that through application of a FLUSH+RELOAD side-channel attack on [[OpenSSL]], the full private key can be revealed after performing cache-timing against as few as 200 signatures performed.<ref>{{cite conference | first1=Naomi | last1=Benger | first3=Nigel P. | last3=Smart | first2=Joop | last2=van de Pol | first4=Yuval | last4=Yarom | title="Ooh Aah... Just a Little Bit" : A Small Amount of Side Channel Can Go a Long Way | publisher=Springer | series=Lecture Notes in Computer Science | volume=8731 | conference=Cryptographic Hardware and Embedded Systems – CHES 2014 | year=2014 | pages=72–95 | doi=10.1007/978-3-662-44709-3_5 | isbn=978-3-662-44708-6 | editor1-first=Lejla | editor1-last=Batina | editor2-first=Matthew | editor2-last=Robshaw | url=https://www.iacr.org/archive/ches2014/87310103/87310103.pdf }}</ref>
+
+===Montgomery ladder===
+The Montgomery ladder<ref>{{cite journal | first=Peter L. | last=Montgomery | title=Speeding the Pollard and elliptic curve methods of factorization | journal=[[Math. Comp.]] | year=1987 | volume=48 | issue=177 | pages=243–264 | mr=0866113 | doi=10.2307/2007888| jstor=2007888 | doi-access=free }}</ref> approach computes the point multiplication in a ''fixed'' number of operations.  This can be beneficial when timing, power consumption, or branch measurements are exposed to an attacker performing a [[side-channel attack]].  The algorithm uses the same representation as from double-and-add.
+
+ R<sub>0</sub> ← 0
+ R<sub>1</sub> ← P
+ '''for''' i from m downto 0 '''do'''
+     '''if''' d<sub>i</sub> = 0 '''then'''
+         R<sub>1</sub> ← point_add(R<sub>0</sub>, R<sub>1</sub>)
+         R<sub>0</sub> ← point_double(R<sub>0</sub>)
+     '''else'''
+         R<sub>0</sub> ← point_add(R<sub>0</sub>, R<sub>1</sub>)
+         R<sub>1</sub> ← point_double(R<sub>1</sub>)
+ 
+     // invariant property to maintain correctness
+     '''assert''' R<sub>1</sub> == point_add(R<sub>0</sub>, P)
+ '''return''' R<sub>0</sub>
+
+This algorithm has in effect the same speed as the double-and-add approach except that it computes the same number of point additions and doubles regardless of the value of the multiplicand ''d''.  This means that at this level the algorithm does not leak any information through branches or power consumption.
+
+However, it has been shown that through application of a FLUSH+RELOAD side-channel attack on OpenSSL, the full private key can be revealed after performing cache-timing against only one signature at a very low cost.<ref>{{cite journal |last1=Yarom |first1=Yuval |last2=Benger |first2=Naomi |date=2014 |title=Recovering OpenSSL ECDSA Nonces Using the FLUSH+RELOAD Cache Side-channel Attack |url=https://eprint.iacr.org/2014/140 |journal=IACR Cryptology ePrint Archive}}</ref>
+
+=== Longer chains ===
+Using [[Lucas chain]]s provides an optimized sequence of doubling and adds compared to the Montgomery ladder, which is faster on larger multiples (longer chains). This method is called "PRAC". PRAC is also published by Montgomery, with the "[[reference implementation]]" being GMP-ECM.<ref name=PZ06>{{cite book |last1=Zimmermann |first1=Paul |last2=Dodson |first2=Bruce |chapter=20 Years of ECM |title=Algorithmic Number Theory |series=Lecture Notes in Computer Science |date=2006 |volume=4076 |pages=525–542 |doi=10.1007/11792086_37|isbn=978-3-540-36075-9 |chapter-url=https://members.loria.fr/PZimmermann/papers/ecm-submitted.pdf}} [https://inria.hal.science/inria-00070192v2 HAL]</ref> DJ Bernstein mentions a number of such schemes in 2017.<ref>{{Citation| last1 = Bernstein| first1 = Daniel J.| last2 = Lange| first2 = Tanja| title = Montgomery curves and the Montgomery ladder| access-date = 2025-11-06| date = 2017| url = https://eprint.iacr.org/2017/293}}</ref>{{rp|at=&sect;4.8.2}}
+ 
+===Constant time Montgomery ladder===
+The security of a cryptographic implementation is likely to face the threat of the so-called [[timing attacks]] 
+which exploits the data-dependent timing characteristics of the implementation. Machines running cryptographic
+implementations consume variable amounts of time to process different inputs and so the timings 
+vary based on the encryption key. To resolve this issue, cryptographic algorithms are implemented
+in a way which removes data dependent variable timing characteristic from the implementation leading
+to the so-called constant-time implementations. Software implementations are considered to be constant-time in the 
+following sense as stated in:<ref>{{cite book |last1=Bernstein |first1=Daniel J. |title=Public Key Cryptography - PKC 2006 |chapter=Curve25519: New Diffie-Hellman Speed Records |series=Lecture Notes in Computer Science |date=2006 |volume=3958 |pages=207–228 |url=https://doi.org/10.1007/11745853_14 |doi=10.1007/11745853_14 |isbn=978-3-540-33851-2 }}</ref> “''avoids all input-dependent branches, all input-dependent array'' 
+''indices, and other instructions with input-dependent timings.''” The GitHub page<ref>{{cite web |last1=Aumasson |first1=Jean-Philippe |title=Guidelines for low-level cryptography Software. |url=https://github.com/veorq/cryptocoding |publisher=GitHub |access-date=March 26, 2024}}</ref> lists coding rules
+for implementations of cryptographic operations, and more generally for operations involving secret or 
+sensitive values.
+
+The Montgomery ladder is an <math>x</math>-coordinate only algorithm for elliptic curve point multiplication 
+and is based on the double and add rules over a specific set of curves known as [[Montgomery curve]]. The algorithm has a conditional branching 
+such that the condition depends on a secret bit. So a straightforward implementation of the ladder won't be 
+constant time and has the potential to leak the secret bit. This problem has been addressed in literature<ref name="djbmont">{{cite book |last1=Bernstein |first1=Daniel J. |last2=Lange |first2=Tanja |chapter=Montgomery curves and the Montgomery ladder |date=2017 |chapter-url=https://eprint.iacr.org/2017/293 |editor=Joppe W. Bos |editor2=Arjen K. Lenstra |title=Topics in Computational Number Theory inspired by Peter L. Montgomery |pages=82–115 |publisher=Cambridge University Press }}</ref><ref name ="costellomont">{{cite journal |last1=Costello |first1=Craig |last2=Smith |first2=Benjamin |title=Montgomery curves and their arithmetic - the case of large characteristic fields |journal=Journal of Cryptographic Engineering |date=September 2018 |volume=8 |issue=3 |pages=227–240 |url=https://link.springer.com/article/10.1007/s13389-017-0157-6 |doi=10.1007/s13389-017-0157-6 |arxiv=1703.01863 }}</ref> 
+and several constant time implementations are known. The constant time Montgomery ladder algorithm is as given below which uses two functions CSwap and Ladder-Step. In the return value of the algorithm Z<sub>2</sub><sup>p-2</sup> is the value of Z<sub>2</sub><sup>−1</sup> computed using the [[Fermat's little theorem]].
+
+ '''algorithm''' Montgomery-Ladder(x<sub>P</sub>, n) '''is'''
+     '''input''': An <math>l</math>-bit scalar <math>n</math> and the <math>x</math>-coordinate <math>x_P</math> of a point <math>P</math>.
+     '''output''': <math>x</math>-coordinate of <math>nP</math>, the <math>n</math>-times scalar multiple of <math>P</math>.
+ 
+     X<sub>1</sub> ← x<sub>P</sub>; X<sub>2</sub> ← 1; Z<sub>2</sub> ← 0; X<sub>3</sub> ← x<sub>P</sub>; Z<sub>3</sub> ← 1
+     prevbit ← 0
+ 
+     '''for''' <math>i</math> from <math>l-1</math> downto 0 '''do'''
+         bit ← bit-value at index <math>i</math> of <math>n</math>
+         b ← bit <math>\oplus</math> prevbit
+         prevbit ← bit
+         (<math>\langle</math>X<sub>2</sub>,Z<sub>2</sub><math>\rangle</math>,<math>\langle</math>X<sub>3</sub>,Z<sub>3</sub><math>\rangle</math>) ← CSwap(<math>\langle</math>X<sub>2</sub>,Z<sub>2</sub><math>\rangle</math>,<math>\langle</math>X<sub>3</sub>,Z<sub>3</sub><math>\rangle</math>,b)
+         (<math>\langle</math>X<sub>2</sub>,Z<sub>2</sub><math>\rangle</math>,<math>\langle</math>X<sub>3</sub>,Z<sub>3</sub><math>\rangle</math>) ← Ladder-Step(<math>\langle</math>X<sub>2</sub>,Z<sub>2</sub><math>\rangle</math>,<math>\langle</math>X<sub>3</sub>,Z<sub>3</sub><math>\rangle</math>,X<sub>1</sub>)<br>       
+     '''return''' X<sub>2</sub>Z<sub>2</sub><sup>p-2</sup>
+
+The Ladder-Step function (given below) used within the ladder is the core of the algorithm and is a combined form of the differential add and doubling operations. The field
+constant a<sub>24</sub> is defined as a<sub>24</sub> = <math>(A+2)/4</math>, where <math>A</math> is a parameter of the underlying [[Montgomery curve]].
+
+ '''Function''' Ladder-Step(<math>\langle</math>X<sub>2</sub>,Z<sub>2</sub><math>\rangle</math>,<math>\langle</math>X<sub>3</sub>,Z<sub>3</sub><math>\rangle</math>,X<sub>1</sub>)<br>
+ T<sub>1</sub> ← X<sub>2</sub> + Z<sub>2</sub>
+ T<sub>2</sub> ← X<sub>2</sub> - Z<sub>2</sub>
+ T<sub>3</sub> ← X<sub>3</sub> + Z<sub>3</sub>
+ T<sub>4</sub> ← X<sub>3</sub> - Z<sub>3</sub>
+ T<sub>5</sub> ← T<sub>1</sub><sup>2</sup>
+ T<sub>6</sub> ← T<sub>2</sub><sup>2</sup>
+ T<sub>2</sub> ← T<sub>2</sub> · T<sub>3</sub>
+ T<sub>1</sub> ← T<sub>1</sub> · T<sub>4</sub>
+ T<sub>1</sub> ← T<sub>1</sub> + T<sub>2</sub>
+ T<sub>2</sub> ← T<sub>1</sub> - T<sub>2</sub>
+ X<sub>3</sub> ← T<sub>1</sub><sup>2</sup>
+ T<sub>2</sub> ← T<sub>2</sub><sup>2</sup>
+ Z<sub>3</sub> ← T<sub>2</sub> · X<sub>1</sub>
+ X<sub>2</sub> ← T<sub>5</sub> · T<sub>6</sub>
+ T<sub>5</sub> ← T<sub>5</sub> - T<sub>6</sub>
+ T<sub>1</sub> ← a<sub>24</sub> · T<sub>5</sub>
+ T<sub>6</sub> ← T<sub>6</sub> + T<sub>1</sub>
+ Z<sub>2</sub> ← T<sub>5</sub> · T<sub>6</sub><br>
+ '''return''' (<math>\langle</math>X<sub>2</sub>,Z<sub>2</sub><math>\rangle</math>,<math>\langle</math>X<sub>3</sub>,Z<sub>3</sub><math>\rangle</math>)
+
+The CSwap function manages the conditional branching and helps the ladder to run following the requirements of a constant time implementation. The function swaps the pair of field elements <math>\langle</math>X<sub>2</sub>,Z<sub>2</sub><math>\rangle</math> and <math>\langle</math>X<sub>3</sub>,Z<sub>3</sub><math>\rangle</math> only if <math>b</math> = 1 and 
+this is done without leaking any information about the secret bit. Various methods of implementing CSwap have been proposed in literature.<ref name="djbmont" /><ref name="costellomont" /> A lesser costly option to manage the constant time requirement of the Montgomery ladder is conditional select which is formalised through a function CSelect. This function has been used in various optimisations and has been formally discussed in<ref>{{cite web |last1=Nath |first1=Kaushik |last2=Sarkar |first2=Palash |title=Constant Time Montgomery Ladder |date=2020 |url=https://eprint.iacr.org/2020/956 |publisher=Cryptology ePrint Archive, Paper 2020/956}}</ref>
+
+Since the inception of the standard Montgomery curve [[Curve25519]] at 128-bit security level, there has been various software implementations to compute the ECDH on various architectures and to achieve best possible performance cryptographic developers have resorted to write the implementations using [[assembly language]] of the underlying architecture. The work<ref>{{cite journal |last1=Bernstein |first1=Daniel J. |last2=Duif |first2=Niels |last3=Lange |first3=Tanja |last4=Schwabe |first4=Peter |last5=Yang |first5=Bo-Yin |title=High-speed high-security signatures |journal=Journal of Cryptographic Engineering |date=2012 |volume=2 |issue=2 |pages=77–89 |doi=10.1007/s13389-012-0027-1 |doi-access=free }}</ref> provided a couple of 64-bit assembly implementations targeting the AMD64 architecture. The implementations were developed using a tool known as ''qhasm''<ref>{{cite web |last1=Bernstein |first1=Daniel J. |title=qhasm: tools to help write high-speed software |url=https://cr.yp.to/qhasm.html}}</ref> which can generate high-speed assembly language cryptographic programs. The function CSwap was used in the implementations of these ladders. After that there has been several attempts to optimise the ladder implementation through hand-written assembly programs out of which the notion of CSelect was first used in<ref name="precompute">{{cite book |last1=Oliveira |first1=Thomaz |last2=López |first2=Julio |last3=Hisil |first3=Hüseyin |last4=Faz-Hernández |first4=Armando |last5=Rodrı́guez-Henrı́quez |first5=Francisco |title=Selected Areas in Cryptography – SAC 2017 |chapter=How to (Pre-)Compute a Ladder: Improving the Performance of X25519 and X448 |series=Lecture Notes in Computer Science |date= 2018|volume=10719 |pages=172–191 |chapter-url=https://link.springer.com/chapter/10.1007/978-3-319-72565-9_9 |editor=Carlisle Adams |editor2=Jan Camenisch |publisher=Springer |doi=10.1007/978-3-319-72565-9_9 |isbn=978-3-319-72565-9 }}, Code available at https://github.com/armfazh/rfc7748_precomputed.</ref> and then in.<ref name="knpsjec2022">{{cite journal |last1=Nath |first1=Kaushik |last2=Sarkar |first2=Palash |title=Security and Efficiency Trade-offs for Elliptic Curve Diffie-Hellman at the 128- and 224-bit Security Levels |journal=Journal of Cryptographic Engineering |date=2022 |volume=12 |pages=107–121 |url=https://link.springer.com/article/10.1007/s13389-021-00261-y |doi=10.1007/s13389-021-00261-y |url-access=subscription }}, Code available at https://github.com/kn-cs/x25519</ref> Apart from using sequential instructions, vector instructions have also been used to optimise the ladder computation through various works.<ref>{{cite book |last1=Chou |first1=Tung |title=Selected Areas in Cryptography – SAC 2015 |chapter=Sandy2x: New Curve25519 Speed Records |series=Lecture Notes in Computer Science |date=2016 |volume=9566 |pages=145–160 |chapter-url=https://link.springer.com/chapter/10.1007/978-3-319-31301-6_8 |editor=Orr Dunkelman |editor2=Liam Keliher |doi=10.1007/978-3-319-31301-6_8 |isbn=978-3-319-31300-9 }}, Code available at https://tungchou.github.io/sandy2x/</ref><ref name ="fazacmtoms">{{cite journal |last1=Faz-Hernández |first1=Armando |last2=López |first2=Julio |last3=Dahab |first3=Ricardo |title=High-performance Implementation of Elliptic Curve Cryptography Using Vector Instructions |journal=ACM Transactions on Mathematical Software |date=2019 |volume=45 |issue=3 |pages=1–35 |doi=10.1145/3309759 |doi-access=free }}, Coce available at https://github.com/armfazh/fld-ecc-vec</ref><ref>{{cite journal |last1=Hisil |first1=Hüseyin |last2=Egrice |first2=Berkan |last3=Yassi |first3=Mert |title=Fast 4 Way Vectorized Ladder for the Complete Set of Montgomery Curves |url=https://dergipark.org.tr/en/download/article-file/2329574 |journal=International Journal of Information Security Science |volume=11 |issue=2 |pages=12–24}}, Code available at https://github.com/crypto-ninjaturtles/montgomery4x</ref><ref name="knpsieeetc2022">{{cite journal |last1=Nath |first1=Kaushik |last2=Sarkar |first2=Palash |title=Efficient 4-way Vectorizations of the Montgomery Ladder |journal=IEEE Transactions on Computers |date=2022 |volume=71 |issue=3 |pages=712–723 |doi=10.1109/TC.2021.3060505 }}, Code available at https://github.com/kn-cs/vec-ladder</ref> Along with AMD64, attempts have also been made to achieve efficient implementations on other architectures like ARM. The works<ref>{{cite book |last1=Bernstein |first1=Daniel J. |last2=Schwabe |first2=Peter |title=Cryptographic Hardware and Embedded Systems – CHES 2012 |chapter=NEON crypto |series=Lecture Notes in Computer Science |date=2012 |volume=7428 |pages=320–339 |chapter-url=https://link.springer.com/chapter/10.1007/978-3-642-33027-8_19 |editor=Emmanuel Prouff |editor2=Patrick Schaumont |doi=10.1007/978-3-642-33027-8_19 |isbn=978-3-642-33026-1 }}</ref> and <ref>{{cite web |last1=Lenngren |first1=Emil |title=AArch64 optimized implementation for X25519 |url=https://github.com/Emill/X25519-AArch64/blob/master/X25519_AArch64.pdf |publisher=GitHub}}</ref> provides efficient implementations targeting the ARM architecture. The libraries lib25519<ref>{{cite web |last1=Nath |first1=Kaushik |last2=Bernstein |first2=Daniel J. |title=lib25519 |url=https://lib25519.cr.yp.to/}}</ref> and <ref>{{cite web |last1=Harrison |first1=John R. |title=s2n-bignum |website=[[GitHub]] |url=https://github.com/jargh/s2n-bignum}}</ref> are two state-of-art libraries containing efficient implementations of the Montgomery ladder for [[Curve25519]]. Nevertheless, the libraries have implementations of other cryptographic primitives as well.
+
+Apart from [[Curve25519]], there have been several attempts to compute the ladder over other curves at various security levels. Efficient implementations of the ladder over the standard curve [[Curve448]] at 224-bit security level have also been studied in literature.<ref name="precompute" /><ref name="fazacmtoms" /><ref name="knpsieeetc2022" /> A curve named Curve41417 providing security just over 200 bits was proposed <ref>{{cite book |last1=Bernstein |first1=Daniel J. |last2=Chitchanok |first2=Chuengsatiansup |last3=Tanja |first3=Lange |title=Advanced Information Systems Engineering |chapter=Curve41417: Karatsuba Revisited |series=Lecture Notes in Computer Science |date=2014 |volume=7908 |pages=316–334 |chapter-url=https://link.springer.com/chapter/10.1007/978-3-662-44709-3_18 |editor=Batina, L. |editor2=Robshaw, M.  |doi=10.1007/978-3-662-44709-3_18 |isbn=978-3-642-38708-1 }}</ref> in which a variant of Karatsuba strategy was used to implement the field multiplication needed for the related ECC software. In pursuit of searching Montgomery curves that are competitive to [[Curve25519]] and [[Curve448]] research has been done and couple of curves were proposed along with efficient sequential<ref name="knpsjec2022" /> and vectorised implementations<ref name="knpsieeetc2022" /> of the corresponding ladders. At 256-bit security level efficient implementations of the ladder have also been addressed through three different Montgomery curves.<ref>{{cite journal |last1=Nath |first1=Kaushik |last2=Sarkar |first2=Palash |title=Efficient Elliptic Curve Diffie-Hellman Computation at the 256-bit Security Level |journal=IET Information Security |date=2020 |volume=14 |issue=6 |pages=633–640 |url=https://doi.org/10.1049/iet-ifs.2019.0620 |doi=10.1049/iet-ifs.2019.0620 |url-access=subscription }}, Code available at https://github.com/kn-cs/mont256-dh and https://github.com/kn-cs/mont256-vec</ref>
+
+==References==
+{{Reflist}}
+
+[[Category:Elliptic curves]]
+[[Category:Articles with example Rust code]]

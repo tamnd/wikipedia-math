@@ -1,0 +1,65 @@
+<!-- wikipedia: en
+     page: 5283890
+     title: Split-radix FFT algorithm
+     revision: 1320745110
+     timestamp: 2025-11-06T14:34:51Z
+     history: https://en.wikipedia.org/w/index.php?curid=5283890&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1320745110 -->
+{{Short description|Fast Fourier transform algorithm}}
+The '''split-radix FFT''' is a [[fast Fourier transform]] (FFT) algorithm for computing the [[discrete Fourier transform]] (DFT), and was first described in an initially little-appreciated paper by [[R. Yavne]] (1968)[https://dl.acm.org/profile/81387609872] and subsequently rediscovered simultaneously by various authors in 1984. (The name "split radix" was coined by two of these reinventors, [[Pierre Duhamel|P. Duhamel]] and [[Henk D. L. Hollmann|H. Hollmann]].)  In particular, split radix is a variant of the [[Cooley–Tukey FFT algorithm]] that uses a blend of radices 2 and 4: it [[recursion|recursively]] expresses a DFT of length ''N'' in terms of one smaller DFT of length ''N''/2 and two smaller DFTs of length ''N''/4.
+
+The split-radix FFT, along with its variations, long had the distinction of achieving the lowest published arithmetic operation count (total exact number of required [[real number|real]] additions and multiplications) to compute a DFT of [[power of two|power-of-two]] sizes ''N''.  The arithmetic count of the original split-radix algorithm was improved upon in 2004 (with the initial gains made in unpublished work by J. Van Buskirk via hand optimization for ''N''=64 [http://groups.google.com/group/comp.dsp/msg/9e002292accb8a8b] [https://web.archive.org/web/20061130110013/http://home.comcast.net/~kmbtib/]), but it turns out that one can still achieve the new lowest count by a modification of split radix (Johnson and Frigo, 2007). Although the number of arithmetic operations is not the sole factor (or even necessarily the dominant factor) in determining the time required to compute a DFT on a [[computer]], the question of the minimum possible count is of longstanding theoretical interest.  (No tight lower bound on the operation count has currently been proven.)
+
+The split-radix algorithm can only be applied when ''N'' is a multiple of 4, but since it breaks a DFT into smaller DFTs it can be combined with any other FFT algorithm as desired.
+
+==Split-radix decomposition==
+Recall that the DFT is defined by the formula:
+:<math> X_k =  \sum_{n=0}^{N-1} x_n \omega_N^{nk} </math>
+where <math>k</math> is an integer ranging from <math>0</math> to <math>N-1</math> and <math>\omega_N</math> denotes the primitive [[root of unity]]:
+:<math>\omega_N = e^{-\frac{2\pi i}{N}},</math>
+and thus: <math>\omega_N^N = 1</math>.
+
+The split-radix algorithm works by expressing this summation in terms of three smaller summations.  (Here, we give the "decimation in time" version of the split-radix FFT; the dual decimation in frequency version is essentially just the reverse of these steps.)
+
+First, a summation over the [[even and odd numbers|even]] indices <math>x_{2n_2}</math>.  Second, a summation over the odd indices broken into two pieces: <math>x_{4n_4+1}</math> and <math>x_{4n_4+3}</math>, according to whether the index is 1 or 3 [[modulo operation|modulo]] 4.  Here, <math>n_m</math> denotes an index that runs from 0 to <math>N/m-1</math>.  The resulting summations look like:
+
+:<math> X_k =  \sum_{n_2=0}^{N/2-1} x_{2n_2} \omega_{N/2}^{n_2 k} 
++ \omega_N^k \sum_{n_4=0}^{N/4-1} x_{4n_4+1} \omega_{N/4}^{n_4 k}
++ \omega_N^{3k} \sum_{n_4=0}^{N/4-1} x_{4n_4+3} \omega_{N/4}^{n_4 k}
+</math>
+
+where we have used the fact that <math>\omega_N^{m n k} = \omega_{N/m}^{n k}</math>.  These three sums correspond to ''portions'' of [[Cooley–Tukey FFT algorithm#The radix-2 DIT case|radix-2]] (size ''N''/2) and radix-4 (size ''N''/4) Cooley–Tukey steps, respectively.  (The underlying idea is that the even-index subtransform of radix-2 has no multiplicative factor in front of it, so it should be left as-is, while the odd-index subtransform of radix-2 benefits by combining a second recursive subdivision.)
+
+These smaller summations are now exactly DFTs of length ''N''/2 and ''N''/4, which can be performed recursively and then recombined.
+
+More specifically, let <math>U_k</math> denote the result of the DFT of length ''N''/2 (for <math>k = 0,\ldots,N/2-1</math>), and let <math>Z_k</math> and <math>Z'_k</math> denote the results of the DFTs of length ''N''/4 (for <math>k = 0,\ldots,N/4-1</math>).  Then the output <math>X_k</math> is simply:
+:<math>X_k = U_k + \omega_N^k Z_k + \omega_N^{3k} Z'_k.</math>
+
+This, however, performs unnecessary calculations, since <math>k \geq N/4</math> turn out to share many calculations with <math>k < N/4</math>.  In particular, if we add ''N''/4 to ''k'', the size-''N''/4 DFTs are not changed (because they are periodic in ''N''/4), while the size-''N''/2 DFT is unchanged if we add ''N''/2 to ''k''. So, the only things that change are the <math>\omega_N^k</math> and <math>\omega_N^{3k}</math> terms, known as [[twiddle factor]]s.  Here, we use the identities:
+:<math>\omega_N^{k+N/4} = -i \omega_N^k</math>
+:<math>\omega_N^{3(k+N/4)} = i \omega_N^{3k}</math>
+to finally arrive at:
+:<math>X_k = U_k + \left( \omega_N^k Z_k + \omega_N^{3k} Z'_k \right),</math>
+:<math>X_{k+N/2} = U_k - \left( \omega_N^k Z_k + \omega_N^{3k} Z'_k \right),</math>
+:<math>X_{k+N/4} = U_{k+N/4} - i \left( \omega_N^k Z_k - \omega_N^{3k} Z'_k \right),</math>
+:<math>X_{k+3N/4} = U_{k+N/4} + i \left( \omega_N^k Z_k - \omega_N^{3k} Z'_k \right),</math>
+which gives all of the outputs <math>X_k</math> if we let <math>k</math> range from <math>0</math> to <math>N/4-1</math> in the above four expressions.
+
+Notice that these expressions are arranged so that we need to combine the various DFT outputs by pairs of additions and subtractions, which are known as [[butterfly diagram|butterflies]].  In order to obtain the minimal operation count for this algorithm, one needs to take into account special cases for <math>k = 0</math> (where the twiddle factors are unity) and for <math>k = N/8</math> (where the twiddle factors are <math>(1 \pm i)/\sqrt{2}</math> and can be multiplied more quickly); see, e.g. Sorensen ''et al.'' (1986).  Multiplications by <math>\pm 1</math> and <math>\pm i</math> are ordinarily counted as free (all negations can be absorbed by converting additions into subtractions or vice versa).
+
+This decomposition is performed recursively when ''N'' is a power of two.  The base cases of the recursion are ''N''=1, where the DFT is just a copy <math>X_0 = x_0</math>, and ''N''=2, where the DFT is an addition <math>X_0 = x_0 + x_1</math> and a subtraction <math>X_1 = x_0 - x_1</math>.
+
+These considerations result in a count: <math>4 N \log_2 N - 6N + 8</math> real additions and multiplications, for ''N''&gt;1 a power of two.  This count assumes that, for odd powers of 2, the leftover factor of 2 (after all the split-radix steps, which divide ''N'' by 4) is handled directly by the DFT definition (4 real additions and multiplications), or equivalently by a radix-2 Cooley–Tukey FFT step.
+
+==References==
+* R. Yavne, "[https://dl.acm.org/doi/10.1145/1476589.1476610 An economical method for calculating the discrete Fourier transform]," in ''Proc. AFIPS Fall Joint Computer Conf.'' '''33''', 115–125 (1968).
+* P. Duhamel and H. Hollmann, "Split-radix FFT algorithm," ''Electron. Lett.'' '''20''' (1), 14–16 (1984).
+* M. Vetterli and H. J. Nussbaumer, "Simple FFT and DCT algorithms with reduced number of operations," ''Signal Processing'' '''6''' (4), 267–278 (1984).
+* J. B. Martens, "Recursive cyclotomic factorization—a new algorithm for calculating the discrete Fourier transform," ''IEEE Trans. Acoust., Speech, Signal Processing'' '''32''' (4), 750–761 (1984).
+* P. Duhamel and M. Vetterli, "Fast Fourier transforms: a tutorial review and a state of the art," ''Signal Processing'' '''19''', 259–299 (1990).
+* S. G. Johnson and M. Frigo, "[http://www.fftw.org/newsplit.pdf A modified split-radix FFT with fewer arithmetic operations]," ''IEEE Trans. Signal Process.'' '''55''' (1), 111–119 (2007).
+* Douglas L. Jones, "[http://cnx.org/content/m12031/latest/ Split-radix FFT algorithms]," ''[http://cnx.org/ Connexions]'' web site (Nov. 2, 2006).
+* H. V. Sorensen, M. T. Heideman, and C. S. Burrus, "On computing the split-radix FFT", ''IEEE Trans. Acoust., Speech, Signal Processing'' '''34''' (1), 152–156 (1986).
+
+[[Category:Fast Fourier transforms]]

@@ -1,0 +1,130 @@
+<!-- wikipedia: en
+     page: 4842394
+     title: Biconnected component
+     revision: 1373367893
+     timestamp: 2026-09-05T16:30:30Z
+     history: https://en.wikipedia.org/w/index.php?curid=4842394&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373367893 -->
+{{Short description|Maximal biconnected subgraph}}
+{{confused|vertex cut}}
+[[Image:Graph-Biconnected-Components.svg|thumb|alt=An example graph with biconnected components marked|Each color corresponds to a biconnected component. Multi-colored vertices are cut vertices, and thus belong to multiple biconnected components.]]
+
+In [[graph theory]], a '''biconnected component''' or '''block''' (sometimes known as a '''2-connected component''') is a maximal [[biconnected graph|biconnected]] [[glossary of graph theory#Subgraphs|subgraph]].  Any [[Connectivity (graph theory)#Connected graph|connected graph]] decomposes into a [[Tree (graph theory)|tree]] of biconnected components called the '''block-cut tree''' of the graph. The blocks are attached to each other at shared [[Vertex (graph theory)|vertices]] called '''cut vertices''' or '''separating vertices''' or '''articulation points'''.  Specifically, a '''cut vertex''' is any vertex whose removal increases the number of [[Connected component (graph theory)|connected components]].<ref name="AL-TAIE p. ">{{cite book | last=AL-TAIE | first=MOHAMMED ZUHAIR. KADRY, SEIFEDINE | title=PYTHON FOR GRAPH AND NETWORK ANALYSIS. | publisher=SPRINGER | publication-place= | date=2019 | isbn=978-3-319-85037-5 | oclc=1047552679 | page= | quote= A cut-vertex is a vertex that if removed, the number of network components increases. | chapter=3. Graph Theory}}</ref> A block containing at most one cut vertex is called a '''leaf block''', it corresponds to a [[Vertex_(graph_theory)#Types_of_vertices|leaf vertex]] in the block-cut tree.
+
+==Algorithms==
+
+===Linear time depth-first search===
+The classic [[sequential algorithm]] for computing biconnected components in a connected [[undirected graph]] is due to [[John Hopcroft]] and [[Robert Tarjan]] (1973).<ref>{{Cite journal| first1 = J.| first2 = R.| last1 = Hopcroft| last2 =  Tarjan| title = Algorithm 447: efficient algorithms for graph manipulation| journal = Communications of the ACM| volume = 16| issue = 6| pages = 372–378| year = 1973| doi = 10.1145/362248.362272| doi-access = free}}</ref> It runs in [[Time complexity#Linear time|linear time]], and is based on [[depth-first search]]. This algorithm is also outlined as Problem 22-2 of [[Introduction to Algorithms]] (both 2nd and 3rd editions).
+
+The idea is to run a depth-first search while maintaining the following information:
+# the depth of each vertex in the depth-first-search tree (once it gets visited), and
+# for each vertex {{mvar|v}}, the lowest depth of neighbors of all descendants of {{mvar|v}} (including {{mvar|v}} itself) in the depth-first-search tree, called the {{math|'''lowpoint'''}}.
+The depth is standard to maintain during a depth-first search.  The lowpoint of {{mvar|v}} can be computed after visiting all descendants of {{mvar|v}} (i.e., just before {{mvar|v}} gets popped off the depth-first-search [[Stack (abstract data type)|stack]]) as the minimum of the depth of {{mvar|v}}, the depth of all neighbors of {{mvar|v}} (other than the parent of {{mvar|v}} in the depth-first-search tree) and the lowpoint of all children of {{mvar|v}} in the depth-first-search tree.
+
+The key fact is that a nonroot vertex {{mvar|v}} is a cut vertex (or articulation point) separating two biconnected components [[if and only if]] there is a child {{mvar|y}} of {{mvar|v}} such that {{math|lowpoint(''y'') ≥ depth(''v'')}}. This property can be tested once the depth-first search returned from every child of {{mvar|v}} (i.e., just before {{mvar|v}} gets popped off the depth-first-search stack), and if '''true''', {{mvar|v}} separates the graph into different biconnected components. This can be represented by computing one biconnected component out of every such {{mvar|y}} (a component which contains {{mvar|y}} will contain the subtree of {{mvar|y}}, plus {{mvar|v}}), and then erasing the subtree of {{mvar|y}} from the tree.
+
+The root vertex must be handled separately: it is a cut vertex if and only if it has at least two children in the DFS tree.  Thus, it suffices to simply build one component out of each child subtree of the root (including the root).
+
+====Pseudocode====
+
+ <u>GetArticulationPoints(i)</u>
+     visited[i] := '''true'''
+     current_time := current_time+1
+     visit_time[i] := current_time
+     low[i] := current_time
+     childCount := 0
+     isArticulation := '''false'''
+ 
+     '''for each''' j '''in''' Neighborhood(i) '''do'''
+         '''if''' '''not''' visited[j] '''then'''
+             parent[j] := i
+             GetArticulationPoints(j)
+             childCount := childCount + 1
+             '''if''' low[j] ≥ visit_time[i] '''then'''
+                 isArticulation := '''true'''
+             low[i] := Min (low[i], low[j])
+         '''else if''' j ≠ parent[i] '''then'''
+             low[i] := Min (low[i], visit_time[j])
+     '''if''' (parent[i] ≠ '''null''' '''and''' isArticulation) '''or''' (parent[i] = '''null''' '''and''' childCount > 1) '''then'''
+         '''Output''' i as articulation point
+
+ <u>Main</u>
+ current_time := 0          // global variable
+ parent[r] := '''null'''
+ GetArticulationPoints(r)   // r is an arbitrary root
+
+Note that the terms child and parent denote the relations in the DFS tree, not the original graph.
+
+<div>[[File:TarjanAPDemoDepth.gif|400px|thumb|A demo of Tarjan's algorithm to find cut vertices. '''D''' denotes depth and '''L''' denotes lowpoint.]]</div>
+<br />
+
+===Other algorithms===
+A simple alternative to the above algorithm uses [[chain decomposition]]s, which are special ear decompositions depending on [[depth-first search|DFS]]-trees.<ref name="Schmidt">{{citation
+ | last = Schmidt | first = Jens M. | author-link = Jens M. Schmidt
+ | doi = 10.1016/j.ipl.2013.01.016
+ | issue = 7
+ | journal = Information Processing Letters
+ | pages = 241–244
+ | year = 2013
+ | title = A Simple Test on 2-Vertex- and 2-Edge-Connectivity
+ | volume = 113| arxiv = 1209.0700}}.</ref> Chain decompositions can be computed in linear time by this [[Bridge (graph theory)#Bridge-Finding with Chain Decompositions|traversing rule]]. Let {{mvar|C}} be a chain decomposition of {{mvar|G}}. Then {{mvar|G}} is 2-vertex-connected if and only if {{mvar|G}} has minimum [[Degree (graph theory)|degree]] 2 and {{math|''C''{{sub|1}}}} is the only [[Cycle (graph theory)|cycle]] in {{mvar|C}}. This gives immediately a linear-time 2-connectivity test and can be extended to list all cut vertices of {{mvar|G}} in linear time using the following statement: A vertex {{mvar|v}} in a connected graph {{mvar|G}} (with minimum degree 2) is a cut vertex if and only if {{mvar|v}} is incident to a [[Bridge (graph theory)|bridge]] or {{mvar|v}} is the first vertex of a cycle in {{math|''C'' – ''C''{{sub|1}}}}. The list of cut vertices can be used to create the [[Biconnected component#Block-cut tree|block-cut tree]] of {{mvar|G}} in linear time.
+
+In the [[online algorithm|online]] version of the problem, vertices and edges are added (but not removed) dynamically, and a data structure must maintain the biconnected components.  [[Jeffery Westbrook]] and [[Robert Tarjan]] (1992) <ref>{{Cite journal| first1 = J.| first2 = R. E.| title = Maintaining bridge-connected and biconnected components on-line| last1 = Westbrook| journal = Algorithmica| volume = 7| issue = 1–6| pages = 433–464| year = 1992| doi = 10.1007/BF01758773| last2 =  Tarjan}}</ref> developed an efficient data structure for this problem based on [[disjoint-set data structure]]s.  Specifically, it processes {{mvar|n}} vertex additions and {{mvar|m}} edge additions in {{math|''O''(''m'' ''α''(''m'', ''n''))}} total time, where {{mvar|α}} is the [[inverse Ackermann function]].  This time bound is proved to be optimal.
+
+[[Uzi Vishkin]] and [[Robert Tarjan]] (1985) <ref>{{Cite journal| first1 = R.| first2 = U.| last1 = Tarjan| last2 =  Vishkin| title = An Efficient Parallel Biconnectivity Algorithm| journal = [[SIAM Journal on Computing|SIAM J. Comput.]] | volume = 14 | issue = 4 | pages = 862–874 | year = 1985 | doi = 10.1137/0214061}}</ref> designed a [[parallel algorithm]] on CRCW [[Parallel random-access machine|PRAM]] that runs in {{math|''O''(log ''n'')}} time with {{math|''n'' + ''m''}} processors.
+
+Another algorithm has been provided by Harold Gabow, in his paper "Path-based depth-first search for strong and biconnected components" (2000).<ref>{{Cite journal |last=Gabow |first=Harold N. |date=2000-05-31 |title=Path-based depth-first search for strong and biconnected components |url=https://www.sciencedirect.com/science/article/pii/S002001900000051X |journal=Information Processing Letters |volume=74 |issue=3 |pages=107–114 |doi=10.1016/S0020-0190(00)00051-X |issn=0020-0190|url-access=subscription }}</ref>
+
+==Related structures==
+
+===Equivalence relation===
+One can define a [[binary relation]] on the edges of an arbitrary undirected graph, according to which two edges {{mvar|e}} and {{mvar|f}} are related if and only if either {{math|1=''e'' = ''f''}} or the graph contains a [[simple cycle]] through both {{mvar|e}} and {{mvar|f}}. Every edge is related to itself, and an edge {{mvar|e}} is related to another edge {{mvar|f}} if and only if {{mvar|f}} is related in the same way to {{mvar|e}}. Less obviously, this is a [[transitive relation]]: if there exists a simple cycle containing edges {{mvar|e}} and {{mvar|f}}, and another simple cycle containing edges {{mvar|f}} and {{mvar|g}}, then one can combine these two cycles to find a simple cycle through {{mvar|e}} and {{mvar|g}}. Therefore, this is an [[equivalence relation]], and it can be used to partition the edges into equivalence classes, subsets of edges with the property that two edges are related to each other if and only if they belong to the same [[equivalence class]]. The subgraphs formed by the edges in each equivalence class are the biconnected components of the given graph. Thus, the biconnected components partition the edges of the graph; however, they may share vertices with each other.<ref>{{harvtxt|Tarjan|Vishkin|1985}} credit the definition of this equivalence relation to {{harvtxt|Harary|1969}}; however, Harary does not appear to describe it in explicit terms.</ref>
+
+===Block graph===
+The '''block graph''' of a given graph {{mvar|G}} is the [[intersection graph]] of its blocks. Thus, it has one vertex for each block of {{mvar|G}}, and an edge between two vertices whenever the corresponding two blocks share a vertex.
+A graph {{mvar|H}} is the block graph of another graph {{mvar|G}} exactly when all the blocks of {{mvar|H}} are complete subgraphs. The graphs {{mvar|H}} with this property are known as the [[block graph]]s.<ref>{{citation|first=Frank|last=Harary|author-link=Frank Harary|title=Graph Theory|publisher=Addison-Wesley|year=1969|page=29}}.</ref>
+
+===Block-cut tree===
+A '''cutpoint''', '''cut vertex''', or '''articulation point''' of a graph {{mvar|G}} is a vertex that is shared by two or more blocks. The structure of the blocks and cutpoints of a connected graph can be described by a [[Tree (graph theory)|tree]] called the '''block-cut tree''' or '''BC-tree'''. This tree has a vertex for each block and for each articulation point of the given graph. There is an edge in the block-cut tree for each pair of a block and an articulation point that belongs to that block.<ref>{{harvtxt|Harary|1969}}, p.&nbsp;36.</ref>
+
+[[File:Block-cut tree2.svg|800px|thumb|none|A graph, and its block-cut tree.<br/>'''Blocks''': <br/>
+{{math|1=''b''{{sub|1}} = [1,2]}} <br/>
+{{math|1=''b''{{sub|2}} = [2,3,4]}} <br/>
+{{math|1=''b''{{sub|3}} = [2,5,6,7]}} <br/>
+{{math|1=''b''{{sub|4}} = [7,8,9,10,11]}} <br/>
+{{math|1=''b''{{sub|5}} = [8,12,13,14,15]}} <br/>
+{{math|1=''b''{{sub|6}} = [10,16]}} <br/>
+{{math|1=''b''{{sub|7}} = [10,17,18]}} <br/> '''Cutpoints:''' <br/>
+{{math|1=''c''{{sub|1}} = 2}} <br/>
+{{math|1=''c''{{sub|2}} = 7}} <br/>
+{{math|1=''c''{{sub|3}} = 8}} <br/>
+{{math|1=''c''{{sub|4}} = 10}}]]
+
+==See also==
+* [[Triconnected component]]
+* [[Bridge (graph theory)]]
+* [[Single-entry single-exit]] Counter part of biconnected components in directed graphs
+
+==Notes==
+<references/>
+
+==References==
+* {{cite journal
+ | author = Eugene C. Freuder
+ | title = A Sufficient Condition for Backtrack-Bounded Search
+ | journal = Journal of the Association for Computing Machinery
+ | volume = 32
+ | issue = 4
+ | year = 1985
+ | pages = 755&ndash;761
+ | doi = 10.1145/4221.4225| author-link = Eugene C. Freuder
+ | doi-access = free
+ }}
+
+== External links ==
+* [http://www.geeksforgeeks.org/biconnected-components/ C++ implementation of Biconnected Components]
+
+{{DEFAULTSORT:Biconnected Component}}
+[[Category:Graph connectivity]]
+[[Category:Articles with example pseudocode]]

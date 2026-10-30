@@ -1,0 +1,92 @@
+<!-- wikipedia: en
+     page: 26597035
+     title: Pairwise summation
+     revision: 1366836768
+     timestamp: 2026-07-30T14:38:00Z
+     history: https://en.wikipedia.org/w/index.php?curid=26597035&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1366836768 -->
+{{Short description|Algorithmic technique}}
+In [[numerical analysis]], '''pairwise summation''', also called '''cascade summation''', is a [[summation algorithm]], i.e. a technique to sum a sequence of finite-[[arithmetic precision|precision]] [[floating-point]] numbers that substantially reduces the accumulated [[round-off error]] compared to naively accumulating the sum in sequence.<ref name=Higham93>{{Citation | title=The accuracy of floating point summation |
+first1=Nicholas J. | last1=Higham | journal=[[SIAM Journal on Scientific Computing]] |
+volume=14 | issue=4 | pages=783–799 | doi=10.1137/0914050 | year=1993
+|
+bibcode=1993SJSC...14..783H | citeseerx=10.1.1.43.3535 }}</ref>  Although there are other techniques such as [[Kahan summation]] that typically have even smaller round-off errors, pairwise summation is nearly as good (differing only by a logarithmic factor) while having much lower computational cost&mdash;it can be implemented so as to have nearly the same cost (and exactly the same number of arithmetic operations) as naive summation.
+
+In particular, pairwise summation of a sequence of ''n'' numbers ''x<sub>n</sub>'' works by [[recursion (computer science)|recursively]] breaking the sequence into two halves, summing each half, and adding the two sums: a [[divide and conquer algorithm]].  Its worst-case roundoff errors grow [[Big O notation|asymptotically]] as at most ''O''(ε&nbsp;log&nbsp;''n''), where ε is the [[machine precision]] (assuming a fixed [[condition number]], as discussed below).<ref name=Higham93/>  In comparison, the naive technique of accumulating the sum in sequence (adding each ''x<sub>i</sub>'' one at a time for ''i''&nbsp;=&nbsp;1,&nbsp;...,&nbsp;''n'') has roundoff errors that grow at worst as ''O''(ε''n'').<ref name=Higham93/>  [[Kahan summation]] has a [[error bound|worst-case error]] of roughly ''O''(ε), independent of ''n'', but requires several times more arithmetic operations.<ref name=Higham93/>   If the roundoff errors are random, and in particular have random signs, then they form a [[random walk]] and the error growth is reduced to an average of <math>O(\varepsilon \sqrt{\log n})</math> for pairwise summation.<ref name=Tasche>Manfred Tasche and Hansmartin Zeuner ''Handbook of Analytic-Computational Methods in Applied Mathematics'' Boca Raton, FL: CRC Press, 2000).</ref>
+
+A very similar recursive structure of DFT decomposition is found in many [[fast Fourier transform]] (FFT) algorithms, and is responsible for the same slow roundoff accumulation of those FFTs when implemented with a breadth-first technique due to poor [[memory locality]].<ref name="Tasche"/><ref name=JohnsonFrigo08>S. G. Johnson and M. Frigo, "[https://arxiv.org/abs/2602.23525 Implementing FFTs in practice], in ''Fast Fourier Transforms'', edited by [[C. Sidney Burrus]] (2008); mirrored at arXiv:2602.23525.</ref>
+
+==The algorithm==
+
+In [[pseudocode]], the pairwise summation algorithm for an [[Array data type|array]] {{var|x}} of length {{var|n}} ≥ 0 can be written:
+
+ ''s'' = '''pairwise'''(''x''[1...''n''])
+       '''if''' ''n'' &le; ''N''     ''base case: naive summation for a sufficiently small array''
+           ''s'' = 0
+           '''for''' ''i'' = 1 to ''n''
+               ''s'' = ''s'' + ''x''[''i'']
+       '''else'''         ''divide and conquer: recursively sum two halves of the array''
+           ''m'' = [[Floor and ceiling functions|floor]](''n'' / 2)
+           ''s'' = '''pairwise'''(''x''[1...''m'']) + '''pairwise'''(''x''[''m''+1...''n''])
+       '''end if'''
+
+For some sufficiently small {{var|N}}, this algorithm switches to a naive loop-based summation as a [[Recursion#base case|base case]], whose error bound is O(Nε).<ref>{{cite book|first=Nicholas | last=Higham |title=Accuracy and Stability of Numerical Algorithms (2 ed)| publisher=SIAM|year=2002 | pages=81–82}}</ref>  The entire sum has a worst-case error that grows asymptotically as ''O''(ε&nbsp;log&nbsp;''n'') for large ''n'', for a given condition number (see below).
+
+In an algorithm of this sort (as for [[Divide and conquer algorithm#Choosing the base cases|divide and conquer algorithm]]s in general<ref>Radu Rugina and Martin Rinard, "[http://people.csail.mit.edu/rinard/paper/lcpc00.pdf Recursion unrolling for divide and conquer programs]," in ''Languages and Compilers for Parallel Computing'', chapter 3, pp. 34–48.  ''Lecture Notes in Computer Science'' vol. 2017 (Berlin: Springer, 2001).</ref>), it is desirable to use a larger base case in order to [[Amortized analysis|amortize]] the overhead of the recursion. If ''N''&nbsp;=&nbsp;1, then there is roughly one recursive subroutine call for every input, but more generally there is one recursive call for (roughly) every ''N''/2 inputs if the recursion stops at exactly&nbsp;''n''&nbsp;=&nbsp;''N''.  By making ''N'' sufficiently large, the overhead of recursion can be made negligible (precisely this technique of a large base case for recursive summation is employed by high-performance FFT implementations<ref name=JohnsonFrigo08/>).
+
+Regardless of ''N'', exactly ''n''&minus;1 additions are performed in total, the same as for naive summation, so if the recursion overhead is made negligible then pairwise summation has essentially the same computational cost as for naive summation.
+
+A variation on this idea is to break the sum into ''b'' blocks at each recursive stage, summing each block recursively, and then summing the results, which was dubbed a "superblock" algorithm by its proposers.<ref name=Castaldo08>Anthony M. Castaldo, R. Clint Whaley, and Anthony T. Chronopoulos, "Reducing floating-point error in dot product using the superblock family of algorithms," ''SIAM J. Sci. Comput.'', vol. 32, pp. 1156–1174 (2008).</ref>  The above pairwise algorithm corresponds to ''b''&nbsp;=&nbsp;2 for every stage except for the last stage which is&nbsp;''b''&nbsp;=&nbsp;''N''.
+
+Dalton, Wang & Blainey (2014) describe a iterative, "shift-reduce" formulation for pairwise summation. It can be [[loop unrolling|unrolled]] and sped up using [[SIMD]] instructions. The non-unrolled version is:<ref name=Dalton>{{cite conference |last1=Dalton |first1=Barnaby |last2=Wang |first2=Amy |last3=Blainey |first3=Bob |title=SIMDizing pairwise sums: a summation algorithm balancing accuracy with throughput |date=16 February 2014 |pages=65–70 |doi=10.1145/2568058.2568070 |conference=2014 Workshop on Workshop on Programming Models for SIMD/Vector Processing - WPMVP ’14}}</ref>
+
+<syntaxhighlight lang=c>
+double shift_reduce_sum(double ∗x, size_t n) {
+  double stack[64], v;
+  size_t p = 0;
+  for (size_t i = 0; i < n; ++i) {
+    v = x[i];                               // shift
+    for (size_t b = 1; i & b; b <<= 1, −−p) // reduce
+      v += stack[p−1];
+    stack[p++] = v;
+  }
+  double sum = 0.0;
+  while (p)
+    sum += stack[−−p];
+  return sum;
+}
+</syntaxhighlight>
+
+==Accuracy==
+
+Suppose that one is summing ''n'' values ''x''<sub>''i''</sub>, for ''i''&nbsp;=&nbsp;1,&nbsp;...,&nbsp;''n''.  The exact sum is:
+:<math>S_n = \sum_{i=1}^n x_i</math>
+
+(computed with infinite precision).
+
+With pairwise summation for a base case ''N''&nbsp;=&nbsp;1, one instead obtains <math>S_n + E_n</math>, where the error <math>E_n</math> is bounded above by:<ref name=Higham93/>
+
+:<math>|E_n| \leq \frac{\varepsilon \log_2 n}{1 - \varepsilon \log_2 n} \sum_{i=1}^n |x_i| </math>
+
+where ε is the [[machine precision]] of the arithmetic being employed (e.g. ε&nbsp;&asymp;&nbsp;10<sup>&minus;16</sup> for standard [[double precision]] floating point).  Usually, the quantity of interest is the [[relative error]] <math>|E_n|/|S_n|</math>, which is therefore bounded above by:
+:<math>\frac{|E_n|}{|S_n|} \leq \frac{\varepsilon \log_2 n}{1 - \varepsilon \log_2 n} \left(\frac{\sum_{i=1}^n |x_i|}{\left| \sum_{i=1}^n x_i \right|}\right). </math>
+
+In the expression for the relative error bound, the fraction (&Sigma;|''x<sub>i</sub>''|/|&Sigma;''x<sub>i</sub>''|) is the [[condition number]] of the summation problem.  Essentially, the condition number represents the ''intrinsic'' sensitivity of the summation problem to errors, regardless of how it is computed.<ref>L. N. Trefethen and D. Bau, ''Numerical Linear Algebra'' (SIAM: Philadelphia, 1997).</ref>  The relative error bound of ''every'' ([[backwards stable]]) summation method by a fixed algorithm in fixed precision (i.e. not those that use [[arbitrary-precision arithmetic]], nor algorithms whose memory and time requirements change based on the data), is proportional to this condition number.<ref name=Higham93/>  An ''ill-conditioned'' summation problem is one in which this ratio is large, and in this case even pairwise summation can have a large relative error.  For example, if the summands ''x<sub>i</sub>'' are uncorrelated random numbers with zero mean, the sum is a [[random walk]] and the condition number will grow proportional to <math>\sqrt{n}</math>.  On the other hand, for random inputs with nonzero mean the condition number asymptotes to a finite constant as <math>n\to\infty</math>.  If the inputs are all [[non-negative]], then the condition number is 1.
+
+Note that the <math>1 - \varepsilon \log_2 n</math> denominator is effectively 1 in practice, since <math>\varepsilon \log_2 n</math> is much smaller than 1 until ''n'' becomes of order 2<sup>1/ε</sup>, which is roughly 10<sup>10<sup>15</sup></sup> in double precision.
+
+In comparison, the relative error bound for naive summation (simply adding the numbers in sequence, rounding at each step) grows as <math>O(\varepsilon n)</math> multiplied by the condition number.<ref name=Higham93/>  In practice, it is much more likely that the rounding errors have a random sign, with zero mean, so that they form a random walk; in this case, naive summation has a [[root mean square]] relative error that grows as <math>O(\varepsilon \sqrt{n})</math> and pairwise summation has an error that grows as <math>O(\varepsilon \sqrt{\log n})</math> on average.<ref name="Tasche"/>
+
+==Software implementations==
+
+Pairwise summation is the default summation algorithm in [[NumPy]]<ref>[https://github.com/numpy/numpy/pull/3685 ENH: implement pairwise summation], github.com/numpy/numpy pull request #3685 (September 2013).</ref> and the [[Julia (programming language)|Julia technical-computing language]],<ref>[https://github.com/JuliaLang/julia/pull/4039 RFC: use pairwise summation for sum, cumsum, and cumprod], github.com/JuliaLang/julia pull request #4039 (August 2013).</ref> where in both cases it was found to have comparable speed to naive summation (thanks to the use of a large base case).
+
+Other software implementations include the HPCsharp library<ref>https://github.com/DragonSpit/HPCsharp HPCsharp nuget package of high performance C# algorithms</ref> for the [[C Sharp (programming language)|C#]] language and the standard library summation<ref>{{Cite web|title=std.algorithm.iteration - D Programming Language|url=https://dlang.org/phobos/std_algorithm_iteration.html#sum|access-date=2021-04-23|website=dlang.org}}</ref> in [[D (programming language)|D]].
+
+==References==
+{{reflist}}
+
+[[Category:Computer arithmetic]]
+[[Category:Numerical analysis]]
+[[Category:Articles with example pseudocode]]

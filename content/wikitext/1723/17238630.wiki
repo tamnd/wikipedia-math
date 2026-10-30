@@ -1,0 +1,69 @@
+<!-- wikipedia: en
+     page: 17238630
+     title: Multiple-try Metropolis
+     revision: 1302251498
+     timestamp: 2025-07-24T07:52:04Z
+     history: https://en.wikipedia.org/w/index.php?curid=17238630&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1302251498 -->
+'''Multiple-try Metropolis (MTM)''' is a [[sampling method]] that is a modified form of the [[Metropolis–Hastings]] method, first presented by Liu, Liang, and Wong in 2000.
+It is designed to help the sampling trajectory converge faster,
+by increasing both the step size and the acceptance rate.   
+
+==Background==
+
+===Problems with Metropolis–Hastings===
+In [[Markov chain Monte Carlo]], the [[Metropolis–Hastings algorithm]] (MH) can be used to sample from a [[probability distribution]] which is difficult to sample from directly. However, the MH algorithm requires the user to supply a proposal distribution, which can be relatively arbitrary. In many cases, one uses a Gaussian distribution centered on the current point in the [[probability space]], of the form <math>Q(x'; x^t)=\mathcal{N}(x^t;\sigma^2 I) \,</math>. This proposal distribution is convenient to sample from and may be the best choice if one has little knowledge about the target distribution, <math>\pi(x) \,</math>. If desired, one can use the more general [[multivariate normal distribution]], <math>Q(x'; x^t)=\mathcal{N}(x^t;\mathbf{\Sigma})</math>, where <math>\mathbf{\Sigma}</math> is the covariance matrix which the user believes is similar to the target distribution.
+
+Although this method must converge to the stationary distribution in the limit of infinite sample size, in practice the progress can be exceedingly slow. If <math>\sigma^2 \,</math> is too large, almost all steps under the MH algorithm will be rejected. On the other hand, if <math>\sigma^2 \,</math> is too small, almost all steps will be accepted, and the Markov chain will be similar to a random walk through the probability space. In the simpler case of <math>Q(x'; x^t)=\mathcal{N}(x^t;I) \,</math>, we see that <math>N \,</math> steps only takes us a distance of <math>\sqrt{N} \,</math>. In this event, the Markov Chain will not fully explore the probability space in any reasonable amount of time. Thus the MH algorithm requires reasonable tuning of the [[scale parameter]] (<math>\sigma^2 \,</math> or <math>\mathbf{\Sigma}</math>).
+
+===Problems with high dimensionality===
+Even if the scale parameter is well-tuned, as the dimensionality of the problem increases, progress can still remain exceedingly slow. To see this, again consider <math>Q(x'; x^t)=\mathcal{N}(x^t;I) \,</math>. In one dimension, this corresponds to a Gaussian distribution with mean 0 and variance 1. For one dimension, this distribution has a mean step of zero, however the mean squared step size is given by
+
+:<math>\langle x^2 \rangle =\int_{-\infty}^\infty x^2\frac{1}{\sqrt{2 \pi}}e^{-\frac{x^2}{2}} dx=1</math>
+
+As the number of dimensions increases, the expected step size becomes larger and larger. In <math>N \,</math> dimensions, the probability of moving a radial distance <math>r \,</math> is related to the [[Chi distribution]], and is given by
+
+:<math>P_n(r) \propto r^{n-1}e^{-r^2/2}</math>
+
+This distribution is peaked at <math>r=\sqrt{N-1} \,</math> which is <math>\approx\sqrt{N} \,</math> for large <math>N \,</math>. This means that the step size will increase as the roughly the square root of the number of dimensions. For the MH algorithm, large steps will almost always land in regions of low probability, and therefore be rejected.
+
+If we now add the scale parameter <math>\sigma^2 \,</math> back in, we find that to retain a reasonable acceptance rate, we must make the transformation <math>\sigma^2 \rightarrow \sigma^2/N</math>. In this situation, the acceptance rate can now be made reasonable, but the exploration of the probability space becomes increasingly slow. To see this, consider a slice along any one dimension of the problem. By making the scale transformation above, the expected step size is any one dimension is not <math>\sigma \,</math> but instead is <math>\sigma/\sqrt{N}</math>. As this step size is much smaller than the "true" scale of the probability distribution (assuming that <math>\sigma \,</math> is somehow known a priori, which is the best possible case), the algorithm executes a random walk along every parameter.
+
+==The multiple-try Metropolis algorithm==
+
+Suppose <math>Q(\mathbf{x},\mathbf{y})</math> is an arbitrary [[proposal function]]. We require that <math>Q(\mathbf{x},\mathbf{y})>0</math> only if <math>Q(\mathbf{y},\mathbf{x})>0</math>. Additionally, <math>\pi(\mathbf{x})</math> is the [[likelihood function]].
+
+Define <math>w(\mathbf{x},\mathbf{y})=\pi(\mathbf{x})Q(\mathbf{x},\mathbf{y})\lambda(\mathbf{x},\mathbf{y})</math> where <math>\lambda(\mathbf{x},\mathbf{y})</math> is a non-negative symmetric function in <math>\mathbf{x}</math> and <math>\mathbf{y}</math> that can be chosen by the user.
+
+Now suppose the current state is <math>\mathbf{x}</math>. The MTM algorithm is as follows:
+
+1) Draw ''k'' independent trial proposals <math>\mathbf{y}_1,\ldots,\mathbf{y}_k</math> from <math>Q(\mathbf{x},.)</math>. Compute the weights <math>w(\mathbf{y}_j,\mathbf{x})</math> for each of these.
+
+2) Select <math>\mathbf{y}</math> from the <math>\mathbf{y}_i</math> with probability proportional to the weights.
+
+3) Now produce a reference set by drawing <math>\mathbf{x}_1,\ldots,\mathbf{x}_{k-1}</math> from the distribution <math>Q(\mathbf{y},.)</math>. Set <math>\mathbf{x}_k=\mathbf{x}</math> (the current point).
+
+4) Accept <math>\mathbf{y}</math> with probability
+:<math>r=\text{min} \left(1, \frac{ w(\mathbf{y}_1,\mathbf{x} )+ \ldots+ w(\mathbf{y}_k,\mathbf{x}) }{ w(\mathbf{x}_1,\mathbf{y})+ \ldots+ w(\mathbf{x}_k,\mathbf{y}) } \right)</math>
+
+It can be shown that this method satisfies the [[detailed balance]] property and therefore produces a reversible Markov chain with <math>\pi(\mathbf{x})</math> as the stationary distribution.
+
+If <math>Q(\mathbf{x},\mathbf{y})</math> is symmetric (as is the case for the [[multivariate normal distribution]]), then one can choose <math>\lambda(\mathbf{x},\mathbf{y})=\frac{1}{Q(\mathbf{x},\mathbf{y})}</math>  which gives <math>w(\mathbf{x},\mathbf{y})=\pi(\mathbf{x})</math>.
+
+===Disadvantages===
+Multiple-try Metropolis needs to compute the energy of <math>2k-1</math> other states at every step.
+If the slow part of the process is calculating the energy, then this method can be slower.
+If the slow part of the process is finding neighbors of a given point, or generating random numbers, then again this method can be slower.
+It can be argued that this method only appears faster because it puts much more computation into a "single step" than Metropolis-Hastings does.
+
+==See also==
+* [[Markov chain Monte Carlo]]
+* [[Metropolis–Hastings algorithm]]
+* [[Detailed balance]]
+
+==References==
+* Liu, J. S., Liang, F. and Wong, W. H. (2000). The multiple-try method and local optimization in Metropolis sampling, ''Journal of the American Statistical Association'', '''95'''(449): 121–134 [https://www.jstor.org/stable/2669532 JSTOR]
+
+[[Category:Monte Carlo methods]]
+[[Category:Markov chain Monte Carlo]]

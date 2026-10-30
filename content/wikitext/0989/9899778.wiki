@@ -1,0 +1,95 @@
+<!-- wikipedia: en
+     page: 9899778
+     title: Implicit certificate
+     revision: 1374515128
+     timestamp: 2026-09-12T15:08:02Z
+     history: https://en.wikipedia.org/w/index.php?curid=9899778&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374515128 -->
+{{more footnotes|date=December 2015}}
+In [[cryptography]], '''implicit certificates''' are a variant of [[public key certificate]]. A subject's [[Public-key cryptography|public key]] is reconstructed from the data in an implicit certificate, and is then said to be "implicitly" verified. Tampering with the certificate will result in the reconstructed public key being invalid, in the sense that it is infeasible to find the matching private key value, as would be required to make use of the tampered certificate.
+
+By comparison, traditional public-key certificates include a copy of the subject's public key, and a [[digital signature]] made by the issuing [[certificate authority]] (CA).  The public key must be explicitly validated, by verifying the signature using the CA's public key. For the purposes of this article, such certificates will be called "explicit" certificates.
+
+Elliptic Curve Qu-Vanstone (ECQV) is one kind of implicit certificate scheme. It is described in the document ''Standards for Efficient Cryptography 4 (SEC4)''.<ref>{{cite web|url=http://www.secg.org/sec4-1.0.pdf |title=Standards for efficient cryptography, SEC 4: Elliptic Curve Qu-Vanstone Implicit Certificate Scheme (ECQV) |publisher=www.secg.org |date=2013-01-24 |access-date=2017-07-05}}</ref><br/>This article will use ECQV as a concrete example to illustrate implicit certificates.
+
+== Comparison of ECQV with explicit certificates ==
+
+Conventional explicit certificates are made up of three parts: subject identification data, a [[public key]] and a [[digital signature]] which binds the public key to the user's identification data (ID).  These are distinct data elements within the certificate, and contribute to the size of the certificate: for example, a standard [[X.509]] certificate is on the order of 1KB in size (~8000 bits).
+
+An ECQV implicit certificate consists of identification data, and a single cryptographic value. This value, an [[Elliptic-curve cryptography|elliptic curve]] point, combines the function of public key data and CA signature. ECQV implicit certificates can therefore be considerably smaller than explicit certificates, and so are useful in highly constrained environments such as Radio-frequency Identification [[RFID]] tags, where not a lot of memory or bandwidth is available.
+
+ECQV certificates are useful for any ECC scheme where the private and public keys are of the form ( ''d'', ''dG'' ). This includes key agreement protocols such as [[ECDH]] and [[ECMQV]], or signing algorithms such as [[ECDSA]]. The operation will fail if the certificate has been altered, as the reconstructed public key will be invalid. Reconstructing the public key is fast (a single [[Elliptic curve point multiplication|point multiplication]] operation) compared to ECDSA signature verification.
+
+==Comparison with ID-based cryptography==
+
+Implicit certificates are not to be confused with [[ID-based cryptography|identity-based cryptography]]. In ID-based schemes, the subject's identity itself is used to derive their public key; there is no 'certificate' as such. The corresponding private key is calculated and issued to the subject by a [[trusted third party]].
+
+In an implicit certificate scheme, the subject has a private key which is not revealed to the CA during the certificate-issuing process. The CA is trusted to issue certificates correctly, but not to hold individual user's private keys. Wrongly issued certificates can be [[certificate revocation|revoked]], whereas there is no comparable mechanism for misuse of private keys in an identity-based scheme.
+
+==Description of the ECQV scheme==
+
+Initially the scheme parameters must be agreed upon. These are:
+* The [[Elliptic-curve cryptography#Domain parameters|elliptic curve parameters]], including a generating point <math>G \,</math>of order <math>n \,</math>. 
+* An encoding function <math> \textrm{Encode}(\gamma, ID)</math> with a public key reconstruction data <math> \gamma</math> and an identifying information <math>ID</math> encodes its arguments as a byte-block, and a corresponding <math>\textrm{Decode}_{\gamma}( \sdot )</math> which extracts the <math>\gamma</math> value from an encoding.
+* A [[Cryptographic hash function|hash function]] <math>H_n( \sdot )</math> which accepts a byte-block and yields a hash value as an integer in the range <math>[0, n-1]</math>
+
+The [[certificate authority]] CA will have private key <math>c \,</math> and public key <math>Q_{CA} = cG</math>
+
+=== Certificate request protocol ===
+
+Here, Alice will be the user who requests the implicit certificate from the CA. She has identifying information <math>ID_A</math>.
+
+# Alice generates a random integer <math>\alpha \,</math>
+# Alice computes <math>A = \alpha\,G \,</math> and sends <math>A</math> and <math>ID_A</math> to the CA.
+# CA selects a random integer <math>k \,</math> from <math>[1, n-1] \,</math> and computes <math>kG \,</math>.
+# CA computes <math>\gamma = A + kG \,</math> (this is the public key reconstruction data)
+# CA computes <math> Cert= \textrm{Encode} ( \gamma , \textrm{ID}_A ) \,</math>
+# CA computes <math>e = H_n( Cert ) </math>
+# CA computes <math>s = ek + c \pmod{n} \,</math> (<math> s \,</math> is the private key reconstruction data)
+# CA sends <math>(s, Cert) \,</math> to Alice
+# Alice computes <math>e' = H_n (Cert)</math> and her private key <math>a = e'\alpha + s \pmod{n} \,</math>
+# Alice computes <math>\gamma' = \textrm{Decode}_{\gamma} (Cert)</math> and her public key <math>Q_A = e'\gamma' + Q_{CA} \,</math>
+# Alice verifies that the certificate is valid, i.e. that <math>Q_A = aG</math>
+
+=== Using the certificate ===
+
+Here, Alice wants to prove her identity to Bob, who trusts the CA.
+
+# Alice sends <math>Cert</math> to Bob, and a ciphertext <math>C</math> created using her private key <math>a</math>. The ciphertext can be a digital signature, or part of an [[Authenticated Key Exchange]] protocol.
+# Bob computes <math>\gamma'' = \textrm{Decode}_{\gamma} (Cert)</math> and <math>e'' = H_n (Cert)</math>.
+# Bob computes Alice's alleged public key <math>Q_A' = e''\gamma'' + Q_{CA}</math>
+# Bob validates ciphertext <math>C</math> using <math>Q_A'</math>. If this validation is successful, he can trust that the key <math>Q_A'</math> is owned by the user whose identity information is contained in <math>Cert</math>.
+
+=== Proof of equivalence of private and public keys ===
+
+Alice's private key is <math>a = e'\alpha + s = e\alpha + ek + c \pmod{n}</math>
+
+The public key reconstruction value <math>\gamma = A + kG = (\alpha + k)G</math>
+
+Alice's public key is <math>Q_A = e\gamma + Q_{CA} = e(\alpha + k)G + cG = (e\alpha + ek + c)G</math>
+
+Therefore, <math>Q_A = aG</math>, which completes the proof.
+
+==Security==
+
+A security proof for ECQV has been published by Brown et al.<ref>{{cite book |last1= Brown | first1 = Daniel R. L. | last2= Gallant | first2= Robert P. |last3=Vanstone |first3=Scott A.   | title = Financial Cryptography | chapter = Provably Secure Implicit Certificate Schemes | date=2001  |url=http://www.cacr.math.uwaterloo.ca/techreports/2000/corr2000-55.ps  |volume=2339 |series=Lecture Notes in Computer Science | issue=1 |pages=156–165 |doi=10.1007/3-540-46088-8_15 | isbn = 978-3-540-44079-6 |access-date=27 December 2015}}</ref>
+
+==See also==
+
+* [[Elliptic curve cryptography]]
+
+==References==
+{{Reflist}}
+* {{Cite book | last1 = Hankerson | first1 = D. | last2 = Vanstone | first2 = S. | author-link2 = Scott Vanstone | last3 = Menezes | first3 = A. | author-link3 = Alfred Menezes | doi = 10.1007/b97644 | title = Guide to Elliptic Curve Cryptography | series = Springer Professional Computing | publisher = [[Springer Science+Business Media|Springer]]| location = New York| year = 2004 | isbn = 978-0-387-95273-4 | pmid =  | pmc = }}
+* [http://www.certicom.com/index.php?action=res,cc&issue=2-2&&article=3 certicom.com], ''Explaining Implicit Certificates'', Code and Cipher Vol. 2, no. 2
+* Leon Pintsov and Scott Vanstone, ''Postal Revenue Collection in the Digital Age'', Financial Cryptography 2000, Lecture Notes in Computer Science 1962, pp.&nbsp;105–120, Springer, February 2000.
+
+==External links==
+*[http://www.secg.org Standards for Efficient Cryptography Group]
+* Blackberry {{Deprecated archive|url=https://archive.today/20130628182256/http://developer.blackberry.com/native/documentation/bb10/com.qnx.doc.crypto/topic/c_cert_ecqv.html|title=Crypto API|sec=el}} supports ECQV
+* Blackberry's Certicom Corp. uses ECQV for Zigbee Smart Energy
+*[https://www.siscertifications.com/iso-27001-certification/ Standards for ISO/IEC 27001:2022 Certifications]
+{{Cryptography navbox | public-key}}
+
+[[Category:Public-key cryptography]]

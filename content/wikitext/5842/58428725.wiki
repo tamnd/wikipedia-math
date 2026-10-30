@@ -1,0 +1,82 @@
+<!-- wikipedia: en
+     page: 58428725
+     title: Crypto-PAn
+     revision: 1349471482
+     timestamp: 2026-04-17T13:39:23Z
+     history: https://en.wikipedia.org/w/index.php?curid=58428725&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1349471482 -->
+{{short description|Cryptographic algorithm for anonymizing IP addresses}}
+{{orphan|date=September 2018}}
+'''Crypto-PAn''' ('''Cryptography-based Prefix-preserving Anonymization'''<ref name="refimpl"/>) is a [[cryptographic algorithm]] for [[data anonymization|anonymizing]] [[IP address]]es while preserving their [[subnet]] structure. That is, the algorithm [[encrypt]]s any string of bits <math>x</math> to a new string <math>E_k(x)</math>, while ensuring that for any pair of bit-strings <math>x, y</math> which share a common prefix of length <math>p</math>, their images <math>E_k(x), E_k(y)</math> also share a common prefix of length <math>p</math>. A mapping with this property is called ''prefix-preserving''.<ref name="Xu2001"/> In this way, Crypto-PAn is a kind of [[format-preserving encryption]].
+
+The mathematical outline of Crypto-PAn was developed by Jinliang Fan, Jun Xu, Mostafa H. Ammar (all of [[Georgia Institute of Technology|Georgia Tech]]) and Sue B. Moon.<ref name="Xu2002"/> It was inspired<ref name="Xu2002"/> by the IP address anonymization done by Greg Minshall's TCPdpriv program circa 1996.
+
+==Algorithm==
+[[Image:Crypto-PAn-tree-structure.svg |thumb|right |A diagram of the Crypto-PAn algorithm as a tree descent. The nodes of the tree are colored according to a pseudo-random function of the key material (not shown). The arrows show the descent corresponding to the input bit-string "010". That descent's nodes are colored "001"; the anonymized output string is thus "011".]]
+
+Intuitively, Crypto-PAn encrypts a bit-string of length <math>n</math> by descending a [[binary tree]] of depth <math>n</math>, one step for each bit in the string. Each of the binary tree's <math>2^n - 1</math> non-leaf nodes has been given a value of "0" or "1", according to some [[pseudo-random function]] seeded by the encryption key. At each step <math>i</math> of the descent, the algorithm computes the <math>i</math>th bit of the output by [[XOR]]ing the <math>i</math>th bit of the input with the value of the current node.
+
+The [[reference implementation]]<ref name="refimpl"/> takes a 256-bit key. The first 128 bits of the key material are used to initialize an [[Advanced Encryption Standard|AES-128]] cipher in [[Electronic Codebook|ECB mode]]. The second 128 bits of the key material are encrypted with the cipher to produce a 128-bit padding block <math>\mathit{pad}</math>.
+
+Given a 32-bit [[IPv4]] address <math>x</math>, the reference implementation performs the following operation for each bit <math>x_i</math> of the input: Compose a 128-bit input block <math>I_i = x_{[0,i)} \mathit{pad}_{[i,128)}</math>. Encrypt <math>I_i</math> with the cipher to produce a 128-bit output block <math>O_i</math>. Finally, XOR the <math>i</math>th bit of that output block with the <math>i</math>th bit of <math>x</math>, and append the result — <math>x_i \oplus O_{i,i}</math> — onto the output bitstring. Once all 32 bits of the output bitstring have been computed, the result is returned as the anonymized output <math>E_k(x)</math> which corresponds to the original input <math>x</math>.
+
+The reference implementation does not implement deanonymization; that is, it does not provide a function <math>D_k</math> such that <math>D_k(E_k(x)) = x</math>. However, decryption can be implemented almost identically to encryption, just making sure to compose each input block <math>I_i = x_{[0,i)} \mathit{pad}_{[i,128)}</math> using the plaintext bits of <math>x</math> decrypted so far, rather than using the ciphertext bits: <math>I_i \neq E_k(x)_{[0,i)} \mathit{pad}_{[i,128)}</math>.
+
+The reference implementation does not implement encryption of bitstrings of lengths other than 32; for example, it does not support the anonymization of 128-bit [[IPv6]] addresses. In practice, the 32-bit Crypto-PAn algorithm can be used in "ECB mode" itself, so that a 128-bit string <math>x_{[0,128)}</math> might be anonymized as <math>E_k(x_{[0,32)}) E_k(x_{[32,64)}) E_k(x_{[64,96)}) E_k(x_{[96,128)})</math>. This approach preserves the prefix structure of the 128-bit string, but does leak information about the lower-order chunks; for example, an anonymized [[IPv6 address]] consisting of the same 32-bit ciphertext repeated four times is likely the [[IPv6 address#Special addresses|special address]] <code>::</code>, which thus reveals the encryption of the 32-bit plaintext <code>0000:0000</code>.
+
+In principle, the reference implementation's approach (building 128-bit input blocks <math>I_i</math>) can be extended up to 128 bits. Beyond 128 bits, a different approach would have to be used; but the fundamental algorithm (descending a binary tree whose nodes are marked with a [[pseudo-random function]] of the key material) remains valid.
+
+==Implementations==
+
+Crypto-PAn's [[C++]] [[reference implementation]] was written in 2002 by Jinliang Fan.<ref name="refimpl"/>
+
+In 2005, David Stott of [[Lucent]] made some improvements to the C++ reference implementation, including a deanonymization routine.<ref name="Stott"/> Stott also observed<ref name="Stott"/> that the algorithm preserves prefix structure while destroying suffix structure; running the Crypto-PAn algorithm on a bit-reversed string will preserve any existing ''suffix'' structure while destroying ''prefix'' structure. Thus, running the algorithm first on the input string, and then again on the bit-reversed output of the first pass, destroys both prefix and suffix structure. (However, once the suffix structure has been destroyed, destroying the remaining prefix structure can be accomplished far more efficiently by simply feeding the non-reversed output to AES-128 in ECB mode. There is no particular reason to reuse Crypto-PAn in the second pass.)
+
+A [[Perl]] implementation was written in 2005 by John Kristoff.<ref name="Kristoff"/> [[Python (programming language)|Python]]<ref name="pycryptopan"/> and [[Ruby (programming language)|Ruby]]<ref name="rubyimpl"/> implementations also exist.
+
+Versions of the Crypto-PAn algorithm are used for [[data anonymization]] in many applications, including NetSniff<ref name="NetSniff"/> and [[CAIDA]]'s CoralReef library.<ref name="libcoral"/>
+
+==Related work==
+
+In 2025, the IPCrypt project proposed standardized methods for encrypting IP addresses, including a prefix-preserving construction (''ipcrypt-pfx'') intended to work for both IPv4 and IPv6 and to modernize earlier designs such as Crypto-PAn. The corresponding Internet-Draft<ref name="ipcrypt-draft"/> and a research preprint on the IACR ePrint archive<ref name="ipcrypt-eprint"/> compare IPCrypt’s constructions with Crypto-PAn.
+
+==References==
+<references>
+<ref name="Kristoff">{{cite web |title=IP-Anonymous 0.04 |author=John Kristoff |date=November 2005 |url=https://metacpan.org/pod/IP::Anonymous |access-date=2018-09-07 |archive-date=2018-09-08 |archive-url=https://web.archive.org/web/20180908054256/https://metacpan.org/pod/IP::Anonymous |url-status=live }}</ref>
+
+<ref name="libcoral">{{cite web |title=Documentation for the C Coral API / IP address anonymization |date=29 March 2000 |url=http://www.caida.org/tools/measurement/coralreef/doc/doc/libcoral-c.html |access-date=2018-09-07 |archive-date=2016-12-02 |archive-url=https://web.archive.org/web/20161202013629/http://www.caida.org/tools/measurement/coralreef/doc/doc/libcoral-c.html |url-status=live }}</ref>
+
+<ref name="NetSniff">{{cite web |title=NetSniff / IP Address Anonymisation Modes / Crypto-PAn |url=http://caia.swin.edu.au/ice/tools/netsniff/anonymisation.html |date=2007-06-26 |access-date=2018-09-07 |archive-date=2018-04-11 |archive-url=https://web.archive.org/web/20180411133023/http://caia.swin.edu.au/ice/tools/netsniff/anonymisation.html |url-status=live }}</ref>
+
+<ref name="pycryptopan">{{cite web |title=pycryptopan 0.01d |author=Michael Bauer |publisher=[[Python Package Index]] |url=https://pypi.org/project/pycryptopan/ |date=2013-08-26 |access-date=2018-09-07 |archive-date=2018-09-08 |archive-url=https://web.archive.org/web/20180908092812/https://pypi.org/project/pycryptopan/ |url-status=live }}</ref>
+
+<ref name="refimpl">{{cite web |title=Crypto-PAn.1.0.tar.gz (reference implementation) |author=Jinliang Fan |date=April 2002 |url=https://www.cc.gatech.edu/computing/Telecomm/projects/cryptopan/ |access-date=2018-09-07 |archive-date=2018-09-08 |archive-url=https://web.archive.org/web/20180908092841/https://www.cc.gatech.edu/computing/Telecomm/projects/cryptopan/ |url-status=dead }}</ref>
+
+<ref name="rubyimpl">{{cite web |title=CryptoPAn 0.1.0 |author=Peter Wood |date=2016-09-25 |publisher=rubygems.org |url=https://rubygems.org/gems/CryptoPAn/versions/0.1.0 |access-date=2018-09-07 |archive-date=2018-09-08 |archive-url=https://web.archive.org/web/20180908015837/https://rubygems.org/gems/CryptoPAn/versions/0.1.0 |url-status=live }}</ref>
+
+<ref name="Stott">{{cite web |title=Lucent's Extensions to Cryptopan |author=David Stott |date=August 2005 |url=https://www.cc.gatech.edu/computing/Networking/projects/cryptopan/lucent.shtml |access-date=2018-09-07 |archive-date=2018-09-08 |archive-url=https://web.archive.org/web/20180908092852/https://www.cc.gatech.edu/computing/Networking/projects/cryptopan/lucent.shtml |url-status=dead }}</ref>
+
+<ref name="Xu2001">{{cite journal |title=On the Design and Performance of Prefix-Preserving IP Traffic Trace Anonymization |author1=Jun Xu |author2=Jinliang Fan |author3=Mostafa H. Ammar |author4=Sue B. Moon |journal=Proceedings of the First ACM SIGCOMM Workshop on Internet Measurement |date=2001 |url=http://conferences.sigcomm.org/imc/2001/imw2001-papers/69.pdf |access-date=2018-09-07 |archive-date=2018-09-08 |archive-url=https://web.archive.org/web/20180908092815/http://conferences.sigcomm.org/imc/2001/imw2001-papers/69.pdf |url-status=live }}</ref>
+
+<ref name="Xu2002">{{cite journal |author1=Jun Xu |author2=Jinliang Fan |author3=Mostafa H. Ammar |author4=Sue B. Moon |title=Prefix-preserving IP address anonymization: Measurement-based security evaluation and a new cryptography-based scheme |journal=Computer Networks |s2cid=6518311 |date=2002 |volume=46 |issue=2 |pages=253–272 |doi=10.1016/j.comnet.2004.03.033 |isbn=0769518567 |hdl=1853/6549 |hdl-access=free }}</ref>
+
+<ref name="ipcrypt-draft">{{cite web
+ |title=Methods for IP Address Encryption and Obfuscation (IPCrypt) – Internet-Draft
+ |author=Frank Denis
+ |date=12 September 2025
+ |url=https://datatracker.ietf.org/doc/draft-denis-ipcrypt/
+ |website=IETF Datatracker
+ |access-date=18 September 2025}}</ref>
+
+<ref name="ipcrypt-eprint">{{cite web
+ |title=IPCrypt: Optimal, Practical Encryption of IP Addresses for Privacy and Measurement
+ |url=https://eprint.iacr.org/2025/1689
+ |website=IACR Cryptology ePrint Archive
+ |date=2025
+ |access-date=18 September 2025}}</ref>
+
+</references>
+
+[[Category:Advanced Encryption Standard]]
+[[Category:Symmetric-key algorithms]]
