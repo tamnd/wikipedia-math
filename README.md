@@ -27,10 +27,14 @@ The design is in the Wikipedia spec of math2 (WP01 to WP15). The tools that fill
 | `content/markdown/<shard>/<pageid>.md` | the Markdown rendering, with the licence header |
 | `analysis/objects/<shard>/<pageid>-r<revision>.md` | the object records (WP3.13) |
 | `analysis/census/<shard>/<pageid>-r<revision>.md` | the census records (WP4.5) |
+| `analysis/edges/<shard>/<pageid>.md` | the edges of each article (WP06) |
+| `tags/<shard>/<pageid>.md` | the tag register and the runs of the matcher of each article (WP5.4) |
+| `reports/census.md` and `reports/edges.md` | the reports of `m2 wp census report` and `m2 wp edges` |
+| `reports/runs/` | one run record for each run of `m2 wp fetch`, `m2 wp parsoid`, `m2 wp pointers` and the other commands |
 | `scripts/research/` | the scripts that made the measurements of the spec |
-| `work/` | the downloads and the table store. This directory is not committed |
+| `work/` | the downloads, the table store, the Parsoid HTML and the pointers. This directory is not committed |
 
-The data files are Markdown with a YAML header, so that a person can read each file on GitHub. In an objects file, the header gives the fields of each object, and the body gives the text of each object under a heading with its ref. In a census file, the header gives the census, and the body gives a summary table.
+The data files are Markdown with a YAML header, so that a person can read each file on GitHub. In an objects file, the header gives the fields of each object, and the body gives the text of each object under a heading with its ref. In a census file, the header gives the census, and the body gives a summary table. In a tags file, the header gives the register and the runs, and the body gives a table of the tags.
 
 `<shard>` is the page id divided by 10,000, with zeros in front to 4 digits. For example, page 53993 is in shard `0005`. Page ids do not change, so an article stays in its shard.
 
