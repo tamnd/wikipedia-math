@@ -1,0 +1,90 @@
+<!-- wikipedia: en
+     page: 77939986
+     title: Reparameterization trick
+     revision: 1368309804
+     timestamp: 2026-08-08T08:46:40Z
+     history: https://en.wikipedia.org/w/index.php?curid=77939986&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1368309804 -->
+{{Short description|Technique used in stochastic gradient variational inference}}
+
+The '''reparameterization trick''' (aka "reparameterization gradient estimator") is a technique used in [[statistical machine learning]], particularly in [[variational inference]], [[variational autoencoder]]s, and [[stochastic optimization]]. It allows for the efficient computation of gradients through random variables, enabling the optimization of [[Parametric model|parametric probability models]] using [[stochastic gradient descent]], and the [[variance reduction]] of [[estimator]]s.
+
+It was developed in the 1980s in [[operations research]], under the name of "pathwise gradients", or "stochastic gradients".<ref name=":0">{{Cite journal |last1=Figurnov |first1=Mikhail |last2=Mohamed |first2=Shakir |last3=Mnih |first3=Andriy |date=2018 |title=Implicit Reparameterization Gradients |url=https://proceedings.neurips.cc/paper_files/paper/2018/hash/92c8c96e4c37100777c7190b76d28233-Abstract.html |journal=Advances in Neural Information Processing Systems |publisher=Curran Associates, Inc. |volume=31}}</ref><ref>Fu, Michael C. "Gradient estimation." ''Handbooks in operations research and management science'' 13 (2006): 575-616.</ref> Its use in variational inference was proposed in 2013.<ref>{{cite arXiv |last1=Kingma |first1=Diederik P. |title=Auto-Encoding Variational Bayes |date=2022-12-10 |eprint=1312.6114 |last2=Welling |first2=Max|class=stat.ML }}</ref>
+
+== Mathematics ==
+
+Let <math>z</math> be a random variable with distribution <math>q_\phi(z)</math>, where <math>\phi</math> is a vector containing the parameters of the distribution.
+
+=== REINFORCE estimator ===
+
+Consider an objective function of the form:<math display="block">L(\phi) = \mathbb{E}_{z \sim q_\phi(z)}[f(z)]</math>Without the reparameterization trick, estimating the gradient <math>\nabla_\phi L(\phi)  </math> can be challenging, because the parameter appears in the random variable itself. In more detail, we have to statistically estimate:<math display="block">\nabla_\phi L(\phi) = \nabla_\phi \int dz \; q_\phi(z) f(z)  </math>The REINFORCE estimator, widely used in [[reinforcement learning]] and especially [[policy gradient]],<ref>{{Cite journal |last=Williams |first=Ronald J. |date=1992-05-01 |title=Simple statistical gradient-following algorithms for connectionist reinforcement learning |url=https://link.springer.com/article/10.1007/bf00992696 |journal=Machine Learning |language=en |volume=8 |issue=3 |pages=229–256 |doi=10.1007/BF00992696 |issn=1573-0565}}</ref> uses the following equality:<math display="block">\nabla_\phi L(\phi) =  \int dz \; q_\phi(z) \nabla_\phi(\ln q_\phi(z)) f(z) = 
+\mathbb{E}_{z \sim q_\phi(z)}[\nabla_\phi(\ln q_\phi(z)) f(z)]</math>This allows the gradient to be estimated:<math display="block">\nabla_\phi L(\phi) \approx \frac 1N \sum_{i=1}^N \nabla_\phi(\ln q_\phi(z_i)) f(z_i)   </math>The REINFORCE estimator has high variance, and many methods were developed to [[Variance reduction|reduce its variance]].<ref>{{Cite journal |last1=Greensmith |first1=Evan |last2=Bartlett |first2=Peter L. |last3=Baxter |first3=Jonathan |date=2004 |title=Variance Reduction Techniques for Gradient Estimates in Reinforcement Learning |url=https://jmlr.org/papers/v5/greensmith04a.html |journal=Journal of Machine Learning Research |volume=5 |issue=Nov |pages=1471–1530 |issn=1533-7928}}</ref>
+
+=== Reparameterization estimator ===
+The reparameterization trick expresses <math>z</math> as:<math display="block">z = g_\phi(\epsilon), \quad \epsilon \sim p(\epsilon)</math>Here, <math>g_\phi</math> is a deterministic function parameterized by <math>\phi</math>, and <math>\epsilon</math> is a noise variable drawn from a fixed distribution <math>p(\epsilon)</math>. This gives:<math display="block">L(\phi) = \mathbb{E}_{\epsilon \sim p(\epsilon)}[f(g_\phi(\epsilon))] </math>Now, the gradient can be estimated as:<math display="block">\nabla_\phi L(\phi) = \mathbb{E}_{\epsilon \sim p(\epsilon)}[\nabla_\phi f(g_\phi(\epsilon))]
+\approx \frac 1N \sum_{i=1}^N \nabla_\phi f(g_\phi(\epsilon_i)) </math>
+
+== Examples ==
+For some common distributions, the reparameterization trick takes specific forms:
+
+[[Normal distribution]]: For <math>z \sim \mathcal{N}(\mu, \sigma^2)</math>, we can use:<math display="block">z = \mu + \sigma \epsilon, \quad \epsilon \sim \mathcal{N}(0, 1)</math>
+
+[[Exponential distribution]]: For <math>z \sim \text{Exp}(\lambda)</math>, we can use:<math display="block">z = -\frac{1}{\lambda} \log(\epsilon), \quad \epsilon \sim \text{Uniform}(0, 1)</math>{{Anchor|Concrete distribution}}[[Discrete distribution]] can be reparameterized by the [[Gumbel distribution]] (Gumbel-softmax trick or "concrete distribution") <ref>{{cite arXiv |last1=Maddison |first1=Chris J. |title=The Concrete Distribution: A Continuous Relaxation of Discrete Random Variables |date=2017-03-05 |eprint=1611.00712 |last2=Mnih |first2=Andriy |last3=Teh |first3=Yee Whye|class=cs.LG }}</ref> and diffusion models.<ref>{{cite conference |last1=Andersson |first1=Jennifer R. |last2=Zhao |first2=Zheng |date=2026 |title=Diffusion differentiable resampling |book-title=Proceedings of the 43rd International Conference on Machine Learning (ICML)}}</ref><ref>{{cite conference |last1=Gourevitch |first1=Samson |last2=Durmus |first2=Alain |last3=Moulines |first3=Eric |last4=Olsson |first4=Jimmy |last5=Janati |first5=Yazid |date=2026 |title=Categorical reparameterization with denoising diffusion models |book-title=Proceedings of the 43rd International Conference on Machine Learning (ICML)}}</ref>
+
+In general, any distribution that is differentiable with respect to its parameters can be reparameterized by inverting the multivariable CDF function, then apply the implicit method. See <ref name=":0" /> for an exposition and application to the [[Gamma distribution|Gamma]], [[Beta distribution|Beta]], [[Dirichlet distribution|Dirichlet]], and [[von Mises distribution]]s.
+
+== Applications ==
+
+=== Variational autoencoder ===
+[[File:Reparameterization_Trick.png|thumb|300x300px|The scheme of the reparameterization trick. The randomness variable <math>{\varepsilon}</math> is injected into the latent space <math>z</math> as external input. In this way, it is possible to backpropagate the gradient without involving stochastic variable during the update.]]
+[[File:Reparameterized_Variational_Autoencoder.png|thumb|300x300px|The scheme of a variational autoencoder after the reparameterization trick.]]
+In [[Variational autoencoder|Variational Autoencoders]] (VAEs), the VAE objective function, known as the [[Evidence lower bound|Evidence Lower Bound]] (ELBO), is given by:
+
+<math display="block">
+\text{ELBO}(\phi, \theta) = \mathbb{E}_{z \sim q_\phi(z|x)}[\log p_\theta(x|z)] - D_{\text{KL}}(q_\phi(z|x) || p(z))
+</math>
+
+where <math>q_\phi(z|x)</math> is the encoder (recognition model), <math>p_\theta(x|z)</math> is the decoder ([[generative model]]), and <math>p(z)</math> is the prior distribution over latent variables. The gradient of ELBO with respect to <math>\theta</math> is simply<math display="block">
+\mathbb{E}_{z \sim q_\phi(z|x)}[\nabla_\theta \log p_\theta(x|z)] \approx \frac{1}{L} \sum_{l=1}^L \nabla_\theta \log p_\theta(x|z_l)
+</math>but the gradient with respect to <math>\phi</math> requires the trick. Express the sampling operation <math>z \sim q_\phi(z|x)</math> as:<math display="block">
+z = \mu_\phi(x) + \sigma_\phi(x) \odot \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)
+</math>where <math>\mu_\phi(x)</math> and <math>\sigma_\phi(x)</math> are the outputs of the encoder network, and <math>\odot</math> denotes [[Hadamard product (matrices)|element-wise multiplication]]. Then we have<math display="block">\nabla_\phi \text{ELBO}(\phi, \theta) = \mathbb{E}_{\epsilon \sim \mathcal{N}(0, I)}[\nabla_\phi \log p_\theta(x|z) - \nabla_\phi \log q_\phi(z|x) + \nabla_\phi \log p(z)]</math>where <math>z = \mu_\phi(x) + \sigma_\phi(x) \odot \epsilon</math>. This allows us to estimate the gradient using Monte Carlo sampling:<math display="block">
+\nabla_\phi \text{ELBO}(\phi, \theta) \approx \frac{1}{L} \sum_{l=1}^L [\nabla_\phi \log p_\theta(x|z_l) - \nabla_\phi \log q_\phi(z_l|x) + \nabla_\phi \log p(z_l)]
+</math>where <math>z_l = \mu_\phi(x) + \sigma_\phi(x) \odot \epsilon_l </math> and <math>\epsilon_l \sim \mathcal{N}(0, I)</math> for <math>l = 1, \ldots, L</math>.
+
+This formulation enables [[backpropagation]] through the sampling process, allowing for [[End-to-end principle|end-to-end]] training of the VAE model using stochastic gradient descent or its variants.
+
+=== Variational inference ===
+
+More generally, the trick allows using stochastic gradient descent for [[variational inference]]. Let the variational objective (ELBO) be of the form:<math display="block">
+\text{ELBO}(\phi) = \mathbb{E}_{z \sim q_\phi(z)}[\log p(x, z) - \log q_\phi(z)]  
+</math>Using the reparameterization trick, we can estimate the gradient of this objective with respect to <math>\phi</math>:<math display="block">
+\nabla_\phi \text{ELBO}(\phi) \approx \frac{1}{L} \sum_{l=1}^L \nabla_\phi [\log p(x, g_\phi(\epsilon_l)) - \log q_\phi(g_\phi(\epsilon_l))], \quad \epsilon_l \sim p(\epsilon)
+</math>
+
+=== Dropout ===
+
+The reparameterization trick has been applied to reduce the variance in [[Dilution (neural networks)|dropout]], a regularization technique in neural networks. The original dropout can be reparameterized with [[Bernoulli distribution]]s:<math display="block">
+y = (W \odot \epsilon) x, \quad \epsilon_{ij} \sim \text{Bernoulli}(\alpha_{ij})
+</math>where <math>W</math> is the weight matrix, <math>x</math> is the input, and <math>\alpha_{ij}</math> are the (fixed) dropout rates.
+
+More generally, other distributions can be used than the Bernoulli distribution, such as the gaussian noise:<math display="block">
+y_i = \mu_i + \sigma_i \odot \epsilon_i, \quad \epsilon_i \sim \mathcal{N}(0, I)
+</math>where <math>\mu_i = \mathbf{m}_i^\top x</math> and <math>\sigma_i^2 = \mathbf{v}_i^\top x^2</math>, with <math>\mathbf{m}_i</math> and <math>\mathbf{v}_i</math> being the mean and variance of the <math>i</math>-th output neuron. The reparameterization trick can be applied to all such cases, resulting in the ''variational dropout'' method.<ref>{{Cite journal |last1=Kingma |first1=Durk P |last2=Salimans |first2=Tim |last3=Welling |first3=Max |date=2015 |title=Variational Dropout and the Local Reparameterization Trick |url=https://proceedings.neurips.cc/paper/2015/hash/bc7316929fe1545bf0b98d114ee3ecb8-Abstract.html |journal=Advances in Neural Information Processing Systems |volume=28|arxiv=1506.02557 }}</ref>
+
+== See also ==
+* [[Variational autoencoder]]
+* [[Stochastic gradient descent]]
+* [[Variational inference]]
+
+== References ==
+{{Reflist}}
+
+== Further reading ==
+* {{cite journal |last1=Ruiz |first1=Francisco R. |last2=AUEB |first2=Titsias RC |last3=Blei |first3=David |date=2016 |title=The Generalized Reparameterization Gradient |url=https://proceedings.neurips.cc/paper_files/paper/2016/hash/f718499c1c8cef6730f9fd03c8125cab-Abstract.html |journal=Advances in Neural Information Processing Systems |volume=29 |arxiv=1610.02287 |access-date=September 23, 2024}}
+* {{Cite journal |last1=Zhang |first1=Cheng |last2=Butepage |first2=Judith |last3=Kjellstrom |first3=Hedvig |last4=Mandt |first4=Stephan |date=2019-08-01 |title=Advances in Variational Inference |journal=IEEE Transactions on Pattern Analysis and Machine Intelligence |volume=41 |issue=8 |pages=2008–2026 |doi=10.1109/TPAMI.2018.2889774 |pmid=30596568 |issn=0162-8828|arxiv=1711.05597 |bibcode=2019ITPAM..41.2008Z }}
+* {{cite web |last=Mohamed |first=Shakir |date=October 29, 2015 |title=Machine Learning Trick of the Day (4): Reparameterisation Tricks |url=https://blog.shakirm.com/2015/10/machine-learning-trick-of-the-day-4-reparameterisation-tricks/ |access-date=September 23, 2024 |website=The Spectator |ref={{sfnref|The Spectator|2015}}}}
+
+[[Category:Machine learning]]
+[[Category:Stochastic optimization]]

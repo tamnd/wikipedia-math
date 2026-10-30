@@ -1,0 +1,144 @@
+<!-- wikipedia: en
+     page: 7415899
+     title: Sequential quadratic programming
+     revision: 1376196060
+     timestamp: 2026-09-22T17:51:21Z
+     history: https://en.wikipedia.org/w/index.php?curid=7415899&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1376196060 -->
+{{Short description|Optimization algorithm}}
+{{Context|date=October 2009}}
+'''Sequential quadratic programming''' ('''SQP''') is an [[iterative method]] for [[nonlinear programming|constrained nonlinear optimization]], also known as Lagrange-Newton method. SQP methods are used on [[mathematics|mathematical]] problems for which the [[objective function]] and the constraints are twice [[continuously differentiable]], but not necessarily [[convex function|convex]].
+
+SQP methods solve a sequence of optimization subproblems, each of which optimizes a quadratic model of the objective subject to a linearization of the constraints. If the problem is unconstrained, then the method reduces to [[Newton's method]] for finding a point where the gradient of the objective vanishes.  If the problem has only equality constraints, then the method is equivalent to applying Newton's method to the first-order optimality conditions, or [[Karush–Kuhn–Tucker conditions]], of the problem.
+
+==Algorithm basics==
+[[File:Sequential Quadratic Programming schematic.pdf|thumb|379x379px|Overview schematic illustrating the basic SQP algorithm]]
+Consider a [[nonlinear programming]] problem of the form:
+
+:<math>\begin{array}{rl}
+\min\limits_{x} & f(x) \\
+\mbox{subject to} & h(x) \ge 0 \\
+  & g(x) = 0.
+\end{array}</math>
+where <math>x \in \mathbb{R}^n</math>, <math>f: \mathbb{R}^n \rightarrow \mathbb{R}</math>, <math>h: \mathbb{R}^n \rightarrow \mathbb{R}^{m_I}</math> and <math>g: \mathbb{R}^n \rightarrow \mathbb{R}^{m_E}</math>.
+
+The [[Lagrange multiplier|Lagrangian]] for this problem is<ref>{{ cite book | year=2006|url=http://www.ece.northwestern.edu/~nocedal/book/num-opt.html| title= Numerical Optimization| publisher=Springer.|isbn=978-0-387-30303-1| author=Jorge Nocedal and Stephen J. Wright}}</ref>
+:<math>\mathcal{L}(x,\lambda,\sigma) = f(x) + \lambda h(x) + \sigma g(x),</math>
+
+where <math>\lambda</math> and <math>\sigma</math> are [[Lagrange multipliers]].
+
+===The equality constrained case===
+
+If the problem does not have inequality constraints (that is, <math>m_I = 0</math>), the first-order optimality conditions (aka [[Karush–Kuhn–Tucker_conditions|KKT conditions]]) <math>\nabla \mathcal{L}(x, \sigma) = 0</math> are a set of nonlinear equations that may be iteratively solved with [[Newton's method in optimization|Newton's Method]]. Newton's method linearizes the KKT conditions at the current iterate <math>\left[x_k, \sigma_k \right]^T</math>,
+which provides the following expression for the Newton step <math>\left[d_x, d_\sigma \right]^T</math>:
+
+<math>
+
+\begin{bmatrix}
+        d_x \\
+        d_\sigma
+    \end{bmatrix}
+    = -[\nabla_{xx}^2 \mathcal{L}(x_k, \sigma_k)]^{-1} \nabla_x \mathcal{L}(x_k, \sigma_k)
+    = -
+    \begin{bmatrix}
+        \nabla^2_{xx} \mathcal{L}(x_k, \sigma_k) & \nabla g(x_k, \sigma_k) \\
+        \nabla g^{T}(x_k, \sigma_k) & 0
+    \end{bmatrix}^{-1}
+    \begin{bmatrix}
+        \nabla f(x_k) + \sigma_k \nabla g(x_k) \\
+        g(x_k)
+    \end{bmatrix}
+</math>,
+
+where <math> \nabla^2_{xx} \mathcal{L}(x_k, \sigma_k)</math> denotes the [[Hessian matrix]] of the Lagrangian, and <math>d_x</math> and <math>d_\sigma</math> are the primal and dual displacements, respectively. Note that the Lagrangian Hessian is not explicitly inverted and a linear system is solved instead.
+
+When the Lagrangian Hessian <math>\nabla^2 \mathcal{L}(x_k, \sigma_k)</math> is not [[Definite_matrix|positive definite]], the Newton step may not exist or it may characterize a stationary point that is not a local minimum (but rather, a local maximum or a saddle point). In this case, the Lagrangian Hessian must be regularized, for example one can add a multiple of the identity to it such that the resulting matrix is positive definite.
+
+An alternative view for obtaining the primal-dual displacements is to construct and solve a local quadratic model of the original problem at the current iterate:
+
+<math>
+\begin{array}{rl}
+\min\limits_{d_x} & f(x_k) + \nabla f(x_k)^T d_x + \frac{1}{2} d_x^T \nabla^2_{xx} \mathcal{L}(x_k, \sigma_k) d_x \\
+\mathrm{s.t.} & g(x_k) + \nabla g(x_k)^T d_x = 0.
+\end{array}
+</math>
+
+The optimality conditions of this [[Quadratic_programming|quadratic problem]] correspond to the linearized KKT conditions of the original problem.
+Note that the term <math>f(x_k)</math> in the expression above may be left out, since it is constant under the <math>\min\limits_{d}</math> operator.
+
+===The inequality constrained case===
+
+In the presence of inequality constraints (<math>m_I > 0</math>), we can naturally extend the definition of the local quadratic model introduced in the previous section:
+
+<math>
+\begin{array}{rl}
+\min\limits_{d} & f(x_k) + \nabla f(x_k)^Td + \frac{1}{2} d^T \nabla^2_{xx} \mathcal{L}(x_k, \lambda_k, \sigma_k) d \\
+\mathrm{s.t.} & h(x_k) + \nabla h(x_k)^T d \ge 0 \\
+              & g(x_k) + \nabla g(x_k)^T d = 0.
+\end{array}
+</math>
+
+===The SQP algorithm===
+The SQP algorithm starts from the initial iterate <math>(x_0, \lambda_0, \sigma_0)</math>. At each iteration, the QP subproblem is built and solved; the resulting Newton step direction <math>[d_x, d_\lambda, d_\sigma]^T</math> is used to update current iterate:
+
+<math>\left[ x_{k+1}, \lambda_{k+1}, \sigma_{k+1} \right]^T = 
+\left[ x_{k}, \lambda_{k}, \sigma_{k} \right]^T + [d_x, d_\lambda, d_\sigma]^T.</math>
+
+This process is repeated for <math>k = 0, 1, 2, \ldots</math> until some convergence criterion is satisfied.
+
+==Practical implementations==
+
+Practical implementations of the SQP algorithm are significantly more complex than its basic version above. To adapt SQP for real-world applications, the following challenges must be addressed:
+* The possibility of an infeasible QP subproblem.
+* QP subproblem yielding a bad step: one that either fails to reduce the target or increases constraints violation.
+* Breakdown of iterations due to significant deviation of the target/constraints from their quadratic/linear models.
+
+To overcome these challenges, various strategies are typically employed:
+* Use of merit functions, which assess progress towards a constrained solution, non-monotonic steps or filter methods.
+* Trust region or line search methods to manage deviations between the quadratic model and the actual target.
+* Special feasibility restoration phases to handle infeasible subproblems, or the use of L1-penalized subproblems to gradually decrease infeasibility
+
+These strategies can be combined in numerous ways, resulting in a diverse range of SQP methods.
+
+==Alternative approaches==
+* [[Sequential linear programming]]
+* [[Sequential linear-quadratic programming]]
+* [[Augmented Lagrangian method]]
+
+==Implementations==
+SQP methods have been implemented in well known numerical environments such as [[MATLAB]] and [[GNU Octave]]. There also exist numerous software libraries, including open source:
+
+* [[SciPy]] (de facto standard for scientific Python) has scipy.optimize.minimize(method='SLSQP') solver.
+* [https://nlopt.readthedocs.io/en/latest/ NLopt] (C/C++ implementation, with numerous interfaces including Julia, Python, R, MATLAB/Octave), implemented by Dieter Kraft as part of a package for optimal control, and modified by S. G. Johnson.<ref name="Kraft">{{cite journal |last1=Kraft |first1=Dieter |title=Algorithm 733: TOMP–Fortran modules for optimal control calculations |journal=ACM Transactions on Mathematical Software |date=Sep 1994 |volume=20 |issue=3 |pages=262–281 |doi=10.1145/192115.192124 |url=https://github.com/scipy/scipy/blob/master/scipy/optimize/slsqp/slsqp_optmz.f |access-date=1 February 2019|s2cid=16077051 }}</ref><ref>{{cite web |title=NLopt Algorithms: SLSQP |website=Read the Docs |date=July 1988 |url=https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/#slsqp |access-date=1 February 2019 }}</ref>
+* [[ALGLIB]] SQP solver (C++, C#, Java, Python API)
+* [https://docs.acados.org/index.html acados] (C with interfaces to Python,  MATLAB, Simulink, Octave) implements a SQP method tailored to the problem structure arising in [[optimal control]], but tackles also general nonlinear programs.
+
+and commercial
+
+* [[LabVIEW]]
+* [[KNITRO]]<ref>[https://www.artelys.com/tools/knitro_doc/2_userGuide/algorithms.html KNITRO User Guide: Algorithms]</ref> (C, C++, C#, Java, Python, Julia, Fortran)
+* [[NPSOL]] (Fortran)
+* [[SNOPT]] (Fortran)
+* [[NLPQL]] (Fortran)
+* [[MATLAB]]
+* [[SuanShu numerical library|SuanShu]] (Java)
+
+==See also==
+* [[Newton's method]]
+* [[Secant method]]
+* [[Model predictive control|Model Predictive Control]]
+
+==Notes==
+{{Reflist}}
+
+==References==
+* {{cite book|last1=Bonnans|first1=J.&nbsp;Frédéric|last2=Gilbert|first2=J.&nbsp;Charles|last3=Lemaréchal|first3=Claude|last4=Sagastizábal|first4=Claudia&nbsp;A.|author4-link= Claudia Sagastizábal |title=Numerical optimization: Theoretical and practical aspects|url=https://www.springer.com/mathematics/applications/book/978-3-540-35445-1|edition=Second revised ed. of  translation of 1997 <!-- ''Optimisation numérique: Aspects théoriques et pratiques'' --> French| series=Universitext|publisher=Springer-Verlag|location=Berlin|year=2006|pages=xiv+490|isbn=978-3-540-35445-1|doi=10.1007/978-3-540-35447-5|mr=2265882|author-link3=Claude Lemaréchal}}
+* {{ cite book | year=2006|url=http://www.ece.northwestern.edu/~nocedal/book/num-opt.html| title= Numerical Optimization| publisher=Springer.|isbn=978-0-387-30303-1| author=Jorge Nocedal and Stephen J. Wright}}
+
+==External links==
+* [https://neos-guide.org/guide/algorithms/sqp/  Sequential Quadratic Programming at NEOS guide]
+
+{{optimization algorithms|constrained}}
+
+[[Category:Optimization algorithms and methods]]

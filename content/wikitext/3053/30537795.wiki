@@ -1,0 +1,210 @@
+<!-- wikipedia: en
+     page: 30537795
+     title: Skew binary number system
+     revision: 1352476501
+     timestamp: 2026-05-04T12:16:51Z
+     history: https://en.wikipedia.org/w/index.php?curid=30537795&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1352476501 -->
+{{Short description|Non-standard positional numeral system}}
+The '''skew binary number system''' is a [[Non-standard positional numeral systems|non-standard positional numeral system]] in which the ''n''th digit contributes a value of <math>2^{n+1} - 1</math> times the digit (digits are indexed from 0) instead of <math>2^{n}</math> times as they do in [[binary number|binary]].  Each digit has a value of 0, 1, or 2. A number can have many skew binary representations. For example, a decimal number 15 can be written as 1000, 201 and 122. Each number can be written uniquely in skew binary canonical form where there is only ''at most'' one instance of the digit 2, which must be the ''[[Least significant bit|least significant]]'' nonzero digit. In this case 15 is written canonically as 1000.
+
+==Examples==
+Canonical skew binary representations of the numbers from 0 to 15 are shown in following table:<ref>{{cite OEIS|A169683}}</ref>
+
+{| class="wikitable" style="text-align:right"
+|-
+! Decimal !! Binary !! Skew Binary !! Ternary
+|-
+| 0 || 0 || 0 || 0
+|-
+| 1 || 1 || 1 || 1
+|-
+| 2 || 10 || 2 || 2
+|-
+| 3 || 11 || 10 || 10
+|-
+| 4 || 100 || 11 || 11
+|-
+| 5 || 101 || 12 || 12
+|-
+| 6 || 110 || 20 || 20
+|-
+| 7 || 111 || 100 || 21
+|-
+| 8 || 1000 || 101 || 22
+|-
+| 9 || 1001 || 102 || 100
+|-
+| 10 || 1010 || 110 || 101
+|-
+| 11 || 1011 || 111 || 102
+|-
+| 12 || 1100 || 112 || 110
+|-
+| 13 || 1101 || 120 || 111
+|-
+| 14 || 1110 || 200 || 112
+|-
+| 15 || 1111 || 1000 || 120
+|-
+| 16 || 10000 || 1001 || 121
+|}
+
+==Arithmetical operations==
+The advantage of skew binary is that each increment operation can be done with at most one [[Carry (arithmetic)|carry]] operation. This exploits the fact that <math>2 (2^{n+1} - 1) + 1 = 2^{n+2} - 1 </math>. Incrementing a skew binary number is done by setting the only two to a zero and incrementing the next digit from zero to one or one to two. When numbers are represented using a form of [[run-length encoding]] as linked lists of the non-zero digits, incrementation and decrementation can be performed in constant time.
+
+Other arithmetic operations may be performed by switching between the skew binary representation and the binary representation.<ref>{{cite journal|last1=Elmasry|first1=Amr|last2=Jensen|first2=Claus|last3=Katajainen|first3=Jyrki|title=Two Skew-Binary Numeral Systems and One Application|journal=Theory of Computing Systems|date=2012|volume=50|pages=185–211|doi=10.1007/s00224-011-9357-0|s2cid=253736860 |url=http://www.cphstl.dk/Paper/TOCS-2011/journal.pdf}}</ref>
+
+=== Conversion between decimal and skew binary number ===
+
+To convert from decimal to skew binary number, one can use the following formula:<ref>{{cite web |author=The Online Encyclopedia of Integer Sequences |title=The canonical skew-binary numbers |url=https://oeis.org/A169683}}</ref>
+
+'''Base case''': <math> a(0) = 0 </math> 
+
+'''Induction case''': <math>  a(2^n-1+i) = a(i) + 10^{n-1} </math> 
+
+'''Boundaries''': <math> 0 \le i \le 2^n-1,n \ge 1 </math>
+
+
+To convert from skew binary number to decimal, one can use the definition of a skew binary number:
+
+<math> S = \sum_{i = 0}^N b_i(2^{i+1}-1) </math>, where <math> b_i \in {0,1,2} </math>, st. only least significant bit (lsb)  <math> b_{lsb} </math> is 2.
+
+==== C++ code to convert decimal number to skew binary number ====
+
+<syntaxhighlight lang="c++">
+#include <iostream>
+#include <cmath>
+#include <algorithm>
+#include <iterator>
+
+using namespace std;
+
+
+long dp[10000];
+
+//Using formula a(0) = 0; for n >= 1, a(2^n-1+i) = a(i) + 10^(n-1) for 0 <= i <= 2^n-1,
+//taken from The On-Line Encyclopedia of Integer Sequences (https://oeis.org/A169683)
+
+long convertToSkewbinary(long decimal){
+
+ int maksIndex = 0;
+ long maks = 1;
+ 
+ while(maks < decimal){
+     
+     maks *= 2;
+     maksIndex++;
+ }
+   
+
+ for(int j = 1; j <= maksIndex; j++){
+     long power = pow(2,j);
+  
+    for(int i = 0; i <= power-1; i++)
+        dp[i + power-1] = pow(10,j-1) + dp[i];
+ }
+
+ 
+  return dp[decimal];
+    
+}
+int main() {
+    std::fill(std::begin(dp), std::end(dp), -1);
+    dp[0] = 0;
+    
+    //One can compare with numbers given in
+    //https://oeis.org/A169683
+    for(int i = 50; i < 125; i++){
+        long current = convertToSkewbinary(i);
+        cout << current << endl;
+    }
+
+    
+	return 0;
+}
+</syntaxhighlight>
+
+==== C++ code to convert skew binary number to decimal number ====
+
+<syntaxhighlight lang="c++">
+#include <iostream>
+#include <cmath>
+
+
+using namespace std;
+
+
+// Decimal =    (0|1|2)*(2^N+1 -1)   +  (0|1|2)*(2^(N-1)+1 -1) + ... 
+//          +  (0|1|2)*(2^(1+1) -1) +  (0|1|2)*(2^(0+1) -1)
+//
+// Expected input: A positive integer/long where digits are 0,1 or 2, s.t only least significant nonzero bit/digit is 2.
+//
+long convertToDecimal(long skewBinary){
+
+  int k = 0;
+  long decimal = 0;
+  
+  while(skewBinary > 0){
+      int digit = skewBinary % 10;
+      skewBinary = ceil(skewBinary/10);
+      decimal += (pow(2,k+1)-1)*digit;
+      k++;
+  }
+  return decimal;
+}
+int main() {
+
+    int test[] = {0,1,2,10,11,12,20,100,101,102,110,111,112,120,200,1000};
+
+    for(int i = 0; i < sizeof(test)/sizeof(int); i++)
+          cout << convertToDecimal(test[i]) << endl;;
+
+    
+	return 0;
+}
+</syntaxhighlight>
+
+===From skew binary representation to binary representation===
+Given a skew binary number, its value can be computed by a loop, computing the successive values of <math>2^{n+1}-1</math> and adding it once or twice for each <math>n</math> such that the <math>n</math>th digit is 1 or 2 respectively. A more efficient method is now given, with only bit representation and one subtraction.
+
+The skew binary number of the form <math>b_0\dots b_n</math> without 2 and with <math>m</math> 1s is equal to the binary number <math>0b_0\dots b_n</math> minus <math>m</math>. Let <math>d^{c}</math> represents the digit <math>d</math> repeated <math>c</math> times. The skew binary number of the form <math>0^{c_0}21^{c_1}0b_0\dots b_n</math> with <math>m</math> 1s is equal to the binary number <math>0^{c_0+c_1+2}1b_0\dots b_n</math> minus <math>m</math>.
+
+===From binary representation to skew binary representation===
+Similarly to the preceding section, the binary number <math>b</math> of the form <math>b_0\dots b_n</math> with <math>m</math> 1s equals the skew binary number <math>b_1\dots b_n</math> plus <math>m</math>. Note that since addition is not defined, adding <math>m</math> corresponds to incrementing the number <math>m</math> times. However, <math>m</math> is bounded by the [[logarithm]] of <math>b</math> and incrementation takes constant time. Hence transforming a binary number into a skew binary number runs in time linear in the length of the number.
+
+==Applications==
+The skew binary numbers were developed by [[Eugene Myers]] in 1983 for a [[purely functional data structure]] that allows the operations of the [[Stack (abstract data type)|stack abstract data type]] and also allows efficient indexing into the sequence of stack elements.<ref>{{cite journal
+ | last = Myers | first = Eugene W.
+ | doi = 10.1016/0020-0190(83)90106-0
+ | issue = 5
+ | journal = Information Processing Letters
+ | mr = 741239
+ | pages = 241–248
+ | title = An applicative random-access stack
+ | volume = 17
+ | year = 1983}}</ref> They were later applied to [[skew binomial heap]]s, a variant of [[binomial heap]]s that support constant-time worst-case insertion operations.<ref>{{cite journal
+ | last1 = Brodal | first1 = Gerth Stølting
+ | last2 = Okasaki | first2 = Chris
+ | date = November 1996
+ | doi = 10.1017/s095679680000201x
+ | issue = 6
+ | journal = Journal of Functional Programming
+ | pages = 839–857
+ | title = Optimal purely functional priority queues
+ | volume = 6| doi-access = free
+ }}</ref>
+
+==See also==
+* [[Three-valued logic]]
+* [[Redundant binary representation]]
+* [[Gray code#n-ary Gray code|n-ary Gray code]]
+
+==Notes==
+{{reflist}}
+
+[[Category:Number theory]]
+[[Category:Functional programming]]
+[[Category:Computer arithmetic]]
+[[Category:Non-standard positional numeral systems]]

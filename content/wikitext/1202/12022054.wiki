@@ -1,0 +1,74 @@
+<!-- wikipedia: en
+     page: 12022054
+     title: Cannon's algorithm
+     revision: 1292012080
+     timestamp: 2025-05-24T18:18:37Z
+     history: https://en.wikipedia.org/w/index.php?curid=12022054&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1292012080 -->
+{{Short description|Algorithm for matrix multiplication}}
+In [[computer science]], '''Cannon's algorithm''' is a [[distributed algorithm|distributed]] [[algorithm for matrix multiplication]] for two-dimensional [[Mesh networking|meshes]] first described in 1969 by [[Lynn Elliot Cannon]].<ref>{{cite thesis |first=Lynn Elliot |last=Cannon |title=A cellular computer to implement the Kalman Filter Algorithm |date=14 July 1969 |type=PhD |publisher=Montana State University |url=https://scholarworks.montana.edu/bitstreams/643669d9-055d-4345-a467-41ad612599c8/download}}</ref><ref name="stanfordpaper">{{cite tech report |last=Gupta |first=H. |last2=Sadayappan |first2=P. |title=Communication Efficient Matrix-Multiplication on Hypercubes |date=1994 |publisher=Stanford Infolab |url=http://ilpubs.stanford.edu:8090/59/}}</ref>
+
+It is especially suitable for computers laid out in an ''N'' × ''N'' mesh.<ref name="ornl.gov">{{cite book |chapter=4.2 Matrix Multiplication on a Distributed Memory Machine |title=Numerical Linear Algebra |publisher=Computational Science Education Project |date=1991–1995 |chapter-url=https://www.phy.ornl.gov/csep/la/node6.html|archive-url=https://web.archive.org/web/20180401075129/https://www.phy.ornl.gov/csep/la/node6.html |archive-date=1 April 2018 }}</ref>  While Cannon's algorithm works well in homogeneous 2D grids, extending it to heterogeneous 2D grids has been shown to be difficult.<ref name="lyonfr">{{cite thesis |first=Jean-François |last=Pineau |title=Communication-aware scheduling on heterogeneous master-worker platforms |date=October 2010 |type=PhD |publisher=Ecole normale supérieure de lyon |url=https://tel.archives-ouvertes.fr/tel-00530131/document |id=tel-00530131}}</ref>
+
+The main advantage of the algorithm is that its storage requirements remain constant and are independent of the number of processors.<ref name="stanfordpaper"/>
+
+The Scalable Universal Matrix Multiplication Algorithm (SUMMA)<ref>{{cite journal |first1=Robert A. |last1=van de Geijn |first2=Jerrell |last2=Watts |title=SUMMA: scalable universal matrix multiplication algorithm |journal=Concurrency: Practice and Experience |volume=9 |issue=4 |pages=255–274 |date=April 1997 |doi= 10.1002/(SICI)1096-9128(199704)9:4<255::AID-CPE250>3.0.CO;2-2|url=http://onlinelibrary.wiley.com/doi/10.1002/(SICI)1096-9128(199704)9:4%3C255::AID-CPE250%3E3.0.CO;2-2/abstract|url-access=subscription }}</ref>
+is a more practical algorithm that requires less workspace and overcomes the need for a square 2D grid.  It is used by the [[ScaLAPACK]], [[PLAPACK]], and [http://code.google.com/p/elemental/ Elemental] libraries.
+
+==Algorithm overview==
+
+When multiplying two ''n''×''n'' matrices A and B, we need ''n''×''n'' processing nodes p arranged in a 2D grid.
+ // PE(i , j)
+ k := (i + j) mod N;
+ a := a[i][k];
+ b := b[k][j];
+ c[i][j] := 0;
+ for (l := 0; l < N; l++) {
+     c[i][j] := c[i][j] + a * b;
+         concurrently {
+             send a to PE(i, (j + N − 1) mod N);
+             send b to PE((i + N − 1) mod N, j);
+         } with {
+             receive a' from PE(i, (j + 1) mod N);
+             receive b' from PE((i + 1) mod N, j );
+         }
+     a := a';
+     b := b';
+ }
+We need to select k in every iteration for every Processor Element (PE) so that processors don't access the same data for computing <math>a_{ik} * b_{kj}</math>.
+
+Therefore processors in the same row / column must begin summation with different indexes. If for example ''PE(0,0)''  calculates <math>a_{00} * b_{00}</math> in the first step, ''PE(0,1) chooses'' <math>a_{01} * b_{11}</math> first. The selection of ''k := (i + j) mod n'' for ''PE(i,j)'' satisfies this constraint for the first step.
+
+In the first step we distribute the input matrices between the processors based on the previous rule.
+
+In the next iterations we choose a new ''k' := (k + 1) mod n'' for every processor. This way every processor will continue accessing different values of the matrices. The needed data is then always at the neighbour processors. ''A PE(i,j)'' needs then the '''''<math>a</math>''''' from ''PE(i,(j + 1) mod n)'' and the <math>b</math> from ''PE((i + 1) mod n,j)'' for the next step. This means that <math>a</math> has to be passed cyclically to the left and also <math>b</math> cyclically upwards. The results of the multiplications are summed up as usual. After n steps, each processor has calculated all <math>a_{ik} * b_{kj}</math> once and its sum is thus the searched <math>c_{ij}</math>.
+
+After the initial distribution of each processor, only the data for the next step has to be stored. These are the intermediate result of the previous sum, a <math>a_{ik}</math> and a <math> b_{kj}</math>. This means that all three matrices only need to be stored in memory once evenly distributed across the processors.
+
+=== Generalisation ===
+In practice we have much fewer processors than the matrix elements. We can replace the matrix elements with submatrices, so that every processor processes more values. The scalar multiplication and addition become sequential matrix multiplication and addition. The width and height of the submatrices will be <math>N=n/\sqrt {p}</math>.
+
+The runtime of the algorithm is  <math>T\mathcal{(n, p)} = T_{coll} (n/N, p) + N*T_{seq}(n/N) + 2(N - 1)(T_{start} + T_{byte}(n/ N)^2)
+</math> , where <math>T_{coll}</math> is the time of the initial distribution of the matrices in the first step, <math>T_{seq}</math> is the calculation of the intermediate results and <math>T_{start}</math> and <math>T_{byte}</math> stands for the time it takes to establish a connection and transmission of byte respectively.
+
+A disadvantage of the algorithm is that there are many connection setups, with small message sizes. It would be better to be able to transmit more data in each message.
+
+== See also ==
+* [[Systolic array]]
+
+== References ==
+{{reflist}}
+
+== External links ==
+{{refbegin}}
+*{{cite web |first=J. |last=Demmel |title=Lecture 9: Parallel Matrix Multiplication |date=1996 |work=CS267 Applications of Parallel Computers |publisher=U.C. Berkeley |url=http://www.cs.berkeley.edu/~demmel/cs267/lecture11/lecture11.html}}
+*{{cite web |first=Aaron |last=Harwood |title=Matrix multiplication §Cannon's algorithm |date=2003 |work=433-498 Networks and Parallel Processing Complexity |publisher=Melbourne University |url=http://www.cs.mu.oz.au/498/notes/node30.html |archive-url=https://web.archive.org/web/20070703035731/http://www.cs.mu.oz.au/498/notes/node30.html |archive-date=3 July 2007 }} 
+{{refend}}
+
+{{Numerical linear algebra}}
+
+{{DEFAULTSORT:Cannon's Algorithm}}
+[[Category:Distributed algorithms]]
+[[Category:Matrix multiplication algorithms]]
+[[Category:Mesh networking]]

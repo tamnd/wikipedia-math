@@ -1,0 +1,200 @@
+<!-- wikipedia: en
+     page: 56993742
+     title: Parallel all-pairs shortest path algorithm
+     revision: 1356730364
+     timestamp: 2026-05-29T13:54:56Z
+     history: https://en.wikipedia.org/w/index.php?curid=56993742&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1356730364 -->
+{{Short description|Computational problem of graph theory}}
+{{Multiple issues|
+{{no footnotes|date=March 2018}}
+{{how-to|date=May 2019}}
+}}
+A central problem in algorithmic [[graph theory]] is the [[shortest path problem]]. Hereby, the problem of finding the shortest path between every pair of nodes is known as '''all-pair-shortest-paths (APSP)''' problem. As [[sequential algorithm]]s for this problem often yield long runtimes, parallelization has shown to be beneficial in this field. In this article two efficient algorithms solving this problem are introduced.
+
+Another variation of the problem is the single-source-shortest-paths (SSSP) problem, which also has parallel approaches: [[Parallel single-source shortest path algorithm]].
+
+== Problem definition==
+Let <math>G=(V,E,w)</math> be a directed Graph with the set of nodes <math>V</math> and the set of edges <math>E\subseteq V\times V</math>. Each edge <math>e \in E</math> has a weight <math>w(e)</math> assigned. The goal of the all-pair-shortest-paths problem is to find the shortest path between '''all''' pairs of nodes of the graph. For this path to be unique it is required that the graph does not contain cycles with a negative weight.
+
+In the remainder of the article it is assumed that the graph is represented using an [[adjacency matrix]]. We expect the output of the algorithm to be a distancematrix <math>D</math>. In <math>D</math>, every entry <math>d_{i,j}</math> is the weight of the shortest path in <math>G</math> from node <math>i</math> to node <math>j</math>.
+
+The [[Floyd algorithm]] presented later can handle negative edge weights, whereas the [[Dijkstra algorithm]] requires all edges to have a positive weight.
+
+== Dijkstra algorithm ==
+
+The [[Dijkstra algorithm]] originally was proposed as a solver for the single-source-shortest-paths problem. However, the algorithm can easily be used for solving the All-Pair-Shortest-Paths problem by executing the Single-Source variant with each node in the role of the root node.
+
+In [[pseudocode]] such an implementation could look as follows:
+  1    '''func''' DijkstraSSSP(''G'',''v'') {
+  2        ... ''//standard SSSP-implementation here''
+  3        return ''d<sub>v</sub>'';
+  4    }
+  5    
+  6    '''func''' DijkstraAPSP(''G'') {
+  7        ''D'' := |''V''|x|''V''|-Matrix
+  8        '''for''' ''i'' '''from''' 1 '''to''' |''V''| {
+  9           //''D[v] denotes the v-th row of D''
+  10          ''D''[''v''] := DijkstraSSP(''G'',''i'')
+  11       }
+  12   }
+
+In this example we assume that <code>DijkstraSSSP</code> takes the graph <math>G</math> and the root node <math>v</math> as input.
+The result of the execution in turn is the distancelist <math>d_v</math>. In <math>d_v</math>, the <math>i</math>-th element stores the distance from the root node <math>v</math> to the node <math>i</math>.
+Therefore the list <math>d_v</math> corresponds exactly to the <math>v</math>-th row of the APSP distancematrix <math>D</math>.
+For this reason, <code>DijkstraAPSP</code> iterates over all nodes of the graph <math>G</math> and executes <code>DijkstraSSSP</code> with each as root node while storing the results in <math>D</math>.
+
+The runtime of <code>DijkstraSSSP</code> is <math>O(|E|+|V|\log(|V|))</math> as we expect the graph to be represented using an [[adjacency matrix]].
+Therefore <code>DijkstraAPSP</code> has a total sequential runtime of <math>O(|E||V|+|V|^2\log(|V|))</math>.
+
+===Parallelization for up to |V| processors===
+
+A trivial parallelization can be obtained by parallelizing the loop of <code>DijkstraAPSP</code> in line''8''.
+However, when using the sequential <code>DijkstraSSSP</code> this limits the number of processors to be used by the number of iterations executed in the loop.
+Therefore, for this trivial parallelization <math>|V|</math> is an upper bound for the number of processors.
+
+For example, let the number of processors <math>p</math> be equal to the number of nodes <math>|V|</math>. This results in each processor executing <code>DijkstraSSSP</code> exactly once in parallel.
+However, when there are only for example <math>p=\frac{|V|}{2}</math> processors available, each processor has to execute <code>DijkstraSSSP</code> twice.
+
+In total this yields a runtime of <math>O(|V|^2 \cdot \frac{|V|}{p})</math>, when <math>|V|</math> is a multiple of <math>p</math>.
+Consequently, the efficiency of this parallelization is perfect: Employing <math>p</math> processors reduces the runtime by the factor <math>p</math>.
+
+Another benefit of this parallelization is that no communication between the processors is required. However, it is required that every processor has enough local memory to store the entire adjacency matrix of the graph.
+
+===Parallelization for more than |V| processors===
+[[File:Apsp dijkstra graph.png|thumb]][[File:Apsp dijkstra distancelist.png|thumb]]
+If more than <math>|V|</math> processors shall be used for the parallelization, it is required that multiple processors take part of the <code>DijkstraSSSP</code> computation. For this reason, the parallelization is split across into two levels.
+
+For the first level the processors are split into <math>|V|</math> partitions.
+Each partition is responsible for the computation of a single row of the distancematrix <math>D</math>. This means each partition has to evaluate one <code>DijkstraSSSP</code> execution with a fixed root node.
+With this definition each partition has a size of  <math>k=\frac{p}{|V|}</math> processors. The partitions can perform their computations in parallel as the results of each are independent of each other. Therefore, the parallelization presented in the previous section corresponds to a partition size of 1 with <math>p=|V|</math> processors.
+
+The main difficulty is the parallelization of multiple processors executing <code>DijkstraSSSP</code> for a single root node. The idea for this parallelization is to distribute the management of the distancelist <math>d_v</math> in DijkstraSSSP within the partition. Each processor in the partition therefore is exclusively responsible for <math>\frac{|V|}{k}</math> elements of <math>d_v</math>. For example, consider <math>|V|=4</math> and <math>p=8</math>: this yields a partition size of <math>k=2</math>. In this case, the first processor of each partition is responsible for <math>d_{v,1}</math>, <math>d_{v,2}</math> and the second processor is responsible for <math>d_{v,3}</math> and <math>d_{v,4}</math>. Hereby, the total distance lists is <math>d_v = [d_{v,1},d_{v,2},d_{v,3},d_{v,4}]</math>.
+
+The <code>DijkstraSSSP</code> algorithm mainly consists of the repetition of two steps: First, the nearest node <math>x</math> in the distancelist <math>d_v</math> has to be found. For this node the shortest path already has been found.
+Afterwards the distance of all neighbors of <math>x</math> has to be adjusted in <math>d_v</math>.
+
+These steps have to be altered as follows because for the parallelization <math>d_v</math> has been distributed across the partition:
+# Find the node <math>x</math> with the shortest distance in <math>d_v</math>.
+#* Each processor owns a part of <math>d_v</math>: Each processor scans for the local minimum <math>\tilde{x}</math> in his part, for example using [[linear search]].
+#* Compute the global minimum <math>x</math> in <math>d_v</math> by performing a [[reduce-operation]] across all <math>\tilde{x}</math>.
+#* Broadcast the global minimum <math>x</math> to all nodes in the partition.
+# Adjust the distance of all neighbors of <math>x</math> in <math>d_v</math>
+#* Every processors now knows the global nearest node <math>x</math> and its distance. Based on this information, adjust the neighbors of <math>x</math> in <math>d_v</math> which are managed by the corresponding processor.
+	
+The total runtime of such an iteration of <code>DijkstraSSSP</code> performed by a partition of size <math>k</math> can be derived based on the performed subtasks:
+* The linear search for <math>\tilde{x}</math>: <math>O(\frac{|V|}{k})</math>
+* Broadcast- and Reduce-operations: These can be implemented efficiently for example using binonmialtrees. This yields a communication overhead of <math>O(\log k)</math>.
+For <math>|V|</math>-iterations this results in a total runtime of <math>O(|V| (\frac{|V|}{k} + \log k))</math>.
+After substituting the definition of <math>k</math> this yields the total runtime for <code>DijkstraAPSP</code>: <math>O(\frac{|V|^3}{p} + \log p)</math>.
+
+The main benefit of this parallelization is that it is not required anymore that every processor stores the entire adjacency matrix.
+Instead, it is sufficient when each processor within a partition only stores the columns of the adjacency matrix of the nodes for which he is responsible.
+Given a partition size of <math>k</math>, each processor only has to store <math>\frac{|V|}{k}</math> columns of the adjacency matrix.
+A downside, however, is that this parallelization comes with a communication overhead due to the reduce- and broadcast-operations.
+
+====Example====
+The graph used in this example is the one presented in the image with four nodes.
+
+The goal is to compute the distancematrix with <math>p=8</math> processors.
+For this reason, the processors are divided into four partitions with two processors each.
+For the illustration we focus on the partition which is responsible for the computation of the shortest paths from node '''A''' to all other nodes.
+Let the processors of this partition be named '''p1''' and '''p2'''.
+
+The computation of the distancelist across the different iterations is visualized in the second image.
+
+The top row in the image corresponds to <math>d_A</math> after the initialization, the bottom one to <math>d_A</math> after the termination of the algorithm.
+The nodes are distributed in a way that '''p1''' is responsible for the nodes '''A''' and '''B''', while '''p2''' is responsible for '''C''' and '''D'''.
+The distancelist <math>d_A</math> is distributed according to this.
+For the second iteration the subtasks executed are shown explicitly in the image:
+# Computation of the local minimum node in <math>d_A</math>
+# Computation of the globalminimum node in <math>d_A</math> through a reduce operation
+# Broadcast of the global minimum node in <math>d_A</math>
+# Marking of the global nearest node as "finished" and adjusting the distance of its neighbors
+
+== Floyd–Warshall algorithm ==
+
+The [[Floyd–Warshall algorithm]] solves the All-Pair-Shortest-Paths problem for directed graphs. With the [[adjacency matrix]] of a graph as input, it calculates shorter paths iterative. After |''V'' | iterations the distance-matrix contains all the shortest paths. The following describes a sequential version of the algorithm in pseudo code:
+
+  1    '''func''' Floyd_All_Pairs_SP(''A'') {
+  2        <math>D^{(0)}</math> = ''A'';
+  3        '''for''' ''k'' := 1 '''to''' ''n'' '''do'''
+  4            '''for''' ''i'' := 1 '''to''' ''n'' '''do'''
+  5                '''for''' ''j'' := 1 '''to''' ''n'' '''do'''
+  6                    <math>d^{(k)}_{i,j} := \min(d^{(k-1)}_{i,j}, d^{(k-1)}_{i,k} + d^{(k-1)}_{k,j}) </math>
+  7     }
+
+[[File:2d block-mapping.png|thumb|300x300px|partition of a matrix with 2-D block mapping]]
+
+Where ''A'' is the [[adjacency matrix]], ''n'' = |''V'' | the number of nodes and ''D'' the distance matrix.
+
+===Parallelization===
+
+The basic idea to parallelize the algorithm is to partition the matrix and split the computation between the processes. Each process is assigned to a specific part of the matrix. A common way to achieve this is '''2-D Block Mapping'''. Here the matrix is partitioned into squares of the same size and each square gets assigned to a process. For an <math>n \times n</math>-matrix and ''p'' processes each process calculates a  <math>n/ \sqrt p \times n/ \sqrt p</math> sized part of the distance matrix. For <math> p = n^2 </math> processes each would get assigned to exactly one element of the matrix. Because of that the parallelization only scales to a maximum of <math>n^2</math> processes. In the following we refer with <math>p_{i,j}</math> to the process that is assigned to the square in the i-th row and the j-th column.
+
+As the calculation of the parts of the distance matrix is dependent on results from other parts the processes have to communicate between each other and exchange data. In the following we refer with <math>d^{(k)}_{i,j}</math> to the element of the i-th row and j-th column of the distance matrix after the k-th iteration. To calculate <math>d^{(k)}_{i,j}</math> we need the elements <math>d^{(k-1)}_{i,j}</math>, <math>d^{(k-1)}_{i,k}</math> and <math>d^{(k-1)}_{k,j}</math> as specified in line 6 of the algorithm. <math>d^{(k-1)}_{i,j}</math> is available to each process as it was calculated by itself in the previous iteration.
+
+Additionally each process needs a part of the k-th row and the k-th column of the <math>D^{k-1}</math> matrix. The <math>d^{(k-1)}_{i,k}</math> element holds a process in the same row and the <math>d^{(k-1)}_{k,j}</math> element holds a process in the same column as the process that wants to compute <math>d^{(k)}_{i,j}</math>. Each process that calculated a part of the k-th row in the <math>D^{k-1}</math> matrix has to send this part to all processes in its column. Each process that calculated a part of the k-th column in the <math>D^{k-1}</math> matrix has to send this part to all processes in its row. All this processes have to do a one-to-all-broadcast operation along the row or the column. The data dependencies are illustrated in the image below.
+
+For the 2-D block mapping we have to modify the algorithm as follows:
+
+  1    '''func''' Floyd_All_Pairs_Parallel(<math>D^{(0)}</math>) {
+  2        '''for''' ''k'' := 1 '''to''' ''n'' '''do''' {
+  3            Each process <math>p_{i,j}</math> that has a segment of the k-th row of <math>D^{(k-1)}</math>,
+               broadcasts it to the <math>p_{*,j}</math> processes;
+  4            Each process <math>p_{i,j}</math> that has a segment of the k-th column of <math>D^{(k-1)}</math>,
+               broadcasts it to the <math>p_{i,*}</math> processes;
+  5            Each process waits to receive the needed segments;
+  6            Each process computes its part of the <math>D^{(k)}</math> matrix;
+  7        }
+  8    }
+
+[[File:Data-denpendencies-floyd.png|thumb|400x400px|data dependencies in Floyd algorithm]]
+
+In line 5 of the algorithm we have a synchronisation step to ensure that all processes have the data necessary to compute the next iteration. To improve the runtime of the algorithm we can remove the synchronisation step without affecting the correctness of the algorithm. To achieve that each process starts the computation as soon as it has the data necessary to compute its part of the matrix. This version of the algorithm is called '''pipelined 2-D block mapping'''.
+
+===Runtime===
+
+The runtime of the sequential algorithm is determined by the triple nested [[for loop]]. The computation in line 6 can be done in constant time (<math>O(1)</math>). Therefore, the runtime of the sequential algorithm is <math>O(n^3)</math>.
+
+====2-D block mapping====
+The runtime of the parallelized algorithm consists of two parts. The time for the computation and the part for communication and data transfer between the processes.
+
+As there is no additional computation in the algorithm and the computation is split equally among the ''p'' processes, we have a runtime of <math>O(n^3 / p)</math> for the computational part.
+
+In each iteration of the algorithm there is a one-to-all broadcast operation performed along the row and column of the processes. There are <math> n / \sqrt p </math> elements broadcast. Afterwards there is a synchronisation step performed. How much time these operations take is highly dependent on the architecture of the parallel system used. Therefore, the time needed for communication and data transfer in the algorithm is <math>T_\text{comm} = n  (T_\text{synch} + T_\text{broadcast})</math>.
+
+For the whole algorithm we have the following runtime:
+
+: <math>T = O\left( \frac{n^3} p\right) + n  (T_\text{synch} + T_\text{broadcast})</math>
+
+====Pipelined 2-D block mapping====
+For the runtime of the data transfer between the processes in the pipelined version of the algorithm we assume that a process can transfer ''k'' elements to a neighbouring process in <math>O(k)</math> time. In every step there are <math>n / \sqrt p </math> elements of a row or a column send to a neighbouring process. Such a step takes <math>O(n / \sqrt p )</math> time. After <math>\sqrt p </math> steps the relevant data of the first row and column arrive at process <math> p_{\sqrt p ,\sqrt p}</math> (in <math>O(n)</math> time).
+
+The values of successive rows and columns follow after time <math>O(n^2 / p)</math> in a pipelined mode. Process <math>p_{\sqrt p ,\sqrt p}</math> finishes its last computation after O(<math>n^3 / p</math>) + O(<math>n</math>) time. Therefore, the additional time needed for communication in the pipelined version is <math>O(n)</math>.
+
+The overall runtime for the pipelined version of the algorithm is:
+
+: <math>T = O\left( \frac{n^3} p\right) + O(n)</math>
+
+== References ==
+{{reflist}}
+
+==Bibliography==
+* Grama, A.: ''Introduction to [[parallel computing]].'' Pearson Education, 2003.
+* {{citation
+ | last1 = Kumar | first1 = Vipin
+ | last2 = Singh | first2 = Vineet
+ | date = October 1991
+ | doi = 10.1016/0743-7315(91)90083-l
+ | issue = 2
+ | journal = Journal of Parallel and Distributed Computing
+ | pages = 124–138
+ | title = Scalability of parallel algorithms for the all-pairs shortest-path problem
+ | url = https://www-users.cse.umn.edu/~kumar001/papers/shortest-path.ps
+ | volume = 13}}
+* Foster, I.: ''Designing and Building Parallel Programs'' (Online).
+* Bindell, Fall: ''[https://www.cs.cornell.edu/~bindel/class/cs5220-f11/code/path.pdf Parallel All-Pairs Shortest Paths]'' Applications of Parallel Computers, 2011.
+
+[[Category:Graph algorithms]]

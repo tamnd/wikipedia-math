@@ -1,0 +1,624 @@
+<!-- wikipedia: en
+     page: 27119605
+     title: Hosmer–Lemeshow test
+     revision: 1310653624
+     timestamp: 2025-09-10T21:48:29Z
+     history: https://en.wikipedia.org/w/index.php?curid=27119605&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1310653624 -->
+{{Short description|Statistical test for logistic regression models}}
+{{Multiple issues|
+{{howto|date=January 2017}}
+{{Inline|date=May 2020}}
+}}
+
+The '''Hosmer–Lemeshow test''' is a [[statistical test]] for [[goodness of fit]] and [[calibration (statistics)|calibration]] for [[logistic regression]] models. It is used frequently in [[Predictive analytics|risk prediction]] models. The test assesses whether or not the observed event rates match expected event rates in subgroups of the model population. The Hosmer–Lemeshow test specifically identifies subgroups as the [[decile]]s of fitted risk values. Models for which expected and observed event rates in subgroups are similar are called well calibrated.
+
+The test was named after its developers, statisticians David Hosmer and Stanley Lemeshow,<ref>{{Cite journal |last1=Hosmer |first1=David W. |last2=Lemesbow |first2=Stanley |date=1980 |title=Goodness of fit tests for the multiple logistic regression model |url=http://www.tandfonline.com/doi/abs/10.1080/03610928008827941 |journal=Communications in Statistics - Theory and Methods |language=en |volume=9 |issue=10 |pages=1043–1069 |doi=10.1080/03610928008827941 |issn=0361-0926|url-access=subscription }}</ref><ref>{{Cite journal |last1=Lemeshow |first1=Stanley |last2=Hosmer |first2=David W. |date=1982 |title=A review of goodness of fit statistics for use in the development of logistic regression models |url=https://academic.oup.com/aje/article-lookup/doi/10.1093/oxfordjournals.aje.a113284 |journal=American Journal of Epidemiology |language=en |volume=115 |issue=1 |pages=92–106 |doi=10.1093/oxfordjournals.aje.a113284 |pmid=7055134 |issn=1476-6256|url-access=subscription }}</ref> and it was popularized by their textbook on logistic regression.<ref>{{Cite book |last1=Hosmer |first1=David W. |title=Applied logistic regression |last2=Lemeshow |first2=Stanley |last3=Sturdivant |first3=Rodney X. |date=2013 |publisher=Wiley |isbn=978-0-470-58247-3 |edition=3 |series=Wiley series in probability and statistics |location=Hoboken, NJ}}</ref>
+
+==Introduction==
+===Motivation===
+
+Logistic regression models provide an estimate of the probability of an outcome, usually designated as a "success". It is desirable that the estimated probability of success be close to the true probability. Consider the following example.
+
+A researcher wishes to know if caffeine improves performance on a memory test. Volunteers consume different amounts of caffeine from 0 to 500&nbsp;mg, and their score on the memory test is recorded. The results are shown in the table below.
+{| class="wikitable"
+!group
+!caffeine
+!n.volunteers
+!A.grade
+!proportion.A
+|-
+|1
+|0
+|30
+|10
+|0.33
+|-
+|2
+|50
+|30
+|13
+|0.43
+|-
+|3
+|100
+|30
+|17
+|0.57
+|-
+|4
+|150
+|30
+|15
+|0.50
+|-
+|5
+|200
+|30
+|10
+|0.33
+|-
+|6
+|250
+|30
+|5
+|0.17
+|-
+|7
+|300
+|30
+|4
+|0.13
+|-
+|8
+|350
+|30
+|3
+|0.10
+|-
+|9
+|400
+|30
+|3
+|0.10
+|-
+|10
+|450
+|30
+|1
+|0.03
+|-
+|11
+|500
+|30
+|0
+|0
+|}
+The table has the following columns.
+
+*group: identifier for the 11 treatment groups, each receiving a different dose
+*caffeine: mg of caffeine for volunteers in a treatment group
+*n.volunteers: number of volunteers in a treatment group
+*A.grade: the number of volunteers who achieved an A grade in the memory test (success)
+*proportion.A: the proportion of volunteers who achieved an A grade
+
+The researcher performs a logistic regression, where "success" is a grade of A in the memory test, and the explanatory (''x'') variable is dose of caffeine. The logistic regression indicates that caffeine dose is significantly associated with the probability of an A grade (''p''&nbsp;<&nbsp;0.001). However, the plot of the probability of an A grade versus mg caffeine shows that the logistic model (red line) does not accurately predict the probability seen in the data (black circles).
+
+[[File:Logistic fit caffeine grade A.svg|400px|logistic fit caffeine grade A]]
+
+The logistic model suggests that the highest proportion of A scores will occur in volunteers who consume zero mg caffeine, when in fact the highest proportion of A scores occurs in volunteer consuming in the range of 100 to 150&nbsp;mg.
+
+The same information may be presented in another graph that is helpful when there are two or more explanatory (''x'') variables. This is a graph of observed proportion of successes in the data and the expected proportion as predicted by the logistic model. Ideally all the points fall on the diagonal red line.
+
+[[File:Logistic obs vs exp caffeine.svg|400px|Graph logistic obs vs exp caffeine]]
+
+The expected probability of success (a grade of A) is given by the equation for the logistic regression model:
+
+:<math>p(\text{success}) = \frac 1 {1+e^{-(b_0 + b_1 x_1 )}} </math>
+
+where ''b''<sub>0</sub> and ''b''<sub>1</sub> are specified by the logistic regression model:
+* ''b''<sub>0</sub> is the intercept 
+* ''b''<sub>1</sub> is the coefficient for ''x''<sub>1</sub>
+
+For the logistic model of P(success) vs dose of caffeine, both graphs show that, for many doses, the estimated probability is not close to the probability observed in the data. This occurs even though the regression gave a significant p-value for caffeine. It is possible to have a significant p-value, but still have poor predictions of the proportion of successes. The Hosmer–Lemeshow test is useful to determine if the poor predictions (lack of fit) are significant, indicating that there are problems with the model.
+
+There are many possible reasons that a model may give poor predictions. In this example, the plot of the logistic regression suggests that the probability of an A score does not change monotonically with caffeine dose, as assumed by the model. Instead, it increases (from 0 to 100&nbsp;mg) and then decreases. The current model is P(success) vs caffeine, and appears to be an inadequate model. A better model might be P(success) vs caffeine&nbsp;+&nbsp;caffeine<sup>2</sup>. The addition of the quadratic term caffeine<sup>2</sup> to the regression model would allow for the increasing and then decreasing relationship of grade to caffeine dose. The logistic model including the caffeine<sup>2</sup> term indicates that the quadratic caffeine^2 term is significant (''p''&nbsp;=&nbsp;0.003) while the linear caffeine term is not significant (''p''&nbsp;=&nbsp;0.21).
+
+The graph below shows the observed proportion of successes in the data versus the expected proportion as predicted by the logistic model that includes the caffeine^\<sup>2</sup> term.
+
+[[File:Logistic obs vs exp caffeine quadratic.svg|400px|Graph logistic obs vs exp caffeine quadratic]]
+
+The Hosmer–Lemeshow test can determine if the differences between observed and expected proportions are significant, indicating model lack of fit.
+
+===Pearson chi-squared goodness of fit test===
+
+The Pearson chi-squared goodness of fit test provides a method to test if the observed and expected proportions differ significantly. This method is useful if there are many observations for each value of the x variable(s).
+
+For the caffeine example, the observed number of A grades and non-A grades are known. The expected number (from the logistic model) can be calculated using the equation from the logistic regression. These are shown in the table below.
+{| class="wikitable"
+!group
+!caffeine
+!n.A.observed
+!n.A.expected  
+!n.notA.observed
+!n.notA.expected
+|-
+|1
+|0
+|10
+|16.78
+|20
+|13.22
+|-
+|2
+|50
+|13
+|14.37
+|17
+|15.63
+|-
+|3
+|100
+|17
+|12.00
+|13
+|18.00
+|-
+|4
+|150
+|15
+|9.77
+|15
+|20.23
+|-
+|5
+|200
+|10
+|7.78
+|20
+|22.22
+|-
+|6
+|250
+|5
+|6.07
+|25
+|23.93
+|-
+|7
+|300
+|4
+|4.66
+|26
+|25.34
+|-
+|8
+|350
+|3
+|3.53
+|27
+|26.47
+|-
+|9
+|400
+|3
+|2.64
+|27
+|27.36
+|-
+|10
+|450
+|1
+|1.96
+|29
+|28.04
+|-
+|11
+|500
+|0
+|1.45
+|30
+|28.55
+|}
+The null hypothesis is that the observed and expected proportions are the same across all doses. The alternative hypothesis is that the observed and expected proportions are not the same.
+
+The Pearson chi-squared statistic is the sum of (observed – expected)^2/expected. For the caffeine data, the Pearson chi-squared statistic is 17.46. The number of degrees of freedom is the number of doses (11) minus the number of parameters from the logistic regression (2), giving 11 - 2 = 9 degrees of freedom. The probability that a chi-square statistic with df=9 will be 17.46 or greater is p = 0.042. This result indicates that, for the caffeine example, the observed and expected proportions of A grades differ significantly. The model does not accurately predict the probability of an A grade, given the caffeine dose. This result is consistent with the graphs above.
+
+In this caffeine example, there are 30 observations for each dose, which makes calculation of the 
+Pearson chi-squared statistic feasible. Unfortunately, it is common that there are not enough observations for each possible combinations of values of the x variables, so the Pearson chi-squared statistic cannot be readily calculated. A solution to this problem is the Hosmer–Lemeshow statistic. The key concept of the Hosmer–Lemeshow statistic is that, instead of observations being grouped by the values of the x variable(s), the observations are grouped by expected probability. That is, observations with similar expected probability are put into the same group, usually to create approximately 10 groups.
+
+===Calculation of the statistic===
+
+The Hosmer–Lemeshow [[test statistic]] is given by:
+
+: <math>
+\begin{align}
+H & = \sum_{g=1}^G \left(\frac{(O_{1g} - E_{1g})^2}{E_{1g}}+\frac{(O_{0g} - E_{0g})^2}{E_{0g}}\right) \\[5pt]
+& = \sum_{g=1}^G \left(\frac{(O_{1g} - E_{1g})^2}{N_g \pi_g}+\frac{(N_g-O_{1g} - (N_g - E_{1g}))^2}{N_g (1-\pi_{g})}\right) \\[5pt]
+& = \sum_{g=1}^G \frac{(O_{1g} - E_{1g})^2}{N_g \pi_g (1-\pi_g)}.
+\end{align}
+</math>
+
+Here ''O''<sub>1''g''</sub>, ''E''<sub>1''g''</sub>, ''O''<sub>0''g''</sub>, ''E''<sub>0''g''</sub>, ''N''<sub>''g''</sub>, and {{pi}}<sub>''g''</sub> denote the observed ''Y''&nbsp;=&nbsp;1 events, expected ''Y''&nbsp;=&nbsp;1 events, observed ''Y''&nbsp;=&nbsp;0 events, expected ''Y''&nbsp;=&nbsp;0 events, total observations, predicted risk for the ''g''<sup>th</sup> risk decile group, and ''G'' is the number of groups. The test statistic asymptotically follows a [[chi-squared distribution|<math>\chi^2</math> distribution]] with ''G''&nbsp;−&nbsp;2 degrees of freedom. The number of risk groups may be adjusted depending on how many fitted risks are determined by the model. This helps to avoid singular decile groups.
+
+The Pearson chi-squared goodness of fit test cannot be readily applied if there are only one or a few observations for each possible value of an ''x'' variable, or for each possible combination of values of x variables. The Hosmer–Lemeshow statistic was developed to address this problem.
+
+Suppose that, in the caffeine study, the researcher was not able to assign 30 volunteers to each dose. Instead, 170 volunteers reported the estimated amount of caffeine they consumed in the previous 24 hours. The data are shown in the table below.
+{| class="wikitable"
+!group
+!caffeine   
+!n.volunteers
+!A.grade
+!proportion.A
+|-
+|1
+|0
+|30
+|16
+|0.53
+|-
+|2
+|25
+|11
+|7
+|0.64
+|-
+|3
+|50
+|15
+|11
+|0.73
+|-
+|4
+|75
+|5
+|4
+|0.80
+|-
+|5
+|100
+|18
+|16
+|0.89
+|-
+|6
+|125
+|5
+|4
+|0.80
+|-
+|7
+|150
+|24
+|17
+|0.71
+|-
+|8
+|175
+|8
+|5
+|0.62
+|-
+|9
+|200
+|12
+|5
+|0.42
+|-
+|10
+|225
+|8
+|3
+|0.38
+|-
+|11
+|250
+|5
+|3
+|0.60
+|-
+|12
+|275
+|4
+|1
+|0.25
+|-
+|13
+|300
+|1
+|0
+|0.00
+|-
+|14
+|325
+|1
+|0
+|0.00
+|-
+|15
+|350
+|1
+|1
+|1.00
+|-
+|16
+|375
+|1
+|0
+|0.00
+|-
+|17
+|400
+|1
+|0
+|0.00
+|-
+|18
+|425
+|1
+|0
+|0.00
+|-
+|19
+|450
+|1
+|0
+|0.00
+|-
+|20
+|475
+|1
+|0
+|0.00
+|-
+|21
+|500
+|1
+|0
+|0.00
+|}
+The table shows that, for many dose levels, there are only one or a few observations. The Pearson chi-squared statistic would not give reliable estimates in this situation.
+
+The logistic regression model for the caffeine data for 170 volunteers indicates that caffeine dose is significantly associated with an A grade, ''p''&nbsp;<&nbsp;0.001. The graph shows that there is a downward slope. However, the probability of an A grade as predicted by the logistic model (red line) does not accurately predict the probability estimated from the data for each dose (black circles). Despite the significant p-value for caffeine dose, there is lack of fit of the logistic curve to the observed data.
+
+[[File:Logistic graph 170 volunteers.svg|400px|logistic graph 170 volunteers]]
+
+This version of the graph can be somewhat misleading, because different numbers of volunteers take each dose. In an alternative graph, the bubble plot, the size of the circle is proportional to the number of volunteers.<ref name="BilderLoughin2015">{{Citation
+|last1=Bilder
+|first1=Christopher R.
+|last2=Loughin
+|first2= Thomas M.
+|title= Analysis of Categorical Data with R
+|edition=First
+|year=2014
+|publisher= Chapman and Hall/CRC
+|isbn= 978-1439855676
+}}
+</ref>
+
+[[File:Bubble plot logistic 170 volunteers.svg|400px|Bubble plot logistic 170 volunteers]]
+
+The plot of observed versus expected probability also indicates the lack of fit of the model, with much scatter around the ideal diagonal.
+
+[[File:Obs vs exp 170 caffeine.svg|400px|Graph of obs vs exp 170 caffeine logistic example]]
+
+Calculation of the Hosmer–Lemeshow statistic proceeds in 6 steps,<ref name="KleinbaumKlein2012">{{Citation
+|last1=Kleinbaum
+|first1=David G.
+|last2=Klein
+|first2= Mitchel
+|title= Survival analysis: A Self-learning text
+|edition=Third
+|year=2012
+|publisher= Springer
+|isbn= 978-1441966452
+}}
+</ref> using the caffeine data for 170 volunteers as an example.
+
+1. Compute p(success) for all ''n'' subjects
+
+Compute p(success) for each subject using the coefficients from the logistic regression. Subjects with the same values for the explanatory variables will have the same estimated probability of success. The table below shows the p(success), the expected proportion of volunteers with an A grade, as predicted by the logistic model.
+{| class="wikitable"
+!Group
+!caffeine 
+!expected.proportion
+|-
+|1
+|0
+|0.73
+|-
+|2
+|25
+|0.70
+|-
+|3
+|50
+|0.68
+|-
+|4
+|75
+|0.65
+|-
+|5
+|100
+|0.63
+|-
+|6
+|125
+|0.60
+|-
+|7
+|150
+|0.57
+|-
+|8
+|175
+|0.55
+|-
+|9
+|200
+|0.52
+|-
+|10
+|225
+|0.49
+|-
+|11
+|250
+|0.46
+|-
+|12
+|275
+|0.43
+|-
+|13
+|300
+|0.40
+|-
+|14
+|325
+|0.38
+|-
+|15
+|350
+|0.35
+|-
+|16
+|375
+|0.33
+|-
+|17
+|400
+|0.30
+|-
+|18
+|425
+|0.28
+|-
+|19
+|450
+|0.26
+|-
+|20
+|475
+|0.23
+|-
+|21
+|500
+|0.22
+|}
+2. Order p(success) from largest to smallest values
+
+The table from Step 1 is sorted by p(success), the expected proportion. If every volunteer took a different dose, there would be 170 different values in the table. Because there are only 21 unique dose values, there are only 21 unique values of p(success).
+
+3. Divide the ordered values into Q percentile groups
+
+The ordered values of p(success) are divided into Q groups. The number of groups, Q, is typically 10. Because of tied values for p(success), the number of subjects in each group may not be identical. Different software implementations of the Hosmer–Lemeshow test use different methods for handling subjects with the same p(success), so the cut points to create the Q groups may differ. In addition, using a different value for Q will produce different cut points. The table in Step 4 shows the Q = 10 intervals for the caffeine data.
+
+4. Create a table of observed and expected counts
+
+The observed number of successes and failures in each interval are obtained by counting the subjects in that interval. The expected number of successes in an interval is the sum of the probability of success for the subjects in that interval.
+
+The table below shows the cut points for the p(success) intervals selected by the R function HLTest() from Bilder and Loughin, with the number of observed and expected A and not A.
+{| class="wikitable"
+!p(success) interval
+!Observed not A
+!Observed A
+!Expected not A
+!Expected A
+|-
+|[0.215,0.256]
+|4
+|1
+|3.8
+|1.2
+|-
+|(0.256,0.302]
+|2
+|0
+|1.4
+|0.6
+|-
+|(0.302,0.352]
+|5
+|3
+|5.4
+|2.6
+|-
+|(0.352,0.405]
+|8
+|2
+|6
+|4
+|-
+|(0.405,0.461]
+|5
+|5
+|5
+|4
+|-
+|(0.461,0.517]
+|12
+|8
+|9.9
+|10.1
+|-
+|(0.517,0.574]
+|10
+|22
+|13.9
+|18.1
+|-
+|(0.574,0.628]
+|3
+|20
+|8.7
+|14.3
+|-
+|(0.628,0.68]
+|5
+|15
+|6.5
+|13.5
+|-
+|(0.68,0.727]
+|18
+|23
+|11.5
+|29.5
+|}
+5. Calculate the Hosmer–Lemeshow statistic from the table
+
+The Hosmer–Lemeshow statistic is calculated using the formula given in the introduction, which for the caffeine example is 17.103.
+
+:<math> H = \sum_{q=1}^{10} \left(\frac{(\text{Observed.A} - \text{Expected.A})^2}{\text{Expected.A}}+\frac{(\text{Observed.not.A} - \text{Expected.not.A})^2}{\text{Expected.not.A}} \right) </math>
+
+6. Calculate the p-value
+
+Compare the computed Hosmer–Lemeshow statistic to a chi-squared distribution with ''Q''&nbsp;−&nbsp;2 degrees of freedom to calculate the p-value.
+
+There are ''Q''&nbsp;=&nbsp;10 groups in the caffeine example, giving 10&nbsp;–&nbsp;2 =&nbsp;8 degrees of freedom. The p-value for a chi-squared statistic of 17.103 with df&nbsp;=&nbsp;8 is ''p''&nbsp;=&nbsp;0.029. The p-value is below alpha =&nbsp;0.05, so the null hypothesis that the observed and expected proportions are the same across all doses is rejected.
+The way to compute this is to get a cumulative distribution function for a right-tail chi-square distribution with 8 degrees of freedom, i.e. cdf_chisq_rt(x,8), or 1&nbsp;−&nbsp;cdf_chisq_lt(x, 8).
+
+===Limitations and alternatives===
+The Hosmer–Lemeshow test has limitations. [[Frank Harrell|Harrell]] describes several:<ref>{{Cite web|url=https://stats.stackexchange.com/q/169438|title=Evaluating logistic regression and interpretation of Hosmer–Lemeshow Goodness of Fit|website=Cross Validated|access-date=2020-02-29}}</ref>
+
+"The Hosmer–Lemeshow test is for overall calibration error, not for any particular lack of fit such as quadratic effects. It does not properly take [[overfitting]] into account, is arbitrary to choice of bins and method of computing quantiles, and often has power that is too low."
+
+"For these reasons the Hosmer–Lemeshow test is no longer recommended. Hosmer et al have a better one d.f. [[omnibus test]] of fit, implemented in the R rms package residuals.lrm function."
+
+"But I recommend specifying the model to make it more likely to fit up front (especially with regard to relaxing linearity assumptions using regression splines) and using the bootstrap to estimate overfitting and to get an overfitting-corrected high-resolution smooth calibration curve to check absolute accuracy. These are done using the R rms package."
+
+Other alternatives have been developed to address the limitations of the Hosmer–Lemeshow test. These include the Osius–Rojek test and the Stukel test.<ref>{{Cite journal |last1=Hosmer |first1=D. W. |last2=Hosmer |first2=T. |last3=Le Cessie |first3=S. |last4=Lemeshow |first4=S. |date=1997-05-15 |title=A comparison of goodness-of-fit tests for the logistic regression model |url=https://onlinelibrary.wiley.com/doi/10.1002/(SICI)1097-0258(19970515)16:93.0.CO;2-O |journal=Statistics in Medicine |language=en |volume=16 |issue=9 |pages=965–980 |doi=10.1002/(SICI)1097-0258(19970515)16:9<965::AID-SIM509>3.0.CO;2-O |pmid=9160492 |issn=0277-6715|url-access=subscription }}</ref><ref>available in the R script AllGOFTests.R: www.chrisbilder.com/categorical/Chapter5/AllGOFTests.R.</ref>
+
+==References==
+{{Reflist}}
+
+==External links==
+* {{cite book |last1=Hosmer |first1=David W. |last2=Lemeshow |first2=Stanley |year=2013 |title=Applied Logistic Regression |location=New York |publisher=Wiley |isbn=978-0-470-58247-3}}
+* {{cite book | author=Alan Agresti| authorlink = Alan Agresti| title=Categorical Data Analysis| location= Hoboken | publisher=John Wiley and Sons| year=2012 | isbn=978-0-470-46363-5}}
+
+{{DEFAULTSORT:Hosmer-Lemeshow test}}
+[[Category:Statistical tests]]
+[[Category:Logistic regression]]

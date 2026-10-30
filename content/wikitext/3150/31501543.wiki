@@ -1,0 +1,156 @@
+<!-- wikipedia: en
+     page: 31501543
+     title: Coffman–Graham algorithm
+     revision: 1335617036
+     timestamp: 2026-01-30T05:38:34Z
+     history: https://en.wikipedia.org/w/index.php?curid=31501543&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1335617036 -->
+{{short description|Method for partitioning partial orders into levels}}
+The '''Coffman–Graham algorithm''' is an [[algorithm]] for arranging the elements of a [[partially ordered set]] into a sequence of levels. The algorithm chooses an arrangement such that an element that comes after another in the order is assigned to a lower level, and such that each level has a number of elements that does not exceed a fixed width bound {{mvar|W}}. When {{math|1=''W'' = 2}}, it uses the minimum possible number of distinct levels, and in general it uses at most {{math|2 &minus; 2/''W''}} times as many levels as necessary.
+
+It is named after [[Edward G. Coffman, Jr.]] and [[Ronald Graham]], who published it in 1972 for an application in [[job shop scheduling]]. In this application, the elements to be ordered are jobs, the bound {{mvar|W}} is the number of jobs that can be scheduled at any one time, and the partial order describes prerequisite relations between the jobs. The goal is to find a schedule that completes all jobs in minimum total time. Subsequently, the same algorithm has also been used in [[graph drawing]], as a way of placing the vertices of a [[directed graph]] into layers of fixed widths so that most or all edges are directed consistently downwards.
+
+For a partial ordering given by its [[transitive reduction]] (covering relation), the Coffman–Graham algorithm can be implemented in [[linear time]] using the [[partition refinement]] data structure as a subroutine. If the transitive reduction is not given, it takes [[polynomial time]] to construct it.
+
+==Problem statement and applications==
+In the version of the job shop scheduling problem solved by the Coffman–Graham algorithm, one is given a set of {{mvar|n}} jobs {{math|''J''<sub>1</sub>, ''J''<sub>2</sub>, ..., ''J''<sub>''n''</sub>}}, together with a system of precedence constraints {{math|''J<sub>i</sub>'' < ''J<sub>j</sub>''}} requiring that job {{math|''J<sub>i</sub>''}} be completed before job {{math|''J<sub>j</sub>''}} begins. Each job is assumed to take unit time to complete. The scheduling task is to assign each of these jobs to time slots on a system of {{mvar|W}} identical processors, minimizing the [[makespan]] of the assignment (the time from the beginning of the first job until the completion of the final job). Abstractly, the precedence constraints define a partial order on the jobs, so the problem can be rephrased as one of assigning the elements of this partial order to levels (time slots) in such a way that each time slot has at most as many jobs as processors (at most {{mvar|W}} elements per level), respecting the precedence constraints. This application was the original motivation for Coffman and Graham to develop their algorithm.<ref name="cg72">{{citation
+ | last1 = Coffman | first1 = E. G. Jr. | author1-link = Edward G. Coffman, Jr.
+ | last2 = Graham | first2 = R. L. | author2-link = Ronald Graham
+ | mr = 0334913
+ | journal = [[Acta Informatica]]
+ | pages = 200–213
+ | title = Optimal scheduling for two-processor systems
+ | url = http://www.math.ucsd.edu/~ronspubs/72_04_two_processors.pdf
+ | volume = 1
+ | year = 1972 | issue = 3 | doi=10.1007/bf00288685| s2cid = 40603807 }}.</ref><ref>{{citation|contribution=Some basic scheduling algorithms|first=Joseph Y.-T.|last=Leung|title=Handbook of Scheduling: Algorithms, Models, and Performance Analysis|publisher=CRC Press|year=2004|isbn=978-1-58488-397-5}}.</ref>
+
+In the [[layered graph drawing]] framework outlined by {{harvtxt|Sugiyama|Tagawa|Toda|1981}}<ref>{{citation|first1=Kozo|last1=Sugiyama|first2=Shôjirô|last2=Tagawa|first3=Mitsuhiko|last3=Toda|title=Methods for visual understanding of hierarchical system structures|journal=[[IEEE Systems, Man, and Cybernetics Society|IEEE Transactions on Systems, Man, and Cybernetics]]|volume=SMC-11|issue=2|pages=109–125|year=1981|mr=0611436|doi=10.1109/TSMC.1981.4308636|bibcode=1981ITSMC..11..109S |s2cid=8367756 }}.</ref> the input is a [[directed graph]], and a drawing of a graph is constructed in several stages:<ref name="bett"/><ref>{{citation|contribution=Layered drawings of digraphs|first1=Oliver|last1=Bastert|first2=Christian|last2=Matuszewski|title=Drawing Graphs: Methods and Models|editor1-first=Michael|editor1-last=Kaufmann|editor2-first=Dorothea|editor2-last=Wagner|editor2-link=Dorothea Wagner|publisher=Springer-Verlag|series=Lecture Notes in Computer Science|volume=2025|year=2001|pages=87–120|doi=10.1007/3-540-44969-8_5|isbn=978-3-540-42062-0 }}. Bastert and Matuszewski also include a description of the Coffman–Graham algorithm; however, they omit the transitive reduction stage of the algorithm.</ref>
+#A [[feedback arc set]] is chosen, and the edges of this set reversed, in order to convert the input into a [[directed acyclic graph]] with (if possible) few reversed edges.
+#The vertices of the graph are given integer {{mvar|y}}-coordinates in such a way that, for each edge, the starting vertex of the edge has a higher coordinate than the ending vertex, with at most {{mvar|W}} vertices sharing the same {{mvar|y}}-coordinate. In this way, all edges of the directed acyclic graph and most edges of the original graph will be oriented consistently downwards.
+#Dummy vertices are introduced within each edge so that the subdivided edges all connect pairs of vertices that are in adjacent levels of the drawing.
+#Within each group of vertices with the same {{mvar|y}}-coordinate, the vertices are [[permutation|permuted]] in order to minimize the [[crossing number (graph theory)|number of crossings]] in the resulting drawing, and the vertices are assigned {{mvar|x}}-coordinates consistently with this permutation.
+#The vertices and edges of the graph are drawn with the coordinates assigned to them.
+In this framework, the {{mvar|y}}-coordinate assignment again involves grouping elements of a partially ordered set (the vertices of the graph, with the [[reachability]] ordering on the vertex set) into layers (sets of vertices with the same {{mvar|y}}-coordinate), which is the problem solved by the Coffman–Graham algorithm.<ref name="bett">{{citation|contribution=Chapter 9: Layered drawings of digraphs|title=Graph Drawing: Algorithms for the Visualization of Graphs|first1=Giuseppe|last1=di Battista|first2=Peter|last2=Eades|author2-link=Peter Eades|first3=Roberto|last3=Tamassia|author3-link=Roberto Tamassia|first4=Ioannis G.|last4=Tollis|publisher=Prentice Hall|year=1999|pages=265–302}}.</ref> Although there exist alternative approaches than the Coffman–Graham algorithm to the layering step, these alternatives in general are either not able to incorporate a bound on the maximum width of a level or rely on complex [[integer programming]] procedures.<ref>{{citation
+ | last1 = Healy | first1 = Patrick
+ | last2 = Nikolov | first2 = Nikola S.
+ | contribution = How to layer a directed acyclic graph
+ | doi = 10.1007/3-540-45848-4_2
+ | mr = 1962416
+ | pages = 16–30
+ | publisher = Springer-Verlag
+ | series = Lecture Notes in Computer Science
+ | title = [[International Symposium on Graph Drawing|Graph Drawing: 9th International Symposium, GD 2001 Vienna, Austria, September 23–26, 2001, Revised Papers]]
+ | volume = 2265
+ | year = 2002| doi-access = free
+ | isbn = 978-3-540-43309-5
+ }}.</ref>
+
+More abstractly, both of these problems can be formalized as a problem in which the input consists of a partially ordered set and an integer {{mvar|W}}. The desired output is an assignment of integer level numbers to the elements of the partially ordered set such that, if {{math|''x'' < ''y''}} is an ordered pair of related elements of the partial order, the number assigned to {{mvar|x}} is smaller than the number assigned to {{mvar|y}}, such that at most {{mvar|W}} elements are assigned the same number as each other, and minimizing the difference between the smallest and the largest assigned numbers.
+
+==The algorithm==
+The Coffman–Graham algorithm performs the following steps.<ref name="bett"/>
+#Represent the partial order by its [[transitive reduction]] or [[covering relation]], a directed acyclic graph {{mvar|G}} that has an edge from ''x'' to ''y'' whenever {{math|''x'' < ''y''}} and there does not exist any third element {{mvar|z}} of the partial order for which {{math|''x'' < ''z'' < ''y''}}. In the graph drawing applications of the Coffman–Graham algorithm, the resulting directed acyclic graph may not be the same as the graph being drawn, and in the scheduling applications it may not have an edge for every precedence constraint of the input: in both cases, the transitive reduction removes redundant edges that are not necessary for defining the partial order.
+#Construct a [[Topological sorting|topological ordering]] of {{mvar|G}} in which the vertices are ordered [[lexicographic order|lexicographically]] by the set of positions of their incoming neighbors. To do so, add the vertices one at a time to the ordering, at each step choosing a vertex {{mvar|v}} to add such that the incoming neighbors of {{mvar|v}} are all already part of the partial ordering, and such that the most recently added incoming neighbor of {{mvar|v}} is earlier than the most recently added incoming neighbor of any other vertex that could be added in place of {{mvar|v}}. If two vertices have the same most recently added incoming neighbor, the algorithm breaks the tie in favor of the one whose second most recently added incoming neighbor is earlier, etc.
+#Assign the vertices of {{mvar|G}} to levels in the reverse of the topological ordering constructed in the previous step. For each vertex {{mvar|v}}, add {{mvar|v}} to a level that is at least one step higher than the highest level of any outgoing neighbor of {{mvar|v}}, that does not already have {{mvar|W}} elements assigned to it, and that is as low as possible subject to these two constraints.
+
+==Analysis==
+===Output quality===
+As {{harvtxt|Coffman|Graham|1972}} originally proved, their algorithm computes an optimal assignment for {{math|1=''W'' = 2}}; that is, for scheduling problems with unit length jobs on two processors, or for layered graph drawing problems with at most two vertices per layer.<ref name="cg72"/> A closely related algorithm also finds the optimal solution for scheduling of jobs with varying lengths, allowing pre-emption of scheduled jobs, on two processors.<ref>{{citation
+ | last1 = Muntz | first1 = R. R.
+ | last2 = Coffman | first2 = E. G. | author2-link = Edward G. Coffman, Jr.
+ | doi = 10.1109/T-C.1969.222573
+ | journal = [[IEEE Transactions on Computers]]
+ | pages = 1014–1020
+ | title = Optimal preemptive scheduling on two-processor systems
+ | volume = 18
+ | year = 1969| issue = 11
+ | bibcode = 1969ITCmp.100.1014M
+ | s2cid = 206617438
+ }}.</ref> For {{math|''W'' > 2}}, the Coffman–Graham algorithm uses a number of levels (or computes a schedule with a makespan) that is within a factor of {{math|2 &minus; 2/''W''}} of optimal.<ref name="ls77">{{citation
+ | last1 = Lam | first1 = Shui
+ | last2 = Sethi | first2 = Ravi | author2-link = Ravi Sethi
+ | doi = 10.1137/0206037
+ | mr = 0496614
+ | issue = 3
+ | journal = [[SIAM Journal on Computing]]
+ | pages = 518–536
+ | title = Worst case analysis of two scheduling algorithms
+ | volume = 6
+ | year = 1977}}.</ref><ref name="bt94">{{citation
+ | last1 = Braschi | first1 = Bertrand
+ | last2 = Trystram | first2 = Denis
+ | doi = 10.1137/S0097539790181889
+ | mr = 1274650
+ | issue = 3
+ | journal = [[SIAM Journal on Computing]]
+ | pages = 662–669
+ | title = A new insight into the Coffman–Graham algorithm
+ | volume = 23
+ | year = 1994}}.</ref> For instance, for {{math|1=''W'' = 3}}, this means that it uses at most {{math|4/3}} times as many levels as is optimal. When the partial order of precedence constraints is an [[interval order]], or belongs to several related classes of partial orders, the Coffman–Graham algorithm finds a solution with the minimum number of levels regardless of its width bound.<ref>{{citation
+ | last1 = Chardon | first1 = Marc
+ | last2 = Moukrim | first2 = Aziz
+ | doi = 10.1137/S0895480101394999
+ | mr = 2178187
+ | issue = 1
+ | journal = [[SIAM Journal on Discrete Mathematics]]
+ | pages = 109–121
+ | title = The Coffman-Graham algorithm optimally solves UET task systems with overinterval orders
+ | volume = 19
+ | year = 2005}}.</ref>
+
+As well as finding schedules with small makespan, the Coffman–Graham algorithm (modified from the presentation here so that it topologically orders the [[reverse graph]] of {{mvar|G}} and places the vertices as early as possible rather than as late as possible) minimizes the [[total flow time]] of two-processor schedules, the sum of the completion times of the individual jobs. A related algorithm can be used to minimize the total flow time for a version of the problem in which preemption of jobs is allowed.<ref>{{citation
+ | last1 = Coffman | first1 = E. G. Jr. | author1-link = Edward G. Coffman, Jr.
+ | last2 = Sethuraman | first2 = J.
+ | last3 = Timkovsky | first3 = V. G.
+ | doi = 10.1007/s00236-003-0119-6
+ | mr = 1996238
+ | issue = 8
+ | journal = [[Acta Informatica]]
+ | pages = 597–612
+ | title = Ideal preemptive schedules on two processors
+ | volume = 39
+ | year = 2003| s2cid = 7016804 }}.</ref>
+
+===Time complexity===
+{{harvtxt|Coffman|Graham|1972}} and {{harvtxt|Lenstra|Rinnooy Kan|1978}}<ref>{{citation
+ | last1 = Lenstra | first1 = J. K. | author1-link = Jan Karel Lenstra
+ | last2 = Rinnooy Kan | first2 = A. H. G. | author2-link = Alexander Rinnooy Kan
+ | jstor = 169889
+ | mr = 0462553
+ | issue = 1
+ | journal = Operations Research
+ | pages = 22–35
+ | title = Complexity of scheduling under precedence constraints
+ | volume = 26
+ | year = 1978 | doi=10.1287/opre.26.1.22| hdl = 10338.dmlcz/141477
+ | hdl-access = free
+ }}.</ref> state the time complexity of the Coffman–Graham algorithm, on an {{mvar|n}}-element partial order, to be {{math|''O''(''n''<sup>2</sup>)}}. However, this analysis omits the time for constructing the transitive reduction, which is not known to be possible within this bound.  {{harvtxt|Sethi|1976}} shows how to implement the topological ordering stage of the algorithm in [[linear time]], based on the idea of [[partition refinement]].<ref>{{citation
+ | last = Sethi | first = Ravi | author-link = Ravi Sethi
+ | doi = 10.1137/0205005
+ | mr = 0398156
+ | issue = 1
+ | journal = SIAM Journal on Computing
+ | pages = 73–82
+ | title = Scheduling graphs on two processors
+ | volume = 5
+ | year = 1976}}.</ref> Sethi also shows how to implement the level assignment stage of the algorithm efficiently by using a [[disjoint-set data structure]]. In particular, with a version of this structure published later by {{harvtxt|Gabow|Tarjan|1985}}, this stage also takes linear time.<ref>{{citation
+ | last1 = Gabow | first1 = Harold N. | author1-link = Harold N. Gabow
+ | last2 = Tarjan | first2 = Robert Endre | author2-link = Robert Tarjan
+ | doi = 10.1016/0022-0000(85)90014-5
+ | mr = 801823
+ | issue = 2
+ | journal = Journal of Computer and System Sciences
+ | pages = 209–221
+ | title = A linear-time algorithm for a special case of disjoint set union
+ | volume = 30
+ | year = 1985| doi-access = free
+ }}.</ref>
+
+==References==
+{{reflist|35em}}
+
+{{DEFAULTSORT:Coffman-Graham algorithm}}
+[[Category:Graph drawing]]
+[[Category:Processor scheduling algorithms]]
+[[Category:Optimal scheduling]]

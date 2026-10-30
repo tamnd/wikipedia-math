@@ -1,0 +1,101 @@
+<!-- wikipedia: en
+     page: 61292787
+     title: Counting Bloom filter
+     revision: 1375063343
+     timestamp: 2026-09-15T16:58:24Z
+     history: https://en.wikipedia.org/w/index.php?curid=61292787&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375063343 -->
+{{Short description|Probabilistic data structure}}
+A '''counting Bloom filter''' ('''CBF'''<ref name="choi-2024">{{cite journal |last1=Choi |first1=Eunji |last2=Lee |first2=Jungwon |last3=Yim |first3=Changhoon |last4=Lim |first4=Hyesook |year=2024 |title=Decoding Errors in Difference-Invertible Bloom Filters: Analysis and Resolution |journal=IEEE Access |volume=12 |pages=40622–40633 |doi=10.1109/ACCESS.2024.3377222  |doi-access=free|bibcode=2024IEEEA..1240622C }}</ref>) or '''spectral Bloom filter'''<ref name="cohen-2003">{{cite book |first1=Saar |last1=Cohen |first2=Yossi |last2=Matias |chapter=Spectral bloom filters |title=Proceedings of the 2003 ACM SIGMOD international conference on Management of data |year=2003 |doi=10.1145/872757.872787 |pages=241–252 |url=https://whiteblock.io/wp-content/uploads/2019/10/sbf-sigmod-03.pdf |isbn=978-1-58113-634-0 |s2cid=1058187 |archive-date=2021-03-10 |archive-url=https://web.archive.org/web/20210310041118/https://whiteblock.io/wp-content/uploads/2019/10/sbf-sigmod-03.pdf }}</ref> is a [[probabilistic]] [[data structure]] that is used to test whether the number of occurrences of a given [[Element (mathematics)|element]] in a sequence exceeds a given threshold. As a generalized form of the [[Bloom filter]], [[Type I and type II errors|false positive]] matches are possible, but [[Type I and type II errors|false negatives]] are not – in other words, a query returns either "possibly bigger or equal than the threshold" or "definitely smaller than the threshold".
+
+== Algorithm description ==
+Most of the parameters are defined same with [[Bloom filter]], such as ''m, k. m'' is the number of counters in counting Bloom filter, which is expansion of ''m'' bits in Bloom filter. An ''empty counting Bloom filter'' is a ''m'' counters, all set to 0. Similar to Bloom filter, there must also be ''k'' different [[hash function]]s defined, each of which [[Map (mathematics)|maps]] or hashes some set element to one of the ''m'' counter array positions, generating a uniform random distribution. It is also similar that ''k'' is a constant, much smaller than ''m'', which is proportional to the number of elements to be added.
+
+The main generalization of Bloom filter is adding an element. To ''add'' an element, feed it to each of the ''k'' hash functions to get ''k'' array positions and ''increment'' the counters 1 at all these positions.
+
+To ''query'' for an element with a threshold ''θ'' (test whether the count number of an element is smaller than ''θ''), feed it to each of the ''k'' hash functions to get ''k'' counter positions. If any of the counters at these positions is less than ''θ'', the count number of element is definitely less than ''θ'' – if it were more and equal, then all the corresponding counters would have been greater or equal to ''θ''. If all are greater or equal to ''θ'', then either the count is really greater or equal to ''θ'', or the counters have by chance been greater or equal to ''θ''. If all are greater or equal to θ even though the count is smaller than ''θ'', this circumstance is defined as [[false positive]]. This also should be minimized like Bloom filter.
+
+About hashing problem and advantages, see [[Bloom filter]].
+
+A counting Bloom filter is essentially the same data structure as [[count–min sketch]]es, but are used differently.
+
+== Potential for false negatives ==
+Several implementations of counting bloom filters allow for deletion, by decrementing each of the ''k'' counters for a given input.  This will introduce the probability of false negatives during a query if the deleted input has not previously been inserted into the filter.  Guo ''et al.'' present the problem in great detail, and provide heuristics for the parameters ''m'', ''k'', and ''n'' which minimize the probability of false negatives.<ref>{{cite journal | doi=10.1109/TKDE.2009.209 | title=False Negative Problem of Counting Bloom Filter | year=2010 | last1=Deke Guo | last2=Yunhao Liu | last3=Xiangyang Li | last4=Panlong Yang | journal=IEEE Transactions on Knowledge and Data Engineering | volume=22 | issue=5 | pages=651–664 | bibcode=2010ITKDE..22..651G | s2cid=3934679 }}</ref>
+
+== Probability of false positives ==
+The same assumptions in [[Bloom filter]], which hash functions make insertions uniform random, is also assumed here. In the ''m'' pots, ''kn'' balls are inserted randomly. So the probability of one of counter in counting Bloom filter counts ''l'' is
+
+<math>b(l, kn, \frac{1}{m}) = {kn \choose l}(\frac{1}{m})^l (1 - \frac{1}{m})^{kn-l}</math>,
+
+where ''b'' is [[binomial distribution]].<ref>{{Cite journal|last1=Tarkoma|first1=Sasu|last2=Rothenberg|first2=Christian Esteve|last3=Lagerspetz|first3=Eemil|date=2012|title=Theory and Practice of Bloom Filters for Distributed Systems|journal=IEEE Communications Surveys & Tutorials|volume=14|issue=1|pages=131–155|doi=10.1109/surv.2011.031611.00024|bibcode=2012ICST...14..131T |s2cid=17216682|issn=1553-877X}}</ref> A counting Bloom filter determines an element is greater or equal to ''θ'' when the corresponding ''k'' counters are greater or equal to ''θ.'' Therefore, the probability that counting Bloom filter determines an element is greater or equal to ''θ'' is
+
+<math>p_{fp}(\theta, k, n, m) = (1 - \sum\limits_{l < \theta} b(l, kn, \frac{1}{m}))^k</math>.
+
+This is different from formal definition of [[false positive]] in counting Bloom filter. However, following the assumption in Bloom filter, above probability is defined as false positive of counting Bloom filter. If ''θ''=1, the equation becomes false positive of Bloom filter.
+
+=== Optimal number of hash functions ===
+For large but fixed ''n'' and ''m'', the false positive decreases from ''k''=1 to a point defined <math>k_{opt}</math>, and increases from <math>k_{opt}</math>to positive infinity.<ref>{{Cite journal|last1=Lee|first1=Sunggu|last2=Lee|first2=Youngjoo|last3=Jeong|first3=Yongjo|last4=Kim|first4=Kibeom|date=July 2019|title=Analysis of Counting Bloom Filters Used for Count Thresholding|journal=Electronics|volume=8|issue=7|page=779|doi=10.3390/electronics8070779|doi-access=free}}</ref>
+
+[https://www.mdpi.com/2079-9292/8/7/779 Kim et al. (2019)] shows numerical values of <math>k_{opt}</math>within <math>1\leq\theta\leq30</math>. For <math>\theta > 30</math> they suggested using the floor or ceiling of <math>\frac{m}{n} (0.2037\theta + 0.9176)</math>.
+
+== Variants ==
+=== Invertible Bloom filter ===
+An invertible Bloom filter (IBF) is a variant of the counting Bloom filter that allows for listing of the remaining element, given there are not too may of them. There is, however, a small chance that multiple hash collisions can render a element unrecoverable.<ref name="choi-2024" /><ref name="eppstein-2011">{{cite journal |last1=Eppstein |first1=David |last2=Goodrich |first2=Michael T. |year=2011 |title=Straggler Identification in Round-Trip Data Streams via Newton's Identities and Invertible Bloom Filters |journal=IEEE Transactions on Knowledge and Data Engineering |volume=23 |issue=2 |pages=297–306 |doi=10.1109/TKDE.2010.132 |arxiv=0704.3313 |bibcode=2011ITKDE..23..297E }}</ref>
+
+Like a CBF, an IBF consists of a [[hash table]] ''B'' which uses ''k'' hash functions ''h''<sub>1</sub>...''h''<sub>''k''</sub> and stores a counter in each of its ''m'' cells. Alongside each counter, it also stores a sum of elements and a sum of element hashes using a new hash function ''g''. There is also a second hash table ''C'' to recover elements that could not be recovered using ''B'', which also has ''m'' cells but only uses two hash functions ''f''<sub>1</sub> and ''f''<sub>2</sub>. The total number of elements (''n'') is also stored.
+
+To insert an element ''x'', do the following:
+  increment ''n''
+  '''for each''' 1 &le; ''i'' &le; ''k'' '''do'''
+      increment ''B''[''h''<sub>''i''</sub>(''x'')].count
+      add ''x'' to ''B''[''h''<sub>''i''</sub>(''x'')].idSum
+      add ''g''(''x'') to ''B''[''h''<sub>''i''</sub>(''x'')].hashSum
+  '''for each''' ''i'' '''in''' {1, 2} '''do'''
+      increment ''C''[''f''<sub>''i''</sub>(''x'')].count
+      add ''x'' to ''C''[''f''<sub>''i''</sub>(''x'')].idSum
+      add ''g''(''x'') to ''C''[''f''<sub>''i''</sub>(''x'')].hashSum
+
+Likewise, to remove an element ''x'', do the following:
+  decrement ''n''
+  '''for each''' 1 &le; ''i'' &le; ''k'' '''do'''
+      decrement ''B''[''h''<sub>''i''</sub>(''x'')].count
+      subtract ''x'' from ''B''[''h''<sub>''i''</sub>(''x'')].idSum
+      subtract ''g''(''x'') from ''B''[''h''<sub>''i''</sub>(''x'')].hashSum
+  '''for each''' ''i'' '''in''' {1, 2} '''do'''
+      decrement ''C''[''f''<sub>''i''</sub>(''x'')].count
+      subtract ''x'' from ''C''[''f''<sub>''i''</sub>(''x'')].idSum
+      subtract ''g''(''x'') from ''C''[''f''<sub>''i''</sub>(''x'')].hashSum
+
+Repeated insertions and removals can be simplified.
+
+A cell is considered "pure" if it contains only one distinct element ''x'', which can be checked using <code>''g''(''B''[''i''].idSum/''B''[''i''].count) = ''B''[''i''].hashSum/''B''[''i''].count</code>. If a cell is pure, then ''x'' can be recovered by dividing the idSum by the count. To list the remaining elements ("stragglers"), do the following:
+  '''while''' there is a pure cell ''i'' in ''B'' '''do'''
+      let ''x'' := ''B''[''i''].idSum/''B''[''i''].count
+      '''if''' ''B''[''i''].count > 0 '''then'''
+          ''(this is a good element)''
+          output ''x''
+          '''for''' 1 &le; i &le; ''B''[''i''].count '''do'''
+              remove element ''x'' from ''B'' and ''C''
+      '''else'''
+          ''(this is a false delete)''
+          '''for''' 1 &le; i &le; -''B''[''i''].count '''do'''
+              insert element ''x'' into ''B'' and ''C''
+  '''if''' ''n'' &ne; 0 '''then'''
+      ''(there are conflicts in B)''
+      repeat the above [[while loop]], but swap ''B'' and ''C''
+
+=== Invertible Bloom lookup table ===
+An invertible Bloom lookup table (IBLT) is a variant of the invertible Bloom filter that also stores [[key-value pair|associated values]] with each key. The difference is that an IBLT also stores a <code>valueSum</code> in each cell, which can be used to obtain the value for a given key.<ref name="goodrich-2011">{{cite book |last1=Goodrich |first1=Michael T. |last2=Mitzenmacher |first2=Michael |chapter=Invertible bloom lookup tables |year=2011 |title=2011 49th Annual Allerton Conference on Communication, Control, and Computing (Allerton) |pages=792–799 |doi=10.1109/Allerton.2011.6120248 |arxiv=1101.2245 |isbn=978-1-4577-1817-5 }}</ref>
+
+If there are no extraneous deletions (where a key is deleted without being inserted first) or duplicates (where a key is inserted multiple times), then the <code>hashkeySum</code> can be omitted. In this case, pure cells can be detected by checking whether <code>count = 1</code>.
+
+A <code>hashvalueSum</code> may also be stored in each cell to verify that only one value has been inserted for the corresponding key.
+
+IBLTs are suitable for use in [[databases]], [[computer network|networking]]<ref name="goodrich-2011" /> and [[data compression|compression]].<ref>{{cite journal |last1=Fleischhacker |first1=Nils |last2=Larsen |first2=Kasper Green |last3=Obremski |first3=Maciej |last4=Simkin |first4=Mark |year=2024 |title=Invertible Bloom Lookup Tables with Less Memory and Randomness |journal=Leibniz International Proceedings in Informatics |volume=308 |pages=54:1–54:17 |doi=10.4230/LIPIcs.ESA.2024.54 |doi-access=free }}</ref>
+
+== References ==
+<!-- Inline citations added to your article will automatically display here. See en.wikipedia.org/wiki/WP:REFB for instructions on how to add citations. -->
+{{reflist}}
+
+[[Category:Hash-based data structures]]

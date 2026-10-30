@@ -1,0 +1,176 @@
+<!-- wikipedia: en
+     page: 2133529
+     title: Goertzel algorithm
+     revision: 1331147672
+     timestamp: 2026-01-04T20:55:41Z
+     history: https://en.wikipedia.org/w/index.php?curid=2133529&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1331147672 -->
+{{Short description|Technique in digital signal processing}}
+The '''Goertzel algorithm''' is a technique in [[digital signal processing]] (DSP) for efficient evaluation of the individual terms of the [[discrete Fourier transform]] (DFT). It is useful in certain practical applications, such as recognition of [[dual-tone multi-frequency signaling]] (DTMF) tones produced by the push buttons of the keypad of a traditional analog [[telephone]]. The algorithm was [[Species description|first described]] by [[Gerald Goertzel]] in 1958.<ref>{{Citation |first=G. |last=Goertzel |date=January 1958 |title= An Algorithm for the Evaluation of Finite Trigonometric Series |journal= American Mathematical Monthly |volume=65 |issue=1 |pages=34&ndash;35 |doi=10.2307/2310304 |jstor=2310304 }}</ref>
+
+Like the DFT, the Goertzel algorithm analyses one selectable frequency component from a [[discrete signal]].<ref>{{Citation |last=Mock |first=P. |url=https://focus.ti.com/lit/an/spra168/spra168.pdf |title=Add DTMF Generation and Decoding to DSP-μP Designs |journal=EDN |date=March 21, 1985 |issn=0012-7515 }}; also found in DSP Applications with the TMS320 Family, Vol. 1, Texas Instruments, 1989.</ref><ref>{{Citation |first=Chiouguey J. |last=Chen |url=https://focus.ti.com/lit/an/spra066/spra066.pdf |title=Modified Goertzel Algorithm in DTMF Detection Using the TMS320C80 DSP| publisher=Texas Instruments |series=Application Report |id=SPRA066 |date=June 1996 }}</ref><ref>{{Citation |last=Schmer |first=Gunter |url=https://focus.ti.com/lit/an/spra096a/spra096a.pdf |title=DTMF Tone Generation and Detection: An Implementation Using the TMS320C54x |publisher=Texas Instruments |series=Application Report |id=SPRA096a |date= May 2000 }}</ref>  Unlike direct DFT calculations, the Goertzel algorithm applies a single [[Real number|real-valued]] coefficient at each iteration, using real-valued arithmetic for real-valued input sequences. For covering a full spectrum (except when using for continuous stream of data where coefficients are reused for subsequent calculations, which has computational complexity equivalent of [[sliding DFT]]), the Goertzel algorithm has a [[Computational complexity theory|higher order of complexity]] than [[fast Fourier transform]] (FFT) algorithms, but for computing a small number of selected frequency components, it is more numerically efficient. The simple structure of the Goertzel algorithm makes it well suited to small processors and embedded applications.
+
+The Goertzel algorithm can also be used "in reverse" as a sinusoid synthesis function, which requires only 1 multiplication and 1 [[subtraction]] per generated sample.<ref>{{Citation |last1=Cheng |first1=Eric |last2=Hudak |first2=Paul |url=http://haskell.cs.yale.edu/wp-content/uploads/2011/01/AudioProc-TR.pdf |archive-url=https://web.archive.org/web/20170328022024/http://haskell.cs.yale.edu/wp-content/uploads/2011/01/AudioProc-TR.pdf |url-status=dead |archive-date=2017-03-28 |title=Audio Processing and Sound Synthesis in Haskell |date=January 2009 }}</ref>
+
+== The algorithm ==
+The main calculation in the Goertzel algorithm has the form of a [[digital filter]], and for this reason the algorithm is often called a ''Goertzel filter''. The filter operates on an input sequence <math>x[n]</math> in a cascade of two stages with a parameter <math>\omega_0</math>, giving the frequency to be analysed, normalised to [[radian]]s per sample.
+
+The first stage calculates an intermediate sequence, <math>s[n]</math>:
+{{NumBlk|:|<math> s[n] = x[n] + 2 \cos(\omega_0) s[n-1] - s[n-2]. </math>|1}}
+The second stage applies the following filter to <math>s[n]</math>, producing output sequence <math>y[n]</math>:
+{{NumBlk|:|<math>y[n] = s[n] - e^{-j \omega_0} s[n-1].</math>|2}}
+
+The first filter stage can be observed to be a second-order [[Infinite impulse response|IIR filter]] with a [[Digital filter#Direct form I|direct-form]] structure. This particular structure has the property that its internal state variables equal the past output values from that stage. Input values <math>x[n]</math> for <math>n < 0</math> are presumed all equal to 0. To establish the initial filter state so that evaluation can begin at sample <math>x[0]</math>, the filter states are assigned initial values <math>s[-2] = s[-1] = 0</math>. To avoid [[aliasing]] hazards, frequency <math>\omega_0</math> is often restricted to the range 0 to π (see [[Nyquist–Shannon sampling theorem]]); using a value outside this range is not meaningless, but is equivalent to using an aliased frequency inside this range, since the [[exponential function]] is periodic with a period of 2π in <math>\omega_0</math>.
+
+The second-stage filter can be observed to be a [[Finite impulse response|FIR filter]], since its calculations do not use any of its past outputs.
+
+[[Z-transform]] methods can be applied to study the properties of the filter cascade. The Z transform of the first filter stage given in equation (1) is
+{{NumBlk|:|<math>\begin{align}
+ \frac{S(z)}{X(z)} &= \frac{1}{1 - 2 \cos(\omega_0) z^{-1} + z^{-2}} \\
+  & = \frac{1}{(1 - e^{+j \omega_0} z^{-1})(1 - e^{-j \omega_0} z^{-1})}.
+\end{align}</math>|3}}
+The Z transform of the second filter stage given in equation (2) is
+{{NumBlk|:|<math>\frac{Y(z)}{S(z)} = 1 - e^{-j \omega_0}z^{-1}.</math>|4}}
+The combined transfer function of the cascade of the two filter stages is then  
+{{NumBlk|:|<math>\begin{align} 
+ \frac{S(z)}{X(z)} \frac{Y(z)}{S(z)} = \frac{Y(z)}{X(z)} &= \frac{(1 - e^{-j \omega_0}z^{-1})}{(1 - e^{+j \omega_0} z^{-1})(1 - e^{-j \omega_0} z^{-1})} \\
+ &= \frac{1}{1 - e^{+j \omega_0} z^{-1}}.
+\end{align}</math>|5}}
+This can be transformed back to an equivalent time-domain sequence, and the terms unrolled back to the first input term at index <math>n = 0</math>:{{citation needed|date=February 2014}}
+{{NumBlk|:|<math> \begin{align}
+ y[n] &= x[n] + e^{+j \omega_0} y[n-1] \\
+  &= \sum_{k=-\infty}^{n}x[k] e^{+j \omega_0 (n-k)} \\ 
+  &= e^{j \omega_0 n} \sum_{k=0}^{n} x[k] e^{-j \omega_0 k} \qquad \text{since }\forall k < 0, x[k] = 0.
+\end{align} </math>|6}}
+
+== Numerical stability ==
+It can be observed that the [[Pole (complex analysis)|poles]] of the filter's [[Z transform]] are located at <math>e^{+j \omega_0}</math> and <math>e^{-j \omega_0}</math>, on a circle of unit radius centered on the origin of the complex Z-transform plane. This property indicates that the filter process is [[Marginal stability|marginally stable]] and vulnerable to [[Numerical stability|numerical-error accumulation]] when computed using low-precision arithmetic and long input sequences.<ref>{{cite journal|last1=Gentleman|first1=W. M.|title=An error analysis of Goertzel's (Watt's) method for computing Fourier coefficients|journal=The Computer Journal|date=1 February 1969|volume=12|issue=2|pages=160–164|doi=10.1093/comjnl/12.2.160|doi-access=free}}</ref> A numerically stable version was proposed by [[Christian Reinsch]].<ref>{{Citation |first1=J. |last1=Stoer |first2=R. |last2=Bulirsch |date=2002 |title= Introduction to Numerical Analysis |publisher= Springer |isbn=9780387954523}}</ref>
+
+== DFT computations ==
+For the important case of computing a DFT term, the following special restrictions are applied.
+* The filtering terminates at index <math>n = N</math>, where <math>N</math> is the number of terms in the input sequence of the DFT.
+* The frequencies chosen for the Goertzel analysis are restricted to the special form 
+{{NumBlk|::|<math>\omega_0 = 2 \pi \frac{k}{N}.</math>|7}}
+* The index number <math>k</math> indicating the "frequency bin" of the DFT is selected from the set of index numbers
+{{NumBlk|::|<math>k \in \{ 0, 1, 2, ..., N-1 \}. </math>|8}}
+
+Making these substitutions into equation (6) and observing that the term <math>e^{+j 2 \pi k} = 1</math>, equation (6) then takes the following form:
+{{NumBlk|:|<math>y[N] =  \sum_{n=0}^{N} x[n]e^{-j 2 \pi \frac{n k}{N}}. </math>|9}}
+
+We can observe that the right side of equation (9) is extremely similar to the defining formula for DFT term <math>X[k]</math>, the DFT term for index number <math>k</math>, but not exactly the same. The summation shown in equation (9) requires <math>N+1</math> input terms, but only <math>N</math> input terms are available when evaluating a DFT. A simple but inelegant expedient is to extend the input sequence <math>x[n]</math> with one more artificial value <math>x[N] = 0</math>.<ref>{{cite web|url=http://cnx.org/content/m12024/latest/ |title=Goertzel's Algorithm |publisher=Cnx.org |date=2006-09-12 |access-date=2014-02-03}}</ref>  We can see from equation (9) that the mathematical effect on the final result is the same as removing term <math>x[N]</math> from the summation, thus delivering the intended DFT value.
+
+However, there is a more elegant approach that avoids the extra filter pass. From equation (1), we can note that when the extended input term <math>x[N] = 0</math> is used in the final step, 
+{{NumBlk|:|<math>s[N] =  2 \cos(\omega_0) s[N-1] - s[N-2].</math>|10}}
+Thus, the algorithm can be completed as follows:
+* terminate the IIR filter after processing input term <math>x[N-1]</math>,
+* apply equation (10) to construct <math>s[N]</math> from the prior outputs <math>s[N-1]</math> and <math>s[N-2]</math>,
+* apply equation (2) with the calculated <math>s[N]</math> value and with <math>s[N-1]</math> produced by the final direct calculation of the filter.
+
+The last two mathematical operations are simplified by combining them algebraically:
+{{NumBlk|:|<math>\begin{align}
+ y[N] & = s[N] - e^{-j 2 \pi \frac{k}{N}} s[N-1] \\
+  & = (2 \cos(\omega_0) s[N-1] - s[N-2]) - e^{-j 2 \pi \frac{k}{N}} s[N-1] \\
+  & =  e^{j 2 \pi \frac{k}{N}} s[N-1] - s[N-2].
+\end{align}</math>|11}}
+
+Note that stopping the filter updates at term <math>N-1</math> and immediately applying equation (2) rather than equation (11) misses the final filter state updates, yielding a result with incorrect phase.<ref>{{cite web|url=http://www.eetimes.com/design/signal-processing-dsp/4024443/The-Goertzel-Algorithm |title=Electronic Engineering Times &#124; Connecting the Global Electronics Community |publisher=EE Times |access-date=2014-02-03}}</ref>
+
+The particular filtering structure chosen for the Goertzel algorithm is the key to its efficient DFT calculations. We can observe that only one output value <math>y[N]</math> is used for calculating the DFT, so calculations for all the other output terms are omitted. Since the FIR filter is not calculated, the IIR stage calculations <math>s[0], s[1]</math>, etc. can be discarded immediately after updating the first stage's internal state.
+
+This seems to leave a paradox:   to complete the algorithm, the FIR filter stage must be evaluated once using the final two outputs from the IIR filter stage, while for computational efficiency the IIR filter iteration discards its output values. This is where the properties of the direct-form filter structure are applied. The two internal state variables of the IIR filter provide the last two values of the IIR filter output, which are the terms required to evaluate the FIR filter stage.
+
+== Applications ==
+=== Power-spectrum terms ===
+Examining equation (6), a final IIR filter pass to calculate term <math> y[N]</math> using a supplemental input value <math> x[N]=0 </math> applies a complex multiplier of magnitude 1 to the previous term <math>y[N-1]</math>. Consequently, <math>y[N]</math> and <math>y[N-1]</math> represent equivalent signal power. It is equally valid to apply equation (11) and calculate the signal power from term <math>y[N]</math> or to apply equation (2) and calculate the signal power from term <math>y[N-1]</math>. Both cases lead to the following expression for the signal power represented by DFT term <math>X[k]</math>:
+{{NumBlk|:|<math>\begin{align}
+  X[k] \, X'[k] & = y[N] \, y'[N] = y[N-1] \, y'[N-1] \\
+  & = s^2[N-1] + s^2[N-2] - 2 \cos \left(2 \pi \frac{k}{N} \right) \, s[N-1] \, s[N-2].
+\end{align} </math>|12}}
+
+In the [[pseudocode]] below, the complex-valued input data is stored in the [[array data type|array]] <code>x</code> and the variables <code>sprev</code> and <code>sprev2</code> temporarily store output history from the IIR filter. <code>Nterms</code> is the number of samples in the array, and <code>Kterm</code> corresponds to the frequency of interest, multiplied by the sampling period.
+
+ Nterms defined here
+ Kterm selected here
+ ω = 2 × π × Kterm / Nterms;
+ coeff := 2 × cos(ω)
+ 
+ sprev := 0
+ sprev2 := 0
+ '''for each''' index ''n'' in range 0 to Nterms-1 '''do'''
+     s := x[n] + coeff × sprev - sprev2
+     sprev2 := sprev
+     sprev := s
+ '''end'''
+ 
+ power := sprev<sup>''2''</sup> + sprev2<sup>''2''</sup> - (coeff × sprev × sprev2)
+
+It is possible<ref>{{cite web |date=August 25, 2011 |first=Wilfried |last=Elmenreich |title=Efficiently detecting a frequency using a Goertzel filter |url=https://netwerkt.wordpress.com/2011/08/25/goertzel-filter/ |access-date=16 September 2014}}</ref> to organise the computations so that incoming samples are delivered singly to a [[Object-oriented programming|software object]] that maintains the filter state between updates, with the final power result accessed after the other processing is done.
+
+=== Single DFT term with real-valued arithmetic ===
+The case of real-valued input data arises frequently, especially in embedded systems where the input streams result from direct measurements of physical processes. When the input data are real-valued, the filter internal state variables <code>sprev</code> and <code>sprev2</code> can be observed also to be real-valued, consequently, no complex arithmetic is required in the first IIR stage. Optimizing for real-valued arithmetic typically is as simple as applying appropriate real-valued data types for the variables.
+
+After the calculations using input term <math>x[N-1]</math>, and filter iterations are terminated, equation (11) must be applied to evaluate the DFT term. The final calculation uses complex-valued arithmetic, but this can be converted into real-valued arithmetic by separating real and imaginary terms:
+{{NumBlk|:|<math>\begin{align} 
+  c_r  &= \cos(2 \pi \tfrac{k}{N}), \\
+  c_i  &= \sin(2 \pi \tfrac{k}{N}), \\
+  y[N] &= c_r s[N-1] - s[N-2] +  j c_i s[N-1].
+\end{align} 
+</math>|13}}
+
+Comparing to the power-spectrum application, the only difference are the calculation used to finish:
+
+<pre>
+(Same IIR filter calculations as in the signal power implementation)
+XKreal = sprev * cr - sprev2;
+XKimag = sprev * ci;
+</pre>
+
+=== Phase detection ===
+This application requires the same evaluation of DFT term <math>X[k]</math>, as discussed in the previous section, using a real-valued or complex-valued input stream.  Then the signal phase can be evaluated as
+{{NumBlk|:|<math> \phi = \tan^{-1}\frac{\Im(X[k])}{ \Re(X[k])}, </math>|14}}
+taking appropriate precautions for singularities, quadrant, and so forth when computing the inverse tangent function.
+
+=== Complex signals in real arithmetic ===
+Since complex signals decompose linearly into real and imaginary parts, the Goertzel algorithm can be computed in real arithmetic separately over the sequence of real parts, yielding <math>y_\text{r}[n]</math>, and over the sequence of imaginary parts, yielding <math>y_\text{i}[n]</math>. After that, the two complex-valued partial results can be recombined:
+{{NumBlk|:|<math>y[n] = y_\text{r}[n] + j y_\text{i}[n].</math>|15}}
+
+== Computational complexity ==
+{{Refimprove section|date=February 2014}}
+* According to [[computational complexity theory]], computing a set of <math>M</math> DFT terms using <math>M</math> applications of the Goertzel algorithm on a [[data set]] with <math>N</math> values with a "cost per operation" of <math>K</math> has [[big O notation|complexity]] <math>O(KNM)</math>.
+
+: To compute a single [[Discrete Fourier transform|DFT]] bin <math>X(f)</math> for a complex input sequence of length <math>N</math>, the Goertzel algorithm requires <math>2 N</math> multiplications and <math>4\ N</math> additions/subtractions within the loop, as well as 4 multiplications and 4 final additions/subtractions, for a total of <math>2 N + 4</math> multiplications and <math>4 N + 4</math> additions/subtractions. This is repeated for each of the <math>M</math> frequencies.
+
+* In contrast, using an [[Fast Fourier transform|FFT]] on a data set with <math>N</math> values has complexity <math>O(KN\log_2(N))</math>.
+
+: This is harder to apply directly because it depends on the FFT algorithm used, but a typical example is a radix-2 FFT, which requires <math>2 \log_2(N)</math> multiplications and <math>3 \log_2(N)</math> additions/subtractions per [[Discrete Fourier transform|DFT]] bin, for each of the <math>N</math> bins.
+
+In the complexity order expressions, when the number of calculated terms <math>M</math> is smaller than <math>\log N</math>,  the advantage of the Goertzel algorithm is clear. But because FFT code is comparatively complex,
+the "cost per unit of work" factor <math>K</math> is often larger for an FFT, and the practical advantage favours the Goertzel algorithm even for <math>M</math> several times larger than <math>\log_2(N)</math>.
+
+As a rule-of-thumb for determining whether a radix-2 FFT or a Goertzel algorithm is more efficient, adjust the number of terms <math>N</math> in the data set upward to the nearest exact power of 2, calling this <math>N_2</math>, and the Goertzel algorithm is likely to be faster if 
+:<math>M \le \frac{5 N_2}{6 N} \log_2(N_2)</math>
+
+FFT implementations and processing platforms have a significant impact on the relative performance. Some FFT implementations<ref>{{Citation |last1=Press|last2=Flannery|last3=Teukolsky|last4=Vetterling|title=Numerical Recipes, The Art of Scientific Computing|publisher=Cambridge University Press|year=2007|chapter=Chapter 12}}</ref> perform internal complex-number calculations to generate coefficients on-the-fly, significantly increasing their "cost K per unit of work."  FFT and DFT algorithms can use tables of pre-computed coefficient values for better numerical efficiency, but this requires more accesses to coefficient values buffered in external memory, which can lead to increased cache contention that counters some of the numerical advantage.
+
+Both algorithms gain approximately a factor of 2 efficiency when using real-valued rather than complex-valued input data. However, these gains are natural for the Goertzel algorithm but will not be achieved for the FFT without using certain algorithm variants {{which|date=February 2014}} specialised for [[Fast Fourier transform|transforming real-valued data]].
+
+== See also ==
+* [[Bluestein's FFT algorithm]] (chirp-Z)
+* [[Frequency-shift keying]] (FSK)
+* [[Phase-shift keying]] (PSK)
+
+== References ==
+{{reflist|30em}}
+
+==Further reading==
+* {{Citation |last1=Proakis |first1= J. G. |first2=D. G. |last2= Manolakis |title=Digital Signal Processing: Principles, Algorithms, and Applications |location= Upper Saddle River, NJ |publisher=Prentice Hall |year=1996 |pages=480–481 |bibcode= 1996dspp.book.....P |ref=none}}
+
+==External links==
+* {{webarchive |url=https://web.archive.org/web/20180628024641/http://en.dsplib.org/content/goertzel/goertzel.html |title=Goertzel Algorithm}}
+* [http://www.embedded.com/design/configurable-systems/4006427/A-DSP-algorithm-for-frequency-analysis A DSP algorithm for frequency analysis]
+* [https://www.embedded.com/the-goertzel-algorithm The Goertzel Algorithm by Kevin Banks]
+* [https://www.beis.de/Elektronik/Filter/Goertzel/Goertzel_en.html Analysis of the Goertzel Algorithm by Uwe Beis] in which he compares it to analog 2nd order [[Chebyshev_filter| Chebyshev low pass filter]]
+
+[[Category:Fast Fourier transforms]]
+[[Category:Digital signal processing]]

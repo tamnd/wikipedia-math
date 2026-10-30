@@ -1,0 +1,206 @@
+<!-- wikipedia: en
+     page: 5975550
+     title: Power iteration
+     revision: 1364028829
+     timestamp: 2026-07-14T02:00:59Z
+     history: https://en.wikipedia.org/w/index.php?curid=5975550&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1364028829 -->
+{{Short description|Eigenvalue algorithm}}
+{{Use dmy dates|date=January 2020}}
+In [[mathematics]], '''power iteration''' (also known as the '''power method''') is an [[eigenvalue algorithm]]: given a [[diagonalizable]] [[matrix (mathematics)|matrix]] <math>A</math>, the algorithm will produce a number <math>\lambda</math>, which is the greatest (in absolute value) [[eigenvalue]] of <math>A</math>, and a nonzero vector <math>v</math>, which is a corresponding [[eigenvector]] of <math>\lambda</math>, that is, <math>Av = \lambda v</math>.
+The algorithm is also known as the '''[[Richard von Mises|Von Mises]] iteration'''.<ref name=VonMises>[[Richard von Mises]] and H. Pollaczek-Geiringer,
+''Praktische Verfahren der Gleichungsauflösung'', ZAMM - Zeitschrift für Angewandte Mathematik und Mechanik 9, 152-164 (1929).</ref>
+
+Power iteration is a very simple algorithm, but it may converge slowly. The most time-consuming operation of the algorithm is the multiplication of matrix <math>A</math> by a vector, so it is effective for a very large [[sparse matrix]] with appropriate implementation. The speed of convergence is like <math>(\lambda_2 / \lambda_1)^k</math> where <math>k</math> is the number of iterations, and <math>\lambda_1</math> and  <math>\lambda_2</math> are, respectively, the eigenvalue of largest absolute value and an eigenvalue of second-largest absolute value (see a [[Power iteration#Analysis|later section]]). In other words, convergence is exponential with base being the [[spectral gap]].
+
+==The method==
+[[File:Animation of the Power Iteration Algorithm.gif|600x400px|thumb|Animation that visualizes the power iteration algorithm on a 2 x 2 matrix. The matrix is depicted by its two eigenvectors. Error is computed as <math>||\text{approximation} - \text{largest eigenvector}||</math>]]
+
+The power iteration algorithm starts with a vector <math>b_0</math>, which may be an approximation to the dominant eigenvector or a random vector. The method is described by the [[recurrence relation]]
+:<math>b_{k+1} = \frac{Ab_k}{\lVert Ab_k \rVert}</math>
+So, at every iteration, the vector <math>b_k</math> is multiplied by the matrix <math>A</math> and normalized. 
+
+If we assume <math>A</math> has an eigenvalue that is strictly greater in magnitude than its other eigenvalues, i.e.,
+
+<math> \left\vert \lambda_1 \right\vert > \left\vert \lambda_2 \right\vert \geq \ldots \geq \left\vert \lambda_n \right\vert \geq 0
+
+
+
+
+ </math>
+
+and the starting vector <math>b_0</math> has a nonzero component in the direction of an eigenvector associated with the dominant eigenvalue, then a [[subsequence]] <math>\left( b_{k} \right)</math> converges to an eigenvector associated with the dominant eigenvalue.
+
+Without the two assumptions above, the sequence <math>\left( b_{k} \right)</math> does not necessarily converge. In this sequence,
+: <math>b_k = e^{i \phi_k} v_1 + r_k</math>,
+where <math>v_1</math> is an eigenvector associated with the dominant eigenvalue, and <math> \| r_{k} \| \rightarrow 0</math>. The presence of the term <math>e^{i \phi_{k}}</math> implies that <math>\left( b_{k} \right) </math> does not converge unless <math>e^{i \phi_{k}} = 1</math>. Under the two assumptions listed above, the sequence <math>\left( \mu_{k} \right)</math> defined by
+: <math>\mu_{k} = \frac{b_{k}^{*}Ab_{k}}{b_{k}^{*}b_{k}}</math>
+converges to the dominant eigenvalue (with [[Rayleigh quotient]]).{{Clarify|what's the relation between this sequence and the power method|date=October 2016}}
+
+One may compute this with the following algorithm (shown in [[Python (programming language)|Python]] with [[NumPy]]):
+
+<syntaxhighlight lang="python3" line="1">
+import numpy as np
+from numpy import typing as npt
+
+def random_vector(dimension: int) -> npt.NDArray[np.float64]:
+    rng = np.random.default_rng()
+    return rng.random(dimension)
+
+def power_method(
+    A: npt.NDArray[np.float64],
+    num_iterations: int,
+) -> npt.NDArray[np.float64]:
+    if A.shape[0] != A.shape[1]:
+        raise ValueError("A must be a square matrix.")
+    
+    # Choose a random initial vector to reduce the chance
+    # that it is orthogonal to the dominant eigenvector.
+    b_k = random_vector(A.shape[1])
+
+    # Normalize the initial vector.
+    b_k /= np.linalg.norm(b_k)
+
+    for _ in range(num_iterations):
+        # Multiply by the matrix.
+        b_k1 = A @ b_k
+
+        # Compute the length of the new vector.
+        b_k1_norm = np.linalg.norm(b_k1)
+
+        # Stop if the new vector is within machine precision of 0.
+        if np.isclose(b_k1_norm, 0.0):
+            raise ValueError("Power method produced the zero vector.")
+
+        # Normalize the vector for the next iteration.
+        b_k = b_k1 / b_k1_norm
+
+    # Return the approximate dominant eigenvector.
+    return b_k
+</syntaxhighlight>
+The vector <math>b_k</math> converges to an associated eigenvector. Ideally, one should use the [[Rayleigh quotient]] in order to get the associated eigenvalue.
+
+This algorithm is used to calculate the ''[[Google]] [[PageRank]]''.
+
+The method can also be used to calculate the [[spectral radius]] (the eigenvalue with the largest magnitude, for a square matrix) by computing the Rayleigh quotient
+:<math>\rho(A) = \max \left \{ \vert \lambda_1 \vert, \vert \lambda_2 \vert, \ldots, \vert \lambda_n \vert \right \} = \frac{b_k^\top A b_k}{b_k^\top b_k}. </math>
+
+==Analysis==
+Let <math>A</math> be decomposed into its [[Jordan canonical form]]: <math>A=VJV^{-1}</math>, where the first column of <math>V</math> is an eigenvector of <math>A</math> corresponding to the dominant eigenvalue <math>\lambda_{1}</math>. Since [[Generic property|generically]], the dominant eigenvalue of <math>A</math> is unique, the first Jordan block of <math>J</math> is the <math>1 \times 1</math> matrix <math>[\lambda_1],</math> where <math>\lambda_{1}</math> is the largest eigenvalue of <math>A</math> in magnitude. The starting vector <math>b_0</math> can be written as a [[linear combination]] of the columns of <math>V</math>:
+
+:<math>b_{0} = c_{1}v_{1} + c_{2}v_{2} + \ldots + c_{n}v_{n}.</math>
+
+By assumption, <math>b_{0}</math> has a nonzero component in the direction of the dominant eigenvector, so <math>c_{1} \ne 0</math>.
+
+The computationally useful [[recurrence relation]] for <math>b_{k+1}</math> can be rewritten as:
+
+:<math>b_{k+1}=\frac{Ab_{k}}{\|Ab_{k}\|}=\frac{A^{k+1}b_{0}}{\|A^{k+1}b_{0}\|},</math>
+
+where the expression: <math>\frac{A^{k+1}b_{0}}{\|A^{k+1}b_{0}\|}</math> is more amenable to the following analysis:
+
+:<math>\begin{align}
+b_k &= \frac{A^{k}b_{0}}{\| A^{k} b_{0} \|} \\
+    &= \frac{\left( VJV^{-1} \right)^{k} b_{0}}{\|\left( VJV^{-1} \right)^{k}b_{0}\|} \\
+    &= \frac{ VJ^{k}V^{-1} b_{0}}{\| V J^{k} V^{-1} b_{0}\|} \\
+    &= \frac{ VJ^{k}V^{-1} \left( c_{1}v_{1} + c_{2}v_{2} + \cdots + c_{n}v_{n} \right)}{\| V J^{k} V^{-1} \left( c_{1}v_{1} + c_{2}v_{2} + \cdots + c_{n}v_{n} \right)\|} \\
+    &= \frac{ VJ^{k}\left( c_{1}e_{1} + c_{2}e_{2} + \cdots + c_{n}e_{n} \right)}{\| V J^{k} \left( c_{1}e_{1} + c_{2}e_{2} + \cdots + c_{n}e_{n} \right) \|} \\
+    &= \left( \frac{\lambda_{1}}{|\lambda_{1}|} \right)^{k} \frac{c_{1}}{|c_{1}|} \frac{ v_{1} + \frac{1}{c_{1}} V \left( \frac{1}{\lambda_1} J \right)^{k} \left( c_{2}e_{2} +  \cdots + c_{n}e_{n} \right)}{ \left \| v_{1} + \frac{1}{c_{1}} V \left( \frac{1}{\lambda_1} J \right)^{k} \left( c_{2}e_{2} +  \cdots + c_{n}e_{n} \right) \right \| }
+\end{align}</math>
+
+The expression above simplifies as <math>k \to \infty </math>
+
+:<math>\left( \frac{1}{\lambda_{1}} J \right)^{k} = 
+\begin{bmatrix}
+[1] & & & & \\
+& \left( \frac{1}{\lambda_{1}} J_{2} \right)^{k}& & & \\
+& & \ddots & \\
+& & & \left( \frac{1}{\lambda_{1}} J_{m} \right)^{k} \\
+\end{bmatrix}
+\rightarrow
+\begin{bmatrix}
+1 & & & & \\
+& 0 & & & \\
+& & \ddots & \\
+& & & 0 \\
+\end{bmatrix} \quad \text{as} \quad k \to \infty.</math>
+
+The limit follows from the fact that the eigenvalue of <math> \frac{1}{\lambda_{1}} J_{i} </math> is less than 1 in magnitude, so
+
+:<math>\left( \frac{1}{\lambda_{1}} J_{i} \right)^{k} \to 0 \quad \text{as} \quad k \to \infty.</math>
+
+It follows that:
+
+:<math>\frac{1}{c_{1}} V \left( \frac{1}{\lambda_1} J \right)^{k} \left( c_{2}e_{2} + \cdots + c_{n}e_{n} \right) \to 0 \quad \text{as} \quad k \to \infty</math>
+
+Using this fact, <math>b_{k}</math> can be written in a form that emphasizes its relationship with <math>v_{1}</math> when <math>k</math> is large:
+
+:<math>\begin{align}
+b_k &= \left( \frac{\lambda_{1}}{|\lambda_{1}|} \right)^{k} \frac{c_{1}}{|c_{1}|} \frac{v_{1} + \frac{1}{c_{1}} V \left( \frac{1}{\lambda_1} J \right)^{k} \left( c_{2}e_{2} +  \cdots + c_{n}e_{n} \right)}{\left \| v_{1} + \frac{1}{c_{1}} V \left( \frac{1}{\lambda_1} J \right)^{k} \left( c_{2}e_{2} +  \cdots + c_{n}e_{n} \right) \right \| } \\[6pt]
+    &= e^{i \phi_{k}} \frac{c_{1}}{|c_{1}|} \frac{v_{1}}{\|v_{1}\|} + r_{k}
+\end{align}</math>
+
+where <math>e^{i \phi_{k}} = \left( \lambda_{1} / |\lambda_{1}| \right)^{k} </math> and <math> \| r_{k} \| \to 0 </math> as <math>k \to \infty </math>
+
+The sequence <math> \left( b_{k} \right)</math> is bounded, so it contains a convergent subsequence. Note that the eigenvector corresponding to the dominant eigenvalue is only unique up to a scalar, so although the sequence <math>\left(b_{k}\right)</math> may not converge,
+<math>b_{k}</math> is nearly an eigenvector of <math>A</math> for large <math>k</math>.
+
+Alternatively, if <math>A</math> is [[diagonalizable]], then the following proof yields the same result:
+
+Let <math>\lambda_1, \lambda_2, \ldots, \lambda_m</math> be the <math>m</math> eigenvalues (counted with multiplicity) of <math>A</math> in the order of descending absolute value (equalities allowed), that is <math>|\lambda_1| \ge |\lambda_2|\ldots \ge |\lambda_m|</math>, and let <math>v_1, v_2, \ldots, v_m</math> be the corresponding eigenvectors.  Suppose that <math>\lambda_1</math> is the dominant eigenvalue, so that <math>|\lambda_1| > |\lambda_j|</math> for all <math>j>1</math>.
+
+The initial vector <math>b_0</math> can be written:
+
+:<math>b_0 = c_{1}v_{1} + c_{2}v_{2} + \cdots + c_{m}v_{m}.</math>
+
+If <math>b_0</math> is chosen randomly (with uniform probability), then <math>c_1 \neq 0</math> with [[Almost surely|probability 1]].  Now,
+
+:<math>\begin{align}
+A^{k}b_0 &= c_{1}A^{k}v_{1} + c_{2}A^{k}v_{2} + \cdots + c_{m}A^{k}v_{m} \\
+&= c_{1}\lambda_{1}^{k}v_{1} + c_{2}\lambda_{2}^{k}v_{2} + \cdots + c_{m}\lambda_{m}^{k}v_{m} \\
+&= c_{1}\lambda_{1}^{k} \left( v_{1} + \frac{c_{2}}{c_{1}}\left(\frac{\lambda_{2}}{\lambda_{1}}\right)^{k}v_{2} + \cdots + \frac{c_{m}}{c_{1}}\left(\frac{\lambda_{m}}{\lambda_{1}}\right)^{k}v_{m}\right) \\
+&\to c_{1}\lambda_{1}^{k} v_1 && \left |\frac{\lambda_j}{\lambda_1} \right | < 1 \text{ for } j>1
+\end{align}</math>
+
+On the other hand:
+
+:<math> b_k = \frac{A^k b_0}{\|A^kb_0\|}. </math>
+
+Therefore, <math>b_k</math> converges to (a multiple of) the eigenvector <math>v_1</math>. The convergence is [[geometric sequence|geometric]], with ratio
+
+:<math> \left| \frac{\lambda_2}{\lambda_1} \right|. </math>
+
+Thus, the method converges slowly if there is an eigenvalue close in magnitude to the dominant eigenvalue.
+
+==Applications==
+Although the power iteration method approximates only one eigenvalue of a matrix, it remains useful for certain [[computational problem]]s. For instance, [[Google]] uses it to calculate the [[PageRank]] of documents in their [[search engine]],<ref>{{cite news |author=[[Ilse Ipsen|Ipsen, Ilse]], and Rebecca M. Wills |date=5–8 May 2005 |title=7th IMACS International Symposium on Iterative Methods in Scientific Computing |location=Fields Institute, Toronto, Canada |url=https://ipsen.math.ncsu.edu/ps/slides_imacs.pdf}}</ref> and [[Twitter]] uses it to show users recommendations of whom to follow.<ref name="twitterwtf">Pankaj Gupta, Ashish Goel, Jimmy Lin, Aneesh Sharma, Dong Wang, and Reza Bosagh Zadeh [http://dl.acm.org/citation.cfm?id=2488433 WTF: The who-to-follow system at Twitter], Proceedings of the 22nd international conference on World Wide Web</ref> The power iteration method is especially suitable for [[Sparse matrix|sparse matrices]], such as the web matrix, or as the [[Matrix-free methods|matrix-free method]] that does not require storing the [[coefficient matrix]] <math>A</math> explicitly, but can instead access a function evaluating matrix-vector products <math>Ax</math>. For non-symmetric matrices that are [[Condition number#matrices|well-conditioned]] the power iteration method can outperform more complex [[Arnoldi iteration]]. For symmetric matrices, the power iteration method is rarely used, since its convergence speed can be easily increased without sacrificing the small cost per iteration; see, e.g., [[Lanczos iteration]] and [[LOBPCG]].
+
+Some of the more advanced eigenvalue algorithms can be understood as variations of the power iteration. For instance, the [[inverse iteration]] method applies power iteration to the matrix <math>A^{-1}</math>. Other algorithms look at the whole subspace generated by the vectors <math>b_k</math>. This subspace is known as the [[Krylov subspace]]. It can be computed by [[Arnoldi iteration]] or [[Lanczos iteration]].
+[[Gram iteration]]<ref>{{Citation
+| last1=Delattre
+| first1=B.
+| last2=Barthélemy
+| first2=Q.
+| last3=Araujo
+| first3=A.
+| last4=Allauzen
+| first4=A.
+| title=Efficient Bound of Lipschitz Constant for Convolutional Layers by Gram Iteration
+| journal=Proceedings of the 40th International Conference on Machine Learning
+| year=2023
+| pages=7513–7532
+| url=https://proceedings.mlr.press/v202/delattre23a.html
+}}</ref> is a super-linear and deterministic method to compute the largest eigenpair.
+
+==See also==
+* [[Rayleigh quotient iteration]]
+* [[Inverse iteration]]
+
+==References==
+{{Reflist}}
+
+{{Numerical linear algebra}}
+
+{{DEFAULTSORT:Power Iteration}}
+[[Category:Numerical linear algebra]]
+[[Category:Articles with example Python (programming language) code]]

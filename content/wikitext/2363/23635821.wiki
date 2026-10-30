@@ -1,0 +1,132 @@
+<!-- wikipedia: en
+     page: 23635821
+     title: Dinic's algorithm
+     revision: 1374875607
+     timestamp: 2026-09-14T15:41:23Z
+     history: https://en.wikipedia.org/w/index.php?curid=23635821&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374875607 -->
+{{Short description|Algorithm for computing the maximal flow of a network}}
+'''Dinic's algorithm''' or '''Dinitz's algorithm''' is a [[strongly polynomial]] algorithm for computing the [[maximum flow]] in a [[flow network]], conceived in 1970 by Israeli (formerly Soviet) computer scientist [[Yefim Dinitz]].<ref>{{cite journal | author = E. A. Dinic | author-link = Yefim Dinitz | title = Algorithm for solution of a problem of maximum flow in a network with power estimation | journal = Doklady Akademii Nauk SSSR | volume = 11 | year = 1970 | pages = 1277&ndash;1280 | url=http://www.cs.bgu.ac.il/~dinitz/D70.pdf}}</ref> The algorithm runs in <math>O(|V|^2|E|)</math> time and is similar to the [[Edmonds–Karp algorithm]], which runs in <math>O(|V||E|^2)</math> time, in that it uses shortest augmenting paths. The introduction of the concepts of the ''level graph'' and ''blocking flow'' enable Dinic's algorithm to achieve its performance.
+
+==History==
+Dinitz invented the algorithm in January 1969, as a master's student in [[Georgy Adelson-Velsky]]'s group. A few decades later, he would recall:<ref name="even's version" />
+{{blockquote
+| text=In Adel'son-Vel'sky's Algorithms class, the lecturer had a habit of giving the problem to be discussed at the next meeting as an exercise to students. The DA was invented in response to such an exercise. At that time, the author was not aware of the basic facts regarding [the [[Ford–Fulkerson algorithm]]]{{nbsp}}...
+
+Ignorance sometimes has its merits. Very probably, DA would not have been invented then, if the idea of possible saturated edge desaturation had been known to the author.
+| multiline=yes
+}}
+
+In 1970, Dinitz published a description of the algorithm in [[Proceedings of the USSR Academy of Sciences|''Doklady Akademii Nauk SSSR'']]. In 1974, [[Shimon Even]] and (his then Ph.D. student) Alon Itai at the [[Technion – Israel Institute of Technology|Technion]] in Haifa were very curious and intrigued by Dinitz's algorithm as well as [[Alexander V. Karzanov]]'s related idea of blocking flow. However it was hard for them to decipher these two papers, each being limited to four pages to meet the restrictions of journal ''Doklady Akademii Nauk SSSR''. Even did not give up, and after three days of effort managed to understand both papers except for the layered network maintenance issue. Over the next couple of years, Even gave lectures on "Dinic's algorithm", mispronouncing the name of the author while popularizing it. Even and Itai also contributed to this algorithm by combining [[Breadth-first search|BFS]] and [[Depth-first search|DFS]], which is how the algorithm is now commonly presented.<ref name="even's version" />
+
+For about 10 years of time after the Ford–Fulkerson algorithm was invented, it was unknown if it could be made to terminate in polynomial time in the general case of irrational edge capacities. This caused a lack of any known polynomial-time algorithm to solve the max flow problem in generic cases. Dinitz's algorithm and the [[Edmonds–Karp algorithm]] (published in 1972) both independently showed that in the Ford–Fulkerson algorithm, if each augmenting path is the shortest one, then the length of the augmenting paths is non-decreasing and the algorithm always terminates.
+
+==Definition==
+Let <math>G = ((V,E),c,f,s,t)</math> be a network with <math>c(u,v)</math> and <math>f(u,v)</math> the capacity and the flow of the edge <math>(u,v)</math>, respectively.
+
+:The '''residual capacity''' is a mapping <math>c_f\colon V\times V \to R^+</math> defined as,
+:# if <math>(u,v)\in E</math>,
+:#: <math>c_f(u,v) = c(u,v) - f(u,v) </math>
+:# if <math>(v,u)\in E</math>,
+:#: <math>c_f(u,v) = f(v,u) </math>
+:# <math>c_f(u,v) = 0</math> otherwise.
+
+:The '''residual graph''' is an unweighted graph <math>G_f = ((V, E_f), c_f|_{E_f}, s, t)</math>, where
+:: <math>E_f = \{(u,v)\in V \times V \colon\; c_f(u,v) > 0\}</math>.
+
+:An '''augmenting path''' is an <math>s</math>–<math>t</math> path in the residual graph <math>G_f</math>.
+
+:Define <math>\operatorname{dist}(v)</math> to be the length of the shortest path from <math>s</math> to <math>v</math> in <math>G_f</math>. Then the '''level graph''' of <math>G_f</math> is the graph <math>G_L = ((V, E_L), c_f|_{E_L}, s,t)</math>, where
+:: <math>E_L = \{(u,v)\in E_f \colon\; \operatorname{dist}(v) = \operatorname{dist}(u) + 1\}</math>.
+
+:A '''blocking flow''' is an <math>s</math>–<math>t</math> flow <math>f'</math> such that the graph <math>G' = ((V,E_L'), s, t)</math> with <math>E_L' = \{(u,v) \colon\; f'(u,v) < c_f|_{E_L}(u,v)\}</math> contains no <math>s</math>–<math>t</math> path. <ref group="Note">This means that the subgraph resulting from removing all saturated edges (edges <math>(u,v)</math> with <math>f'(u,v)=c_f|_{E_L}(u,v)</math>) does not contain any path from <math>s</math> to <math>t</math>. In other terms, the ''blocking flow'' is such that every possible path from <math>s</math> to <math>t</math> contains a saturated edge.</ref>{{sfn|Tarjan|1983|p=102}}
+
+==Algorithm==
+'''Dinic's Algorithm'''
+: ''Input'': A network <math>G = ((V, E), c, s, t)</math>.
+: ''Output'': An <math>s</math>–<math>t</math> flow <math>f</math> of maximum value.
+# Set <math>f(e) = 0</math> for each <math>e\in E</math>.
+# Construct <math>G_L</math> from <math>G_f</math> of <math>G</math>. If <math>\operatorname{dist}(t) = \infty</math>, stop and output <math>f</math>.
+# Find a blocking flow <math>f'</math> in <math>G_L</math>.
+# Augment flow <math>f</math> by <math>f'</math> and go back to step 2.
+
+==Analysis==
+It can be shown that the number of layers in each blocking flow increases by at least 1 each time and thus there are at most <math>|V|-1</math> blocking flows in the algorithm. For each of them:
+
+* the level graph <math>G_L</math> can be constructed by [[breadth-first search]] in <math>O(E)</math> time
+* a blocking flow in the level graph <math>G_L</math> can be found in <math>O(VE)</math> time<ref group="Note">Finding the blocking flow can be implemented in <math>O(E)</math> per path via a sequence of Advance and Retreat operations. See http://courses.csail.mit.edu/6.854/06/scribe/scribe11.pdf for more details.</ref>
+
+with total running time <math>O(E + VE) = O(VE)</math> for each layer. As a consequence, the running time of Dinic's algorithm is <math>O(V^2 E)</math>.<ref name="even's version">{{cite book | first=Yefim | last=Dinitz | author-link=Yefim Dinitz | editor1=Oded Goldreich | editor-link1=Oded Goldreich | editor2=Arnold L. Rosenberg | editor-link2=Arnold L. Rosenberg | editor3=Alan L. Selman | editor-link3=Alan Selman | title=Theoretical Computer Science: Essays in Memory of [[Shimon Even]] | chapter=Dinitz' Algorithm: The Original Version and Even's Version | series=Lecture Notes in Computer Science | year=2006 | volume=3895 | publisher=Springer | isbn=978-3-540-32880-3 | pages=218–240 | doi=10.1007/11685654_10 | chapter-url=https://link.springer.com/chapter/10.1007/11685654_10}}</ref>
+
+Using a data structure called [[dynamic trees]], the running time of finding a blocking flow in each phase can be reduced to <math>O(E \log V)</math> and therefore the running time of Dinic's algorithm can be improved to <math>O(VE \log V)</math>.
+
+=== Special cases ===
+In networks with unit capacities, a much stronger time bound holds. Each blocking flow can be found in <math>O(E)</math> time, and it can be shown that the number of phases does not exceed <math>O(\sqrt{E})</math> and <math>O(V^{2/3})</math>.<ref group="Note">The <math>O(V^{2/3})</math> bound assumes that no two edges connect the same pair of vertices in the same direction, while the <math>O(\sqrt E)</math> bound makes no such assumption.</ref> Thus the algorithm runs in <math>O(\min\{V^{2/3}, E^{1/2}\}E)</math> time.<ref name="Even1975">{{cite journal|last1=Even|first1=Shimon|last2=Tarjan|first2=R. Endre|year=1975|title=Network Flow and Testing Graph Connectivity|journal=SIAM Journal on Computing|volume=4|issue=4|pages=507–518|issn=0097-5397|doi=10.1137/0204043}}</ref>
+
+In networks that arise from the [[bipartite matching]] problem, the number of phases is bounded by <math>O(\sqrt{V})</math>, therefore leading to the <math>O(\sqrt{V} E)</math> time bound. The resulting algorithm is also known as [[Hopcroft–Karp algorithm]]. More generally, this bound holds for any ''unit network'' — a network in which each vertex, except for source and sink, either has a single entering edge of capacity one, or a single outgoing edge of capacity one, and all other capacities are arbitrary integers.{{sfn|Tarjan|1983|p=102}}
+
+==Example==
+The following is a simulation of Dinic's algorithm. In the level graph <math>G_L</math>, the vertices with labels in red are the values <math>\operatorname{dist}(v)</math>. The paths in blue form a blocking flow.
+
+{| class="wikitable" style="text-align:center; width:915px;" border="1"
+|-
+! width="15px" |
+
+! <math>G</math>
+! <math>G_f</math>
+! <math>G_L</math>
+|-
+! 1.
+| [[File:Dinic algorithm G1.svg|300px]]
+| [[File:Dinic algorithm Gf1.svg|300px]]
+| [[File:Dinic algorithm GL1.svg|300px]]
+|-
+| 
+| align="left" colspan="3" |
+The blocking flow consists of
+# <math>\{s, 1, 3, t\}</math> with 4 units of flow,
+# <math>\{s, 1, 4, t\}</math> with 6 units of flow, and
+# <math>\{s, 2, 4, t\}</math> with 4 units of flow.
+Therefore, the blocking flow is of 14 units and the value of flow <math>|f|</math> is 14. Note that each augmenting path in the blocking flow has ''3'' edges.
+|-
+! 2.
+| [[File:Dinic algorithm G2.svg|300px]]
+| [[File:Dinic algorithm Gf2.svg|300px]]
+| [[File:Dinic algorithm GL2.svg|300px]]
+|-
+| 
+| align="left" colspan="3" |
+The blocking flow consists of
+# <math>\{s, 2, 4, 3, t\}</math> with 5 units of flow.
+Therefore, the blocking flow is of 5 units and the value of flow <math>|f|</math> is 14 + 5 = 19. Note that each augmenting path has 4 edges.
+|-
+! 3.
+| [[File:Dinic algorithm G3.svg|300px]]
+| [[File:Dinic algorithm Gf3.svg|300px]]
+| [[File:Dinic algorithm GL3.svg|300px]]
+|-
+| 
+| align="left" colspan="3" |
+Since <math>t</math> cannot be reached in <math>G_f</math>, the algorithm terminates and returns a flow with maximum value of 19. Note that in each blocking flow, the number of edges in the augmenting path increases by at least 1.
+|-
+|}
+
+==See also==
+* [[Ford–Fulkerson algorithm]]
+* [[Maximum flow problem]]
+
+== Notes ==
+{{reflist|group=Note}}
+{{Reflist}}
+
+==References==
+* {{cite book | first=Yefim | last=Dinitz | author-link=Yefim Dinitz | editor1=Oded Goldreich | editor-link1=Oded Goldreich | editor2=Arnold L. Rosenberg | editor-link2=Arnold L. Rosenberg | editor3=Alan L. Selman | editor-link3=Alan Selman | title=Theoretical Computer Science: Essays in Memory of [[Shimon Even]] | chapter=Dinitz' Algorithm: The Original Version and Even's Version | series=Lecture Notes in Computer Science | year=2006 | volume=3895 | publisher=Springer | isbn=978-3-540-32880-3 | pages=218–240 | doi=10.1007/11685654_10 | chapter-url=https://link.springer.com/chapter/10.1007/11685654_10}}
+* {{cite conference | date=18 April 2019 | place=Ben-Gurion University | first1=Ilan | last1=Kadar | first2=Sivan | last2=Albagli | title=Dinitz's algorithm for finding a maximum flow in a network | no-pp=yes | url=https://slideplayer.com/slide/16480683/ | url-status=live | archive-url=https://web.archive.org/web/20231222225209/https://slideplayer.com/slide/16480683/ | archive-date=22 December 2023}}
+* {{cite book | last1=Korte | first1=B. H. | last2=Vygen | first2=Jens | title = Combinatorial Optimization: Theory and Algorithms (Algorithms and Combinatorics, 21) | chapter = 8.4 Blocking Flows and Fujishige's Algorithm | year = 2008 | publisher = Springer Berlin Heidelberg | isbn = 978-3-540-71844-4 | pages = 174–176}}
+* {{cite book | last=Tarjan | first=R. E. |year =1983 | title=Data structures and network algorithms }}
+
+{{Optimization algorithms|combinatorial}}
+
+[[Category:Network flow problem]]
+[[Category:Graph algorithms]]

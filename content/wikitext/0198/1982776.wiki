@@ -1,0 +1,199 @@
+<!-- wikipedia: en
+     page: 1982776
+     title: Lanczos approximation
+     revision: 1370497197
+     timestamp: 2026-08-21T13:01:48Z
+     history: https://en.wikipedia.org/w/index.php?curid=1982776&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1370497197 -->
+{{Short description|Numerical method for calculating the gamma function}}
+In [[mathematics]], the '''Lanczos approximation''' is a method for computing the [[gamma function]] numerically, published by [[Cornelius Lanczos]] in 1964. It is a practical alternative to the more popular [[Stirling's approximation]] for calculating the gamma function with fixed precision.
+
+==Introduction==
+The Lanczos approximation consists of the formula
+
+:<math>\Gamma(z+1) = \sqrt{2\pi} {\left( z + g + \tfrac12 \right)}^{z + \frac12 } e^{-\left(z+g+\frac12\right)} A_g(z)</math>
+
+for the gamma function, with
+
+:<math>A_g(z) = \tfrac12p_0(g) + p_1(g) \frac{z}{z+1} + p_2(g) \frac{z(z-1)}{(z+1)(z+2)} + \cdots.</math>
+
+Here {{mvar|g}} is a real [[Constant (mathematics)|constant]] that may be chosen arbitrarily subject to the restriction that {{math|Re(''z'' + ''g'' + {{sfrac|1|2}}) > 0}}.<ref>{{cite thesis |url=https://web.viu.ca/pughg/phdThesis/phdThesis.pdf#110 |author=Pugh, Glendon |year=2004 |title=An analysis of the Lanczos Gamma approximation |type=Ph.D.}}</ref> The coefficients {{mvar|p}}, which depend on {{mvar|g}}, are slightly more difficult to calculate (see below). Although the formula as stated here is only valid for arguments in the right complex [[half-plane]], it can be extended to the entire [[complex plane]] by the [[reflection formula]],
+
+:<math>\Gamma(1-z) \; \Gamma(z) = \frac{\pi }{ \sin \pi z}.</math>
+
+The series {{mvar|A}} is [[convergent series|convergent]], and may be truncated to obtain an approximation with the desired precision. By choosing an appropriate {{mvar|g}} (typically a small integer), only some 5–10 terms of the series are needed to compute the gamma function with typical [[single precision|single]] or [[double precision|double]] [[floating point|floating-point]] precision. If a fixed {{mvar|g}} is chosen, the coefficients can be calculated in advance and, thanks to [[partial fraction decomposition]], the sum is recast into the following form:
+
+:<math>A_g(z) = c_0 + \sum_{k=1}^{N} \frac{c_k}{z+k}</math>
+
+Thus computing the gamma function becomes a matter of evaluating only a small number of [[elementary function]]s and multiplying by stored constants.  The Lanczos approximation was popularized by ''[[Numerical Recipes]]'', according to which computing the gamma function becomes "not much more difficult than other built-in functions that we take for granted, such as {{math|sin ''x''}} or {{math|''e''<sup>''x''</sup>}}." The method is also implemented in the [[GNU Scientific Library]], [[Boost (C++ libraries)|Boost]], [[CPython]] and [[musl]].
+
+==Coefficients==
+The coefficients are given by
+:<math>p_k(g) = \frac{\sqrt{2}}{\pi} \sum_{l=0}^k C_{2k+1,\,2l+1} \left(l - \tfrac{1}{2} \right)! {\left(l + g + \tfrac{1}{2} \right)}^{-\left(l+\frac12\right)} e^{l + g + \frac12 }</math>
+
+where {{math|''C''<sub>''n'',''m''</sub>}} represents the {{math|(''n'', ''m'')}}th element of the [[matrix (mathematics)|matrix]] of coefficients for the [[Chebyshev polynomials]], which can be calculated [[recursion|recursively]] from these identities:{{cn|date=August 2026}}
+
+:<math>\begin{align}
+    C_{1,\,1} &= 1 \\[5px]
+    C_{2,\,2} &= 1 \\[5px]
+  C_{n+1,\,1} &= -\,C_{n-1,\,1}  & \text{ for  } n &= 2, 3, 4\, \dots \\[5px]
+C_{n+1,\,n+1} &= 2\,C_{n,\,n}    & \text{ for  } n &= 2, 3, 4\, \dots \\[5px]
+C_{n+1,\,m+1} &= 2\,C_{n,\,m} - C_{n-1,\,m+1} & \text{ for  } n & > m = 1, 2, 3\, \dots
+\end{align}</math>
+
+Godfrey (2001) describes how to obtain the coefficients and also the value of the truncated series {{mvar|A}} as a [[matrix multiplication|matrix product]] with good precision in floating-point.<ref name=Godfrey2001>{{cite web |last=Godfrey |first=Paul |year=2001 |title=Lanczos implementation of the gamma function |url=http://www.numericana.com/answer/info/godfrey.htm |website=Numericana}}</ref>
+
+==Derivation==
+Lanczos derived the formula from [[Leonhard Euler]]'s [[integral]]
+:<math>\Gamma(z+1) = \int_0^\infty  t^{z}\,e^{-t}\,dt,</math>
+
+performing a sequence of basic manipulations to obtain
+
+:<math>\Gamma(z+1) = \left(z+g+1\right)^{z+1} e^{-(z+g+1)} \int_0^e \bigl(v(1-\log v)\bigr)^{z} v^g\,dv,</math>
+
+and deriving a series for the integral.
+
+==Simple implementation==
+The following implementation in the [[Python (programming language)|Python programming language]] works for complex arguments and typically gives 13 correct decimal places.
+Note that omitting the smallest coefficients (in pursuit of speed, for example) gives totally inaccurate results; the coefficients must be recomputed from scratch for an expansion with fewer terms.
+
+<syntaxhighlight lang="python">
+from cmath import sin, sqrt, pi, exp
+
+# Constant g and Coefficients p_k(g)
+G = 7
+P = [
+    0.99999999999980993,
+    676.5203681218851,
+    -1259.1392167224028,
+    771.32342877765313,
+    -176.61502916214059,
+    12.507343278686905,
+    -0.13857109526572012,
+    9.9843695780195716e-6,
+    1.5056327351493116e-7
+]
+
+EPSILON = 1e-07
+def drop_imag(z: complex) -> float | complex:
+    """Turn (a+bj) into a when |b| <= EPSILON"""
+    if abs(z.imag) <= EPSILON:
+        z = z.real
+    return z
+
+
+def gamma(z: int | float | complex) -> float | complex:
+    z = complex(z)
+    if z.real < 0.5:
+        # Lanczos is nor valid for this z.real. Use reflection formula.
+        return pi / (sin(pi * z) * gamma(1 - z))  
+    else:
+        z -= 1
+        x = P[0] + sum(P[i] / (z + i) for i in range(1, len(P)))
+        t = z + G + 0.5
+        return sqrt(2 * pi) * t ** (z + 0.5) * exp(-t) * x
+
+print(gamma(1))
+print(gamma(5))   
+print(gamma(0.5))
+
+"""
+The coefficients used in the code are for when g = 7 and n = len(p) = 9
+For calculation of p_k, see Godfrey (2001)
+
+Here are some other samples
+
+g = 5
+n = 5
+p = [
+    1.0000018972739440364,
+    76.180082222642137322,
+    -86.505092037054859197,
+    24.012898581922685900,
+    -1.2296028490285820771
+]
+
+g = 5
+n = 7
+p = [
+    1.0000000001900148240,
+    76.180091729471463483,
+    -86.505320329416767652,
+    24.014098240830910490,
+    -1.2317395724501553875,
+    0.0012086509738661785061,
+    -5.3952393849531283785e-6
+]
+
+g = 8
+n = 12
+p = [
+    0.9999999999999999298,
+    1975.3739023578852322,
+    -4397.3823927922428918,
+    3462.6328459862717019,
+    -1156.9851431631167820,
+    154.53815050252775060,
+    -6.2536716123689161798,
+    0.034642762454736807441,
+    -7.4776171974442977377e-7,
+    6.3041253821852264261e-8,
+    -2.7405717035683877489e-8,
+    4.0486948817567609101e-9
+]
+"""
+</syntaxhighlight>
+
+==See also==
+* [[Stirling's approximation]]
+* [[Spouge's approximation]]
+
+==References==
+
+<references />
+* {{cite web
+|first1=Paul
+|last1=Godfrey
+|year=2001
+|url=http://www.numericana.com/answer/info/godfrey.htm
+|title=Lanczos Implementation of the Gamma Function
+}}
+* {{cite journal
+  | last = Lanczos
+  | first = Cornelius 
+  | authorlink = Cornelius Lanczos
+  | title = A Precision Approximation of the Gamma Function
+  | jstor = 2949767
+  | journal =Journal of the Society for Industrial and Applied Mathematics, Series B: Numerical Analysis
+  | volume = 1
+  | pages = 86&ndash;96
+  | year = 1964
+  | issue = 1 
+ | issn = 0887-459X
+  | doi= 10.1137/0701008
+  | bibcode = 1964SJNA....1...86L 
+  }}
+* {{Citation | last1=Press | first1=W. H. | last2=Teukolsky | first2=S. A. | last3=Vetterling | first3=W. T. | last4=Flannery | first4=B. P. | year=2007 | title=Numerical Recipes: The Art of Scientific Computing | edition=3rd | publisher=Cambridge University Press |  location=New York | isbn=978-0-521-88068-8 | chapter=Section 6.1. Gamma Function | chapter-url=http://apps.nrbook.com/empanel/index.html?pg=256}}
+* {{cite thesis
+|last=Pugh
+|first=Glendon
+|year=2004
+|degree=PhD
+|url=http://web.mala.bc.ca/pughg/phdThesis/phdThesis.pdf
+|title=An analysis of the Lanczos Gamma approximation
+}}
+* {{cite web
+|last1=Toth
+|first1=Viktor
+|year=2005
+|url=http://www.rskey.org/lanczos.htm
+|title=Programmable Calculators: The Lanczos Approximation
+}}
+* {{MathWorld|urlname=LanczosApproximation|title=Lanczos Approximation}}
+
+{{Factorial and binomial topics}}
+
+[[Category:Gamma and related functions]]
+[[Category:Numerical analysis]]
+[[Category:Articles with example Python (programming language) code]]

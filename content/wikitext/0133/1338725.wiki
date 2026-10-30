@@ -1,0 +1,95 @@
+<!-- wikipedia: en
+     page: 1338725
+     title: Delegated Path Validation
+     revision: 1307758985
+     timestamp: 2025-08-25T14:43:46Z
+     history: https://en.wikipedia.org/w/index.php?curid=1338725&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1307758985 -->
+{{Short description|Public-key-certificate-validation-involved-work-offloading method to trusted server}}
+'''Delegated Path Validation''' ('''DPV''') is a [[Cryptography|cryptographic method]] used to offload the task of validating the [[Certification path validation algorithm|certification path]] of [[digital certificates]] from the [[Client–server model|client]] to a trusted [[Server (computing)|server]].<ref name="RFC3379" /> This process is integral to various security protocols that rely on [[Public Key Infrastructure]] (PKI). DPV aim to enhance the efficiency of [[Certification path validation algorithm|certification path validation]] by leveraging a [[Server (computing)|server]] dedicated to this task, which provides validation results to the client. This approach is particularly useful in resource-constrained environments where clients may not have the [[computational power]] to perform extensive certificate validation themselves.<ref name=RFC3379>{{IETF RFC|3379}} (September 2002), chapter 4, Delegated Path Validation and Delegated Path Discovery Protocol Requirements.</ref>
+
+== Certificate path validation ==
+{{Main|Certification path validation algorithm}}
+[[File:Digital certificates chain of trust.png|thumb|upright=1.7|Diagram illustrating the [[chain of trust]] of a digital certificate, showing the hierarchy from the root CA to the end-entity certificate.]]
+Certificate path validation is a crucial process in PKI that ensures the authenticity and trustworthiness of a [[digital certificate]]. This process is standardized in {{IETF RFC|5280}} and involves verifying a [[Chain of trust|chain of certificates]], starting from the certificate being validated (the end-entity certificate) up to a trusted root [[certificate authority]] (CA).<ref name=RFC5280>{{IETF RFC|5280}} (May 2008), chapter 6, Internet [[X.509]] Public Key Infrastructure Certificate and Certificate Revocation List (CRL) Profile.</ref> The validation process includes several key steps:<ref name="RFC5280" /> 
+* Building the Path: the client constructs a path from the end-entity certificate to a trusted [[root certificate]] by following the chain of issuer and subject fields in each certificate. 
+* Checking Signatures: each certificate in the chain is checked to ensure that it is correctly signed by its issuer, verifying the [[Integrity (computing)|integrity]] and authenticity of each certificate. 
+* Verifying Expiration Dates: the validity period of each certificate is checked to ensure none of the certificates in the path are expired.
+* Checking Revocation Status: each certificate is checked against [[Certificate Revocation List]] (CRL) or online status protocols (such as [[Online Certificate Status Protocol|OCSP]]) to ensure it has not been revoked. 
+* Applying Policies: any additional policies specified by the relying party are applied to ensure the certificate path complies with required security standards and practices.
+
+If all these checks are successfully passed, the certificate path is considered valid, and the end-entity certificate can be trusted.<ref name=RFC5280 />
+
+== Validation policy ==
+DPV allows a server to handle the entire process of path validation based on a set of predefined rules known as a validation policy. <ref name=RFC3379 /> This policy may involve multiple [[Trust anchor|trust anchors]]. A trust anchor is characterized by a public key, a Certificate Authority (CA) name, and a validity period; it may also have additional constraints.<ref>{{Cite book |last1=Ma |first1=Zane |last2=Austgen |first2=James |last3=Mason |first3=Joshua |last4=Durumeric |first4=Zakir |last5=Bailey |first5=Michael |chapter=Tracing your roots: Exploring the TLS trust anchor ecosystem |date=2021-11-02 |title=Proceedings of the 21st ACM Internet Measurement Conference |chapter-url=https://doi.org/10.1145/3487552.3487813 |series=IMC '21 |location=New York, NY, USA |publisher=Association for Computing Machinery |pages=179–194 |doi=10.1145/3487552.3487813 |isbn=978-1-4503-9129-0}}</ref> A [[self-signed certificate]] can be used to designate the public key, issuer name, and the validity period for a [[trust anchor]]. Additional constraints for trust anchors can be defined, such as certification policy constraints or naming constraints. These constraints can also be part of self-signed certificates.<ref name="RFC3379" /> For successful path validation, a valid certification path must be established between the end-entity certificate and a trust anchor, ensuring that none of the certificates in the path are expired or revoked, and all constraints on the path must be met.<ref name=RFC3379 /> A validation policy consists of three main components:<ref name="RFC3379" />
+
+# Certification path requirements: these define the sequence of trust anchors needed to start the certification path processing and the initial conditions for validation;
+# Revocation requirements: these specify the checks needed on the end-entity and CA certificates to ensure they have not been revoked;
+# End-entity certificate specific requirements: these may require the end-entity certificate to include specific extensions with certain types or values.
+
+== Protocol requirements ==
+{{IETF RFC|3379}} specifies several key requirements to ensure effective and secure delegated path validation.
+
+Firstly, if a client requests a specific validation policy that the DPV server does not support, the server must return an error. This ensures that the client is aware that the requested policy cannot be applied. If the client does not specify a validation policy, the server must indicate which validation policy was used in the response. This transparency allows clients to understand the basis on which the validation was performed.<ref name=RFC3379 />
+
+Validation policies can be complex and may include parameters such as root self-signed certificates. The DPV protocol must allow clients to include these policy-dependent parameters in their requests. However, it is expected that most clients will either reference a validation policy suitable for their application or accept the DPV server's default validation policy.<ref name=RFC3379 />
+
+Clients can also request that the DPV server determines the certificate's validity at a specific time other than the current time. In such cases, the server must obtain revocation status information relevant to the specified validation time. If the necessary revocation status information is unavailable, the server must return a status indicating that the certificate is invalid, possibly providing additional details about the reason for invalidity.<ref name=RFC3379 />
+
+For the validation to proceed, the certificate must be either directly provided in the request or unambiguously referenced by details such as the CA [[Lightweight Directory Access Protocol|distinguished name]], certificate serial number, and certificate [[Hash function|hash]]. This ensures that the correct certificate is validated.<ref name=RFC3379 />
+
+The DPV client must be capable of providing the validation server with useful certificates and revocation information related to each certificate being validated. This includes OCSP responses, CRLs, and delta CRLs, which are critical for checking the current status of certificates.<ref name=RFC3379 />
+
+The DPV server must have access to the certificate that needs validation. If the certificate is not provided in the request, the server must obtain it and verify that it matches the reference provided by the client. In the response, the server must include either the certificate or a clear reference to it, especially in cases involving CA key compromises.<ref name=RFC3379 />
+
+The response from the DPV server must indicate one of the following statuses:<ref name="RFC3379" />
+
+* The certificate is valid according to the validation policy;
+* The certificate is not valid according to the validation policy;
+* The validity of the certificate is unknown according to the validation policy;
+* The validity could not be determined due to an error.
+
+If the certificate is not valid, the server must also provide the reason for this determination. Common reasons include the inability to construct a certification path, the constructed path failing the validation algorithm, or the certificate not being valid at the requested time, such as before its validity period begins or during a suspension.<ref name=RFC3379 />
+
+Additionally, the DPV protocol must allow clients to request that the server includes extra information in its response. This extra information helps relying parties who do not trust the DPV server to be confident that the certificate validation was performed correctly. The DPV response must be bound to the DPV request, which can be achieved by including a [[One-way function|one-way]] hash of the request in the response. This binding ensures that all request parameters were considered in building the response.<ref name=RFC3379 />
+
+To ensure the client trusts the DPV server, the response must be [[Authentication|authenticated]]. For the client to prove to third parties that the certificate validation was handled correctly, the DPV response must be [[Digital signature|digitally signed]], except when reporting an error. The DPV server's certificate must authenticate the server, adding another layer of trust and security to the validation process.<ref name=RFC3379 />
+
+=== Relaying, re-direction and multicasting ===
+[[File:Delegated path validation.png|thumb|upright=1.7|Application of the DPV framework in [[Transport Layer Security|TLS]]-based communications, with the optional use of a relaying mechanism by the primary DPV server.]]
+In certain network environments, particularly those with [[Firewall (computing)|firewalls]], a DPV server may encounter difficulties in obtaining all the necessary information to process a validation request. To address this, a DPV server can be configured to leverage the services of other DPV servers. In such scenarios, the client remains unaware that the primary DPV server is utilizing additional servers to fulfill the request. Essentially, the primary DPV server acts as a client to another DPV server, facilitating a more comprehensive validation process. Unlike end clients, DPV servers typically have more substantial computing and memory resources, enabling them to employ relaying, re-direction, or [[multicast|multicasting mechanisms]].<ref name=RFC3379 />
+
+The protocols designed to support these operations may include optional fields and extensions to facilitate relaying, re-direction, or multicasting between DPV servers. However, it is not expected that DPV clients will support these features. If a protocol incorporates such functionalities, it must also provide mechanisms to ensure compatibility with DPV clients and servers that do not support these advanced features, ensuring adherence to the basic protocol requirements.<ref name=RFC3379 />
+
+== Security implications ==
+The DPV protocol must incorporate mechanisms to prevent [[Replay attack|replay attacks]], ensuring that malicious entities cannot reuse validation requests to gain unauthorized access.<ref name=RFC3379 /> Importantly, this replay prevention must not depend on synchronized clocks between the client and server, which can be a vulnerability if clocks are not accurately aligned.<ref>{{Cite book |last=Syverson |first=P. |chapter=A taxonomy of replay attacks &#91;cryptographic protocols&#93; |date=1994 |title=Proceedings the Computer Security Foundations Workshop VII |publisher=IEEE Comput. Soc. Press |pages=187–191 |doi=10.1109/CSFW.1994.315935 |isbn=978-0-8186-6230-0}}</ref>
+
+When a certificate is validated successfully according to the specified policy, the DPV server should include this information in the response if requested by the client. However, if the certificate is found to be invalid or if the server cannot determine its validity, the server may choose to omit this information to avoid unnecessary disclosure of potentially sensitive details.<ref name=RFC3379 />
+
+The revocation status information used by the DPV server pertains to the validation time specified in the client's request. This validation time might differ from the actual time when the certificate's [[Public-key cryptography|private key]] was used to sign a document or transaction.<ref name=RFC3379 /> Therefore, the DPV client should adjust the validation time to account for several delays:<ref name="RFC3379" />
+* The time it takes for the certificate holder (end-entity) to realize that their private key has been or might be compromised;
+* The time needed for the end-entity to report the key compromise to the relevant authorities;
+* The time required for the revocation authority to process the revocation request submitted by the end-entity;
+* The time taken by the revocation authority to update and distribute the new revocation status information.
+
+By considering these factors, the DPV protocol try to ensure that the revocation status information accurately reflects the current validity of the certificate, enhancing the overall security and reliability of the validation process.<ref name=RFC3379 />
+
+== See also ==
+* [[Certificate authority]]
+* [[Chain of trust]]
+* [[Delegated Path Discovery]]
+* [[Public Key Infrastructure]]
+* [[X.509]]
+
+== References ==
+<references />
+
+== Further reading ==
+* {{Cite book |title=Cyber security and IT infrastructure protection |date=2014 |publisher=Syngress is an imprint of Elsevier |isbn=978-0-12-416681-3 |editor-last=Vacca |editor-first=John R. |edition=1 |location=Waltham, MA |chapter=Chapter 3 - Public Key Infrastructure |oclc=861507009}}
+
+== External links ==
+* {{Cite web |url=https://patents.google.com/patent/US8707030B2/en |title=Distributed delegated path discovery and validation |access-date=2024-07-09 |website=Google Patents}}
+*{{Cite web |last=Braun |first=William |title=Certification Path Validation |url=https://docs.hidglobal.com/activid-validation-authority-v7.4/docs/overview/certification-path-validation.htm |access-date=2024-07-11 |website=docs.hidglobal.com}}
+
+[[Category:Cryptographic protocols]]

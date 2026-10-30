@@ -1,0 +1,160 @@
+<!-- wikipedia: en
+     page: 580668
+     title: Pollard's rho algorithm
+     revision: 1363379004
+     timestamp: 2026-07-09T20:58:15Z
+     history: https://en.wikipedia.org/w/index.php?curid=580668&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1363379004 -->
+{{Short description|Integer factorization algorithm}}
+{{about|the integer factorization algorithm|the discrete logarithm algorithm|Pollard's rho algorithm for logarithms}}
+
+'''Pollard's rho algorithm''' is an [[algorithm]] for [[integer factorization]]. It was invented by [[John Pollard (mathematician)|John Pollard]] in 1975.<ref>{{cite journal |last=Pollard |first=J. M. |year=1975 |title=A Monte Carlo method for factorization |url=https://www.cs.cmu.edu/~avrim/451f11/lectures/lect1122_Pollard.pdf |journal=BIT Numerical Mathematics |volume=15 |issue=3 |pages=331–334 |doi=10.1007/bf01933667 |s2cid=122775546}}</ref> It uses only a small amount of space, and its expected running time is proportional to the [[square root]] of the smallest [[prime factor]] of the [[composite number]] being factorized.
+
+== Core ideas ==
+The algorithm is used to factorize a number <math>n = pq</math>, where <math>p</math> is a non-trivial factor. A [[polynomial]] modulo <math>n</math>, called <math>g(x)</math> (e.g., <math>g(x) = (x^2 + 1) \bmod n</math>), is used to generate a [[pseudorandom sequence]]. <math>g(x)</math> must be a polynomial. A starting value, say 2, is chosen, and the sequence continues as <math>x_1 = g(2)</math>, <math>x_2 = g(g(2))</math>, <math>x_3 = g(g(g(2)))</math>, etc. The sequence is related to another sequence <math>\{x_k \bmod p\}</math>. Since <math>p</math> is not known beforehand, this sequence cannot be explicitly computed in the algorithm. Yet in it lies the core idea of the algorithm.
+
+Because the number of possible values for these sequences is finite, both the <math>\{x_k\}</math> sequence, which is mod <math>n</math>, and <math>\{x_k \bmod p\}</math> sequence will eventually repeat, even though these values are unknown. If the sequences were to behave like random numbers, the [[birthday paradox]] implies that the number of <math>x_k</math> before a repetition occurs would be expected to be <math>O(\sqrt N)</math>, where <math>N</math> is the number of possible values. So the sequence <math>\{x_k \bmod p\}</math> will likely repeat much earlier than the sequence <math>\{x_k\}</math>. When one has found a <math>k_1,k_2</math> such that <math>x_{k_1}\neq x_{k_2}</math> but <math>x_{k_1}\equiv x_{k_2}\bmod p</math>, the number <math>|x_{k_1}-x_{k_2}|</math> is a multiple of <math>p</math>, so a non-trivial divisor has been found.<ref name=":0" />
+
+Once a sequence has a repeated value, the sequence will cycle, because each value depends only on the one before it. This structure of eventual cycling gives rise to the name "rho algorithm", owing to similarity to the shape of the Greek letter ''ρ'' when the values <math>x_1 \bmod p</math>, <math>x_2 \bmod p</math>, etc. are represented as nodes in a [[directed graph]].
+
+[[File:Pollard rho cycle.svg|thumb|Cycle diagram resembling the Greek letter&nbsp;''ρ'']]
+
+This is detected by [[Floyd's cycle-finding algorithm]]: two nodes <math>i</math> and <math>j</math> (i.e., <math>x_i</math> and <math>x_j</math>) are kept. In each step, one moves to the next node in the sequence and the other moves forward by two nodes. After that, it is checked whether <math>\gcd(x_i - x_j, n) \ne 1</math>. If it is not 1, then this implies that there is a repetition in the <math>\{x_k \bmod p\}</math> sequence (i.e. <math>x_i \bmod p = x_j \bmod p)</math>. This works because if the <math>x_i \bmod p</math> is the same as <math>x_j \bmod p</math>, the difference between <math>x_i</math> and <math>x_j</math> is necessarily a multiple of <math>p</math>. Although this always happens eventually, the resulting [[greatest common divisor]] (GCD) is a divisor of <math>n</math> other than 1. This may be <math>n</math> itself, since the two sequences might repeat at the same time. In this (uncommon) case the algorithm fails, it can be repeated with a different parameter.
+
+== Algorithm ==
+The algorithm takes as its inputs {{mvar|n}}, the [[integer]] to be factored; and {{tmath|g(x)}}, a polynomial in {{mvar|x}} computed modulo {{mvar|n}}. In the original algorithm, <math>g(x) = (x^2 - 1) \bmod n</math>, but nowadays it is more common to use <math>g(x) = (x^2 + 1) \bmod n</math>. The output is either a non-trivial factor of {{mvar|n}}, or failure. 
+
+It performs the following steps:<ref name=":0">{{cite book |last1=Cormen |first1=Thomas H. |authorlink=Thomas H. Cormen |last2=Leiserson |first2=Charles E. |authorlink2=Charles E. Leiserson |last3=Rivest |first3=Ronald L. |authorlink3=Ronald L. Rivest |last4=Stein |first4=Clifford |authorlink4=Clifford Stein |name-list-style=amp |chapter=Section 31.9: Integer factorization |title=[[Introduction to Algorithms]] |year=2009 |edition=third |publisher=MIT Press |location=Cambridge, MA |pages=975–980|isbn=978-0-262-03384-8 }} (this section discusses only Pollard's rho algorithm).</ref>
+
+Pseudocode for Pollard's rho algorithm
+     x ← 2 // starting value
+     y ← x
+     d ← 1
+ 
+     '''while''' d = 1:
+         x ← g(x)
+         y ← g(g(y))
+         d ← gcd(|x - y|, n)
+ 
+     '''if''' d = n: 
+         '''return failure'''
+     '''else''':
+         '''return''' d
+
+Here {{mvar|x}} and {{mvar|y}} corresponds to {{tmath|x_i}} and {{tmath|x_j}} in the previous section. Note that this algorithm may fail to find a nontrivial factor even when {{mvar|n}} is composite. In that case, the method can be tried again, using a starting value of ''x'' other than 2 (<math>0 \leq x < n</math>)  or a different {{tmath|g(x)}}, <math>g(x) = (x^2 + b) \bmod n</math>, with <math>1 \leq b < n-2</math>.
+
+== Example factorization ==
+Let <math>n = 8051</math> and <math>g(x) = (x^2 + 1) \bmod 8051</math>.
+[[File:Rho-example-animated.gif|thumb|348x348px|Pollard's rho algorithm example factorization for <math>n=253</math> and <math>g(x)=x^2 \bmod 253</math>, with starting value 2. The example is using [[Floyd's cycle-finding algorithm]].]]
+{| class="wikitable" style="text-align:right"
+! width=30 | {{mvar|i}} || width=60 | {{mvar|x}} || width=60 | {{mvar|y}} || {{math|gcd({{abs|''x'' − ''y''}}, 8051)}}
+|-
+| 1 || 5 || 26 || 1
+|-
+| 2 || 26 || 7474 || 1
+|-
+| 3 || 677 || 871 || 97
+|-
+| 4 || 7474 || 1481 || 1
+|}
+
+Now 97 is a non-trivial factor of 8051. Starting values other than {{math|1=''x'' = ''y'' = 2}} may give the cofactor (83) instead of 97. One extra iteration is shown above to make it clear that {{mvar|y}} moves twice as fast as {{mvar|x}}. Note that even after a repetition, the GCD can return to 1.
+
+== Variants ==
+In 1980, [[Richard Brent (scientist)|Richard Brent]] published a faster variant of the rho algorithm. He used the same core ideas as Pollard but a different method of cycle detection, replacing [[Floyd's cycle-finding algorithm]] with the related [[Cycle detection#Brent.27s algorithm|Brent's cycle finding method]].<ref>{{cite journal |last=Brent |first=Richard P. |authorlink=Richard Brent (scientist) |year=1980 |title=An Improved Monte Carlo Factorization Algorithm |journal=BIT |volume=20 |issue=2 |pages=176–184 |url=https://maths-people.anu.edu.au/~brent/pub/pub051.html |doi=10.1007/BF01933190|s2cid=17181286 }}</ref> CLRS (Cormen et Al. [[Introduction to Algorithms]] book) gives a heuristic analysis and failure conditions (the trivial divisor <math>n</math> is found).<ref name=":0" />
+
+A further improvement was made by Pollard and Brent. They observed that if <math>\gcd(a,n) > 1</math>, then also <math>\gcd(ab,n) > 1</math> for any positive integer {{tmath|b}}. In particular, instead of computing <math>\gcd (|x-y|,n)</math> at every step, it suffices to define {{tmath|z}} as the product of 100 consecutive <math>|x-y|</math> terms modulo {{tmath|n}}, and then compute a single <math>\gcd(z,n)</math>. A major speed up results as 100 {{math|gcd}} steps are replaced with 99 multiplications modulo {{tmath|n}} and a single {{math|gcd}}. Occasionally it may cause the algorithm to fail by introducing a repeated factor, for instance when {{tmath|n}} is a [[square (algebra)|square]]. But it then suffices to go back to the previous {{math|gcd}} term, where <math>\gcd(z,n)=1</math>, and use the regular ''ρ'' algorithm from there.<ref group="note">Exercise 31.9-4 in CLRS ()</ref>
+
+== Application ==
+The algorithm is very fast for numbers with small factors, but slower in cases where all factors are large. The ''ρ'' algorithm's most remarkable success was the 1980 factorization of the [[Fermat number]] {{math|''F''<sub>8</sub>}} = 1238926361552897&nbsp;×&nbsp;93461639715357977769163558199606896584051237541638188580280321.<ref name="FotEFN">{{cite journal |last1=Brent |first1=R.P. |last2=Pollard |first2=J. M. |year=1981 |title=Factorization of the Eighth Fermat Number |journal=Mathematics of Computation |volume=36 |issue=154 |pages=627–630 |doi=10.2307/2007666|jstor=2007666 |doi-access=free }}</ref> The ''ρ'' algorithm was a good choice for {{math|''F''<sub>8</sub>}} because the prime factor {{mvar|p}} = 1238926361552897 is much smaller than the other factor. The factorization took 2 hours on a [[UNIVAC]] [[UNIVAC 1100|1100/42]].<ref name="FotEFN" />
+
+== Example: factoring {{mvar|n}} = 10403 = 101 · 103 ==
+
+The following table shows numbers produced by the algorithm, starting with <math>x=2</math> and using the polynomial <math>g(x) = (x^2 + 1) \bmod 10403</math>.
+The third and fourth columns of the table contain additional information not known by the algorithm.
+They are included to show how the algorithm works. 
+
+{| class="wikitable" style="text-align:right;"
+! {{tmath|x}} !! {{tmath|y }} !! {{tmath|x \bmod 101}} !! {{tmath|y \bmod 101}} !! step
+|-
+| 2 || 2 || 2 || 2 || 0
+|-
+| 5 || 2 || 5 || 2 || 1
+|-
+| 26 || 2 || 26 || 2 || 2
+|-
+| 677 || 26 || 71 || 26 || 3
+|-
+| 598 || 26 || 93 || 26 || 4
+|-
+| 3903 || 26 || 65 || 26 || 5
+|-
+| 3418 || 26 || 85 || 26 || 6
+|-
+| 156 || 3418 || 55 || 85 || 7
+|-
+| 3531 || 3418 ||{{rh|align=right}}| 97 || 85 || 8
+|-
+| 5168 || 3418 || 17 || 85 || 9
+|-
+| 3724 || 3418 || 88 || 85 || 10
+|-
+| 978 || 3418 || 69 || 85 || 11
+|-
+| 9812 || 3418 || 15 || 85 || 12
+|-
+| 5983 || 3418 || 24 || 85 || 13
+|-
+| 9970 || 3418 || 72 || 85 || 14
+|-
+| 236 || 9970 || 34 || 72 || 15
+|-
+| 3682 || 9970 || 46 || 72 || 16
+|-
+| 2016 || 9970 ||{{rh|align=right}}| 97 || 72 || 17
+|-
+| 7087 || 9970 || 17 || 72 || 18
+|-
+| 10289 || 9970 || 88 || 72 || 19
+|-
+| 2594 || 9970 || 69 || 72 || 20
+|-
+| 8499 || 9970 || 15 || 72 || 21
+|-
+| 4973 || 9970 || 24 || 72 || 22
+|-
+| 2799 || 9970 ||{{rh|align=right}}| 72 || '''72''' || 23
+|}
+
+The first repetition modulo 101 is 97 which occurs in step 17. The repetition is not detected until step 23, when <math>x \equiv y \pmod{101}</math>. This causes <math>\gcd (x - y, n) = \gcd (2799 - 9970, n)</math> to be <math>p = 101</math>, and a factor is found.
+
+== Complexity ==
+If the pseudorandom number <math>x = g(x)</math> occurring in the Pollard ''ρ'' algorithm were an actual random number, it would follow that success would be achieved half the time, by the [[birthday paradox]] in <math>O(\sqrt p)\le O(n^{1/4})</math> iterations. It is believed that the same analysis applies as well to the actual rho algorithm, but this is a heuristic claim, and rigorous analysis of the algorithm remains open.<ref>{{cite book|title=Mathematics of Public Key Cryptography|first=Steven D.|last=Galbraith|publisher=Cambridge University Press|year=2012|isbn=9781107013926|contribution=14.2.5 Towards a rigorous analysis of Pollard rho|pages=272–273|url=https://books.google.com/books?id=owd76BElvosC&pg=PA272}}.</ref>
+
+== See also == 
+* [[Pollard's rho algorithm for logarithms]]
+* [[Pollard's kangaroo algorithm]]
+
+== Notes ==
+{{reflist|group=note}}
+
+== References ==
+{{reflist}}
+
+== Further reading ==
+* {{cite conference |first1=Shi |last1=Bai |first2=Richard P. |last2=Brent |authorlink2=Richard P. Brent |title=On the Efficiency of Pollard's Rho Method for Discrete Logarithms |conference=The Australasian Theory Symposium (CATS2008) |location=Wollongong |date=January 2008 |book-title=Conferences in Research and Practice in Information Technology, Vol. 77 |pages=125–131 |url=https://maths-people.anu.edu.au/~brent/pub/pub231.html}}  Describes the improvements available from different iteration functions and cycle-finding algorithms.
+* {{cite book |last1=Katz |first1=Jonathan |last2=Lindell |first2=Yehuda |chapter=Chapter 8 |title=Introduction to Modern Cryptography | year=2007 |publisher=CRC Press}}
+* {{cite book | author =Samuel S. Wagstaff, Jr. | title=The Joy of Factoring | publisher=American Mathematical Society | location=Providence, RI | year=2013 | isbn=978-1-4704-1048-3 |url=https://www.ams.org/bookpages/stml-68 |author-link=Samuel S. Wagstaff, Jr. |pages= 135–138 }}
+
+== External links ==
+* [https://sofosband.wixsite.com/pversusnp/single-post/2018/08/27/factorising-part-2-pollards-rho-algorithm Comprehensive article on Pollard's Rho algorithm aimed at an introductory-level audience]
+* {{MathWorld|title=Pollard rho Factorization Method|id=PollardRhoFactorizationMethod}}
+<!-- Dead link: * [http://www.patrickkonsor.com/code/ Java Implementation] -->
+* [https://introcs.cs.princeton.edu/java/99crypto/PollardRho.java.html Java Implementation]
+* [https://forthmath.blogspot.com/2020/01/about-pollard-rho.html About Pollard rho]
+
+{{number theoretic algorithms}}
+
+{{DEFAULTSORT:Pollard's Rho Algorithm}}
+[[Category:Integer factorization algorithms]]

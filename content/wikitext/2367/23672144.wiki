@@ -1,0 +1,96 @@
+<!-- wikipedia: en
+     page: 23672144
+     title: Kerberized Internet Negotiation of Keys
+     revision: 1353522899
+     timestamp: 2026-05-10T19:31:28Z
+     history: https://en.wikipedia.org/w/index.php?curid=23672144&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1353522899 -->
+'''Kerberized Internet Negotiation of Keys''' ('''KINK''') is a protocol defined in RFC 4430 used to set up an [[IPsec]] [[security association]] (SA), similar to [[Internet Key Exchange]] (IKE), utilizing the [[Kerberos (protocol)|Kerberos]] protocol to allow trusted third parties to handle authentication of peers and management of security policies in a centralized fashion.<ref>{{citation | title= RFC 3129: Requirements for Kerberized Internet Negotiation of Keys | publisher= [[Internet Engineering Task Force]] | url= http://tools.ietf.org/html/rfc3129 | date= June 2001 | page= 2 }}</ref>
+
+Its motivation is given in RFC 3129 as an alternative to IKE, in which peers must each use [[X.509]] certificates for authentication, use [[Diffie–Hellman key exchange]] (DH) for encryption, know and implement a security policy for every peer with which it will connect,<ref>{{citation | title= RFC 3129: Requirements for Kerberized Internet Negotiation of Keys | publisher= [[Internet Engineering Task Force]] | url= http://tools.ietf.org/html/rfc3129 | date= June 2001 | page= 1 }}</ref> with authentication of the X.509 certificates either pre-arranged or using [[Domain name system|DNS]], preferably with [[Domain Name System Security Extensions|DNSSEC]].<ref>{{citation | title= RFC 4322: Opportunistic Encryption using the Internet Key Exchange (IKE) | publisher= [[Internet Engineering Task Force]] | url= http://tools.ietf.org/html/rfc4322 | date= June 2001 | page= 5 }}</ref> Utilizing Kerberos, KINK peers must only [[mutual authentication|mutually authenticate]] with the appropriate [[Authentication server|Authentication Server]] (AS), with a [[key distribution center]] (KDC) in turn controlling distribution of [[key (cryptography)|keying material]] for encryption and therefore controlling the IPsec security policy.
+
+== Protocol description ==
+
+KINK is a command/response protocol that can create, delete, and maintain [[IPsec]] SAs.  Each command or response contains a common header along with a set of type-length-value payloads.  The type of a command or a response constrains the payloads sent in the messages of the exchange.
+
+KINK itself is a stateless protocol in that each command or response does not require storage of hard state for KINK. This is in contrast to IKE, which uses Main Mode to first establish an Internet Security Association and Key Management Protocol ([[ISAKMP]]) SA followed by subsequent Quick Mode exchanges.
+
+KINK uses [[Kerberos (protocol)|Kerberos]] mechanisms to provide mutual authentication and replay protection.  For establishing SAs, KINK provides confidentiality for the payloads that follow the Kerberos AP-REQ payload. The design of KINK mitigates denial of service attacks by requiring authenticated exchanges before the use of any public key operations and the installation of any state. KINK also provides a means of using Kerberos User-to-User mechanisms when there is not a key shared between the server and the KDC. This is typically, but not limited to, the case with IPsec peers using PKINIT for initial authentication.
+
+KINK directly reuses Quick Mode payloads defined in section 5.5 of [[Internet Key Exchange|IKE]], with some minor changes and omissions. In most cases, KINK exchanges are a single command and its response.  An optional third message is required when creating SAs, only if the responder rejects the first proposal from the initiator or wants to contribute the keying materials. KINK also provides rekeying and [[Dead Peer Detection]].
+
+=== Packet format ===
+
+The KINK message includes the following fields:
+
+{| class="wikitable" style="text-align:center"
+|+KINK message
+|-
+! Bit offset !! {{mono|&nbsp;0}} !!{{mono|&nbsp;1}}!!{{mono|&nbsp;2}}!!{{mono|&nbsp;3}}!!{{mono|&nbsp;4}}!!{{mono|&nbsp;5}}!!{{mono|&nbsp;6}}!!{{mono|&nbsp;7}}!!{{mono|&nbsp;8}}!!{{mono|&nbsp;9}}!!{{mono|10}}!!{{mono|11}}!!{{mono|12}}!!{{mono|13}}!!{{mono|14}}!!{{mono|15}}!!{{mono|16}}!!{{mono|17}}!!{{mono|18}}!!{{mono|19}}!!{{mono|20}}!!{{mono|21}}!!{{mono|22}}!!{{mono|23}}!!{{mono|24}}!!{{mono|25}}!!{{mono|26}}!!{{mono|27}}!!{{mono|28}}!!{{mono|29}}!!{{mono|30}}!!{{mono|31}}
+|-
+| {{mono|'''0'''}} || colspan="8"| type || colspan="4"| version || colspan="4" bgcolor="#FFDDDD"| &nbsp; || colspan="16"| length
+|-
+| {{mono|'''32'''}} || colspan="32"| domain of interpretation (DOI)
+|- 
+| {{mono|'''64'''}} || colspan="32"| transaction ID (XID)
+|-
+| {{mono|'''96'''}} || colspan="8"| next payload || colspan="1"| A || colspan="7" bgcolor="#FFDDDD"| &nbsp; || colspan="16"| checksum length
+|-
+| {{mono|'''128'''<br/>'''...'''}} || colspan="32"| payloads<br/>...
+|-
+| {{mono|'''...'''<br/>'''...'''}} || colspan="32" | checksum<br/>...
+|}
+
+* type: CREATE, DELETE, REPLY, GETTGT, ACK, STATUS, or private use
+* version: the major protocol version number
+* length: length of the entire message
+* domain of interpretation (DOI): a DOI as defined in the [[Internet Security Association and Key Management Protocol]] (ISAKMP)
+* transaction ID (XID): identification the transaction, defined as a command, a reply, and an optional acknowledgement
+* next payload: type of the first payload after the message header as KINK_DONE, KINK_AP_REQ, KINK_AP_REP, KINK_KRB_ERROR, KINK_TGT_REQ, KINK_TGT_REP, KINK_ISAKMP, KINK_ENCRYPT, or KINK_ERROR
+* ACK or ACKREQ bit: 1 if responder requires an explicit acknowledgement that a REPLY was received otherwise 0
+* checksum length: length in bytes of the cryptographic checksum of the message
+* payloads: a list of Type/Length/Value (TLV) payloads
+* checksum: Kerberos keyed checksum over the entire message excluding the checksum field itself
+
+=== Payloads ===
+
+KINK payloads are defined as:
+
+{| class="wikitable" style="text-align:center"
+|+KINK payload
+|-
+! Bit offset !!{{mono|&nbsp;0}}!!{{mono|&nbsp;1}}!!{{mono|&nbsp;2}}!!{{mono|&nbsp;3}}!!{{mono|&nbsp;4}}!!{{mono|&nbsp;5}}!!{{mono|&nbsp;6}}!!{{mono|&nbsp;7}}!!{{mono|&nbsp;8}}!!{{mono|&nbsp;9}}!!{{mono|10}}!!{{mono|11}}!!{{mono|12}}!!{{mono|13}}!!{{mono|14}}!!{{mono|15}}!!{{mono|16}}!!{{mono|17}}!!{{mono|18}}!!{{mono|19}}!!{{mono|20}}!!{{mono|21}}!!{{mono|22}}!!{{mono|23}}!!{{mono|24}}!!{{mono|25}}!!{{mono|26}}!!{{mono|27}}!!{{mono|28}}!!{{mono|29}}!!{{mono|30}}!!{{mono|31}}
+|-
+| {{mono|'''0'''}} || colspan="8"| next payload || colspan="8" bgcolor="#FFDDDD"| &nbsp;|| colspan="16"| payload length
+|-
+| {{mono|'''32'''<br/>'''...'''}} || colspan="32"| value<br/>...
+|}
+
+* next payload: type of the first payload
+* length: length of the payload
+
+The following payloads are defined:
+
+* KINK_AP_REQ: a payload that relays a Kerberos AP-REQ to the responder
+* KINK_AP_REP: a payload that relays a Kerberos AP-REP to the initiator
+* KINK_KRB_ERROR: a payload that relays Kerberos type errors back to the initiator
+* KINK_TGT_REQ: a payload that provides a means to get a TGT from the peer in order to obtain a User-to-User service ticket from the KDC
+* KINK_TGT_REP: a payload that contains the TGT requested in a previous KINK_TGT_REQ payload of a GETTGT command
+* KINK_ISAKMP: a payload to encapsulate the ISAKMP IKE Quick Mode (phase 2) payloads, to allow [[backward compatibility]] with IKE and ISAKMP if there are subsequent revisions
+* KINK_ENCRYPT: a payload to encapsulate other KINK payloads and is encrypted using the [[session key]] and the algorithm specified by its etype
+* KINK_ERROR: a payload that returns an error condition
+
+== Implementations ==
+
+The following [[open source]] implementations of KINK are currently available:
+* [http://www.racoon2.wide.ad.jp/w/ Racoon2] {{Webarchive|url=https://web.archive.org/web/20081015044410/http://www.racoon2.wide.ad.jp/w/ |date=2008-10-15 }} from the [[WIDE Project]].
+
+== See also ==
+* [[Internet Key Exchange]]
+
+== References ==
+{{reflist}}
+
+[[Category:IPsec]]
+[[Category:Cryptographic protocols]]

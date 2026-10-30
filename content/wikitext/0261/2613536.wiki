@@ -1,0 +1,252 @@
+<!-- wikipedia: en
+     page: 2613536
+     title: VEST
+     revision: 1337162389
+     timestamp: 2026-02-07T21:12:26Z
+     history: https://en.wikipedia.org/w/index.php?curid=2613536&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1337162389 -->
+{{Short description|Family of stream ciphers}}
+{{Other uses|Vest (disambiguation)}}
+{{technical|date=May 2012}}
+{{Infobox encryption method
+| name          = VEST
+| image         = [[Image:VEST Structure.PNG|320px|center]]
+| caption       = High Level Structure of VEST
+| designers     = Sean O'Neil
+| publish date  = June 13, 2005
+| security claim= 80&ndash;256 bits
+| key size      = any
+| state size    = 256 bits (VEST-4) to 768 (VEST-32)
+| structure     = [[NLFSR]], [[Substitution–permutation network|SPN]], [[T-function]]
+| cryptanalysis = 
+}}
+'''VEST (Very Efficient Substitution Transposition)''' [[cipher]]s are a set of families of general-purpose hardware-dedicated ciphers that support single pass [[authenticated encryption]] and can operate as [[cryptographic hash function|collision-resistant hash functions]] designed by [[Sean O'Neil]], [[Benjamin Gittins]] and [[Howard Landman]].<ref>{{cite journal |author1=Sean O’Neil| author2=Benjamin Gittins | author3=Howard Landman |date=2005-10-25 |title=VEST, Hardware-Dedicated Stream Ciphers |journal=ESTREAM Round 1 Submission |url=http://www.ecrypt.eu.org/stream/vest.html |format=PDF |access-date=2007-05-15 }}</ref> VEST cannot be implemented efficiently in software.
+
+VEST is based on a balanced [[T-function]] that can also be described as a [[bijective]] [[NLFSR|nonlinear feedback shift register]] with parallel feedback (NLPFSR) or as a [[substitution–permutation network]], which is assisted by a non-linear [[residue numeral system|RNS]]-based counter. The four VEST family trees described in the cipher specification are '''VEST-4''', '''VEST-8''', '''VEST-16''', and '''VEST-32'''. VEST ciphers support keys and [[Initialization vector|IV]]s of variable [[key size|sizes]] and instant re-keying. All VEST ciphers release output on every clock cycle.
+
+All the VEST variants are covered by European Patent Number [http://v3.espacenet.com/publicationDetails/biblio?CC=EP&NR=1820295A2&KC=B1&FT=D&date=20080709&DB=EPODOC&locale=en_EP EP 1820295(B1)], owned by Synaptic Laboratories.
+
+VEST was a Phase 2 Candidate in the [[eSTREAM]] competition in the hardware portfolio, but was not a Phase 3 or Focus candidate and so is not part of the final portfolio.
+
+==Overview==
+{| class="wikitable"
+|-
+! align="right" | Cipher:
+! align="center" | VEST-4
+! align="center" | VEST-8
+! align="center" | VEST-16
+! align="center" | VEST-32
+! align="center" | AES-128
+|-
+! align="right" | Output, bits per call:
+| align="center" | 4
+| align="center" | 8
+| align="center" | 16
+| align="center" | 32
+| align="center" | 128
+|-
+! align="right" | Claimed security, bits:
+| align="center" | 80
+| align="center" | 128
+| align="center" | 160
+| align="center" | 256
+| align="center" | 128
+|-
+! align="right" | Recommended key length, bits:
+| align="center" | 160
+| align="center" | 256
+| align="center" | 320
+| align="center" | 512
+| align="center" | 128
+|-
+! align="right" | Recommended hash length, bits:
+| align="center" | 160
+| align="center" | 256
+| align="center" | 320
+| align="center" | 512
+|-
+! align="right" | Counter size, bits:
+| align="center" | 163
+| align="center" | 163
+| align="center" | 171
+| align="center" | 171
+|-
+! align="right" | Core size, bits:
+| align="center" | 83
+| align="center" | 211
+| align="center" | 331
+| align="center" | 587
+|-
+! align="right" | State size, bits:
+| align="center" | 256
+| align="center" | 384
+| align="center" | 512
+| align="center" | 768
+| align="center" | 128
+|}
+
+==Design==
+
+===Overall structure===
+VEST ciphers consist of four components: a non-linear counter, a linear counter diffusor, a bijective non-linear accumulator with a large state and a linear output combiner (as illustrated by the image on the top-right corner of this page). The RNS counter consists of sixteen [[NLFSR]]s with [[Prime number|prime]] [[Frequency|periods]], the counter diffusor is a set of 5-to-1 linear combiners with feedback compressing outputs of the 16 counters into 10 bits while at the same time expanding the 8 data inputs into 9 bits, the core accumulator is an NLPFSR accepting 10 bits of the counter diffusor as its input, and the output combiner is a set of 6-to-1 linear combiners.
+
+===Accumulator===
+The core accumulator in VEST ciphers can be seen as a [[substitution–permutation network|SPN]] constructed using non-linear 6-to-1 feedback functions, one for each bit, all of which are updated simultaneously. The VEST-4 core accumulator is illustrated below:
+[[Image:VEST-4 accumulator.png|center|Partial high-level illustration of the VEST-4 core]] 
+It accepts 10 bits (''d''<sub>0</sub>&nbsp;&minus;&nbsp;''d''<sub>9</sub>) as its input. The least significant five bits (''p''<sub>0</sub>&nbsp;&minus;&nbsp;''p''<sub>4</sub>) in the accumulator state are updated by a 5×5 [[substitution box]] and linearly combined with the first five input bits on each round. The next five accumulator bits are linearly combined with the next five input bits and with a non-linear function of four of the less significant accumulator bits. In authenticated encryption mode, the ciphertext feedback bits are also linearly fed back into the accumulator (''e''<sub>0</sub>&nbsp;&minus;&nbsp;''e''<sub>3</sub>) with a non-linear function of four of the less significant accumulator bits. All the other bits in the VEST accumulator state are linearly combined with non-linear functions of five less significant bits of the accumulator state on each round. The use of only the less significant bits as inputs into the feedback functions for each bit is typical of T-functions and is responsible for the feedback bijectivity. This [[Substitution cipher|substitution]] operation is followed by a [[pseudorandom]] [[Transposition cipher|transposition]] of all the bits in the state (see picture below).
+
+==Data authentication==
+VEST ciphers can be executed in their native authenticated encryption mode similar to that of [[Phelix]] but authenticating ciphertext rather than plaintext at the same speed and occupying the same area as [[keystream]] generation. However, unkeyed authentication (hashing) is performed only 8 bits at a time by loading the plaintext into the counters rather than directly into the core accumulator.
+
+===Family keying===
+The four root VEST cipher families are referred to as VEST-4, VEST-8, VEST-16, and VEST-32. Each of the four family trees of VEST ciphers supports family keying to generate other independent cipher families of the same size. The family-keying process is a standard method to generate cipher families with unique substitutions and unique counters with different [[Frequency|periods]]. Family keying enables the end-user to generate a unique secure cipher for every chip.
+
+=== Periods ===
+VEST ciphers are assisted by a non-linear RNS counter with a very long period. According to the authors, determining average periods of VEST ciphers or probabilities of the shortest periods of VEST-16 and VEST-32 falling below their advertised security ratings for some keys remains an open problem and is computationally infeasible. They believe that these probabilities are below 2<sup>−160</sup> for VEST-16 and below 2<sup>−256</sup> for VEST-32. The shortest theoretically possible periods of VEST-4 and VEST-8 are above their security ratings as can be seen from the following table.
+
+{| class="wikitable"
+|-
+! align="right" | Period:
+! align="center" | VEST-4
+! align="center" | VEST-8
+! align="center" | VEST-16
+! align="center" | VEST-32
+|-
+! align="center" | Guaranteed Minimum
+| align="center" | 2<sup>134</sup>
+| align="center" | 2<sup>134</sup>
+| align="center" | 2<sup>143</sup>
+| align="center" | 2<sup>143</sup>
+|-
+! align="center" | Longest Possible 
+| align="center" | 2<sup>251</sup>
+| align="center" | 2<sup>383</sup>
+| align="center" | 2<sup>519</sup>
+| align="center" | 2<sup>791</sup>
+|}
+
+==Performance==
+
+=== Computational efficiency in software ===
+The core accumulator in VEST ciphers has a complex, highly irregular structure that resists its efficient implementation in software.
+
+[[Image:VEST Core4 LowLevel.png|thumbnail|320px|right|The VEST-4 core: Substitution followed by Transposition]]
+
+The highly irregular input structure coupled with a unique set of inputs for each feedback function hinders efficient software execution. As a result, all the feedback functions need to be calculated sequentially in software, thus resulting in the hardware-software speed difference being approximately equal to the number of gates occupied by the feedback logic in hardware (see the column "Difference" in the table below).
+
+{| class="wikitable"
+|-
+! align="right" | Implementation:
+! align="center" | Clock
+! align="center" | VEST-4
+! align="center" | VEST-8
+! align="center" | VEST-16
+! align="center" | VEST-32
+|-
+! align="center" | Hardware
+| align="center" | 250&nbsp;MHz
+| align="right" | ~1 Gbit/s
+| align="right" | ~2 Gbit/s
+| align="right" | ~4 Gbit/s
+| align="right" | ~8 Gbit/s
+|-
+! align="center" | Software
+| align="center" | 250&nbsp;MHz
+| align="right" | < 1.0 Mbit/s
+| align="right" | < 0.8 Mbit/s
+| align="right" | < 1.1 Mbit/s
+| align="right" | < 1.3 Mbit/s
+|-
+! align="center" | Difference
+| align="center" | 
+| align="right" | > 1000 x
+| align="right" | > 2300 x
+| align="right" | > 3500 x
+| align="right" | > 6000 x
+|}
+
+The large differential between VEST's optimised hardware execution and equivalently clocked software optimised execution offers a natural resistance against low cost general-purpose software processor clones masquerading as genuine hardware authentication tokens.
+
+In bulk challenge-response scenarios such as RFID authentication applications, bitsliced implementations of VEST ciphers on 32-bit processors which process many independent messages simultaneously are 2–4 times slower per message byte than AES.
+
+=== Hardware performance ===
+VEST is submitted to the eStream competition under the Profile II as designed for "hardware applications with restricted resources such as limited storage, gate count, or power consumption", and shows high speeds in [[FPGA]] and [[Application-specific integrated circuit|ASIC]] hardware according to [http://asic.ethz.ch/estream/ the evaluation by ETH Zurich].
+
+The authors claim that according to their own implementations using "conservative standard RapidChip design front-end sign-off process", "VEST-32 can effortlessly satisfy a demand for 256-bit secure 10&nbsp;Gbit/s authenticated encryption @ 167&nbsp;MHz on 180ηm LSI Logic RapidChip platform ASIC technologies in less than 45K Gates and zero SRAM". On the 110ηm Rapidchip technologies, VEST-32 offers 20&nbsp;Gbit/s authenticated encryption @ 320&nbsp;MHz in less than 45 K gates". They also state that unrolling the round function of VEST can halve the clock-speed and reduce power consumption while doubling the output per clock-cycle, at the cost of increased area.
+
+=== Key agility ===
+VEST ciphers offer 3 keying strategies:
+* Instantly loading the entire cipher state with a [[cryptographically strong]] key (100% entropy) supplied by a strong key generation or key exchange process;
+* Instant reloading of the entire cipher state with a previously securely initialised cipher state;
+* Incremental key loading (of an imperfect key) beginning with the least significant bit of the key loaded into the counter 15, sliding the 16-bit window down by one bit on each round until the single bit 1 that follows the most significant bit of the key is loaded into the counter 0. The process ends with 32 additional sealing rounds. The entire cipher state can now be stored for instant reloading.
+
+{| class="wikitable"
+|-
+! align="left" | Key Bits
+! align="center" | Rounds to load a key
+|-
+! align="left" | 80
+| align="center" | 128 
+|-
+! align="left" | 160
+| align="center" | 208 
+|-
+! align="left" | 256
+| align="center" | 304
+|-
+! align="left" | 320
+| align="center" | 368
+|-
+! align="left" | 512
+| align="center" | 560
+|}
+
+VEST ciphers offer only 1 resynchronisation strategy:
+* Hashing the (IV) by loading it incrementally 8-bits at a time into the first 8 RNS counters, followed by additional 32 sealing rounds.
+
+{| class="wikitable"
+|-
+! align="center" | IV Bits
+! align="center" | Rounds to load an IV
+|-
+! align="center" | 64
+| align="center" | 40
+|-
+! align="center" | 128
+| align="center" | 48
+|-
+! align="center" | 256
+| align="center" | 64
+|}
+
+==History==
+VEST was designed by Sean O'Neil and submitted to the eStream competition in June 2005. This was the first publication of the cipher.{{Citation needed|date=May 2007}}
+
+==Security==
+The authors say that VEST security margins are inline with the guidelines proposed by [[Lars Ramkilde Knudsen|Lars Knudsen]] in the paper "Some thoughts on the AES process" and the more conservative guidelines recently proposed by [[Nicolas Courtois]] in the paper “Cryptanalysis of Sfinks”. Although the authors are not publishing their own cryptanalysis, VEST ciphers have survived more than a year of public scrutiny as a part of the eStream competition organised by the ECRYPT. They were advanced to the second phase, albeit not as part of the focus group.
+
+===Attacks===
+At SASC 2007, Joux and Reinhard published an attack that recovered 53 bits of the counter state. By comparing the complexity of the attack to a parallelized brute-force attack, Bernstein evaluated the resultant strength of the cipher as 100 bits,<ref>{{cite web| url=http://www.ecrypt.eu.org/stream/phorum/read.php?1,1000 | title=ECRYPT Forum: Attack status of the eSTREAM submissions | archive-url=https://web.archive.org/web/20111228051814/http://www.ecrypt.eu.org/stream/phorum/read.php?1,1000 | archive-date=2011-12-28}}</ref> somewhat below the design strength of most of the VEST family members. The designers of VEST claimed the attack is due to a typographical error in the original cipher specification and published a correction on the Cryptology ePrint archive on 21 January 2007, a few days prior to publication of the attack.
+
+==References==
+{{Reflist}}
+
+==External links==
+* [http://www.ecrypt.eu.org/stream/vestp2.html eSTREAM page on VEST] {{Webarchive|url=https://web.archive.org/web/20160304113803/http://www.ecrypt.eu.org/stream/vestp2.html |date=2016-03-04 }}
+* [http://www.ecrypt.eu.org/stream/p2ciphers/vest/vest_p2.pdf VEST eStream Phase II specification]
+* [http://www.ecrypt.eu.org/stream/p2ciphers/vest/vest_p2source.zip VEST C reference source code and test vectors]
+* [http://asic.ethz.ch/estream/ ETH Zurich Hardware Performance Review]
+* [http://citeseer.ist.psu.edu/knudsen99some.html "Some thoughts on the AES process" paper by Lars R. Knudsen]
+* [http://citeseer.ist.psu.edu/740970.html "Cryptanalysis of Sfinks" paper by Nicolas Courtois]
+* [http://eprint.iacr.org/2005/090.pdf "Rediscovery of Time Memory Tradeoffs" paper by J. Hong and P. Sarkar]
+* [http://cr.yp.to/snuffle/bruteforce-20050425.pdf "Understanding Brute Force" paper by Daniel J. Bernstein]
+* [http://cr.yp.to/bib/2005/decanniere.pdf "Comments on the Rediscovery of Time Memory Data Tradeoffs" paper by C. De Cannière, J. Lano and B. Preneel]
+* [http://www.windowsecurity.com/articles/Ideal-to-Realized-Security-Assurance-Cryptographic-Keys-Part1.html Ideal-to-Realized Security Assurance In Cryptographic Keys by Justin Troutman] {{Webarchive|url=https://web.archive.org/web/20061111015848/http://www.windowsecurity.com/articles/Ideal-to-Realized-Security-Assurance-Cryptographic-Keys-Part1.html |date=2006-11-11 }}
+
+
+{{Cryptography navbox | hash | stream}}
+
+[[Category:Stream ciphers]]
+[[Category:Message authentication codes]]
+[[Category:Cryptographic hash functions]]

@@ -1,0 +1,291 @@
+<!-- wikipedia: en
+     page: 51720097
+     title: Garbled circuit
+     revision: 1374871578
+     timestamp: 2026-09-14T15:12:51Z
+     history: https://en.wikipedia.org/w/index.php?curid=51720097&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374871578 -->
+{{Short description|Cryptographic protocol for two-party computation}}
+{{technical|date=January 2017}}
+
+'''Garbled circuit''' is a [[cryptographic protocol]] that enables two-party [[Secure multi-party computation|secure computation]] in which two mistrusting parties can jointly evaluate a [[Function (mathematics)|function]] over their private inputs without the presence of a [[trusted third party]]. In the garbled circuit protocol, the function has to be described as a [[Boolean circuit]].
+==History==
+The history of garbled circuits is complicated. The invention of garbled circuit was credited to [[Andrew Yao]], as Yao introduced the idea in the oral presentation of a paper<ref name=yao>{{cite book
+| last       = Yao
+| first      = Andrew Chi-Chih
+| title = 27th Annual Symposium on Foundations of Computer Science (SFCS 1986)
+| date       = 1986
+| chapter      = How to generate and exchange secrets
+| pages      = 162–167
+| doi      = 10.1109/SFCS.1986.25
+| isbn      = 978-0-8186-0740-0
+}}</ref> in [[Symposium on Foundations of Computer Science|FOCS]]'86. This was documented by [[Oded Goldreich]] in 2003.<ref name=cryptoprotocol>{{cite journal
+| last       = Goldreich
+| first      = Oded
+| date       = 2003
+| title      = Cryptography and Cryptographic Protocols
+| url        = https://dl.acm.org/citation.cfm?id=966044
+| journal    = Distributed Computing - Papers in Celebration of the 20th Anniversary of PODC
+| volume      = 16
+| issue      = 2–3
+| pages      = 177–199 
+| doi      = 10.1007/s00446-002-0077-1
+| s2cid = 9966766
+}}</ref> The first written document about this technique was by Goldreich, [[Silvio Micali|Micali]], and
+[[Avi Wigderson|Wigderson]] in [[Symposium on Theory of Computing|STOC]]'87.<ref name=mentalgame>{{cite book
+| last1       = Goldreich
+| first1      = Oded
+| last2       = Micali
+| first2      = Silvio
+| last3       = Wigderson
+| first3      = Avi
+| title = Proceedings of the nineteenth annual ACM conference on Theory of computing - STOC '87
+| chapter = How to play ANY mental game
+| date       = 1987
+| pages      = 218–229 
+| doi      = 10.1145/28395.28420
+| isbn      = 978-0-89791-221-1
+| s2cid = 6669082
+}}</ref> The term "garbled circuit" was first used by Beaver, Micali, and [[Phillip Rogaway|Rogaway]] in STOC'90.<ref name=roundcomplexity>{{cite book
+| last1       = Beaver
+| first1      = Donald
+| last2       = Micali
+| first2      = Silvio
+| last3       = Rogaway
+| first3      = Phillip
+| title = Proceedings of the twenty-second annual ACM symposium on Theory of computing - STOC '90
+| chapter = The round complexity of secure protocols
+| date       = 1990
+| pages      = 503–513 
+| doi      = 10.1145/100216.100287
+| isbn      = 978-0-89791-361-4
+| s2cid = 1578121
+}}</ref> Yao's protocol solving [[Yao's Millionaires' Problem]] was the beginning example of secure computation, yet it is not directly related to garbled circuits.
+
+== Background ==
+
+=== Oblivious transfer ===
+In the garbled circuit protocol, we make use of [[oblivious transfer]]. In the oblivious transfer, a [[String (computer science)|string]] is transferred between a sender and a receiver in the following way: a sender has two strings <math>S_0</math> and <math>S_1</math>. The receiver chooses <math>b\in\{0,1\} </math> and the sender sends <math>S_b</math> with the oblivious transfer protocol such that
+# the receiver doesn't gain any information about the unsent string <math>S_{(1-b)}</math>,
+# the value of <math>b</math> is not exposed to the sender.
+
+Note that while the receiver doesn't know the <math>S_{0}, S_{1}</math> values, in practice the receiver knows some information about what <math>S_{b}</math> encodes so that the receiver is not blindly choosing <math>b</math>. That is, if <math>S_{0}</math> encodes a false value, <math>S_{1}</math> encodes a true value and the receiver wants to get the encoded true value, the receiver chooses <math>b=1</math>.
+
+The [[oblivious transfer]] can be built using [[asymmetric cryptography]] like the [[RSA (cryptosystem)|RSA cryptosystem]].
+
+=== Definitions and notations ===
+Operator <math>\parallel</math> is string [[concatenation]]. Operator <math>\oplus</math> is bit-wise [[XOR]]. k is a [[security parameter]] and the length of keys. It should be greater than 80 and is usually set at 128.
+
+== Garbled circuit protocol ==
+The protocol consists of 6 steps as follows:
+# The underlying function (e.g., in the millionaires' problem, comparison function) is described as a Boolean circuit with 2-input gates. The circuit is known to both parties. This step can be done beforehand by a third-party. 
+# Alice ''garbles'' (encrypts) the circuit. We call Alice the ''garbler''.
+# Alice sends the ''garbled circuit'' to Bob along with her encrypted input.
+# In order to calculate the circuit, Bob needs to garble his own input as well. To this end, he needs Alice to help him, because only the garbler knows how to encrypt. Finally, Bob can encrypt his input through oblivious transfer. In terms of the definition from above, Bob is the receiver and Alice the sender at this oblivious transfer.
+# Bob ''evaluates'' (decrypts) the circuit and obtains the encrypted outputs. We call Bob the ''evaluator''.
+# [[Alice and Bob]] communicate to learn the output.
+
+=== Circuit generation ===
+The [[Boolean circuit]] for small functions can be generated by hand. It is conventional to make the circuit out of 2-input [[XOR]] and [[AND gate|AND]] [[logic gate|gates]]. It is important that the generated circuit has the minimum number of AND gates (see [[#Free XOR|Free XOR optimization]]). There are methods that generate the optimized circuit in term of number of AND gates using [[logic synthesis]] technique.<ref>{{cite book
+| last1       = Songhori
+| first1      = Ebrahim M
+| last2       = Hussain
+| first2      = Siam U
+| last3       = Sadeghi
+| first3      = Ahmad-Reza
+| last4       = Schneider
+| first4      = Thomas
+| last5       = Koushanfar
+| first5      = Farinaz| chapter = TinyGarble: Highly Compressed and Scalable Sequential Garbled Circuits
+| title = 2015 IEEE Symposium on Security and Privacy
+|author-link5=Farinaz Koushanfar
+| date       = 2015
+| pages      = 411–428
+| doi      = 10.1109/SP.2015.32
+| isbn      = 978-1-4673-6949-7
+| s2cid = 5346323
+| url = http://tubiblio.ulb.tu-darmstadt.de/101746/
+}}</ref> The circuit for the Millionaires' Problem is a [[digital comparator]] circuit (which is a chain of [[full adder]]s working as a [[Adder–subtractor|subtractor]] and outputting the [[carry flag]]). A full adder circuit can be implemented using only one [[AND gate|AND]] gate and some [[XOR]] gates. This means the total number of AND gates for the circuit of the Millionaires' Problem is equal to the bit-width of the inputs.
+
+=== Garbling ===
+[[File:Garbled circuit AND gate illustration.svg|thumb|Wires and their labels at an AND gate]]
+[[File:Garbled circuit AND gate truth table illustration.svg|thumb|Construction of the truth table of an AND gate]]
+Alice (garbler) encrypts the [[Boolean circuit]] in this step to obtain a ''garbled circuit''. Alice assigns two randomly generated strings called ''labels'' to each wire in the circuit: one for [[Boolean data type|Boolean]] semantic 0 and one for 1. (The label is k-bit long where k the [[security parameter]] and is usually set to 128.) Next, she goes to all the gates in the circuit and replaces 0 and 1 in the [[truth table]]s with the corresponding labels. The table below shows the truth table for an [[AND gate]] with two inputs <math>w^a, w^b</math> and output <math>w^c</math>:
+{| class="wikitable"
+|-
+! a !! b !! c
+|-
+| 0 || 0 || style="background:papayawhip" | 0
+|-
+| 0 || 1 || style="background:papayawhip" | 0
+|-
+| 1 || 0 || style="background:papayawhip" | 0
+|-
+| 1 || 1 || style="background:papayawhip" | 1
+|}
+
+Alice replaced 0 and 1 with the corresponding labels:
+{| class="wikitable"
+|-
+! a !! b !! c
+|-
+| <math>X_0^a</math> || <math>X_0^b</math> || style="background:papayawhip" | <math>X_0^c</math>
+|-
+| <math>X_0^a</math> || <math>X_1^b</math> || style="background:papayawhip" | <math>X_0^c</math>
+|-
+| <math>X_1^a</math> || <math>X_0^b</math> || style="background:papayawhip" | <math>X_0^c</math>
+|-
+| <math>X_1^a</math> || <math>X_1^b</math> || style="background:papayawhip" | <math>X_1^c</math>
+|}
+She then encrypts the output entry of the [[truth table]] with the corresponding two input labels. The encrypted table is called garbled table. This is done such that one can decrypt the garbled table only if he has the correct two input labels. In the table below, <math>Enc_\kappa(X)</math> is a double-key [[symmetric encryption]] in which <math>\kappa</math> is the secret key and X is the value to be encrypted (see [[#Fixed-key blockcipher|Fixed-Key Blockcipher]]).
+{| class="wikitable"
+|-
+! Encrypted Table
+|-
+| style="background:papayawhip" |<math>Enc_{X_0^a, X_0^b}(X_0^c)</math>
+|-
+| style="background:papayawhip" |<math>Enc_{X_0^a, X_1^b}(X_0^c)</math>
+|-
+| style="background:papayawhip" |<math>Enc_{X_1^a, X_0^b}(X_0^c)</math>
+|-
+| style="background:papayawhip" |<math>Enc_{X_1^a, X_1^b}(X_1^c)</math>
+|}
+After this, Alice randomly permutes the table such that the output value cannot be determined from the row. The protocol's name, '''garbled''', is derived from this [[random permutation]].
+{| class="wikitable"
+|-
+! Garbled Table
+|-
+| style="background:papayawhip" |<math>Enc_{X_1^a, X_1^b}(X_1^c)</math>
+|-
+| style="background:papayawhip" |<math>Enc_{X_0^a, X_0^b}(X_0^c)</math>
+|-
+| style="background:papayawhip" |<math>Enc_{X_0^a, X_1^b}(X_0^c)</math>
+|-
+| style="background:papayawhip" |<math>Enc_{X_1^a, X_0^b}(X_0^c)</math>
+|}
+=== Data transfer ===
+Alice sends the computed garbled tables for all gates in the circuit to Bob. Bob needs input labels to open the garbled tables. Thus, Alice chooses the labels corresponding to her input <math>a</math> and sends them to Bob. For example, if Alice's input is <math>\mathbf{a} = a_4a_3a_2a_1a_0 = 01101</math>, then she sends <math>X_0^{a_4}</math>, <math>X_1^{a_3}</math>, <math>X_1^{a_2}</math>, <math>X_0^{a_1}</math>, and <math>X_1^{a_0}</math> to Bob. Bob will not learn anything about Alice's input, <math>\mathbf{a}</math>, since the labels are randomly generated by Alice and they look like random strings to Bob.
+
+Bob needs the labels corresponding to his input as well. He receives his labels through [[oblivious transfer]]s for each bit of his input. For example, if Bob's input is <math>\mathbf{b} = b_4b_3b_2b_1b_0 = 10100</math>, Bob first asks for <math>b_0=0</math> between Alice's labels <math>X_0^{b_0}</math> and <math>X_1^{b_0}</math>. Through a 1-out-of-2 [[oblivious transfer]], he receives <math>X_0^{b_0}</math> and so on. After the [[oblivious transfer]]s, Alice will not learn anything about Bob's input and Bob will not learn anything about the other labels.
+
+=== Evaluation ===
+After the data transfer, Bob has the garbled tables and the input labels. He goes through all gates one by one and tries to decrypt the rows in their garbled tables. He is able to open one row for each table and retrieve the corresponding output label: <math>X^c = Dec_{X^a, X^b}(garbled\_table[i])</math>, where <math> 0\le i \le 3</math>. He continues the evaluation until he reaches to the output labels.
+
+=== Revealing output ===
+After the evaluation, Bob obtains the output label, <math>X^c</math>, and Alice knows its mapping to Boolean value since she has both labels: <math>X_0^c</math> and <math>X_1^c</math>. Either Alice can share her information to Bob or Bob can reveal the output to Alice such that one or both of them learn the output.
+
+== Optimization ==
+
+=== Point-and-permute ===
+In this optimization, Alice generates a random bit, <math>s</math>, called select bit for each wire <math>w</math>. She sets the first bit of label 0, <math>X_0^a</math> to <math>s</math> and the first bit of label 1, <math>X_1^a</math>, to <math>\bar{s}</math> ([[Bitwise operation#NOT|NOT]] of <math>s</math>). She does the same for wire <math>w^b</math>. She then, instead of randomly permuting, sorts the garbled table according to the inputs select bits. This way, Bob does not need to test all four rows of the table to find the correct one, since he receives the pointer bits with each wire label and can find the correct row and decrypt it with one attempt. This reduces the evaluation load by 4 times. It also does not reveal anything about the output value because the select bits are randomly generated.<ref>{{cite book
+| last1       = Beaver
+| first1      = Donald
+| last2      = Micali
+| first2     = Silvio
+| last3      = Rogaway
+| first3     = Phillip
+| title = Proceedings of the twenty-second annual ACM symposium on Theory of computing - STOC '90
+| chapter = The round complexity of secure protocols
+| date       = 1990
+| pages      = 503–513
+| doi      = 10.1145/100216.100287
+| isbn      = 978-0-89791-361-4
+| s2cid = 1578121
+}}</ref>
+
+=== Row reduction ===
+This optimization reduces the size of garbled tables from 4 rows to 3 rows. Here, instead of generating a label for the output wire of a gate randomly, Alice generates it using a function of the input labels. She generates the output labels such that the first entry of the garbled table becomes all 0 and no longer needs to be sent:<ref>{{cite book
+| last1       = Naor
+| first1      = Moni
+| last2      = Pinkas
+| first2     = Benny
+| last3      = Sumner
+| first3     = Reuban
+| title = Proceedings of the 1st ACM conference on Electronic commerce
+| chapter = Privacy preserving auctions and mechanism design
+| date       = 1999
+| pages      = 129–139
+| doi      = 10.1145/336992.337028
+| isbn      = 978-1-58113-176-5
+| s2cid = 207593367
+}}</ref>
+
+<math> \begin{align}
+&Enc_{X_0^a, X_0^b}(X_0^c) = 0 \\
+&X_0^c = Dec_{X_0^a, X_0^b}(0).
+\end{align} </math>
+
+=== Free XOR ===
+In this optimization, Alice generates a global random (k-1)-bit value <math>R</math> which is kept secret. During the garbling of the input gates <math>w^a</math> and <math>w^b</math>, she only generates the labels <math>(X_0^a,X_0^b)</math> and computes the other labels as <math>X_1^a = X_0^a \oplus (R \parallel 1)</math> and <math>X_1^b = X_0^b \oplus (R \parallel 1)</math>. Using these values, the label of an XOR gate's output wire <math>w^c</math> with input wires <math>w^a</math>, <math>w^b</math> is set to <math>X^c = X^a \oplus X^b</math>. The proof of security in the [[Random oracle|Random Oracle Model]] for this optimization is given in the Free-XOR paper.<ref>{{cite book
+| last1       = Kolesnikov
+| first1      = Vladimir
+| last2      = Schneider
+| first2     = Thomas
+| title = Automata, Languages and Programming
+| chapter = Improved Garbled Circuit: Free XOR Gates and Applications
+| date       = 2008
+| volume      = 5126
+| pages      = 486–498
+| doi      = 10.1007/978-3-540-70583-3_40
+| series      = Lecture Notes in Computer Science
+| isbn      = 978-3-540-70582-6
+}}</ref>
+
+==== Implication ====
+Free XOR optimization implies an important point that the amount of data transfer (communication) and number of encryption and decryption (computation) of the garbled circuit protocol relies only on the number of [[and gate|AND gates]] in the [[Boolean circuit]] not the [[xor gate|XOR gates]]. Thus, between two Boolean circuits representing the same function, the one with the smaller number of AND gates is preferred.
+
+=== Fixed-key blockcipher ===
+This method allows to efficiently garble and evaluate AND gates using fixed-key [[Advanced Encryption Standard|AES]], instead of costly [[cryptographic hash function]] like [[SHA-2]]. In this garbling scheme which is compatible with the [[#Free XOR|Free XOR]] and [[#Row Reduction|Row Reduction]] techniques, the output key <math>X^c</math> is encrypted with the input token <math>X^a</math> and <math>X^b</math> using the encryption function <math>Enc(X^a, X^b, T, X^c) = \pi(K) \oplus K \oplus X^c</math>, where <math>K = 2X^a \oplus 4X^b \oplus T</math>, <math>\pi</math> is a fixed-key [[block cipher]] (e.g., instantiated with [[Advanced Encryption Standard|AES]]), and <math>T</math> is a unique-per-gate number (e.g., gate identifier) called ''tweak''.<ref>{{cite book
+| last1       = Bellare
+| first1      = Mihir
+| last2      = Hoang
+| first2     = Viet Tung
+| last3      = Keelveedhi
+| first3     = Sriram
+| last4      = Rogaway
+| first4     = Phillip
+| title = 2013 IEEE Symposium on Security and Privacy
+| chapter = Efficient Garbling from a Fixed-Key Blockcipher
+| date       = 2013
+| pages      = 478–492
+| doi      = 10.1109/SP.2013.39
+| isbn      = 978-0-7695-4977-4
+| s2cid = 1351222
+}}</ref>
+
+=== Half And ===
+This optimization reduce the size of garbled table for AND gates from 3 row in [[#Row Reduction|Row Reduction]] to 2 rows. It is shown that this is the theoretical minimum for the number of rows in the garbled table, for a certain class of garbling techniques.<ref>{{cite book
+| last1       = Zahur
+| first1      = Samee
+| last2      = Rosulek
+| first2     = Mike
+| last3      = Evans
+| first3     = David
+| date       = 2015
+| title      = Two halves make a whole
+| url        = https://eprint.iacr.org/2014/756.pdf
+}}</ref>
+
+== Applications ==
+Garbled circuits are widely used to secure multi-party computation and confidential smart contracts in privacy-preserving cryptographic systems, like COTI V2, an Ethereum Layer 2 protocol that integrates garbled circuits with multiparty computation (MPC) to enable confidential transactions and private data handling on public blockchains.<ref>{{Cite web |last=Haloani |first=Nir |last2=Yanai |first2=Avishay |last3=Meital |first3=Levy |last4=Lavi |first4=Yair |title=COTI V2: Confidential Computing Ethereum Layer 2 |url=https://coti.io/files/coti_v2_whitepaper.pdf}}</ref>
+
+== Security ==
+The Yao's Garbled Circuit is secure against a semi-honest adversary. This type of adversary follows the protocol and does not do any malicious behavior, but it tries to violate the privacy of the other party's input by scrutinizing the messages transmitted in the protocol.
+
+It is more challenging to make this protocol secure against a malicious adversary that deviates from the protocol. One of the first solutions to make the protocol secure against malicious adversary is to use [[zero-knowledge proof]] to prevent malicious activities during the protocol.<ref>{{Cite book|last1=Goldwasser|first1=S|last2=Micali|first2=S|last3=Rackoff|first3=C|title=Proceedings of the seventeenth annual ACM symposium on Theory of computing - STOC '85|chapter=The knowledge complexity of interactive proof-systems|date=1985-12-01|location=Providence, Rhode Island, US|publisher=Association for Computing Machinery|pages=291–304|doi=10.1145/22145.22178|isbn=978-0-89791-151-1|s2cid=8689051}}</ref> For years, this approach was considered more as theoretical solution than a practical solution because of complexity overheads of it. But, it is shown that it is possible to use it with just a small overhead.<ref>{{Cite book|last1=Abascal|first1=Jackson|last2=Faghihi Sereshgi|first2=Mohammad Hossein|last3=Hazay|first3=Carmit|last4=Ishai|first4=Yuval|last5=Venkitasubramaniam|first5=Muthuramakrishnan|title=Proceedings of the 2020 ACM SIGSAC Conference on Computer and Communications Security |chapter=Is the Classical GMW Paradigm Practical? The Case of Non-Interactive Actively Secure 2PC |date=2020-10-30|series=CCS '20|location=Virtual Event, US|publisher=Association for Computing Machinery|pages=1591–1605|doi=10.1145/3372297.3423366|isbn=978-1-4503-7089-9|s2cid=226228208}}</ref> Another approach is using several GC for a circuit and verifying the correctness of a subset of them and then using the rest for the computation with the hope that if the garbler was malicious, it would be detected during the verification phase.<ref>{{Cite book|last1=Lindell|first1=Yehuda|last2=Pinkas|first2=Benny|title=Advances in Cryptology - EUROCRYPT 2007 |chapter=An Efficient Protocol for Secure Two-Party Computation in the Presence of Malicious Adversaries |date=2007|editor-last=Naor|editor-first=Moni|series=Lecture Notes in Computer Science|volume=4515|language=en|location=Berlin, Heidelberg|publisher=Springer|pages=52–78|doi=10.1007/978-3-540-72540-4_4|bibcode=2007LNCS.4515...52L|isbn=978-3-540-72540-4|doi-access=free}}</ref> Another solution is to make the garbling scheme authenticated such that the evaluator can verify the garbled circuit.<ref>{{Cite book|last1=Ishai|first1=Yuval|last2=Kushilevitz|first2=Eyal|last3=Ostrovsky|first3=Rafail|last4=Prabhakaran|first4=Manoj|last5=Sahai|first5=Amit|title=Advances in Cryptology – EUROCRYPT 2011 |chapter=Efficient Non-interactive Secure Computation |date=2011|editor-last=Paterson|editor-first=Kenneth G.|series=Lecture Notes in Computer Science|volume=6632|language=en|location=Berlin, Heidelberg|publisher=Springer|pages=406–425|doi=10.1007/978-3-642-20465-4_23|isbn=978-3-642-20465-4|doi-access=free}}</ref><ref>{{Cite book|last1=Hazay|first1=Carmit|last2=Ishai|first2=Yuval|last3=Venkitasubramaniam|first3=Muthuramakrishnan|title=Theory of Cryptography |chapter=Actively Secure Garbled Circuits with Constant Communication Overhead in the Plain Model |date=2017|editor-last=Kalai|editor-first=Yael|editor2-last=Reyzin|editor2-first=Leonid|chapter-url=https://link.springer.com/chapter/10.1007%2F978-3-319-70503-3_1|series=Lecture Notes in Computer Science|volume=10678|language=en|location=Cham|publisher=Springer International Publishing|pages=3–39|doi=10.1007/978-3-319-70503-3_1|isbn=978-3-319-70503-3}}</ref>
+
+==See also==
+* [[Cryptography]]
+* [[RSA (algorithm)|RSA]]
+* [[Secure multi-party computation]]
+* [[Yao's Millionaires' Problem]]
+
+==References==
+{{reflist}}
+
+== Further reading ==
+*{{cite web|title=Yao's Garbled Circuit|url=https://courses.engr.illinois.edu/cs598man/fa2009/slides/ac-f09-lect16-yao.pdf|website=CS598|publisher=illinois.edu|access-date=18 October 2016}}
+
+[[Category:Theory of cryptography]]
+[[Category:Cryptographic protocols]]

@@ -1,0 +1,93 @@
+<!-- wikipedia: en
+     page: 598735
+     title: Common Scrambling Algorithm
+     revision: 1332033511
+     timestamp: 2026-01-09T14:33:04Z
+     history: https://en.wikipedia.org/w/index.php?curid=598735&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1332033511 -->
+{{Short description|Encryption algorithm used by DVB television standard}}
+The '''Common Scrambling Algorithm''' ('''CSA''') is the [[encryption algorithm]] used in the [[Digital Video Broadcasting|DVB]] [[digital television]] broadcasting for encrypting [[video coding|video stream]]s.
+
+CSA was specified by [[ETSI]] and adopted by the DVB consortium in May 1994. It is being succeeded by CSA3,<ref>{{Cite web |url=http://farncombe.eu/whitepapers/FTLCAWhitePaperTwo.pdf |title= Towards a Replacement for the DVB Common Scrambling Algorithm|access-date=2012-11-20 |archive-url=https://web.archive.org/web/20100705002144/http://farncombe.eu/whitepapers/FTLCAWhitePaperTwo.pdf |archive-date=2010-07-05 |url-status=dead | date=2009 | author=((Farncombe Consulting Group)) | type = white paper | place= Basingstoke}}</ref> based on a combination of 128-bit [[Advanced Encryption Standard|AES]] and a confidential block cipher, XRC. However, CSA3 is not yet in any significant use, so CSA continues to be the dominant cipher for protecting DVB broadcasts.
+
+==History==
+CSA was largely kept secret until 2002. The patent papers gave some hints, but important details, like the layout of the so-called [[S-box]]es, remained secret. Without these, free implementations of the algorithm was not possible. Initially, CSA was to remain implemented in hardware only, making it difficult to [[Reverse engineering|reverse engineer]] existing implementations.
+
+In 2002 FreeDec was released, implementing CSA in [[software]]. Though released as [[executable|binary]] only, [[disassembler|disassembly]] revealed the missing details and allowed reimplementation of the algorithm in higher-level [[programming language]]s.
+
+With CSA now publicly known in its entirety, [[cryptanalyst]]s started looking for weaknesses.
+
+== Description of the cipher ==
+The CSA algorithm is composed of two distinct ciphers: a block cipher and a stream cipher.
+
+When used in encryption mode the data are first encrypted using the 64-bit block cipher in [[Block cipher modes of operation|CBC mode]], starting from packet end.
+The stream cipher is then applied from packet start.
+
+=== Block cipher ===
+
+The block cipher process 64-bit blocks in 56 rounds. It uses 8 bits from an expanded key on each round.
+
+[[Image:Dvbcsa block encrypt.svg|border|480px|Block cipher encryption]]
+
+=== Stream cipher ===
+
+The first 32 round of the stream cipher are used for initialization and do not generate any output.
+The first 64 bits of data are used as [[initialization vector]] during this phase and are left unchanged.
+The stream cipher then generates 2 bits of pseudo-random stream on each round which are xored starting at bit 64 of the packet.
+
+[[File:Dvbcsa stream.svg|800px|border|Stream cipher details]]
+
+==Weaknesses==
+Were CSA to be broken, encrypted DVB transmissions would be decipherable, which would compromise paid digital television services, as DVB has been standardised for [[digital terrestrial television]] in Europe and elsewhere, and is used by many satellite television providers.
+
+Most attacks on the pay-TV system have not targeted CSA itself, but instead the various [[key exchange]] systems responsible for ''generating'' the CSA keys ([[Conax]], Irdeto, [[Nagravision]], [[VideoGuard]], etc.), either by reverse-engineering and breaking the algorithms altogether, or by intercepting the keys in real-time as they are generated on a legitimate decoder, and then distributing them to others (so-called [[card sharing]]).
+
+===Software implementations and bit slicing===
+The stream cipher part of CSA is prone to [[bit slicing]], a software implementation technique which allows decryption of many blocks, or the same block with many different keys, at the same time. This significantly speeds up a brute force search implemented in software, although the factor is too low for a practical real-time attack.
+
+The block cipher part is harder to bit slice, as the [[S-boxes]] involved are too large (8x8) to be efficiently implemented using logical operations, a prerequisite for bit slicing to be more efficient than a regular implementation. However, as all operations are on 8-bit subblocks, the algorithm can be implemented using regular [[SIMD]], or a form of “byteslicing”. As most SIMD instruction sets, (with the exception of [[AVX2]]) do not support parallel look-up tables, the S-box lookups are done in a non-bytesliced implementation, but their integration into the rest of the algorithm is not hampered markedly by the byteslicing.
+
+Both techniques are used in [https://www.videolan.org/developers/libdvbcsa.html libdvbcsa], a free implementation of CSA.
+
+===Cryptanalysis===
+Cryptanalysis is made more difficult as most data is protected both by the block and the stream cipher. Adaption codes can result in packets with some data protected by only the block cipher or the stream cipher.<ref>{{ cite conference | chapter-url=http://sec.cs.kent.ac.uk/cms2004/Program/CMS2004final/p5a1.pdf | last1= Weinmann|last2= Wirt|first2=Kai | chapter =Analysis of the DVB Common Scrambling Algorithm |editor1= David Chadwick |editor2= Bart Preneel |first1= Ralf-Philipp |title=Communications and Multimedia Security | isbn= 978-0-387-24486-0 | series=IFIP — The International Federation for Information Processing, vol 175 | publisher=Springer |date= 2005 |doi=10.1007/0-387-24486-7_15 |conference= 8th IFIP TC-6 TC-11 Conference on Communications and Multimedia Security, Sept. 15-18, 2004, Windermere, The Lake District, United Kingdom | pages=195–207 }}</ref>
+
+===Brute force approach===
+While the CSA algorithm uses 64-bit keys, most of the time, only 48 bits of the key are unknown, since bytes 3 and 7 are used as parity bytes in CA systems, and may be easily recalculated. This allows for possible [[known-plaintext attack]]s when combined with knowledge of the underlying plaintext structure. As the first three bytes of the [[Packetized elementary stream|PES]] header are always 0x000001, it would be possible to launch a [[brute force attack]]. Such an attack would reveal millions of possible keys, but still few enough to make it practical to attempt decryption of other parts of the data with the same key in a second pass to recover the true key.
+
+===Known-plaintext attack===
+In 2011, a group of German researchers released an attack<ref>{{cite conference <!-- Citation bot no -->
+ | first1 = Erik | last1 = Tews
+ | first2 = Julian | last2 = Wälde
+ | first3 = Michael | last3 = Weiner
+ | title = Research in Cryptology | chapter = Breaking DVB-CSA | conference = 4th Western European Workshop, WEWoRC 2011, Weimar, Germany, July 20–22, 2011
+ | series = Lecture Notes in Computer Science | date = 2012 | volume = 7242 | pages = 45–61 | doi = 10.1007/978-3-642-34159-5_4 | isbn = 978-3-642-34158-8 | chapter-url = https://ris.utwente.nl/ws/files/24821147/Breaking_DVB_CSA.pdf | editor1=Frederik Armknecht|editor2= Stefan Lucks| publisher= Springer 
+}}</ref> on CSA as used in the DVB system. By noting that MPEG-2 padding frequently requires long series of zeroes, leading to entire 184-byte cells being encrypted with zeroes only, it is possible to build up a [[rainbow table]] recovering the key from such a known-zero block. (A block would be known to be zero if two blocks with the same ciphertext were found, since presumably both would be zero blocks.) The attack described would require about 7.9 TB of storage, and enable an attacker with a [[GPU]] to recover a key in about seven seconds with 96.8% certainty. However, the attack is only effective when such all-zero padding blocks are present (i.e., in scenes with very little movement or noise), and it would be easily mitigated by for instance sending such all-zero cells unencrypted.
+
+This differs from the brute-force attack examples already mentioned, in that the plain-text contents of the entire cell is known before the attack, not just parts of a block, which enables the ahead-of-time computation of the rainbow table.
+
+===Fault attack===
+In 2004, a fault attack<ref>{{cite journal
+ | first = Kai | last = Wirt
+ | title = Fault attack on the DVB Common Scrambling Algorithm (Report 2004/289)
+ |date=November 2003
+ | journal = Cryptology ePrint Archive
+ | url = https://eprint.iacr.org/2004/289/
+}}</ref> was published on the block cipher. The basic idea was to introduce a few deliberate faults in the intermediate calculations, making it possible to deduce the last eight round keys. From this, the final key can be computed.
+
+While very few faults are needed (on average two or three per round key recovered), fault attacks are usually impractical to carry out, in that it requires the ability to change bits at will inside the hardware of a decoder that already has the key in question.
+
+==References==
+<references />
+
+== External links ==
+*[http://sec.cs.kent.ac.uk/cms2004/Program/CMS2004final/p5a1.pdf Analysis of the DVB Common Scrambling Algorithm]
+*[https://www.videolan.org/developers/libdvbcsa.html libdvbcsa: A free implementation of the DVB Common Scrambling Algorithm]
+*[http://eprints.qut.edu.au/27578/1/c27578.pdf Improved Cryptanalysis of the Common Scrambling Algorithm Stream Cipher]
+*[https://web.archive.org/web/20081203064153/http://www.etsi.org/WebSite/OurServices/Algorithms/dvbalgorithms.aspx ETSI.org DVB CSA systems]
+
+{{broadcast encryption}}
+
+[[Category:Cryptographic algorithms]]
+[[Category:Digital Video Broadcasting]]

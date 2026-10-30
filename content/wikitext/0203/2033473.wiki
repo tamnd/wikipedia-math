@@ -1,0 +1,95 @@
+<!-- wikipedia: en
+     page: 2033473
+     title: ElGamal signature scheme
+     revision: 1300173217
+     timestamp: 2025-07-12T17:55:51Z
+     history: https://en.wikipedia.org/w/index.php?curid=2033473&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1300173217 -->
+{{Short description|Digital signature scheme}}
+The '''ElGamal signature scheme''' is a [[digital signature]] scheme which is based on the difficulty of computing [[discrete logarithm]]s. It was described by [[Taher Elgamal]] in 1985.<ref name="ElgamalOriginalArticle">{{cite journal |author=Taher ElGamal |title=A Public-Key Cryptosystem and a Signature Scheme Based on Discrete Logarithms |journal=IEEE Transactions on Information Theory |volume=31 |issue=4 |year=1985 |pages=469–472 |doi=10.1109/TIT.1985.1057074 |url=https://caislab.kaist.ac.kr/lecture/2010/spring/cs548/basic/B02.pdf|citeseerx=10.1.1.476.4791 |s2cid=2973271 }} (conference version appeared in [[CRYPTO]]'84, pp. 10–18)</ref>
+
+The ElGamal signature algorithm is rarely used in practice. A variant developed at the [[NSA]] and known as the [[Digital Signature Algorithm]] is much more widely used. There are several other variants.<ref>{{cite journal |author=K. Nyberg, R. A. Rueppel |title=Message recovery for signature schemes based on the discrete logarithm problem |journal=Designs, Codes and Cryptography |volume=7 |issue=1–2 |pages=61&ndash;81 |year=1996 |doi=10.1007/BF00125076 |s2cid=123533321 |url=https://link.springer.com/chapter/10.1007/BFb0053434|url-access=subscription }}</ref> The ElGamal signature scheme must not be confused with [[ElGamal encryption]] which was also invented by Taher Elgamal.
+
+==Overview==
+The ElGamal signature scheme is a digital signature scheme based on the algebraic properties of modular exponentiation, together with the discrete logarithm problem. The algorithm uses a '''key pair''' consisting of a '''public key''' and a '''private key'''. The private key is used to generate a '''digital signature''' for a message, and such a signature can be '''verified''' by using the signer's corresponding public key. The digital signature provides message authentication (the receiver can verify the origin of the message), integrity (the receiver can verify that the message has not been modified since it was signed) and non-repudiation (the sender cannot falsely claim that they have not signed the message).
+
+==History==
+The ElGamal signature scheme was described by [[Taher Elgamal]] in 1985.<ref name="ElgamalOriginalArticle"/> It is based on the [[Diffie–Hellman problem]].
+
+==Operation==
+The scheme involves four operations: key generation (which creates the key pair), key distribution, signing and signature verification.
+
+===Key generation===
+Key generation has two phases. The first phase is a choice of algorithm parameters which may be shared between different users of the system, while the second phase computes a single key pair for one user.
+
+====Parameter generation====
+* Choose a key length <math>N</math>.
+* Choose a <math>N</math>-bit [[prime number]] <math>p</math> 
+* Choose a [[cryptographic hash function]] <math>H</math> with output length <math>L</math> bits. If <math>L > N</math>, only the leftmost <math>N</math> bits of the hash output are used.
+* Choose a [[Generating set of a group|generator]] <math>g < p</math> of the [[Multiplicative group of integers modulo n|multiplicative group of integers modulo ''p'']], <math>Z_p^*</math>.
+
+The algorithm parameters are <math>(p, g)</math>. These parameters may be shared between users of the system.
+
+====Per-user keys====
+Given a set of parameters, the second phase computes the key pair for a single user:
+* Choose an integer <math>x</math> randomly from <math>\{ 1 \ldots p-2 \}</math>.
+* Compute <math>y := g^x \bmod p</math>.
+<math>x</math> is the private key and <math>y</math> is the public key.
+
+=== Key distribution ===
+The signer should send the public key <math>y</math> to the receiver via a reliable, but not necessarily secret, mechanism. The signer should keep the private key <math>x</math> secret.
+
+===Signing===
+A message <math>m</math> is signed as follows:
+* Choose an integer <math>k</math> randomly from <math>\{ 2 \ldots p-2 \}</math> with <math>k</math> relatively prime to <math>p-1</math>.
+* Compute <math> r := g^k \bmod p</math>.
+* Compute <math> s := (H(m)-x r)k^{-1} \bmod (p-1)</math>.
+* In the unlikely event that <math>s=0</math> start again with a different random <math>k</math>.
+The signature is <math>(r,s)</math>.
+
+===Verifying a signature===
+One can verify that a signature <math>(r,s)</math> is a valid signature for a message <math>m</math> as follows:
+* Verify that <math>0<r<p</math> and <math>0<s<p-1</math>.
+* The signature is valid if and only if <math> g^{H(m)} \equiv y^r r^s \pmod p.</math>
+
+==Correctness==
+The algorithm is correct in the sense that a signature generated with the signing algorithm will always be accepted by the verifier.
+
+The computation of <math>s</math> during signature generation implies
+: <math> H(m) \, \equiv \, x r + s k \pmod{p-1}.</math>
+Since <math>g</math> is relatively prime to <math>p</math>,
+:<math>
+\begin{align}
+g^{H(m)} & \equiv g^{xr+sk} \pmod p\\
+& \equiv (g^{x})^r (g^{k})^s \pmod p\\
+& \equiv (y)^r (r)^s \pmod p.\\
+\end{align}
+</math>
+
+==Security==
+A third party can forge signatures either by finding the signer's secret key ''x'' or by finding collisions in the hash function <math>H(m) \equiv H(M) \pmod{p-1}</math>. Both problems are believed to be difficult.  However, as of 2011 no tight reduction to a [[computational hardness assumption]] is known.
+
+The signer must be careful to choose a different ''k'' uniformly at random for each signature and to be certain that ''k'', or even partial information about ''k'', is not leaked. Otherwise, an attacker may be able to deduce the secret key ''x'' with reduced difficulty, perhaps enough to allow a practical attack. In particular, if two messages are sent using the same value of ''k'' and the same key, then an attacker can compute ''x'' directly.<ref name="ElgamalOriginalArticle" />
+
+===Existential forgery===
+The original paper<ref name="ElgamalOriginalArticle" /> did not include a [[cryptographic hash function|hash function]] as a system parameter. The message ''m'' was used directly in the algorithm instead of ''H(m)''. This enables an attack called [[existential forgery]], as described in section IV of the paper. Pointcheval and Stern generalized that case and described two levels of forgeries:<ref>{{cite journal|last1=Pointcheval|first1=David|last2=Stern|first2=Jacques|authorlink2=Jacques Stern (cryptographer)|title=Security Arguments for Digital Signatures and Blind Signatures|journal=J Cryptology|date=2000|volume=13|issue=3|pages=361–396|url=https://www.math.uni-frankfurt.de/~dmst/teaching/SS2012/Vorlesung/Point.Stern.pdf|doi=10.1007/s001450010003|citeseerx=10.1.1.208.8352|s2cid=1912537|access-date=2019-08-17|archive-date=2021-04-22|archive-url=https://web.archive.org/web/20210422231713/https://www.math.uni-frankfurt.de/~dmst/teaching/SS2012/Vorlesung/Point.Stern.pdf|url-status=dead}}</ref>
+
+# '''The one-parameter forgery.''' Select an <math>e</math> such that <math>1 < e < p-1</math>. Set <math>r := g^e y \bmod{p}</math> and <math>s := -r \bmod{(p-1)}</math>. Then the tuple <math>(r,s)</math> is a valid signature for the message <math>m = es \bmod{(p-1)}</math>.
+# '''The two-parameters forgery.''' Select <math>1 < e,v < p-1</math>, and <math>\gcd (v,p-1)=1</math>. Set <math>r := g^e y^v \bmod{p}</math> and <math>s := -rv^{-1} \bmod{(p-1)}</math>. Then the tuple <math>(r,s)</math> is a valid signature for the message <math>m = es \bmod{(p-1)}</math>. The one-parameter forgery is a special case of the two-parameter forgery, when <math>v = 1</math>.
+
+==See also==
+* [[Modular arithmetic]]
+* [[Digital Signature Algorithm]]
+* [[Elliptic Curve Digital Signature Algorithm]]
+* [[ElGamal encryption]]
+* [[Schnorr signature]]
+* [[Pointcheval–Stern signature algorithm]]
+
+==References==
+{{reflist}}
+
+{{Cryptography navbox | public-key}}
+
+{{DEFAULTSORT:Elgamal Signature Scheme}}
+[[Category:Digital signature schemes]]

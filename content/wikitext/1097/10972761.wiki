@@ -1,0 +1,196 @@
+<!-- wikipedia: en
+     page: 10972761
+     title: Mathematics of cyclic redundancy checks
+     revision: 1374708864
+     timestamp: 2026-09-13T17:32:10Z
+     history: https://en.wikipedia.org/w/index.php?curid=10972761&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374708864 -->
+{{short description|Methods of error detection and correction in communications}}
+
+The [[cyclic redundancy check]] (CRC) is a check of the [[remainder]] after [[Division (mathematics)|division]] in the [[polynomial ring|ring of polynomials]] over [[GF(2)]] (the [[finite field]] of [[Modular arithmetic|integers modulo]] 2).  That is, the set of [[polynomial]]s where each [[coefficient]] is either zero or one, and [[arithmetic operations]] wrap around.
+
+Any [[Bit array|string of bits]] can be interpreted as the coefficients of a polynomial of this sort, and a message has a valid CRC if it is divisible by (i.e. is a multiple of) an agreed-on ''[[generator polynomial]]''.<!--The variation where the remainder is a fixed non-zero value is omitted here for simplicity but described in #Variations-->  As an example, the message <math>101100</math> is thought of as <math>x^5+x^3+x^2</math> (which is divisible by <math>x^2</math>, see Polynomial arithmetic modulo 2 below for more details). CRCs are convenient and popular because they have good error-detection properties and such a multiple may be easily constructed from any ''message polynomial'' <math>M(x)</math> by appending an <math>n</math>-bit ''remainder polynomial'' <math>R(x)</math> to produce <math>W(x) = M(x) \cdot x^n + R(x)</math>, where <math>n</math> is the degree of the generator polynomial.
+
+Although the separation of <math>W(x)</math> into the message part <math>M(x)</math> and the checksum part <math>R(x)</math> is convenient for use of CRCs, the error-detection properties do not make a distinction; errors are detected equally anywhere within <math>W(x)</math>.
+
+==Formulation==
+In general, [[Computation of cyclic redundancy checks|computation of CRC]] corresponds to [[Euclidean division]] of polynomials over GF(2):
+:<math>M(x) \cdot x^n = Q(x) \cdot G(x) + R(x).</math>
+
+Here <math>M(x)</math> is the original message polynomial and <math>G(x)</math> is the degree-<math>n</math> generator polynomial. The bits of <math>M(x) \cdot x^n</math> are the original message with <math>n</math> zeroes added at the end. The CRC 'checksum' is formed by the coefficients of the remainder polynomial <math>R(x)</math> whose degree is strictly less than <math>n</math> by the properties of Euclidean division. The quotient polynomial <math>Q(x)</math> is of no interest. Using [[modulo operation]], it can be stated that
+:<math>R(x) = M(x) \cdot x^n \,\bmod\, G(x).</math>
+
+In communication, the sender attaches the <math>n</math> bits of R after the original message bits of M, which is equivalent to sending out <math>W(x) = M(x) \cdot x^n + R(x)</math> (the ''codeword''). This equivalence can be seen because we know that <math>R(x)</math> has degree strictly less than <math>n</math>, and the binary message <math>M(x) \cdot x^n</math> corresponds to is the original message bit shifted left <math>n</math> times. Thus appending the <math>n</math> bits of R (possibly with leading zeros) to the message by just adding the polynomials. Writing <math>W(x)</math> this way demonstrates that <math>W(x)\bmod\,G(x)=0</math> as 
+:<math>M(x) \cdot x^n = Q(x) \cdot G(x) + R(x) </math>
+:<math>\Rightarrow </math>
+:<math>M(x) \cdot x^n - R(x) = Q(x) \cdot G(x) </math>
+:<math>\Rightarrow</math> because in GF(2) <math>-1=1</math>
+:<math>W(x) = M(x) \cdot x^n + R(x) = Q(x) \cdot G(x)</math>
+
+The receiver, knowing <math>G(x)</math>, divides <math>W(x)</math> by <math>G(x)</math> and checks that the remainder is zero.  If it is, the receiver discards <math>R(x)</math> (the last <math>n</math> bits) and assumes the received message bits <math>M(x)</math> are correct.
+
+Software implementations sometimes separate the message into its parts and compare the received <math>R(x)</math> to a value reconstructed from the received message, but hardware implementations invariably find the full-length division described above to be simpler.
+
+In practice CRC calculations most closely resemble [[long division]] in binary, except that the subtractions involved do not borrow from more significant digits, and thus become [[exclusive or]] operations.
+
+A CRC is a [[checksum]] in a strict mathematical sense, as it can be expressed as the weighted modulo-2 sum of per-bit [[Syndrome decoding#Syndrome decoding|syndrome]]s, but that word is generally reserved more specifically for sums computed using larger moduli, such as 10, 256, or 65535.
+
+CRCs can also be used as part of [[Error-correcting code memory|error-correcting codes]], which allow not only the detection of transmission errors, but the reconstruction of the correct message.  These codes are based on closely related mathematical principles.
+
+==Polynomial arithmetic modulo 2==
+Since the coefficients are constrained to a single bit, any math operation on CRC polynomials must map the coefficients of the result to either zero or one. For example, in addition:
+
+: <math>(x^3 + x) + (x + 1) = x^3 + 2x + 1 \equiv x^3 + 1 \pmod 2.</math>
+
+Note that <math>2x</math> is equivalent to zero in the above equation because addition of coefficients is performed modulo 2: 
+
+: <math>2x = x + x = x\times(1 + 1) \equiv x\times0 = 0 \pmod 2.</math>
+
+Polynomial addition modulo 2 is the same as [[Exclusive_or#Bitwise_operation|bitwise XOR]]. Since XOR is the inverse of itself, polynominal subtraction modulo 2 is the same as bitwise XOR too.
+
+Multiplication is similar (a [[carry-less product]]):
+: <math>(x^2 + x)(x + 1) = x^3 + 2x^2 + x \equiv x^3 + x \pmod 2.</math>
+
+We can also divide polynomials mod 2 and find the quotient and remainder. For example, suppose we're dividing <math>x^3 + x^2 + x</math> by <math>x + 1</math>. We would find that
+: <math>\frac{x^3 + x^2 + x}{x+1} = (x^2 + 1) - \frac{1}{x+1}.</math>
+<!--when you say divide, readers will look for divide sign in the equation. It is confusing to me if there is none.-->
+
+In other words, 
+: <math>(x^3 + x^2 + x) = (x^2 + 1)(x + 1) - 1 \equiv (x^2 + 1)(x + 1) + 1 \pmod 2.</math>
+
+The division yields a quotient of <math>x^2+1</math> with a remainder of −1, which, since it is odd, has a last bit of 1. 
+
+In the above equations, <math>x^3 + x^2 + x</math> represents the original message bits <code>111</code>, <math>x+1</math> is the generator polynomial, and the remainder <math>1</math> (equivalently, <math>x^0</math>) is the CRC.  The degree of the generator polynomial is 1, so we first multiplied the message by <math>x^1</math> to get <math>x^3 + x^2 + x</math>.
+
+==Variations==
+There are several standard variations on CRCs, any or all of which may be used with any CRC polynomial.  ''Implementation variations'' such as [[endianness]] and CRC presentation only affect the mapping of bit strings to the coefficients of <math>M(x)</math> and <math>R(x)</math>, and do not impact the properties of the algorithm.
+*'''The remainder on division does not need to be zero.'''  Although all of the preceding text is written in terms of divisibility by the generator polynomial, ''any'' fixed remainder <math>S(x)</math> may be used and will perform just as well as a zero remainder.  Most commonly, the all-ones polynomial <math>(x^n+1)/(x+1)</math> is used, but, for example, the [[asynchronous transfer mode]] header error control field has a remainder of <math>x^6+x^4+x^2+1.</math>  The one complication arises if the same hardware which generates the CRC by finding <math>R(x) = M(x) \cdot x^n \bmod G(x) + S(x)</math> is used to check the CRC with a full-width division of <math>W(x) \cdot x^n \bmod G(x).</math>  The latter will not produce a remainder of 0, nor of <math>S(x)</math>, but of <math>S(x) \cdot x^n \bmod G(x).</math>  This does not make CRC checking any more difficult, you just have to know the expected pattern.
+*'''The long division may begin with a non-zero remainder.'''  The remainder is generally computed using an <math>n</math>-bit [[shift register]] holding the current remainder, while message bits are added and reduction modulo <math>G(x)</math> is performed.  Normal division initializes the shift register to zero, but it may instead be initialized to a non-zero value.  (Again, all-ones is most common, but any pattern may be used.)  This is equivalent to adding (XORing) the initialization pattern with the first <math>n</math> bits of the message before feeding them into the algorithm.  The CRC equation becomes <math>M(x) \cdot x^n + \sum_{i=m}^{m+n-1} x^i = Q(x) \cdot G(x) + R(x)</math>, where <math>m > \deg(M(x))</math> is the length of the message in bits. The change this imposes on <math>R(x)</math> is a function of the generating polynomial and the message length, <math>\sum_{i=m}^{m+n-1} x^i \,\bmod\, G(x)</math>.
+
+These two variations serve the purpose of detecting zero bits added to the message.  A preceding zero bit adds a leading zero coefficient to <math>W(x),</math> which does not change its value, and thus does not change its divisibility by the generator polynomial.  By adding a fixed pattern to the first bits of a message, such extra zero bits can be detected.
+
+Likewise, using a non-zero remainder detects trailing zero bits added to a message.  If a CRC-protected message <math>W(x)</math> has a zero bit appended, the received polynomial is <math>W(x)\cdot x.</math>  If the former is divisible by the generator polynomial, so is the latter.  Using a non-zero remainder <math>S(x)</math>, appending a zero bit will result in the different remainder <math>S(x)\cdot x \bmod G(x)</math>, and therefore the extra bit will be detected.
+
+In practice, these two variations are invariably used together.  They change the transmitted CRC, so must be implemented at both the transmitter and the receiver.  Both ends must preset their division circuitry to all-ones, the transmitter must add the trailing inversion pattern to the result, and the receiver must expect this pattern when checking the CRC.  If the receiver checks the CRC by full-length division, the remainder because the CRC of a full codeword that already includes a CRC is no longer zero.  Instead, it is a fixed non-zero pattern, the CRC of the inversion pattern of <math>n</math> ones.
+
+These inversions are extremely common but not universally performed, even in the case of the [[CRC-32]] or CRC-16-CCITT polynomials.  They are almost always included when sending variable-length messages, but often omitted when communicating fixed-length messages, as the problem of added zero bits is less likely to arise.
+
+==Reversed representations and reciprocal polynomials==
+===Polynomial representations===
+<!-- [[File:CRC_Polynomial_Representation_Example.png||Example of CCITT 16-bit Polynomial in the three forms described]] bad illustration, not really understandable -->
+All practical CRC generator polynomials have non-zero <math>x^n</math> and <math>x^0</math> coefficients.  It is very common to convert this to a string of <math>n</math> binary bits by omitting the <math>x^n</math> coefficient.
+
+This bit string may then be converted to a [[binary number]] using one of two conventions:
+*The msbit-first representation has the coefficient of <math>x^{n-1}</math> as the most significant bit and the coefficient of <math>x^0</math> (which is always 1) as the least significant bit.
+*The lsbit-first representation has the coefficient of <math>x^{n-1}</math> as the least significant bit and the coefficient of <math>x^0</math> (which is always 1) as the most significant bit.
+
+The msbit-first form is often referred to in the literature as the ''normal'' representation, while the lsbit-first is called the ''reversed'' representation. It is essential to use the correct form when implementing a CRC.  If the coefficient of <math>x^{n-1}</math> happens to be zero, the forms can be distinguished at a glance by seeing which end has the bit set.
+
+For example, the degree-16 CCITT polynomial in the forms described (bits inside square brackets are included in the word representation; bits outside are implied 1 bits; vertical bars designate [[nibble]] boundaries):
+
+ 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0   coefficient
+  1 [0  0  0  1 |0  0  0  0 |0  0  1  0 |0  0  0  1]  Normal                        
+    [     1     |     0     |     2     |     1    ]  Nibbles of Normal
+ 0x1021
+ 
+  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16
+ [1  0  0  0 |0  1  0  0 |0  0  0  0 |1  0  0  0] 1   Reverse                       
+ [     8     |     4     |     0     |     8    ]     Nibbles of Reverse
+ 0x8408
+ 
+ 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+  1 [0  0  0  0 |1  0  0  0 |0  0  0  1 |0  0  0  1]  Reciprocal                    
+    [     0     |     8     |     1     |     1    ]  Nibbles of Reciprocal
+ 0x0811
+ 
+  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16   Reverse reciprocal
+ 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0   Koopman
+ [1  0  0  0 |1  0  0  0 |0  0  0  1 |0  0  0  0] 1    
+ [     8     |     8     |     1     |     0    ]     Nibbles
+ 0x8810
+
+All the well-known CRC generator polynomials of degree <math>n</math> have two common hexadecimal representations.  In both cases, the coefficient of <math>x^n</math> is omitted and understood to be 1.
+*The msbit-first representation is a hexadecimal number with <math>n</math> bits, the least significant bit of which is always 1.  The most significant bit represents the coefficient of <math>x^{n-1}</math> and the least significant bit represents the coefficient of <math>x^0</math>.
+*The lsbit-first representation is a hexadecimal number with <math>n</math> bits, the most significant bit of which is always 1.  The most significant bit represents the coefficient of <math>x^0</math> and the least significant bit represents the coefficient of <math>x^{n-1}</math>.
+
+The msbit-first form is often referred to in the literature as the ''normal'' representation, while the lsbit-first is called the ''reversed'' representation. It is essential to use the correct form when implementing a CRC.  If the coefficient of <math>x^{n-1}</math> happens to be zero, the forms can be distinguished at a glance by seeing which end has the bit set.
+
+To further confuse the matter, the paper by P. Koopman and T. Chakravarty <ref name="koop02">{{Cite book
+| last = Koopman | first = Philip
+| title = Proceedings International Conference on Dependable Systems and Networks
+| chapter = 32-bit cyclic redundancy codes for Internet applications
+|date=July 2002 <!-- date from http://www.ece.cmu.edu/~koopman/pubs.html -->
+| chapter-url = http://www.ece.cmu.edu/~koopman/networks/dsn02/dsn02_koopman.pdf
+| access-date = 14 January 2011
+| pages = 459–468
+| doi = 10.1109/DSN.2002.1028931
+| isbn = 978-0-7695-1597-7
+| s2cid = 14775606
+}} - verification of Castagnoli's results by exhaustive search and some new good polynomials
+</ref><ref name=koop04>{{Cite book
+| last1 = Koopman | first1 = Philip
+| last2 = Chakravarty | first2 = Tridib
+| title = International Conference on Dependable Systems and Networks, 2004
+| chapter = Cyclic redundancy code (CRC) polynomial selection for embedded networks
+|date=June 2004 <!-- date from http://www.ece.cmu.edu/~koopman/pubs.html -->
+| chapter-url = http://www.ece.cmu.edu/~koopman/roses/dsn04/koopman04_crc_poly_embedded.pdf
+| access-date = 14 January 2011
+| pages = 145–154
+| doi = 10.1109/DSN.2004.1311885
+| isbn = 978-0-7695-2052-0
+| s2cid = 793862
+}} – analysis of short CRC polynomials for embedded applications
+</ref> converts CRC generator polynomials to hexadecimal numbers in yet another way: msbit-first, but including the <math>x^n</math> coefficient and omitting the <math>x^0</math> coefficient.  This "Koopman" representation has the advantage that the degree can be determined from the hexadecimal form and the coefficients are easy to read off in left-to-right order.  However, it is not used anywhere else and is not recommended due to the risk of confusion.
+
+===Reciprocal polynomials===
+A [[reciprocal polynomial]] is created by assigning the <math>x^n</math> through <math>x^0</math> coefficients of one polynomial to the <math>x^0</math> through <math>x^n</math> coefficients of a new polynomial. That is, the reciprocal of the degree <math>n</math> polynomial <math>G(x)</math> is <math>x^nG(x^{-1})</math>. 
+
+The most interesting property of reciprocal polynomials, when used in CRCs, is that they have exactly the same error-detecting strength as the polynomials they are reciprocals of.  The reciprocal of a polynomial generates the same ''codewords'', only bit reversed &mdash; that is, if all but the first <math>n</math> bits of a codeword under the original polynomial are taken, reversed and used as a new message, the CRC of that message under the reciprocal polynomial equals the reverse of the first <math>n</math> bits of the original codeword.  But the reciprocal polynomial is not the same as the original polynomial, and the CRCs generated using it are not the same (even modulo bit reversal) as those generated by the original polynomial.
+
+==Error detection strength==
+The error-detection ability of a CRC depends on the degree of its generator polynomial and on the specific generator polynomial used.  The "error polynomial" <math>E(x)</math> is the [[symmetric difference]] of the received message codeword and the correct message codeword.  An error will go undetected by a CRC algorithm if and only if the error polynomial is divisible by the CRC polynomial.
+*Because a CRC is based on division, no polynomial can detect errors consisting of a string of zeroes prepended to the data, or of missing leading zeroes.  However, see {{slink||Variations}}.
+*All single bit errors will be detected by any polynomial with at least two terms with non-zero coefficients.  The error polynomial is <math>x^k</math>, and <math>x^k</math> is divisible only by polynomials <math>x^i</math> where <math>i \le k</math>.
+*All two bit errors separated by a distance less than the [[order (group theory)|order]] of the ''primitive polynomial which is a factor of the generator polynomial'' will be detected.  The error polynomial in the two bit case is <math>E(x) = x^i + x^k = x^k \cdot (x^{i-k} + 1), \; i > k</math>.  As noted above, the <math>x^k</math> term will not be divisible by the CRC polynomial, which leaves the <math>x^{i-k} + 1</math> term.  By definition, the smallest value of <math>{i-k}</math> such that a polynomial divides <math>x^{i-k} + 1</math> is the polynomial's order ''or exponent''.  The polynomials with the largest order are called [[primitive polynomial (field theory)|primitive polynomial]]s, and for polynomials of degree <math>n</math> with binary coefficients, have order <math>2^n - 1</math>.
+*All errors in an odd number of bits will be detected by a polynomial which is a multiple of <math>x+1</math>.  This is equivalent to the polynomial having an even number of terms with non-zero coefficients. ''This capacity assumes that the generator polynomial is the product of <math>x+1</math> and a primitive polynomial of degree <math>n-i</math> since all primitive polynomials except <math>x+1</math> have an odd number of non-zero coefficients.''
+*All [[error burst|burst errors]] of length <math>n</math> will be detected by any polynomial of degree <math>n</math> or greater which has a non-zero <math>x^0</math> term.
+(As an aside, there is never reason to use a polynomial with a zero <math>x^0</math> term.  Recall that a CRC is the remainder of the message polynomial times <math>x^n</math> divided by the CRC polynomial.  A polynomial with a zero <math>x^0</math> term always has <math>x</math> as a factor. So if <math>K(x)</math> is the original CRC polynomial and <math>K(x) = x \cdot K'(x)</math>, then
+
+: <math>M(x) \cdot x^{n-1} = Q(x) \cdot K'(x) + R(x)</math>
+
+: <math>M(x) \cdot x^n = Q(x) \cdot x \cdot K'(x) + x \cdot R(x)</math>
+
+: <math>M(x) \cdot x^n = Q(x) \cdot K(x) + x \cdot R(x)</math>
+
+That is, the CRC of any message with the <math>K(x)</math> polynomial is the same as that of the same message with the <math>K'(x)</math> polynomial with a zero appended.  It is just a waste of a bit.)
+
+The combination of these factors means that good CRC polynomials are often primitive polynomials (which have the best 2-bit error detection) or primitive polynomials of degree <math>n-1</math>, multiplied by <math>x+1</math> (which detects all odd numbers of bit errors, and has half the two-bit error detection ability of a primitive polynomial of degree <math>n</math>).<ref name="koop02"/>
+
+===Bitfilters===
+Analysis using bitfilters<ref name="koop02"/> allows one to very efficiently determine the properties of a given generator polynomial.  The results are the following:
+
+# All burst errors (but one) with length no longer than the generator polynomial can be detected by any generator polynomial <math>1+\cdots+x^n</math>. This includes 1-bit errors (burst of length 1). The maximum length is <math>n+1</math>, when <math>n</math> is the degree of the generator polynomial (which itself has a length of <math>n+1</math>). The exception to this result is a bit pattern the same as that of the generator polynomial.
+# All uneven bit errors are detected by generator polynomials with even number of terms.
+# 2-bit errors in a (multiple) distance of the longest bitfilter of even parity to a generator polynomial are not detected; all others are detected. For degrees up to 32 there is an optimal generator polynomial with that degree and even number of terms; in this case the period mentioned above is <math>2^{n-1}-1</math>. For <math>n=16</math> this means that blocks of 32,767 bits length do not contain undiscovered 2-bit errors. For uneven number of terms in the generator polynomial there can be a period of <math>2^n-1</math>; however, these generator polynomials (with odd number of terms) do not discover all odd number of errors, so they should be avoided. A list of the corresponding generators with even number of terms can be found in the link mentioned at the beginning of this section.
+# All single bit errors within the bitfilter period mentioned above (for even terms in the generator polynomial) can be identified uniquely by their residual. So CRC method can be used to correct single-bit errors as well (within those limits, e.g. 32,767 bits with optimal generator polynomials of degree 16). Since all odd errors leave an odd residual, all even an even residual, 1-bit errors and 2-bit errors can be distinguished. However, like other [[SECDED]] techniques, CRCs cannot always distinguish between 1-bit errors and 3-bit errors. When 3 or more bit errors occur in a block, CRC bit error correction will be erroneous itself and produce more errors.
+
+==See also==
+*[[Barrett reduction]]
+*[[Error correcting code]]
+*[[List of checksum algorithms]]
+*[[Parity (telecommunication)]]
+*[[Polynomial representations of cyclic redundancy checks]]
+
+==References==
+<references />
+
+
+== External links ==
+{{refbegin}}
+*{{cite web |last=Koopman |first=Phil |title=Blog: Checksum and CRC Central |url=http://checksumcrc.blogspot.com/}} — lists CRC polynomials giving best [[Hamming distance]]s.
+{{refend}}
+{{Mathematics of}}
+{{DEFAULTSORT:Mathematics Of Crc}}
+[[Category:Cyclic redundancy checks]]
+[[Category:Finite fields]]

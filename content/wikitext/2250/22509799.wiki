@@ -1,0 +1,194 @@
+<!-- wikipedia: en
+     page: 22509799
+     title: OPTICS algorithm
+     revision: 1369245315
+     timestamp: 2026-08-13T19:49:06Z
+     history: https://en.wikipedia.org/w/index.php?curid=22509799&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1369245315 -->
+{{Short description|Algorithm for finding density based clusters in spatial data}}
+{{Machine learning|Clustering}}
+'''Ordering points to identify the clustering structure''' ('''OPTICS''') is an algorithm for finding density-based<ref>{{cite journal|last1=Kriegel|first1=Hans-Peter|author-link1=Hans-Peter Kriegel|last2=Kröger|first2=Peer|last3=Sander|first3=Jörg|author-link3=Jörg Sander|last4=Zimek|first4=Arthur|author-link4=Arthur Zimek|title=Density-based clustering|journal=Wiley Interdisciplinary Reviews: Data Mining and Knowledge Discovery|date=May 2011|volume=1|issue=3|pages=231–240|doi=10.1002/widm.30|s2cid=36920706 |url=https://portal.findresearcher.sdu.dk/da/publications/be8fe7b9-d5e2-415c-91bc-5ac6fa00994b}}</ref> [[Cluster analysis|clusters]] in spatial data. It was presented in 1999 by Mihael Ankerst, Markus M. Breunig, [[Hans-Peter Kriegel]] and [[Jörg Sander]].<ref name=":0">{{cite journal | last1=Ankerst | first1=Mihael | last2=Breunig | first2=Markus M. | last3=Kriegel | first3=Hans-Peter | author-link3=Hans-Peter Kriegel | last4=Sander | first4=Jörg | author-link4=Jörg Sander| title=OPTICS: Ordering points to identify the clustering structure | journal=ACM SIGMOD Record | date=1999 | volume=28 | issue=2 | pages=49–60 | doi=10.1145/304181.304187 }}</ref>
+Its basic idea is similar to [[DBSCAN]],<ref>{{Cite conference
+ |author=Martin Ester |author-link=Martin Ester
+ |author2=Hans-Peter Kriegel |author2-link=Hans-Peter Kriegel |author3=Jörg Sander|author-link3=Jörg Sander |author4=Xiaowei Xu|author-link4=Xiaowei Xu
+ | title = A density-based algorithm for discovering clusters in large spatial databases with noise
+ |  pages = 226–231
+ |editor=Evangelos Simoudis |editor2=Jiawei Han |editor3=Usama M. Fayyad
+ | conference = Proceedings of the Second International Conference on Knowledge Discovery and Data Mining (KDD-96)
+ | publisher = [[AAAI Press]]
+ | year = 1996
+ | isbn = 1-57735-004-9 
+ | citeseerx = 10.1.1.71.1980
+ }}</ref> but it addresses one of DBSCAN's major weaknesses: the problem of detecting meaningful clusters in data of varying density. To do so, the points of the database are (linearly) ordered such that spatially closest points become neighbors in the ordering. Additionally, a special distance is stored for each point that represents the density that must be accepted for a cluster so that both points belong to the same cluster. This is represented as a [[dendrogram]].
+
+==Basic idea==
+Like [[DBSCAN]], OPTICS requires two parameters: {{mvar|&epsilon;}}, which describes the maximum distance (radius) to consider, and {{mvar|MinPts}}, describing the number of points required to form a cluster. A point {{mvar|p}} is a ''core point'' if at least {{mvar|MinPts}} points are found within its {{mvar|&epsilon;}}-neighborhood <math>N_\varepsilon(p)</math> (including point {{mvar|p}} itself). In contrast to [[DBSCAN]], OPTICS also considers points that are part of a more densely packed cluster, so each point is assigned a ''core distance'' that describes the distance to the {{mvar|MinPts}}th closest point:
+
+<!-- beware of line lengths for small screens -->
+:<math>\text{core-dist}_\mathit{\varepsilon,MinPts}(p)=
+\begin{cases}
+\text{UNDEFINED} & \text{if } |N_\varepsilon(p)| < \mathit{MinPts}\\ 
+\mathit{MinPts}\text{-th smallest distance in } N_\varepsilon(p) & \text{otherwise}
+\end{cases}</math>
+
+The ''reachability-distance'' of another point {{mvar|o}} from a point {{mvar|p}} is either the distance between {{mvar|o}} and {{mvar|p}}, or the core distance of {{mvar|p}}, whichever is bigger:
+
+<!-- beware of line lengths for small screens -->
+:<math>\text{reachability-dist}_\mathit{\varepsilon,MinPts}(o,p) = 
+\begin{cases}
+\text{UNDEFINED} & \text{if } |N_\varepsilon(p)| < \mathit{MinPts}\\ 
+\max(\text{core-dist}_\mathit{\varepsilon,MinPts}(p), \text{dist}(p,o)) & \text{otherwise}
+\end{cases}</math>
+
+If {{mvar|p}} and {{mvar|o}} are nearest neighbors, this is the <math>\varepsilon' < \varepsilon</math> we need to assume to have {{mvar|p}} and {{mvar|o}} belong to the same cluster.
+
+Both core-distance and reachability-distance are undefined if no sufficiently dense cluster (w.r.t. {{mvar|&epsilon;}}) is available. Given a sufficiently large {{mvar|&epsilon;}}, this never happens, but then every {{mvar|&epsilon;}}-neighborhood query returns the entire database, resulting in <math>O(n^2)</math> runtime. Hence, the {{mvar|&epsilon;}} parameter is required to cut off the density of clusters that are no longer interesting, and to speed up the algorithm.
+
+The parameter {{mvar|&epsilon;}} is, strictly speaking, not necessary. It can simply be set to the maximum possible value. When a spatial index is available, however, it does play a practical role with regards to complexity. OPTICS abstracts from DBSCAN by removing this parameter, at least to the extent of only having to give the maximum value.
+
+==Pseudocode==
+The basic approach of OPTICS is similar to [[DBSCAN]], but instead of maintaining known, but so far unprocessed cluster members in a set, they are maintained in a [[priority queue]] (e.g. using an indexed [[Heap (data structure)|heap]]).
+
+ '''function''' OPTICS(DB, ε, MinPts) '''is'''
+     '''for each''' point p of DB '''do'''
+         p.reachability-distance = UNDEFINED
+     '''for each''' unprocessed point p of DB '''do'''
+         N = getNeighbors(p, ε)
+         mark p as processed
+         output p to the ordered list
+         '''if''' core-distance(p, ε, MinPts) != UNDEFINED '''then'''
+             Seeds = empty priority queue
+             update(N, p, Seeds, ε, MinPts)
+             '''for each''' next q in Seeds '''do'''
+                 N' = getNeighbors(q, ε)
+                 mark q as processed
+                 output q to the ordered list
+                 '''if''' core-distance(q, ε, MinPts) != UNDEFINED '''do'''
+                     update(N', q, Seeds, ε, MinPts)
+
+In update(), the priority queue Seeds is updated with the <math>\varepsilon</math>-neighborhood of <math>p</math> and <math>q</math>, respectively:
+
+ '''function''' update(N, p, Seeds, ε, MinPts) '''is'''
+     coredist = core-distance(p, ε, MinPts)
+     '''for each''' o in N
+         '''if''' o is not processed '''then'''
+             new-reach-dist = max(coredist, dist(p,o))
+             '''if''' o.reachability-distance == UNDEFINED '''then''' // o is not in Seeds
+                 o.reachability-distance = new-reach-dist
+                 Seeds.insert(o, new-reach-dist)
+             '''else'''               // o in Seeds, check for improvement
+                 '''if''' new-reach-dist < o.reachability-distance '''then'''
+                     o.reachability-distance = new-reach-dist
+                     Seeds.move-up(o, new-reach-dist)
+
+OPTICS hence outputs the points in a particular ordering, annotated with their smallest reachability distance (in the original algorithm, the core distance is also exported, but this is not required for further processing).
+
+==Extracting the clusters==
+[[File:OPTICS.svg]]
+
+Using a ''reachability-plot'' (a special kind of [[dendrogram]]), the hierarchical structure of the clusters can be obtained easily. It is a 2D plot, with the ordering of the points as processed by OPTICS on the x-axis and the reachability distance on the y-axis. Since points belonging to a cluster have a low reachability distance to their nearest neighbor, the clusters show up as valleys in the reachability plot. The deeper the valley, the denser the cluster.
+
+The image above illustrates this concept. In its upper left area, a synthetic example data set is shown. The upper right part visualizes the [[spanning tree]] produced by OPTICS, and the lower part shows the reachability plot as computed by OPTICS. Colors in this plot are labels, and not computed by the algorithm; but it is well visible how the valleys in the plot correspond to the clusters in above data set. The yellow points in this image are considered noise, and no valley is found in their reachability plot. They are usually not assigned to clusters, except the omnipresent "all data" cluster in a hierarchical result.
+
+Extracting clusters from this plot can be done manually by selecting ranges on the x-axis after visual inspection, by selecting a threshold on the y-axis (the result is then similar to a DBSCAN clustering result with the same <math>\varepsilon</math> and {{not a typo|minPts}} parameters; here a value of 0.1 may yield good results), or by different algorithms that try to detect the valleys by steepness, knee detection, or local maxima. A range of the plot beginning with a steep descent and ending with a steep ascent is considered a valley, and corresponds to a contiguous area of high density. Additional care must be taken to the last points in a valley to assign them to the inner or outer cluster, this can be achieved by considering the predecessor.<ref>{{Cite conference |last1=Schubert |first1=Erich | author-link1=Erich Schubert|last2=Gertz |first2=Michael |date=2018-08-22 |title=Improving the Cluster Structure Extracted from OPTICS Plots |url=http://ceur-ws.org/Vol-2191/paper37.pdf |conference=Lernen, Wissen, Daten, Analysen (LWDA 2018) |volume=CEUR-WS 2191 |pages=318–329 |via=CEUR-WS}}</ref> Clusterings obtained this way usually are [[hierarchical clustering|hierarchical]], and cannot be achieved by a single DBSCAN run.
+
+==Complexity==
+Like [[DBSCAN]], OPTICS processes each point once, and performs one [[fixed-radius near neighbors|<math>\varepsilon</math>-neighborhood query]] during this processing. Given a [[spatial index]] that grants a neighborhood query in <math>O(\log n)</math> runtime, an overall runtime of <math>O(n \cdot \log n)</math> is obtained. The worst case however is <math>O(n^2)</math>, as with DBSCAN. The authors of the original OPTICS paper report an actual constant slowdown factor of 1.6 compared to DBSCAN. Note that the value of <math>\varepsilon</math> might heavily influence the cost of the algorithm, since a value too large might raise the cost of a neighborhood query to linear complexity.
+
+In particular, choosing <math>\varepsilon > \max_{x,y} d(x,y)</math> (larger than the maximum distance in the data set) is possible, but leads to quadratic complexity, since every neighborhood query returns the full data set. Even when no spatial index is available, this comes at additional cost in managing the heap. Therefore, <math>\varepsilon</math> should be chosen appropriately for the data set.
+
+==Extensions==
+OPTICS-OF<ref>{{Cite book
+ |author=Markus M. Breunig |author2=Hans-Peter Kriegel |author2-link=Hans-Peter Kriegel |author3=Raymond T. Ng |author4=Jörg Sander|author-link4=Jörg Sander
+ | chapter = OPTICS-OF: Identifying Local Outliers
+ | pages = 262–270
+ | title = Principles of Data Mining and Knowledge Discovery
+ | volume = 1704
+ | publisher = [[Springer-Verlag]]
+ | year = 1999
+ | isbn = 978-3-540-66490-1 
+ | doi = 10.1007/b72280
+ | chapter-url = http://springerlink.metapress.com/content/76bx6413gqb4tvta/
+| series = Lecture Notes in Computer Science
+ |s2cid=27352458 |url=https://lirias.kuleuven.be/handle/123456789/125270 }}</ref> is an [[anomaly detection|outlier detection]] algorithm based on OPTICS. The main use is the extraction of outliers from an existing run of OPTICS at low cost compared to using a different outlier detection method. The better known version [[local outlier factor|LOF]] is based on the same concepts.
+
+DeLi-Clu,<ref>{{cite conference
+ | last1 = Achtert | first1 = Elke
+ | last2 = Böhm | first2 = Christian
+ | last3 = Kröger | first3 = Peer
+ | editor1-last = Ng | editor1-first = Wee Keong
+ | editor2-last = Kitsuregawa | editor2-first = Masaru
+ | editor3-last = Li | editor3-first = Jianzhong
+ | editor4-last = Chang | editor4-first = Kuiyu
+ | contribution = DeLi-Clu: Boosting Robustness, Completeness, Usability, and Efficiency of Hierarchical Clustering by a Closest Pair Ranking
+ | doi = 10.1007/11731139_16
+ | pages = 119–128
+ | publisher = Springer
+ | series = Lecture Notes in Computer Science
+ | title = Advances in Knowledge Discovery and Data Mining, 10th Pacific-Asia Conference, PAKDD 2006, Singapore, April 9-12, 2006, Proceedings
+ | volume = 3918
+ | year = 2006| isbn = 978-3-540-33206-0
+ }}</ref> Density-Link-Clustering combines ideas from [[single-linkage clustering]] and OPTICS, eliminating the <math>\varepsilon</math> parameter and offering performance improvements over OPTICS.
+
+HiSC<ref>{{cite conference
+ | last1 = Achtert | first1 = Elke
+ | last2 = Böhm | first2 = Christian
+ | last3 = Kriegel | first3 = Hans-Peter | author-link3=Hans-Peter Kriegel
+ | last4 = Kröger | first4 = Peer
+ | last5 = Müller-Gorman | first5 = Ina
+ | last6 = Zimek | first6 = Arthur | author-link6=Arthur Zimek
+ | editor1-last = Fürnkranz | editor1-first = Johannes
+ | editor2-last = Scheffer | editor2-first = Tobias
+ | editor3-last = Spiliopoulou | editor3-first = Myra
+ | contribution = Finding Hierarchies of Subspace Clusters
+ | doi = 10.1007/11871637_42
+ | pages = 446–453
+ | publisher = Springer
+ | series = Lecture Notes in Computer Science
+ | title = Knowledge Discovery in Databases: PKDD 2006, 10th European Conference on Principles and Practice of Knowledge Discovery in Databases, Berlin, Germany, September 18-22, 2006, Proceedings
+ | volume = 4213
+ | year = 2006| doi-access = free
+ | isbn = 978-3-540-45374-1
+ }}</ref> is a hierarchical [[subspace clustering]] (axis-parallel) method based on OPTICS.
+
+HiCO<ref>{{Cite book| doi = 10.1109/SSDBM.2006.35| isbn = 978-0-7695-2590-7| year = 2006| last1 = Achtert | first1 = E.| last2 = Böhm | first2 = C.| last3 = Kröger | first3 = P.| last4 = Zimek | first4 = A.| author-link4=Arthur Zimek|title = 18th International Conference on Scientific and Statistical Database Management (SSDBM'06)| chapter = Mining Hierarchies of Correlation Clusters| pages = 119–128| s2cid = 2679909}}</ref> is a hierarchical [[correlation clustering]] algorithm based on OPTICS.
+
+DiSH<ref>{{cite conference
+ | last1 = Achtert | first1 = Elke
+ | last2 = Böhm | first2 = Christian
+ | last3 = Kriegel | first3 = Hans-Peter | author-link3=Hans-Peter Kriegel
+ | last4 = Kröger | first4 = Peer
+ | last5 = Müller-Gorman | first5 = Ina
+ | last6 = Zimek | first6 = Arthur | author-link6=Arthur Zimek
+ | editor1-last = Ramamohanarao | editor1-first = Kotagiri
+ | editor2-last = Krishna | editor2-first = P. Radha
+ | editor3-last = Mohania | editor3-first = Mukesh K.
+ | editor4-last = Nantajeewarawat | editor4-first = Ekawit
+ | contribution = Detection and Visualization of Subspace Cluster Hierarchies
+ | doi = 10.1007/978-3-540-71703-4_15
+ | pages = 152–163
+ | publisher = Springer
+ | series = Lecture Notes in Computer Science
+ | title = Advances in Databases: Concepts, Systems and Applications, 12th International Conference on Database Systems for Advanced Applications, DASFAA 2007, Bangkok, Thailand, April 9-12, 2007, Proceedings
+ | volume = 4443
+ | year = 2007| isbn = 978-3-540-71702-7
+ }}</ref> is an improvement over HiSC that can find more complex hierarchies.
+
+FOPTICS<ref>{{cite book | last1=Schneider | first1=Johannes | last2=Vlachos | first2=Michail | title=Proceedings of the 22nd ACM international conference on Information & Knowledge Management | chapter=Fast parameterless density-based clustering via random projections | date=2013 | pages=861–866 | doi=10.1145/2505515.2505590 | isbn=978-1-4503-2263-8 }}</ref> is a faster implementation using random projections.
+
+HDBSCAN*<ref>{{cite journal|last1=Campello|first1=Ricardo J. G. B.|last2=Moulavi|first2=Davoud|last3=Zimek|first3=Arthur|author-link3=Arthur Zimek|last4=Sander|first4=Jörg|author-link4=Jörg Sander|title=Hierarchical Density Estimates for Data Clustering, Visualization, and Outlier Detection|journal=ACM Transactions on Knowledge Discovery from Data|date=22 July 2015|volume=10|issue=1|pages=1–51|doi=10.1145/2733381|s2cid=2887636 }}</ref> is based on a refinement of DBSCAN, excluding border-points from the clusters and thus following more strictly the basic definition of density-levels by Hartigan.<ref>{{cite book|author=J.A. Hartigan|title=Clustering algorithms |publisher=John Wiley & Sons|year=1975}}</ref>
+
+The OPTICS Cordillera<ref>{{cite journal|last1=Rusch|first1=Thomas|last2=Hornik|first2=Kurt|last3=Mair|first3=Patrick|title=Assessing and Quantifying Clusteredness: The OPTICS Cordillera|journal=Journal of Computational and Graphical Statistics|date=2018|volume=27|issue=1|pages=220–233|doi=10.1080/10618600.2017.1349664|doi-access=free}}</ref> is a descriptive [[Scagnostics]] measure of how clustered a data set is. It uses OPTICS to create a dendrogram and then aggregates the dendrogram information to a measure of clusteredness that lies between 0 (no clusteredness) and 1 (maximal clusteredness).
+
+==Availability==
+Java implementations of OPTICS, OPTICS-OF, DeLi-Clu, HiSC, HiCO and DiSH are available in the [[ELKI|ELKI data mining framework]] (with index acceleration for several distance functions, and with automatic cluster extraction using the &xi; extraction method). Other Java implementations include the [[Weka (machine learning)|Weka]] extension (no support for &xi; cluster extraction).
+
+The [[GNU R|R]] package "dbscan" includes a C++ implementation of OPTICS (with both traditional dbscan-like and &xi; cluster extraction) using a [[k-d tree]] for index acceleration for Euclidean distance only.
+
+Python implementations of OPTICS are available in the [https://pyclustering.github.io/ PyClustering] library and in [[scikit-learn]]. HDBSCAN* is available in the [https://hdbscan.readthedocs.io/ hdbscan] library.
+
+==References==
+{{Reflist}}
+
+[[Category:Cluster analysis algorithms]]

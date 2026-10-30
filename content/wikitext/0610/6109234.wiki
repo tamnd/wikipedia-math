@@ -1,0 +1,120 @@
+<!-- wikipedia: en
+     page: 6109234
+     title: CryptGenRandom
+     revision: 1362684736
+     timestamp: 2026-07-05T16:23:55Z
+     history: https://en.wikipedia.org/w/index.php?curid=6109234&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1362684736 -->
+{{Short description|Cryptographic algorithm for random number generation}}
+'''CryptGenRandom''' is a [[CSPRNG|cryptographically secure pseudorandom number generator]] function that is included in [[Microsoft CryptoAPI]]. In [[Win32]] programs, Microsoft recommended its use anywhere random number generation is needed (it has since been replaced by '''BCryptGenRandom''', see below). The [[kernel32]] equivalent is '''RtlGenRandom'''.
+
+A 2007 paper from Hebrew University suggested security problems in the [[Windows 2000]] implementation of [[CryptGenRandom]] (assuming the attacker has control of the machine). Microsoft later acknowledged that the same problems exist in [[Windows XP]], but not in [[Windows Vista|Vista]]. Microsoft released a fix for the bug with Windows XP Service Pack 3 in mid-2008.<ref>{{cite web|url=http://www.computerworld.com/action/article.do?command=viewArticleBasic&articleId=9048438|title=Microsoft confirms that XP contains random number generator bug|archive-url=https://web.archive.org/web/20080622122347/http://www.computerworld.com/action/article.do?command=viewArticleBasic&articleId=9048438|archive-date=2008-06-22}}</ref>
+
+CryptGenRandom is deprecated as it belongs to the deprecated Windows CryptoAPI. The modern Cryptography API: Next Generation (CNG) replacement is '''BCryptGenRandom''' (and the underlying functions ProcessPrng and SystemPrng).<ref>[https://docs.microsoft.com/en-us/windows/desktop/api/wincrypt/nf-wincrypt-cryptgenrandom CryptGenRandom Function (Windows)] "Important:  This API is deprecated. New and existing software should start using Cryptography Next Generation APIs. Microsoft may remove this API in future releases." (This notice applies to all of CryptoAPI.)</ref>
+
+==Background==
+The [[Win32]] [[API]] includes comprehensive support for cryptography through the [[Microsoft CryptoAPI]], a set of cryptographic primitives provided by Microsoft for use in Windows applications. Windows technologies such as [[Transport Layer Security|TLS]] support (via the [[Security Support Provider Interface#Providers|Schannel]] API) and [[code signing]] rely on these primitives, which in turn rely on a [[CSPRNG|cryptographically secure pseudorandom number generator]] (CSPRNG). {{code|CryptGenRandom}} is the standard CSPRNG supplied with the Microsoft CryptoAPI.
+
+==Method of operation==
+
+=== Before Windows Vista ===
+Microsoft-provided [[cryptography]] providers share the same implementation of {{code|CryptGenRandom}}, currently based on an internal [[function (computer science)|function]] called {{code|RtlGenRandom}}.<ref name="rtlgenrandom">{{cite web |title=RtlGenRandom function (ntsecapi.h) |url=https://learn.microsoft.com/en-us/windows/win32/api/ntsecapi/nf-ntsecapi-rtlgenrandom |website=Microsoft Learn |date=22 February 2024 |publisher=Microsoft |access-date=7 November 2024}}</ref> Only a general outline of the [[algorithm]] had been published {{As of|2007|lc=on}}:
+
+<blockquote>
+[''RtlGenRandom''] generates as specified in [[Federal Information Processing Standard|FIPS]] 186-2 appendix 3.1 with [[SHA-1]] as the G function. And with entropy from:
+*The current process ID (GetCurrentProcessID).
+*The current thread ID (GetCurrentThreadID).
+*The tick count since boot time (GetTickCount).
+*The current time (GetLocalTime).
+*Various high-precision performance counters (QueryPerformanceCounter).
+*An [[MD4]] hash of the user's environment block, which includes username, computer name, and search path. <nowiki>[...]</nowiki>
+*High-precision internal CPU counters, such as RDTSC, RDMSR, RDPMC
+<nowiki>[</nowiki>''omitted: long lists of low-level system information fields and performance counters''<nowiki>]</nowiki>
+<ref>{{cite book | title=Writing Secure Code, Second Edition | year=2003 | isbn=0-7356-1722-8 | url-access=registration | url=https://archive.org/details/writingsecucod00howa | last1=Howard | first1=Michael | last2=Leblanc | first2=David | publisher=Pearson Education }}</ref>
+</blockquote>
+
+=== Windows Vista and above ===
+Microsoft has documented the implementation of the [[Windows 10]] random number generator in some detail, in a whitepaper published in 2019.<ref name="10white">{{cite web |last1=Ferguson |first1=Niels |title=The Windows 10 random number generation infrastructure |url=https://download.microsoft.com/download/1/c/9/1c9813b8-089c-4fef-b2ad-ad80e79403ba/Whitepaper%20-%20The%20Windows%2010%20random%20number%20generation%20infrastructure.pdf |website=download.microsoft.com |date=October 2019}}</ref> In Windows 10:
+* There exists a hierarchy of random number generators. The kernel has a "Root" PRNG, from which all randomness is ultimately derived. The kernel then uses the Root PRNG to seed one PRNG per logical processor (so the PRNG state is [[thread-local]] and requires no locking). When a process launches, it requests random bytes from the kernel per-processor PRNG to seed its own Process PRNG. It then uses the Process PRNG to also seed one buffered PRNG per logical processor.<ref name="10white"/>
+* All userspace calls to fetch randomness, be it {{code|CryptGenRandom}} or {{code|RtlGenRandom}}, ultimately fall to {{code|ProcessPrng}}, which returns bytes from the process's per-processor PRNG. The PRNG always uses the AES-CTR-DRBG algorithm as specified by FIPS SP800-90. Although {{code|BCryptGenRandom}} accepts requests for older algorithms for [[backward compatibility]], it only ever return random numbers from the per-processor PRNG.<ref name="10white"/>{{rp|8}}
+** AES-CTR-DRBG, instead of FIPS 186, has been the default since Windows Vista and [[Windows Server 2008]].<ref name=CNGid/>
+** The removal of other algorithms happened in Windows 10.<ref name=CNGid>{{cite web |title=CNG Algorithm Identifiers (Bcrypt.h) - Win32 apps |url=https://learn.microsoft.com/en-us/windows/win32/seccng/cng-algorithm-identifiers |website=learn.microsoft.com |language=en-us |date=13 April 2023 |quote=Note: Beginning with Windows Vista with SP1 and Windows Server 2008, the random number generator is based on the AES counter mode specified in the NIST SP 800-90 standard. [...] Windows 10: Beginning with Windows 10, the dual elliptic curve random number generator algorithm has been removed. Existing uses of this algorithm will continue to work; however, the random number generator is based on the AES counter mode specified in the NIST SP 800-90 standard.}}</ref>
+* The root RNG is periodically reseeded from the entropy pools.<ref name="10white"/>{{rp|9}} At bootup when very little entropy is available, a special "initial seeding" procedure provides the seed from seed files, external entropy, [[Trusted Platform Module|TPM]] randomness, [[RDRAND]]/RDSEED instructions, ACPI-OEM0 table, [[UEFI]] entropy, and the current time.<ref name="10white"/>{{rp|11}}
+* The kernel maintains multiple entropy pools. Multiple entropy sources append into pools, the main one being interrupt timing.<ref name="10white"/>{{rp|12}} When a pool is used, the SHA-512 hash of its contents is taken as the output.<ref name="10white"/>{{rp|10}} Windows does not estimate entropy.<ref name="10white"/>{{rp|16}}
+
+==Security==
+The security of a cryptosystem's CSPRNG is crucial because it is the origin for dynamic key material. Keys needed "on the fly", such as the TLS [[Session key|session keys]] that protect [[HTTPS]] connections, originate from CSPRNGs. If these pseudorandom numbers are predictable, session keys are predictable as well. Because {{code|CryptGenRandom}} is the de facto standard CSPRNG in Win32 environments, its security is critical for Windows users.
+
+===Cryptanalysis===
+
+A [[cryptanalysis]] of CryptGenRandom, published in November 2007 by Leo Dorrendorf and others from the [[Hebrew University of Jerusalem]] and [[University of Haifa]], found significant weaknesses in the [[Windows 2000]] implementation of the algorithm.<ref>{{cite web|url=http://eprint.iacr.org/2007/419.pdf|title=Cryptanalysis of the Random Number Generator of the Windows Operating System|first=Leo|last=Dorrendorf|author2=Zvi Gutterman|author3=Benny Pinkas|access-date=2007-11-12|archive-url=https://web.archive.org/web/20120518140455/http://eprint.iacr.org/2007/419.pdf|archive-date=2012-05-18|url-status=dead}}</ref>
+
+To take advantage of the vulnerability, an attacker would first need to compromise the program running the random number generator. The weaknesses in the paper all depend on an attacker siphoning the state bits out of the generator. An attacker in a position to carry out this attack would typically already be in a position to defeat any random number generator (for instance, they can simply sniff the outputs of the generator, or fix them in memory to known values). However, the Hebrew University team notes that an attacker only need steal the state bits once in order to persistently violate the security of a CryptGenRandom instance. They can also use the information they glean to determine past random numbers that were generated, potentially compromising information, such as credit card numbers, already sent.
+
+The paper's attacks are based on the fact that CryptGenRandom uses the [[stream cipher]] [[RC4]], which can be run backwards once its state is known. They also take advantage of the fact that CryptGenRandom runs in [[user mode]], allowing anyone who gains access to the operating system at user level, for example by exploiting a [[buffer overflow]], to get CryptGenRandom's state information for that process. Finally, CryptGenRandom refreshes its seed from [[information entropy|entropy]] infrequently. This problem is aggravated by the fact that each Win32 process has its own instance of CryptGenRandom state; while this means that a compromise of one process does not transitively compromise every other process, it may also increase the longevity of any successful break.
+
+Because the details of the CryptGenRandom algorithm were not public at the time, Dorrendorf's team used [[reverse engineering]] tools to discern how the algorithm works. Their paper is the first published record of how the Windows cryptographic random number generator operates{{Citation needed|date=March 2015}}.
+
+===Common Criteria===
+Windows 2000, XP and 2003 have all successfully undergone EAL4+ evaluations, including the CryptGenRandom() and FIPSGenRandom() implementations.  The Security Target documentation is available at [https://web.archive.org/web/20060718074701/http://www.commoncriteriaportal.org/ the Common Criteria Portal], and indicates compliance with the EAL4 requirements. Few conclusions can be drawn about the security of the algorithm as a result; EAL4 measures products against best practices and stated security objectives, but rarely involves in-depth cryptanalysis.
+
+===FIPS validation===
+{{cleanup section|reason=Incomplete list; just going to the [https://csrc.nist.rip/groups/STM/cavp/documents/rng/rngval.html rngval page] and Ctrl-F for "Microsoft Corp" is easier. Do we really want to complete the list? It's boring and repetitive, and all it does is show FIPS 186-2 conformance.|date=March 2024}}
+Microsoft has obtained validation of its RNG implementations in the following environments:
+* Windows Vista and Server 2008 RNG Implementation (certificate 435)<ref name=nistrng/>
+* Windows Vista RNG implementations (certificate 321)<ref name=nistrng>{{cite web|title=RNG Validation List|url=https://csrc.nist.rip/groups/STM/cavp/documents/rng/rngval.html|publisher=NIST Computer Security Division|accessdate=20 March 2024}}</ref>
+* Windows 2003 Enhanced Cryptographic Provider (rsaenh.dll) (certificate 316)<ref name=nistrng />
+* Windows 2003 Enhanced DSS and Diffie-Hellman Cryptographic Provider (dssenh.dll) (certificate 314)<ref name=nistrng />
+* Windows 2003 Kernel Mode Cryptographic Module (fips.sys) (certificate 313)<ref name=nistrng />
+* [[Windows CE]] and [[Windows Mobile]] Enhanced Cryptographic Provider (rsaenh.dll) (certificate 292)<ref name=nistrng />
+* Windows CE and Windows Mobile Enhanced Cryptographic Provider (rsaenh.dll) (certificate 286)<ref name=nistrng />
+* Windows CE Enhanced Cryptographic Provider (rsaenh.dll) (certificate 66)<ref name=nistrng />
+
+These tests are "designed to test conformance to the various approved RNG specifications rather
+than provide a measure of a product’s security. [...] Thus, validation should not be interpreted as an evaluation or
+endorsement of overall product security." Few conclusions can be drawn about the security of the algorithm as a result; FIPS evaluations do not necessarily inspect source code or evaluate the way RNG seeds are generated.<ref name=rngvs>{{cite web|title=The Random Number Generator Validation System (RNGVS)|url=http://csrc.nist.gov/groups/STM/cavp/documents/rng/RNGVS.pdf|publisher=National Institute of Standards and Technology Computer Security Division|accessdate=18 June 2013|date=31 January 2005|archive-url=https://web.archive.org/web/20130224022101/http://csrc.nist.gov/groups/STM/cavp/documents/rng/RNGVS.pdf|archive-date=24 February 2013|url-status=dead}}</ref>
+
+The RNG validation list carries the following notice: "As of January 1, 2016, in accordance with the SP800-131A Revision 1 Transitions: Recommendation for Transitioning the Use of Cryptographic Algorithms and Key Lengths, the use of RNGs specified in FIPS 186-2, [X9.31], and the 1998 version of [X9.62] is no longer approved. This list is provided for historical purposes only."<ref>{{cite web |title=Cryptographic Algorithm Validation Program: rng Validation List |url=https://csrc.nist.rip/Projects/Cryptographic-Algorithm-Validation-Program/Validation/Validation-List/RNG}}</ref>
+
+==Alternatives==
+
+===API level===
+Windows developers have several alternative means of accessing the CryptGenRandom functionality; these alternatives invoke the same algorithm and share the same security characteristics, but may have other advantages.
+
+====Using RtlGenRandom====
+If backwards compatibility up to Windows XP is required for your program, the Windows API function {{code|RtlGenRandom}} (which resides in {{code|advapi32.dll}}<ref name="rtlgenrandom" />) can be called to generate secure random data, as shown below. If this is not an issue, the program should use the newer {{code|BCryptGenRandom}} call instead. 
+<blockquote>
+Historically, we always told developers not to use functions such as rand to generate keys, nonces and passwords, rather they should use functions like CryptGenRandom, which creates cryptographically secure random numbers. The problem with CryptGenRandom is you need to pull in CryptoAPI (CryptAcquireContext and such) which is fine if you're using other crypto functions.
+
+On a default Windows XP and later install, CryptGenRandom calls into a function named ADVAPI32!RtlGenRandom, which does not require you load all the CryptAPI stuff. In fact, the new [[Visual Studio 2005|Whidbey]] CRT function, rand_s calls RtlGenRandom.<ref name="rand_s" />
+</blockquote>
+
+====Using RNGCryptoServiceProvider====
+Programmers using [[.NET Framework|.NET]] should use the RNGCryptoServiceProvider Class.<ref>{{Cite web |url=http://jis.mit.edu/pipermail/saag/2004q3.txt |title=Archived copy |access-date=2007-08-27 |archive-url=https://web.archive.org/web/20060908135924/http://jis.mit.edu/pipermail/saag/2004q3.txt |archive-date=2006-09-08 |url-status=dead }}</ref>
+
+====Using Cryptography API: Next Generation (CNG)====
+The CNG <ref>[https://docs.microsoft.com/en-us/windows/desktop/SecCNG/cng-portal Crypto API Next Generation (Windows)]</ref> is a long term replacement for the deprecated Crypto API. It provides an equivalent function '''BCryptGenRandom'''<ref>[https://docs.microsoft.com/en-us/windows/desktop/api/Bcrypt/nf-bcrypt-bcryptgenrandom BCryptGenRandom (Windows)]</ref> as well as dedicated functions for key generation.
+
+===Programming languages===
+*the Microsoft C library function {{code|rand_s}} uses {{code|RtlGenRandom}} to generate cryptographically secure random numbers.<ref name="rand_s">{{cite web |title=rand_s |url=https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/rand-s?view=msvc-170 |website=Microsoft Learn | date=2 December 2022 |publisher=Microsoft |access-date=7 November 2024}}</ref>
+*the [[Python (programming language)|Python]] function ''urandom'' in the ''os'' module, which uses [[/dev/urandom]] on [[Unix-like]] systems, calls CryptGenRandom on Windows systems.<ref>https://docs.python.org/2/library/os.html#os.urandom Python Library Reference, OS module</ref>
+*the {{code|SunMSCAPI}} [[Java Cryptography Architecture|JCA]] provider available with [[OpenJDK]] and Oracle distributions of the [[Java Runtime Environment|JRE]] on Windows provides a SecureRandom implementation with the algorithm name Windows-PRNG. This class forwards all queries for random or seed bytes as well as setting additional seed bytes to CryptGenRandom.<ref>http://docs.oracle.com/javase/8/docs/technotes/guides/security/SunProviders.html#SunMSCAPI Oracle Java SE 8 technical documentation, Sun Providers</ref>
+
+==See also==
+
+* [[Entropy-supplying system calls]] – the approximate equivalent of CryptGenRandom in [[OpenBSD]] and the [[Linux kernel]]
+* [[/dev/random]] – a randomness source in most [[Unix-like]] kernels
+* [[Random number generator attack]]
+
+==References==
+{{Reflist|30em}}
+
+==External links==
+* [https://www.microsoft.com/en-us/sharedsource/ Microsoft Shared Source licensing programs]
+
+[[Category:Cryptographic algorithms]]
+[[Category:Pseudorandom number generators]]
+[[Category:Cryptographically secure pseudorandom number generators]]
+[[Category:Microsoft application programming interfaces]]
+[[Category:Microsoft Windows security technology]]

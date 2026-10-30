@@ -1,0 +1,274 @@
+<!-- wikipedia: en
+     page: 30632997
+     title: MinHash
+     revision: 1371062713
+     timestamp: 2026-08-24T10:43:18Z
+     history: https://en.wikipedia.org/w/index.php?curid=30632997&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1371062713 -->
+{{Short description|Data mining technique}}
+In [[computer science]] and [[data mining]], '''MinHash''' (or the '''min-wise independent permutations''' [[locality sensitive hashing]] scheme) is a technique for quickly estimating how [[Similarity measure|similar]] two sets are. The scheme was published by [[Andrei Broder]] in a 1997 conference,<ref name="b97"/> and initially used in the [[AltaVista]] search engine to detect duplicate web pages and eliminate them from search results.<ref name="bcfm">{{citation
+ | last1 = Broder | first1 = Andrei Z. | author1-link = Andrei Broder
+ | last2 = Charikar | first2 = Moses
+ | last3 = Frieze | first3 = Alan M. | author3-link = Alan M. Frieze
+ | last4 = Mitzenmacher | first4 = Michael | author4-link = Michael Mitzenmacher
+ | contribution = Min-wise independent permutations
+ | doi = 10.1145/276698.276781
+ | location = New York, NY, USA
+ | pages = 327–336
+ | publisher = [[Association for Computing Machinery]]
+ | title = Proc. 30th ACM Symposium on Theory of Computing (STOC '98)
+ | year = 1998| title-link = Symposium on Theory of Computing | isbn = 978-0-89791-962-3 | s2cid = 465847 | doi-access = free}}.</ref> It has also been applied in large-scale [[Cluster analysis|clustering]] problems, such as [[document clustering|clustering documents]] by the similarity of their sets of words.<ref name="b97">{{citation
+ | last = Broder
+ | first = Andrei Z.
+ | title = Proceedings. Compression and Complexity of SEQUENCES 1997 (Cat. No.97TB100171)
+ | year = 1998
+ | author-link = Andrei Broder
+ | contribution = On the resemblance and containment of documents
+ | doi = 10.1109/SEQUEN.1997.666900
+ | url = http://gatekeeper.dec.com/ftp/pub/dec/SRC/publications/broder/positano-final-wpnums.pdf
+ | pages = 21–29
+ | publisher = [[IEEE]]
+ | isbn = 978-0-8186-8132-5
+ | s2cid = 11748509
+ | access-date = 2014-01-18
+ | archive-url = https://web.archive.org/web/20150131043133/http://gatekeeper.dec.com/ftp/pub/dec/SRC/publications/broder/positano-final-wpnums.pdf
+ | archive-date = 2015-01-31
+ }}.</ref>
+
+==Jaccard similarity and minimum hash values==
+The [[Jaccard index|Jaccard similarity coefficient]] is a commonly used indicator of the similarity between two sets. Let {{math|''U''}} be a set and {{math|''A''}} and {{math|''B''}} be subsets of {{math|''U''}}, then the Jaccard index is defined to be the ratio of the number of elements of their [[intersection (set theory)|intersection]] and the number of elements of their [[union (set theory)|union]]:
+:<math> J(A,B) = {{|A \cap B|}\over{|A \cup B|}}.</math>
+This value is 0 when the two sets are [[Disjoint sets|disjoint]], 1 when they are equal, and strictly between 0 and 1 otherwise. Two sets are more similar (i.e. have relatively more members in common) when their Jaccard index is closer to 1. The goal of MinHash is to estimate {{math|''J''(''A'',''B'')}} quickly, without explicitly computing the intersection and union.
+
+Let {{math|''h''}} be a [[hash function]] that maps the members of {{math|''U''}} to distinct integers, let {{math|''perm''}} be a random [[permutation]] of the elements of the set {{math|''U''}}, and for any subset {{math|''S''}} of {{math|''U''}} define {{math|''h''<sub>min</sub>(''S'')}} to be the minimal member of {{math|''S''}} with respect to {{math|''h'' ∘ ''perm''}}—that is, the member {{math|''x''}} of {{math|''S''}} with the minimum value of {{math|''h''(''perm''(''x''))}}. (In cases where the hash function used is assumed to have pseudo-random properties, the random permutation would not be used.)
+
+Now, applying {{math|''h''<sub>min</sub>}} to both {{math|''A''}} and {{math|''B''}}, and assuming no hash collisions, we see that the values are equal ({{math|1=''h''<sub>min</sub>(''A'') = ''h''<sub>min</sub>(''B'')}}) if and only if among all elements of <math>A\cup B</math>, the element with the minimum hash value lies in the intersection <math>A \cap B</math>. The probability of this being true is exactly the Jaccard index, therefore:
+:<math>\text{Pr}[ h_{\text{min}}(A) = h_{\text{min}}(B) ] = J(A,B),</math>
+
+That is, the [[probability]] that {{math|1=''h''<sub>min</sub>(''A'') = ''h''<sub>min</sub>(''B'')}} is true is equal to the similarity {{math|''J''(''A'',''B'')}}, assuming drawing {{math|''perm''}} from a uniform distribution. In other words, if {{math|''r''}} is the [[random variable]] that is one when {{math|1=''h''<sub>min</sub>(''A'') = ''h''<sub>min</sub>(''B'')}} and zero otherwise, then {{math|''r''}} is an [[Bias of an estimator|unbiased estimator]] of {{math|''J''(''A'',''B'')}}. {{math|''r''}} has too high a [[variance]] to be a useful estimator for the Jaccard similarity on its own, because <math>r</math> is always zero or one. The idea of the MinHash scheme is to reduce this variance by averaging together several variables constructed in the same way.
+
+==Algorithm==
+
+===Variant with many hash functions===
+The simplest version of the minhash scheme uses {{math|''k''}} different hash functions, where {{math|''k''}} is a fixed integer parameter, and represents each set {{math|''S''}} by the {{math|''k''}} values of {{math|''h''<sub>min</sub>(''S'')}} for these {{math|''k''}} functions.
+
+To estimate {{math|''J''(''A'',''B'')}} using this version of the scheme, let {{math|''y''}} be the number of hash functions for which {{math|1=''h''<sub>min</sub>(''A'') = ''h''<sub>min</sub>(''B'')}}, and use {{math|''y''/''k''}} as the estimate. This estimate is the average of {{math|''k''}} different 0-1 random variables, each of which is one when {{math|1=''h''<sub>min</sub>(''A'') = ''h''<sub>min</sub>(''B'')}} and zero otherwise, and each of which is an unbiased estimator of {{math|''J''(''A'',''B'')}}. Therefore, their average is also an unbiased estimator, and by standard deviation for sums of 0-1 random variables, its expected error is {{math|O(1/{{sqrt|''k''}})}}.<ref>{{citation|first=Sergey|last=Vassilvitskii|year=2011|title=COMS 6998-12: Dealing with Massive Data (lecture notes, Columbia university)|url=https://www.cs.columbia.edu/~coms699812/lecture1.pdf|archive-url=https://web.archive.org/web/20181024161246/https://www.cs.columbia.edu/~coms699812/lecture1.pdf|archive-date=2018-10-24}}.</ref>
+
+Therefore, for any constant {{math|&epsilon; > 0}} there is a constant {{math|1=''k'' = O(1/&epsilon;<sup>2</sup>)}} such that the expected error of the estimate is at most&nbsp;{{math|&epsilon;}}. For example, 400 hashes would be required to estimate {{math|''J''(''A'',''B'')}} with an expected error less than or equal to .05.
+
+===Variant with a single hash function===
+It may be computationally expensive to compute multiple hash functions, but a related version of MinHash scheme avoids this penalty by using only a single hash function and uses it to select multiple values from each set rather than selecting only a single minimum value per hash function. Let {{math|''h''}} be a hash function, and let {{math|''k''}} be a fixed integer. If {{math|''S''}} is any set of {{math|''k''}} or more values in the domain of {{math|''h''}},
+define {{math|''h''<sub>(''k'')</sub>(''S'')}} to be the subset of the {{math|''k''}} members of {{math|''S''}} that have the smallest values of {{math|''h''}}. This subset {{math|''h''<sub>(''k'')</sub>(''S'')}} is used as a ''signature'' for the set {{math|''S''}}, and the similarity of any two sets is estimated by comparing their signatures.
+
+Specifically, let ''A'' and ''B'' be any two sets.
+Then {{math|1=''X'' = ''h''<sub>(''k'')</sub>(''h''<sub>(''k'')</sub>(''A'') &cup; ''h''<sub>(''k'')</sub>(''B'')) = ''h''<sub>(''k'')</sub>(''A'' &cup; ''B'')}} is a set of ''k'' elements of {{math|''A'' &cup; ''B''}}, and if ''h'' is a random function then any subset of ''k'' elements is equally likely to be chosen; that is, {{math|''X''}} is a [[simple random sample]] of {{math|''A'' &cup; ''B''}}. The subset {{math|1=''Y'' = ''X'' &cap; ''h''<sub>(''k'')</sub>(''A'') &cap; ''h''<sub>(''k'')</sub>(''B'')}} is the set of members of {{math|''X''}} that belong to the intersection {{math|''A'' &cap; ''B''}}. Therefore, |{{math|''Y''}}|/{{math|''k''}} is an unbiased estimator of {{math|''J''(''A'',''B'')}}. The difference between this estimator and the estimator produced by multiple hash functions is that {{math|''X''}} always has exactly {{math|''k''}} members, whereas the multiple hash functions may lead to a smaller number of sampled elements due to the possibility that two different hash functions may have the same minima. However, when {{math|''k''}} is small relative to the sizes of the sets, this difference is negligible.
+
+By standard [[Chernoff bound]]s for sampling without replacement, this estimator has expected error {{math|O(1/{{sqrt|''k''}})}}, matching the performance of the multiple-hash-function scheme.
+
+===Time analysis===
+The estimator {{math|&#124;''Y''&#124;/''k''}} can be computed in time {{math|O(''k'')}} from the two signatures of the given sets, in either variant of the scheme. Therefore, when {{math|&epsilon;}} and {{math|''k''}} are constants, the time to compute the estimated similarity from the signatures is also constant. The signature of each set can be computed in [[linear time]] on the size of the set, so when many pairwise similarities need to be estimated this method can lead to a substantial savings in running time compared to doing a full comparison of the members of each set. Specifically, for set size {{math|''n''}} the many hash variant takes {{math|O(''n'' ''k'')}} time. The single hash variant is generally faster, requiring {{math|O(''n'')}} time to maintain the queue of minimum hash values assuming {{math|''n'' >> ''k''}}.<ref name="b97" />
+
+==Incorporating weights==
+A variety of techniques to introduce weights into the computation of MinHashes have been developed. The simplest extends it to integer weights.<ref>{{citation
+  | title = Near Duplicate Image Detection: min-Hash and tf-idf Weighting.
+  | last1 = Chum | first1 = Ondrej | last2 = Philbin | first2 = James | last3 = Zisserman | first3 = Andrew
+  | journal = BMVC
+  | volume = 810
+  | pages = 812–815
+  | url = http://www.bmva.org/bmvc/2008/papers/119.pdf
+  | year = 2008}}</ref>
+Extend our hash function {{mvar|h}} to accept both a set member and an integer, then generate multiple hashes for each item, according to its weight. If item {{mvar|i}} occurs {{mvar|n}} times, generate hashes <math>h(i,1), h(i,2), \ldots, h(i,n)</math>. Run the original algorithm on this expanded set of hashes. Doing so yields the [[Jaccard index#Weighted Jaccard similarity and distance|weighted Jaccard Index]] as the collision probability.
+
+: <math>J_\mathcal{W}(x,y) = \frac{\sum_i \min(x_i,y_i)}{\sum_i \max(x_i,y_i)}</math>
+
+Further extensions that achieve this collision probability on real weights with better runtime have been developed, one for dense data,<ref>{{cite arXiv
+  | title=Exact weighted minwise hashing in constant time
+  | eprint = 1602.08393
+  | last1 = Shrivastava | first1 = Anshumali
+  | year = 2016
+  | mode=cs2| class = cs.DS
+  }}</ref> and another for sparse data.<ref>{{Cite book| last1 = Ioffe | first1 = Sergey
+  | title = 2010 IEEE International Conference on Data Mining | chapter = Improved Consistent Sampling, Weighted Minhash and L1 Sketching | pages = 246–255
+  | url = https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/36928.pdf
+  | year = 2010| doi = 10.1109/ICDM.2010.80 | isbn = 978-1-4244-9131-5 | s2cid = 9970906 }}</ref>
+
+Another family of extensions use exponentially distributed hashes. A uniformly random hash between 0 and 1 can be converted to follow an exponential distribution by [[Inverse transform sampling|CDF inversion]]. This method exploits the many beautiful properties of the [[Exponential distribution#Distribution of the minimum of exponential random variables|minimum of a set of exponential variables]].
+
+: <math>H(x) = \underset{i}{\operatorname{arg\,min}} \frac{-\log(h(i))}{x_i}</math>
+
+This yields as its collision probability the [[Jaccard index#Probability Jaccard similarity and distance|probability Jaccard index]]<ref>{{cite book| last1 = Moulton | first1 = Ryan | title = 2018 IEEE International Conference on Data Mining (ICDM) | pages = 347–356 | last2 = Jiang | first2 = Yunjiang | chapter = Maximally Consistent Sampling and the Jaccard Index of Probability Distributions | year = 2018| arxiv=1809.04052 |mode=cs2| doi = 10.1109/ICDM.2018.00050 | isbn = 978-1-5386-9159-5 | s2cid = 49746072 }}</ref>
+
+: <math>J_\mathcal{P}(x,y) = \sum_{x_i\neq 0 \atop y_i \neq 0} \frac{1}{\sum_{j} \max\left(\frac{x_j}{x_i}, \frac{y_j}{y_i}\right)}</math>
+
+==Min-wise independent permutations==
+In order to implement the MinHash scheme as described above, one needs the hash function {{math|''h''}} to define a [[random permutation]] on {{math|''n''}} elements, where {{math|''n''}} is the total number of distinct elements in the union of all of the sets to be compared. But because there are {{math|''n''!}} different permutations, it would require {{math|&Omega;(''n'' log ''n'')}} bits just to specify a truly random permutation, an infeasibly large number for even moderate values of {{math|''n''}}. Because of this fact, by analogy to the theory of [[universal hashing]], there has been significant work on finding a family of permutations that is "min-wise independent", meaning that for any subset of the domain, any element is equally likely to be the minimum. It has been established that a min-wise independent family of permutations must include at least
+:<math>\operatorname{lcm}(1, 2, \cdots, n) \ge e^{n-o(n)}</math>
+different permutations, and therefore that it needs {{math|&Omega;(''n'')}} bits to specify a single permutation, still infeasibly large.<ref name="bcfm"/>
+
+===Practical min-wise independent hash functions===
+
+Because of the above impracticality, two variant notions of min-wise independence have been introduced: restricted min-wise independent permutations families, and approximate min-wise independent families.
+Restricted min-wise independence is the min-wise independence property restricted to certain sets of cardinality at most {{math|''k''}}.<ref>{{citation
+ | last1 = Matoušek | first1 = Jiří | author1-link = Jiří Matoušek (mathematician)
+ | last2 = Stojaković | first2 = Miloš
+ | doi = 10.1002/rsa.10101
+ | issue = 4
+ | journal = Random Structures and Algorithms
+ | pages = 397–408
+ | title = On restricted min-wise independence of permutations
+ | volume = 23
+ | year = 2003| s2cid = 1483449 }}.</ref>
+Approximate min-wise independence has at most a fixed probability {{math|&epsilon;}} of varying from full independence.<ref>{{citation
+ | last1 = Saks | first1 = M. | author1-link = Michael Saks (mathematician)
+ | last2 = Srinivasan | first2 = A.
+ | last3 = Zhou | first3 = S.
+ | last4 = Zuckerman | first4 = D.
+ | doi = 10.1016/S0020-0190(99)00163-5
+ | issue = 1–2
+ | journal = [[Information Processing Letters]]
+ | pages = 29–32
+ | title = Low discrepancy sets yield approximate min-wise independent permutation families
+ | volume = 73
+ | year = 2000}}.</ref>
+
+In 1999 [[Piotr Indyk]] proved<ref>Indyk, Piotr. "A small approximately min-wise independent family of hash functions." Journal of Algorithms 38.1 (2001): 84-90.</ref> that any [[K-independent_hashing|k-wise independent family of hash functions]] is also approximately min-wise independent for <math>k</math> large enough.
+In particular, there are constants <math>c,c'>0</math> such that if <math>k\ge c \log\tfrac{1}{\epsilon}</math>, then
+:<math>\Pr_{h\in \mathcal H}[h(x)<\min h(X)]=\frac{1}{|X|+1}(1\pm\epsilon),</math>
+for all sets <math>|X|\le \epsilon n c'</math> and <math>x \not\in X</math>.
+(Note, here <math>(1\pm\epsilon)</math> means the probability is at most a factor <math>1+\epsilon</math> too big, and at most <math>1-\epsilon</math> too small.)
+
+This guarantee is, among other things, sufficient to give the Jaccard bound required by the MinHash algorithm.
+That is, if <math>A</math> and <math>B</math> are sets, then
+:<math>\Pr_{h\in\mathcal H}[\min h(A) = \min h(B)] = \frac{|A\cap B|}{|A\cup B|}\pm\epsilon.</math>
+
+Since [[K-independent_hashing|k-wise independent hash functions]] can be specified using just <math>k\log n</math> bits, this approach is much more practical than using completely min-wise independent permutations.
+
+Another practical family of hash functions that give approximate min-wise independence is [[Tabulation hashing]].
+
+==Applications==
+The original applications for MinHash involved clustering and eliminating near-duplicates among web documents, represented as sets of the words occurring in those documents.<ref name="b97"/><ref name="bcfm"/><ref>{{cite book|last1=Manasse|first1=Mark|title=On the Efficient Determination of Most Near Neighbors: Horseshoes, Hand Grenades, Web Search, and Other Situations when Close is Close Enough|date=2012|publisher=Morgan & Claypool|isbn=978-1-60845-088-6|page=72}}</ref> Similar techniques have also been used for clustering and near-duplicate elimination for other types of data, such as images: in the case of image data, an image can be represented as a set of smaller subimages cropped from it, or as sets of more complex image feature descriptions.<ref>{{citation
+ | last1 = Chum | first1 = Ondřej
+ | last2 = Philbin | first2 = James
+ | last3 = Isard | first3 = Michael
+ | last4 = Zisserman | first4 = Andrew
+ | contribution = Scalable near identical image and shot detection
+ | doi = 10.1145/1282280.1282359
+ | title = Proceedings of the 6th ACM International Conference on Image and Cideo Retrieval (CIVR'07)
+ | pages = 549–556
+ | year = 2007| isbn = 978-1-59593-733-9
+ | s2cid = 3330908
+ }}; {{citation
+ | last1 = Chum | first1 = Ondřej
+ | last2 = Philbin | first2 = James
+ | last3 = Zisserman | first3 = Andrew
+ | contribution = Near duplicate image detection: min-hash and tf-idf weighting
+ | page = 4
+ | title = Proceedings of the British Machine Vision Conference
+ | url = http://www.bmva.org/bmvc/2008/papers/119.pdf
+ | volume = 3
+ | year = 2008}}.</ref>
+
+In [[data mining]], {{harvtxt|Cohen|Datar|Fujiwara|Gionis|2001}} use MinHash as a tool for [[association rule learning]]. Given a database in which each entry has multiple attributes (viewed as a [[Logical matrix|0–1 matrix]] with a row per database entry and a column per attribute) they use MinHash-based approximations to the Jaccard index to identify candidate pairs of attributes that frequently co-occur, and then compute the exact value of the index for only those pairs to determine the ones whose frequencies of co-occurrence are below a given strict threshold.<ref>{{citation
+ | last1 = Cohen | first1 = E. | author1-link = Edith Cohen
+ | last2 = Datar | first2 = M.
+ | last3 = Fujiwara | first3 = S.
+ | last4 = Gionis | first4 = A.
+ | last5 = Indyk | first5 = P. | author5-link = Piotr Indyk
+ | last6 = Motwani | first6 = R. | author6-link = Rajeev Motwani
+ | last7 = Ullman | first7 = J. D. | author7-link = Jeffrey Ullman
+ | last8 = Yang | first8 = C.
+ | doi = 10.1109/69.908981
+ | issue = 1
+ | journal = IEEE Transactions on Knowledge and Data Engineering
+ | pages = 64–78
+ | title = Finding interesting associations without support pruning
+ | volume = 13
+ | year = 2001| bibcode = 2001IDSO...13...64C }}.</ref>
+
+The MinHash algorithm has been adapted for [[bioinformatics]], where the problem of comparing genome sequences has a similar theoretical underpinning to that of comparing documents on the web. MinHash-based tools<ref name=":0">{{Cite journal|last1=Ondov|first1=Brian D.|last2=Treangen|first2=Todd J.|last3=Melsted|first3=Páll|last4=Mallonee|first4=Adam B.|last5=Bergman|first5=Nicholas H.|last6=Koren|first6=Sergey|last7=Phillippy|first7=Adam M.|date=2016-06-20|title=Mash: fast genome and metagenome distance estimation using MinHash|journal=Genome Biology|volume=17|issue=1|page=132|doi=10.1186/s13059-016-0997-x|issn=1474-760X|pmc=4915045|pmid=27323842 |doi-access=free }}</ref><ref>{{Cite web|url=https://sourmash.readthedocs.io/en/latest/|title=Welcome to sourmash! — sourmash 1.0 documentation|website=sourmash.readthedocs.io|language=en|access-date=2017-11-13}}</ref> allow rapid comparison of [[whole genome sequencing]] data with reference genomes (around 3 minutes to compare one genome with the 90000 reference genomes in [[RefSeq]]), and are suitable for speciation and maybe a limited degree of microbial sub-typing. There are also applications for metagenomics <ref name=":0" /> and the use of MinHash derived algorithms for genome alignment and genome assembly.<ref>{{Cite journal|last1=Berlin|first1=Konstantin|last2=Koren|first2=Sergey|last3=Chin|first3=Chen-Shan|last4=Drake|first4=James P|last5=Landolin|first5=Jane M|last6=Phillippy|first6=Adam M|date=2015-05-25|title=Assembling large genomes with single-molecule sequencing and locality-sensitive hashing|journal=Nature Biotechnology|language=en|volume=33|issue=6|pages=623–630|doi=10.1038/nbt.3238|pmid=26006009|bibcode=2015NatBi..33..623B |s2cid=17246729|issn=1546-1696}}</ref> Accurate average nucleotide identity (ANI) values can be generated very efficiently with MinHash-based algorithms.<ref>{{cite journal |last1=Jain |first1=Chirag |last2=Rodriguez-R |first2=Luis M. |last3=Phillippy |first3=Adam M. |last4=Konstantinidis |first4=Konstantinos T. |last5=Aluru |first5=Srinivas |title=High throughput ANI analysis of 90K prokaryotic genomes reveals clear species boundaries |journal=Nature Communications |date=December 2018 |volume=9 |issue=1 |page=5114 |doi=10.1038/s41467-018-07641-9 |pmid=30504855 |pmc=6269478 |bibcode=2018NatCo...9.5114J |doi-access=free}}</ref>
+
+==Other uses==
+The MinHash scheme may be seen as an instance of [[locality-sensitive hashing]], a collection of techniques for using hash functions to map large sets of objects down to smaller hash values in such a way that, when two objects have a small distance from each other, their hash values are likely to be the same. In this instance, the signature of a set may be seen as its hash value. Other locality sensitive hashing techniques exist for [[Hamming distance]] between sets and [[cosine distance]] between [[Euclidean vector|vector]]s; locality sensitive hashing has important applications in [[nearest neighbor search]] algorithms.<ref>{{citation
+ | last1 = Andoni | first1 = Alexandr
+ | last2 = Indyk | first2 = Piotr | author2-link = Piotr Indyk
+ | doi = 10.1145/1327452.1327494
+ | issue = 1
+ | journal = [[Communications of the ACM]]
+ | pages = 117–122
+ | title = Near-optimal hashing algorithms for approximate nearest neighbor in high dimensions
+ | volume = 51
+ | year = 2008| s2cid = 6468963
+ }}.</ref> For large distributed systems, and in particular [[MapReduce]], there exist modified versions of MinHash to help compute similarities with no dependence on the point dimension.<ref>
+{{cite arXiv
+ | last1 = Zadeh | first1 = Reza
+ | last2 = Goel | first2 = Ashish
+ | title = Dimension Independent Similarity Computation
+ | eprint = 1206.2082
+ | year = 2012
+ | class = cs.DS
+
+ | mode=cs2
+}}.</ref>
+
+==Evaluation and benchmarks==
+A large scale evaluation was conducted by [[Google]] in 2006 <ref>
+{{citation
+ | last1 = Henzinger
+ | first1 = Monika
+ | contribution = Finding near-duplicate web pages: a large-scale evaluation of algorithms
+ | title = Proceedings of the 29th Annual International ACM SIGIR Conference on Research and Development in Information Retrieval
+ | pages = [https://archive.org/details/sigirseattle20060000inte/page/284 284]
+ | url = https://archive.org/details/sigirseattle20060000inte/page/284
+ | year = 2006
+ | doi = 10.1145/1148170.1148222
+ | isbn = 978-1-59593-369-0
+ | s2cid = 207160068
+ | url-access = registration
+ }}.</ref> to compare the performance of Minhash and [[SimHash]]<ref>{{citation
+ | author = Charikar, Moses S.
+ | contribution = Similarity estimation techniques from rounding algorithms
+ | title = Proceedings of the 34th Annual ACM Symposium on Theory of Computing
+ | pages = 380–388
+ | year = 2002
+ | doi = 10.1145/509907.509965| isbn = 978-1-58113-495-7
+ | s2cid = 4229473
+ }}.</ref> algorithms. In 2007 Google reported using Simhash for duplicate detection for web crawling<ref>
+{{citation
+ | last1 = Gurmeet Singh | first1 = Manku
+ | last2 = Jain | first2 =  Arvind
+ | last3 = Das Sarma | first3 =  Anish
+ | contribution = Detecting near-duplicates for web crawling
+ | title = Proceedings of the 16th International Conference on World Wide Web
+ | page = 141
+ | url = http://static.googleusercontent.com/media/research.google.com/en//pubs/archive/33026.pdf
+ | year = 2007
+ | doi = 10.1145/1242572.1242592| isbn = 978-1-59593-654-7
+ | s2cid = 1414324
+ }}.</ref> and using Minhash and [[Locality-sensitive hashing|LSH]] for [[Google News]] personalization.<ref>
+{{citation
+ | last1 = Das | first1 = Abhinandan S.
+ | last2 = Datar | first2 = Mayur
+ | last3 = Garg | first3 = Ashutosh
+ | last4 = Rajaram | first4 = Shyam
+ | contribution = Google news personalization: scalable online collaborative filtering
+ | title = Proceedings of the 16th International Conference on World Wide Web
+ | page = 271
+ | year = 2007
+ | doi = 10.1145/1242572.1242610 |display-authors=etal| isbn = 978-1-59593-654-7
+ | s2cid = 207163129
+ }}.</ref>
+
+==See also==
+
+* {{Annotated link |Bloom filter}}
+* {{Annotated link |Count–min sketch}}
+* {{Annotated link |w-shingling}}
+
+==References==
+{{reflist|30em}}
+
+[[Category:Hash functions]]
+[[Category:Clustering criteria]]
+[[Category:Hashing]]
+[[Category:Probabilistic data structures]]

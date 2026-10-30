@@ -1,0 +1,129 @@
+<!-- wikipedia: en
+     page: 1418498
+     title: Left recursion
+     revision: 1352788040
+     timestamp: 2026-05-06T07:30:01Z
+     history: https://en.wikipedia.org/w/index.php?curid=1418498&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1352788040 -->
+{{Short description|Theory of computer sciences}}
+{{technical|date=November 2015}}
+In the [[formal language theory]] of [[computer science]], '''left recursion''' is a special case of [[recursion (computer science)|recursion]] where a string is recognized as part of a language by the fact that it decomposes into a string from that same language (on the left) and a suffix (on the right).  For instance, <math>1+2+3</math> can be recognized as a sum because it can be broken into <math>1+2</math>, also a sum, and <math>{}+3</math>, a suitable suffix.
+
+In terms of [[context-free grammar]], a [[Terminal and nonterminal symbols#Nonterminal symbols|nonterminal]] is left-recursive if the leftmost symbol in one of its productions is itself (in the case of direct left recursion) or can be made itself by some sequence of substitutions (in the case of indirect left recursion).
+
+== Definition ==
+A grammar is left-recursive [[if and only if]] there exists a nonterminal symbol <math>A</math> that can derive to a [[Formal grammar#The semantics of grammars|sentential form]] with itself as the leftmost symbol.<ref>{{Cite web |title=Notes on Formal Language Theory and Parsing |url=http://www.cs.nuim.ie/~jpower/Courses/parsing/parsing.pdf |url-status=bot: unknown |archive-url=https://web.archive.org/web/20071127105226/http://www.cs.nuim.ie/~jpower/Courses/parsing/parsing.pdf |archive-date=2007-11-27 |access-date=2023-10-30}}. James Power, Department of Computer Science National University of Ireland, Maynooth Maynooth, Co. Kildare, Ireland.[[JPR02]]</ref> Symbolically,
+:<math> A \Rightarrow^+ A\alpha</math>,
+where <math>\Rightarrow^+</math> indicates the operation of making one or more substitutions, and <math>\alpha</math> is any sequence of terminal and nonterminal symbols.
+
+=== Direct left recursion ===
+Direct left recursion occurs when the definition can be satisfied with only one substitution.  It requires a rule of the form
+:<math>A \to A\alpha</math>
+where <math>\alpha</math> is a sequence of nonterminals and terminals . For example, the rule
+:<math>\mathit{Expression} \to \mathit{Expression} + \mathit{Term}</math>
+is directly left-recursive. A left-to-right [[recursive descent parser]] for this rule might look like
+<syntaxhighlight lang="cpp">
+void Expression() {
+  Expression();
+  match('+');
+  Term();
+}
+</syntaxhighlight>
+and such code would fall into infinite recursion when executed.
+
+=== Indirect left recursion ===
+Indirect left recursion occurs when the definition of left recursion is satisfied via several substitutions.  It entails a set of rules following the pattern
+:<math>A_0 \to \beta_0A_1\alpha_0</math>
+:<math>A_1 \to \beta_1A_2\alpha_1</math>
+:<math>\cdots</math>
+:<math>A_n \to \beta_nA_0\alpha_n</math>
+where <math>\beta_0, \beta_1, \ldots, \beta_n</math> are sequences that can each yield the [[empty string]], while <math>\alpha_0, \alpha_1, \ldots, \alpha_n</math> may be any sequences of terminal and nonterminal symbols at all.  Note that these sequences may be empty.  The derivation
+:<math>A_0\Rightarrow\beta_0A_1\alpha_0\Rightarrow^+ A_1\alpha_0\Rightarrow\beta_1A_2\alpha_1\alpha_0\Rightarrow^+\cdots\Rightarrow^+ A_0\alpha_n\dots\alpha_1\alpha_0</math>
+then gives <math>A_0</math> as leftmost in its final sentential form.
+
+== Uses ==
+Left recursion is commonly used as an idiom for making operations [[left-associative]]: that an expression <code>a+b-c-d+e</code> is evaluated as <code>(((a+b)-c)-d)+e</code>. In this case, that evaluation order could be achieved as a matter of syntax via the three grammatical rules
+:<math> \mathit{Expression} \to \mathit{Term} </math>
+:<math> \mathit{Expression} \to \mathit{Expression} + \mathit{Term} </math>
+:<math> \mathit{Expression} \to \mathit{Expression} - \mathit{Term} </math>
+These only allow parsing the <math>\mathit{Expression}</math> <code>a+b-c-d+e</code> as consisting of the <math>\mathit{Expression}</math> <code>a+b-c-d</code> and <math>\mathit{Term}</math> <code>e</code>, where <code>a+b-c-d</code> in turn consists of the <math>\mathit{Expression}</math> <code>a+b-c</code> and <math>\mathit{Term}</math> <code>d</code>, while <code>a+b-c</code> consists of the <math>\mathit{Expression}</math> <code>a+b</code> and <math>\mathit{Term}</math> <code>c</code>, etc.
+
+== Removing left recursion ==
+Left recursion often poses problems for parsers, either because it leads them into infinite recursion (as in the case of most [[top-down parsing|top-down parsers]]) or because they expect rules in a normal form that forbids it (as in the case of many [[bottom-up parsing|bottom-up parsers]]{{clarify|reason=Which bottom-up parser needs a normal form and/or can not handle left recursion?|date=July 2023}}).  Therefore, a grammar is often preprocessed to eliminate the left recursion.
+
+=== Removing direct left recursion ===
+The general algorithm to remove direct left recursion follows. Several improvements to this method have been made.<ref name="Moore2000">{{cite journal|last=Moore|first=Robert C.|title=Removing Left Recursion from Context-Free Grammars|journal=6th Applied Natural Language Processing Conference|date=May 2000|pages=249–255|url=https://www.microsoft.com/en-us/research/wp-content/uploads/2000/04/naacl2k-proc-rev.pdf}}</ref>
+For a left-recursive nonterminal <math>A</math>, discard any rules of the form <math>A\rightarrow A</math> and consider those that remain:
+:<math>A \rightarrow A\alpha_1 \mid \ldots \mid A\alpha_n \mid \beta_1 \mid \ldots \mid \beta_m </math>
+where:
+* each <math>\alpha</math> is a nonempty sequence of nonterminals and terminals, and
+* each <math>\beta</math> is a sequence of nonterminals and terminals that does not start with <math>A</math>.
+Replace these with two sets of productions, one set for <math>A</math>:
+:<math>A \rightarrow \beta_1A^\prime \mid \ldots \mid \beta_mA^\prime</math>
+and another set for the fresh nonterminal <math>A'</math> (often called the "tail" or the "rest"):
+:<math>A^\prime \rightarrow \alpha_1A^\prime \mid \ldots \mid \alpha_nA^\prime \mid \epsilon</math>
+Repeat this process until no direct left recursion remains.
+
+As an example, consider the rule set
+:<math>\mathit{Expression} \rightarrow \mathit{Expression}+\mathit{Expression} \mid \mathit{Integer} \mid \mathit{String}</math>
+This could be rewritten to avoid left recursion as
+:<math>\mathit{Expression} \rightarrow \mathit{Integer}\,\mathit{Expression}' \mid \mathit{String}\,\mathit{Expression}'</math>
+:<math>\mathit{Expression}' \rightarrow {}+\mathit{Expression} \text{ } \mathit{Expression}'\mid \epsilon</math>
+
+=== Removing all left recursion ===
+The above process can be extended to eliminate all left recursion, by first converting indirect left recursion to direct left recursion on the highest numbered nonterminal in a cycle. 
+:'''Inputs''' ''A grammar: a set of nonterminals <math>A_1,\ldots,A_n</math> and their productions''
+:'''Output''' ''A modified grammar generating the same language but without left recursion''
+:# ''For each nonterminal <math>A_i</math>:''
+:## ''Repeat until an iteration leaves the grammar unchanged:''
+:### ''For each rule <math>A_i\rightarrow\alpha_i</math>, the <math>\alpha_i</math> being a sequence of terminals and nonterminals:''
+:#### ''If <math>\alpha_i</math> begins with a nonterminal <math>A_j</math> and <math>j<i</math>:''
+:##### ''Let <math>\beta_i</math> be <math>\alpha_i</math> without its leading <math>A_j</math>.''
+:##### ''Remove the rule <math>A_i\rightarrow\alpha_i</math>.''
+:##### ''For each rule <math>A_j\rightarrow\alpha_j</math>:''
+:###### ''Add the rule <math>A_i\rightarrow\alpha_j\beta_i</math>.''
+:## ''Remove direct left recursion for <math>A_i</math> as described above.''
+Step 1.1.1 amounts to expanding the initial nonterminal <math>A_j</math> in the right hand side of some rule <math>A_i \to A_j \beta</math>, but only if <math>j<i</math>. If <math>A_i \to A_j \beta</math> was one step in a cycle of productions giving rise to a left recursion, then this has shortened that cycle by one step, but often at the price of increasing the number of rules.
+
+The algorithm may be viewed as establishing a [[topological ordering]] on nonterminals: afterwards there can only be a rule <math>A_i \to A_j \beta</math> if <math>j>i</math>.
+Note that this algorithm is highly sensitive to the nonterminal ordering; optimizations often focus on choosing this ordering well.{{Clarify|date=March 2022}}
+
+== Pitfalls ==
+Although the above transformations preserve the language generated by a grammar, they may change the [[parse tree]]s that [[Witness (mathematics)|witness]] strings' recognition.  With suitable bookkeeping, [[Rewriting#Term rewriting systems|tree rewriting]] can recover the originals, but if this step is omitted, the differences may change the semantics of a parse.
+
+Associativity is particularly vulnerable; left-associative operators typically appear in right-associative-like arrangements under the new grammar.  For example, starting with this grammar:
+:<math>\mathit{Expression} \rightarrow \mathit{Expression}\,-\,\mathit{Term} \mid \mathit{Term}</math>
+:<math>\mathit{Term} \rightarrow \mathit{Term}\,*\,\mathit{Factor} \mid \mathit{Factor}</math>
+:<math>\mathit{Factor} \rightarrow (\mathit{Expression}) \mid \mathit{Integer}</math>
+the standard transformations to remove left recursion yield the following:
+:<math>\mathit{Expression} \rightarrow \mathit{Term}\ \mathit{Expression}'</math>
+:<math>\mathit{Expression}' \rightarrow {} - \mathit{Term}\ \mathit{Expression}' \mid \epsilon</math>
+:<math>\mathit{Term} \rightarrow \mathit{Factor}\ \mathit{Term}'</math>
+:<math>\mathit{Term}' \rightarrow {} * \mathit{Factor}\ \mathit{Term}' \mid \epsilon</math>
+:<math>\mathit{Factor} \rightarrow (\mathit{Expression}) \mid \mathit{Integer}</math>
+
+Parsing the string "1 - 2 - 3" with the first grammar in an LALR parser (which can handle left-recursive grammars) would have resulted in the parse tree:
+[[File:Left-recursive-parse-of-a-double-subtraction.png|center|Left-recursive parsing of a double subtraction]]
+This parse tree groups the terms on the left, giving the correct semantics ''(1 - 2) - 3''.
+
+Parsing with the second grammar gives
+[[File:Right-recursive-parse-of-a-double-subtraction.png|center|Right-recursive parsing of a double subtraction]]
+which, properly interpreted, signifies ''1 + (-2 + (-3))'', also correct, but less faithful to the input and much harder to implement for some operators.  Notice how terms to the right appear deeper in the tree, much as a right-recursive grammar would arrange them for ''1 - (2 - 3)''.
+
+== Accommodating left recursion in top-down parsing==
+A [[formal grammar]] that contains left recursion cannot be [[parse]]d by a [[LL parser|LL(k)-parser]] or other naive [[recursive descent parser]] unless it is converted to a [[Weak equivalence (formal languages)|weakly equivalent]] right-recursive form. In contrast, left recursion is preferred for [[LALR parser]]s because it results in lower stack usage than [[right recursion]]. However, more sophisticated top-down parsers can implement general [[context-free grammar]]s by use of curtailment. In 2006, Frost and Hafiz described an algorithm which accommodates [[ambiguous grammar]]s with direct left-recursive [[Formal grammar#The syntax of grammars|production rules]].<ref name="FrostHafiz2006">{{cite journal|last=Frost|first=R.|author2=R. Hafiz|date=2006|title=A New Top-Down Parsing Algorithm to Accommodate Ambiguity and Left Recursion in Polynomial Time.|journal=ACM SIGPLAN Notices|volume=41|issue=5|pages=46–54|url=http://portal.acm.org/citation.cfm?id=1149988|doi=10.1145/1149982.1149988|s2cid=8006549|url-access=subscription}}, available from the author at http://hafiz.myweb.cs.uwindsor.ca/pub/p46-frost.pdf {{Webarchive|url=https://web.archive.org/web/20150108175703/http://hafiz.myweb.cs.uwindsor.ca/pub/p46-frost.pdf |date=2015-01-08 }}</ref> That algorithm was extended to a complete [[parsing]] algorithm to accommodate indirect as well as direct left recursion in [[polynomial]] time, and to generate compact polynomial-size representations of the potentially exponential number of parse trees for highly ambiguous grammars by Frost, Hafiz and Callaghan in 2007.<ref name="FrostHafizCallaghan2007">{{cite journal|last=Frost|first=R.|author2=R. Hafiz|author3=P. Callaghan|date=June 2007|title=Modular and Efficient Top-Down Parsing for Ambiguous Left-Recursive Grammars.|journal=10th International Workshop on Parsing Technologies (IWPT), ACL-SIGPARSE|pages=109–120|url=http://acl.ldc.upenn.edu/W/W07/W07-2215.pdf|archive-url=https://web.archive.org/web/20110527032954/http://acl.ldc.upenn.edu/W/W07/W07-2215.pdf|url-status=dead|archive-date=2011-05-27}}</ref> The authors then implemented the algorithm as a set of [[parser combinator]]s written in the [[Haskell (programming language)|Haskell]] [[programming language]].<ref name="FrostHafizCallaghan2008">{{cite book|last=Frost|first=R. |author2=R. Hafiz |author3=P. Callaghan|title=Practical Aspects of Declarative Languages |chapter=Parser Combinators for Ambiguous Left-Recursive Grammars |date=January 2008|volume=4902|issue=2008|pages=167–181|url=https://cs.uwindsor.ca/~richard/PUBLICATIONS/PADL_08.pdf|doi=10.1007/978-3-540-77442-6_12|series=Lecture Notes in Computer Science|isbn=978-3-540-77441-9|archive-url=https://web.archive.org/web/20081221131212/https://cs.uwindsor.ca/~richard/PUBLICATIONS/PADL_08.pdf|archive-date=2008-12-21}}</ref>
+
+== See also ==
+* [[Tail recursion]]
+
+== References ==
+<references />
+
+== External links ==
+* [http://lambda.uta.edu/cse5317/notes/node21.html Practical Considerations for LALR(1) Grammars] {{Webarchive|url=https://web.archive.org/web/20201201013243/http://lambda.uta.edu/cse5317/notes/node21.html |date=2020-12-01 }}
+
+[[Category:Control flow]]
+[[Category:Formal languages]]
+[[Category:Parsing]]
+[[Category:Recursion]]

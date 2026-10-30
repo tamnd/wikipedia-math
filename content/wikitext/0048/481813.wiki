@@ -1,0 +1,89 @@
+<!-- wikipedia: en
+     page: 481813
+     title: Timing attack
+     revision: 1372367929
+     timestamp: 2026-08-31T12:27:19Z
+     history: https://en.wikipedia.org/w/index.php?curid=481813&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1372367929 -->
+{{Short description|Cryptographic attack}}
+{{Use dmy dates|date=September 2020}}
+[[File:Histogram_of_cross-site_leaks_cache_timing_attack_example.png|thumb|upright=1.8|An example of a timing attack being performed on a [[web cache]]. The left graph denotes a timing attack successfully detecting a cached image whereas the right one shows an attack that fails to do the same.]]
+In [[cryptography]], a '''timing attack''' is a [[side-channel attack]] in which the attacker attempts to compromise a [[cryptosystem]] by analyzing the time taken to execute cryptographic algorithms. Every logical operation in a computer takes time to execute, and the time can differ based on the input; with precise measurements of the time for each operation, an attacker may be able to work backwards to the input.
+
+Information can leak from a system through measurement of the time it takes to respond to certain queries. How much this information can help an attacker depends on many variables such as cryptographic system design, the CPU running the system, the algorithms used, assorted implementation details, timing attack countermeasures, and accuracy of the timing measurements. Any algorithm that has data-dependent timing variation is vulnerable to timing attacks. Removing timing-dependencies is difficult since varied execution time can occur at any level.
+
+Vulnerability to timing attacks is often overlooked in the design phase and can be introduced unintentionally with [[compiler optimizations]]. [[Side-channel attack#Countermeasures|Countermeasures]] include [[Blinding (cryptography)|blinding]] and [[Constant time|constant-time]] functions.
+
+== Constant-time challenges ==
+Many cryptographic algorithms can be implemented (or masked by a proxy) in a way that reduces or eliminates data-dependent timing information, known as a '''constant-time algorithm'''. A trivial "'''timing-safe implementation"''' can be found here.<ref>{{cite web |title=timingsafe_bcmp|url=https://man.openbsd.org/timingsafe_bcmp.3 |access-date=2024-11-11}}</ref> Imagine an implementation in which every call to a subroutine always returns exactly after time ''T'' has elapsed, where ''T'' is the maximum time it takes to execute that routine on every possible authorized input. Such a hypothetical implementation would leak no information about the data supplied to that invocation (in reality, non-data-dependent timing variations are unavoidable). The downside of such an approach is that the time used for all executions becomes that of the [[Best, worst and average case|worst-case]] performance of the function.<ref>{{cite web |title=A beginner's guide to constant-time cryptography |url=https://www.chosenplaintext.ca/articles/beginners-guide-constant-time-cryptography.html |access-date=2021-05-09}}</ref> It would appear that [[Blinding (cryptography)|blinding]] should be applied to avoid vulnerability to timing attacks.
+
+The data-dependency of timing may stem from one of the following:<ref name="BearSSL">{{Cite web |title=Constant-Time Crypto |url=https://www.bearssl.org/constanttime.html |access-date=2017-01-10 |website=BearSSL}}</ref>
+* Non-local memory access, as the CPU may [[CPU cache|cache]] the data. Software run on a CPU with a data cache will exhibit data-dependent timing variations as a result of memory lookups into the cache.
+* [[Conditional jump]]s. Modern CPUs try to [[Speculative execution|speculatively execute]] past conditional jumps by guessing. Guessing wrongly (not uncommon with essentially random secret data) entails a measurable large delay as the CPU tries to backtrack. This requires writing [[Branch (computer science)#Branch-free code|branch-free code]].
+* Some "complicated" mathematical operations, depending on the actual CPU hardware:
+** Integer division is almost always non-constant time. The CPU uses a [[microcode]] loop that uses a different code path when either the divisor or the dividend is small.
+** CPUs without a [[barrel shifter]] run [[Bitshift|shifts]] and [[Bit rotate|rotations]] in a loop, one position at a time. As a result, the amount to shift must not be secret.
+** Older CPUs run multiplications in a way similar to division.
+
+== Examples ==
+
+The execution time for the [[square-and-multiply algorithm]] used in [[modular exponentiation]] depends linearly on the number of '1' bits in the key. While the number of '1' bits alone is not nearly enough information to make finding the key easy, repeated executions with the same key and different inputs can be used to perform statistical correlation analysis of timing information to recover the key completely, even by a passive attacker. Observed timing measurements often include noise (from such sources as network latency, or disk drive access differences from access to access, and the [[error correction]] techniques used to recover from transmission errors). Nevertheless, timing attacks are practical against a number of encryption algorithms, including [[RSA (algorithm)|RSA]], [[ElGamal encryption|ElGamal]], and the [[Digital Signature Algorithm]].
+
+In 2003, [[Dan Boneh|Boneh]] and [[David Brumley|Brumley]] demonstrated a practical network-based timing attack on [[Secure Sockets Layer|SSL]]-enabled web servers, based on a different vulnerability having to do with the use of RSA with [[Chinese remainder theorem]] optimizations.  The actual network distance was small in their experiments, but the attack successfully recovered a server private key in a matter of hours.  This demonstration led to the widespread deployment and use of [[Blinding (cryptography)|blinding]] techniques in SSL implementations.  In this context, blinding is intended to remove correlations between key and encryption time.<ref>David Brumley and Dan Boneh. [http://crypto.stanford.edu/~dabo/papers/ssl-timing.pdf Remote timing attacks are practical.] USENIX Security Symposium, August 2003.</ref><ref>{{Cite book |last=Kocher |first=Paul C. |title=Advances in Cryptology — CRYPTO '96 |chapter=Timing Attacks on Implementations of Diffie-Hellman, RSA, DSS, and Other Systems |series=Lecture Notes in Computer Science |date=1996 |volume=1109 |editor-last=Koblitz |editor-first=Neal  |chapter-url=https://link.springer.com/chapter/10.1007/3-540-68697-5_9 |language=en |location=Berlin, Heidelberg |publisher=Springer |pages=104–113 |doi=10.1007/3-540-68697-5_9 |isbn=978-3-540-68697-2|chapter-url-access=subscription }}</ref>
+
+Some versions of [[Unix]] use a relatively expensive implementation of the ''crypt'' library function for hashing an 8-character password into an 11-character string.  On older hardware, this computation took a deliberately and measurably long time: as much as two or three seconds in some cases.<ref>{{Cite web |title=;login: password protection for modern operating systems |url=https://www.usenix.org/system/files/login/articles/1103-alexander.pdf |website=USENIX |date=June 2004 |quote=UNIX iterates the DES algorithm 25 times to create the crypt algorithm. Provos and Mazières estimated that a Digital Equipment Corporation VAX-11/780 contemporary to the design of crypt would be able to try only 3.6 possible passwords per second per salt.}}</ref>  The ''login'' program in early versions of Unix executed the crypt function only when the login name was recognized by the system. This leaked information through timing about the validity of the login name, even when the password was incorrect. An attacker could exploit such leaks by first applying [[Brute-force attack|brute-force]] to produce a list of login names known to be valid, then attempt to gain access by combining only these names with a large set of passwords known to be frequently used. Without any information on the validity of login names the time needed to execute such an approach would increase by orders of magnitude, effectively rendering it useless. Later versions of Unix have fixed this leak by always executing the crypt function, regardless of login name validity.{{Citation needed|date=October 2012}}
+
+Two otherwise securely isolated processes running on a single system with either [[cache memory]] or [[virtual memory]] can communicate by deliberately causing [[page fault]]s and/or [[cache miss]]es in one process, then monitoring the resulting changes in access times from the other.  Likewise, if an application is trusted, but its paging/caching is affected by branching logic, it may be possible for a second application to determine the values of the data compared to the branch condition by monitoring access time changes; in extreme examples, this can allow recovery of cryptographic key bits.<ref>See Percival, Colin, [http://www.daemonology.net/papers/htt.pdf Cache Missing for Fun and Profit], 2005.</ref><ref>Bernstein, Daniel J., [http://cr.yp.to/antiforgery/cachetiming-20050414.pdf Cache-timing attacks on AES], 2005.</ref>
+
+The 2017 [[Meltdown (security vulnerability)|Meltdown]] and [[Spectre (security vulnerability)|Spectre]] attacks which forced CPU manufacturers (including Intel, AMD, ARM, and IBM) to redesign their CPUs both rely on timing attacks.<ref>{{Cite web|url=https://googleprojectzero.blogspot.com/2018/01/reading-privileged-memory-with-side.html |title=Reading privileged memory with a side-channel |date=January 3, 2018 |author-first=Jann |author-last=Horn |publisher=googleprojectzero.blogspot.com}}</ref> As of early 2018, almost every computer system in the world is affected by Spectre.<ref>{{Cite web|url=https://spectreattack.com/#faq-systems-spectre|title=Spectre systems FAQ|website=Meltdown and Spectre}}</ref><ref>{{Cite news|url=https://www.reuters.com/article/us-cyber-intel-idUSKBN1ES1BO|title=Security flaws put virtually all phones, computers at risk|date=4 January 2018|work=Reuters}}</ref><ref>{{Cite web|url=https://www.ibm.com/blogs/psirt/potential-impact-processors-power-family/|title=Potential Impact on Processors in the POWER Family|date=14 May 2019|website=IBM PSIRT Blog}}</ref>
+
+In 2018, many internet servers were still vulnerable to slight variations of the original timing attack on RSA, two decades after the original vulnerability was discovered.<ref>{{Cite web |last=Kario |first=Hubert |title=The Marvin Attack |url=https://people.redhat.com/~hkario/marvin/ |access-date=2023-12-19 |website=people.redhat.com |language=en}}</ref>
+
+=== String comparison algorithms ===
+The following [[C (programming language)|C]] code demonstrates a typical insecure string comparison which stops testing as soon as a character doesn't match. For example, when comparing <code>"ABCDE"</code> with <code>"ABxDE"</code> it will return after 3 loop iterations:
+
+<syntaxhighlight lang="c">
+#include <stddef.h>
+
+bool insecure_string_compare(const void *a, const void *b, size_t length) {
+  const char *ca = a, *cb = b;
+  for (size_t i = 0; i < length; i++)
+    if (ca[i] != cb[i])
+      return false;
+  return true;
+}
+</syntaxhighlight>
+
+By comparison, the following version runs in constant-time by testing all characters and using a [[bitwise operation]] to accumulate the result:
+<syntaxhighlight lang="c">
+#include <stddef.h>
+
+bool constant_time_string_compare(const void *a, const void *b, size_t length) {
+  const char *ca = a, *cb = b;
+  bool result = true;
+  for (size_t i = 0; i < length; i++)
+    result &= ca[i] == cb[i];
+  return result;
+}
+</syntaxhighlight>
+
+In the world of C library functions, the first function is analogous to {{code|memcmp()}}, while the latter is analogous to NetBSD's {{code|consttime_memequal()}} or<ref>{{Cite web|url=https://www.freebsd.org/cgi/man.cgi?query=consttime_memequal&manpath=NetBSD+7.0|title = Consttime_memequal}}</ref> OpenBSD's {{code|timingsafe_bcmp()}} and {{code|timingsafe_memcmp}}. On other systems, the comparison function from cryptographic libraries like [[OpenSSL]] and [[libsodium]] can be used.<!-- There should be a big flashy "don't roll your own crypto" paragraph here, but I have no idea how to phrase it. Whatever. -->
+
+== Notes ==
+Timing attacks are easier to mount if the adversary knows the internals of the hardware implementation, and even more so, the cryptographic system in use. Since cryptographic security should never depend on the obscurity of either (see [[security through obscurity]], specifically both Shannon's Maxim and [[Kerckhoffs's principle]]), resistance to timing attacks should not either. If nothing else, an exemplar can be purchased and reverse engineered. Timing attacks and other side-channel attacks may also be useful in identifying, or possibly reverse-engineering, a cryptographic algorithm used by some device.
+
+== See also ==
+* [[Power analysis]]
+* [[Pixel stealing attack]]
+
+==References==
+{{reflist}}
+
+==Further reading==
+* {{cite journal |first=Richard |last=Lipton |author-link=Richard J. Lipton |author2=Naughton, Jeffrey F. |date=March 1993 |title=Clocked adversaries for hashing |journal=Algorithmica |volume=9 |issue=3 |pages=239–252 |doi=10.1007/BF01190898 |s2cid=19163221}}
+* {{cite book |last1=Reparaz |first1=Oscar |last2=Balasch |first2=Josep |last3=Verbauwhede |first3=Ingrid |title=Design, Automation & Test in Europe Conference & Exhibition (DATE), 2017 |chapter=Dude, is my code constant time? |date=March 2017 |pages=1697–1702 |doi=10.23919/DATE.2017.7927267 |isbn=978-3-9815370-8-6 |s2cid=35428223 |chapter-url=https://eprint.iacr.org/2016/1123.pdf}} &nbsp; Describes [https://github.com/oreparaz/dudect dudect], a simple program that times a piece of code on different data.
+
+{{Cryptography navbox | block}}
+
+[[Category:Side-channel attacks]]

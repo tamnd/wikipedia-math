@@ -1,0 +1,287 @@
+<!-- wikipedia: en
+     page: 71470682
+     title: Reverse-search algorithm
+     revision: 1329657475
+     timestamp: 2025-12-27T07:38:07Z
+     history: https://en.wikipedia.org/w/index.php?curid=71470682&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1329657475 -->
+'''Reverse-search algorithms''' are a class of [[algorithm]]s for generating all objects of a given size, from certain classes of [[combinatorics|combinatorial objects]]. In many cases, these methods allow the objects to be generated in [[polynomial time]] per object, using only enough memory to store a constant number of objects ([[polynomial space]]). (Generally, however, they are not classed as polynomial-time algorithms, because the number of objects they generate is exponential.) They work by organizing the objects to be generated into a [[spanning tree]] of their [[state space]], and then performing a [[depth-first search]] of this tree.
+
+Reverse-search algorithms were introduced by [[David Avis]] and [[Komei Fukuda]] in 1991, for problems of generating the [[Vertex (geometry)|vertices]] of [[convex polytope]]s and the cells of [[Arrangement of hyperplanes|arrangements of hyperplanes]].{{r|pivot}} They were formalized more broadly by Avis and Fukuda in 1996.{{r|rs4e}}
+
+==Principles==
+A reverse-search algorithm generates the combinatorial objects in a [[state space]], an [[implicit graph]] whose vertices are the objects to be listed and whose edges represent certain "local moves" connecting pairs of objects, typically by making small changes to their structure. It finds each objects using a [[depth-first search]] in a rooted [[spanning tree]] of this state space, described by the following information:{{r|rs4e}}
+*The root of the spanning tree, one of the objects
+*A subroutine for generating the parent of each object in the tree, with the property that if repeated enough times it will eventually reach the root
+*A subroutine for listing all of the neighbors in the state space (not all of which may be neighbors in the tree)
+
+From this information it is possible to find the children of any given node in the tree, reversing the links given by the parent subroutine: they are simply the neighbors whose parent is the given node. It is these reversed links to child nodes that the algorithm searches.{{r|rs4e}}
+
+A classical depth-first search of this spanning tree would traverse the tree recursively, starting from the root, at each node listing all of the children and making a recursive call for each one. Unlike a depth-first search of a graph with cycles, it is not necessary to maintain the set of already-visited nodes to avoid repeated visits; such repetition is not possible in a tree. However, this recursive algorithm may still require a large amount of memory for its [[call stack]], in cases when the tree is very deep. Instead, reverse search traverses the spanning tree in the same order while only storing two objects: the current object of the traversal, and the previously traversed object. Initially, the current object is set to the root of the tree, and there is no previous object. From this information, it is possible to determine the next step of the traversal by the following case analysis:{{r|rs4e}}
+*If there is no previous object, or the previous object is the parent of the current object, then this is the first time the traversal has reached the current object, so it is output from the search. The next object is its first child or, if it has no children, its parent.
+*In all other cases, the previous object must be a child of the current object. The algorithm lists the children (that is, state-space neighbors of the current object that have the current object as their parent) one at a time until reaching this previous child, and then takes one more step in this list of children. If another child is found in this way, it is the next object. If there is no next child and the current object is not the root, the next object is the parent of the current object. In the remaining case, when there is no next child and the current object is the root, the reverse search terminates.
+
+This algorithm involves listing the neighbors of an object once for each step in the search. However, if there are <math>N</math> objects to be listed, then the search performs <math>2N-1</math> steps, so the number of times it generates neighbors of objects is within a factor of two of the number of times the recursive depth-first search would do the same thing.{{r|rs4e}}
+
+==Applications==
+Examples of the problems to which reverse search has been applied include the following combinatorial generation problems:
+;Vertices of simple convex polytopes
+:If a <math>d</math>-dimensional [[convex polytope]] is defined as an intersection of [[Half-space (geometry)|half-spaces]], then its [[vertex (geometry)|vertices]] can be described as the points of intersection of <math>d</math> or more [[hyperplane]]s bounding the halfspaces; it is a simple polytope if no vertex is the intersection of more than <math>d</math> of these hyperplanes. The [[vertex enumeration problem]] is the problem of listing all of these vertices. The edges of the polytope connect pairs of vertices that have <math>d-1</math> hyperplanes in common, so the vertices and edges form a state space in which each vertex has <math>d</math> neighbors. The [[simplex algorithm]] from the theory of [[linear programming]] finds a vertex maximizing a given linear function of the coordinates, by walking from vertex to vertex, choosing at each step a vertex with a greater value of the function; there are several standard choices of "pivot rule" that specify more precisely which vertex to choose. Any such pivot rule can be interpreted as defining the parent function of a spanning tree of the polytope, whose root is the optimal vertex. Applying reverse search to this data generates all vertices of the polytope. A similar algorithm can also enumerate all bases of a linear program, without requiring that it defines a polytope that is simple.{{r|rs4e|revised}}
+;Cells of hyperplane arrangements
+:A [[hyperplane arrangement]] decomposes [[Euclidean space]] into cells, each described by a "sign vector" that describes whether its points belong to one of the hyperplanes (sign 0), are on one side of the hyperplane (sign +1), or are on the other side (sign &minus;1). The cells form a connected state space under local moves that change a single sign by one unit, and it is possible to check that this operation produces a valid cell by solving a linear programming feasibility problem. A spanning tree can be constructed for any choice of root cell by defining a parent operator that makes the first possible change that would bring the sign vector closer to that of the root. Using reverse search for this state space and parent operator produces an algorithm for listing all cells in polynomial time per cell.{{r|rs4e|sleumer}}
+;Point-set triangulations
+:The [[Point-set triangulation|triangulations of a planar point set]] are connected by "flip" moves that remove one diagonal from a triangulation and replace it by another. If the [[Delaunay triangulation]] is chosen as the root, then every triangulation can be flipped to the Delaunay triangulation by steps in which the triangulation of some subset of four points is replaced by its Delaunay triangulation.{{r|lawson|sibson}} Choosing the first Delaunay flip as the parent of each triangulation, and applying local search, produces an algorithm for listing all triangulations in polynomial time per triangulation.{{r|rs4e}}
+;Connected subgraphs
+:The connected subgraphs, and connected [[induced subgraph]]s, of a given connected graph form a state space whose local moves are the addition or removal of a single edge or vertex of the graph, respectively. A spanning tree of this state space can be obtained by adding the first edge or vertex (in some ordering of the edges or vertices) whose addition produces another connected subgraph; its root is the whole graph. Applying local search to this state space and parent operator produces an algorithm for listing all connected subgraphs in polynomial time per subgraph.{{r|rs4e}}
+
+Other applications include algorithms for generating the following structures:
+*[[Polyomino]]s,{{r|polyomino}} [[polyiamond]] [[prototile]]s,{{r|polyiamond}} and [[polyhex (mathematics)]] [[hydrocarbon]] molecules.{{r|polyhex}}
+*[[Topological ordering]]s of [[directed acyclic graph]]s, using a state space whose local moves reverse the ordering of two elements.{{r|rs4e}}
+*[[Spanning tree]]s of graphs, non-crossing spanning trees of planar point sets, and more generally bases of [[matroid]]s, using a state  space that swaps one edge for another.{{r|rs4e}}
+*[[Euler tour]]s in graphs.{{r|euler}}
+*The [[maximal independent set]]s of [[sparse graph]]s.{{r|sparse-mis}}
+*[[Maximal planar graph]]s{{r|rooted}} and [[polyhedral graph]]s.{{r|wagner}}
+*Non-crossing [[Laman graph|minimally rigid graphs]] on a given point set.{{r|laman}}
+*[[Polygonalization|Surrounding polygons]], polygons that have some of a given set of points as vertices and surround the rest, using a state space that adds or removes one vertex of the polygon.{{r|yahouy}}
+*Vertices or facets of the [[Minkowski sum]] of convex polytopes.{{r|zonotope|weibel}}
+*The corners (multidegrees) of [[monomial ideal]]s.{{r|monomial}}
+
+==References==
+<references>
+
+<ref name=euler>{{citation
+ | last1 = Kurita | first1 = Kazuhiro
+ | last2 = Wasa | first2 = Kunihiro
+ | doi = 10.1016/j.tcs.2022.04.048
+ | journal = [[Theoretical Computer Science (journal)|Theoretical Computer Science]]
+ | mr = 4436557
+ | pages = 1–12
+ | title = Constant amortized time enumeration of Eulerian trails
+ | volume = 923
+ | year = 2022| doi-access = free
+ | arxiv = 2101.10473
+ }}</ref>
+
+<ref name=laman>{{citation
+ | last1 = Avis | first1 = David | author1-link = David Avis
+ | last2 = Katoh | first2 = Naoki
+ | last3 = Ohsaki | first3 = Makoto
+ | last4 = Streinu | first4 = Ileana | author4-link = Ileana Streinu
+ | last5 = Tanigawa | first5 = Shin-ichi
+ | date = June 2007
+ | doi = 10.1007/s00373-007-0709-0
+ | issue = S1
+ | journal = [[Graphs and Combinatorics]]
+ | pages = 117–134
+ | title = Enumerating non-crossing minimally rigid frameworks
+ | url = https://www-cgrl.cs.mcgill.ca/~avis/doc/avis/AKOST06a.pdf
+ | volume = 23| s2cid = 10874512 }}</ref>
+
+<ref name=lawson>{{citation
+ | last = Lawson | first = C. L.
+ | publisher = Jet Propulsion Laboratory
+ | series = Memo 299
+ | title = Generation of a triangular grid with applications to contour plotting
+ | year = 1972}}</ref>
+
+<ref name=monomial>{{citation
+ | last1 = Bayer | first1 = Dave | author1-link = Dave Bayer
+ | last2 = Taylor | first2 = Amelia
+ | doi = 10.1016/j.jsc.2009.05.002
+ | issue = 10
+ | journal = [[Journal of Symbolic Computation]]
+ | mr = 2543431
+ | pages = 1477–1486
+ | title = Reverse search for monomial ideals
+ | volume = 44
+ | year = 2009| doi-access = free
+ }}</ref>
+
+<ref name=pivot>{{citation
+ | last1 = Avis | first1 = David | author1-link = David Avis
+ | last2 = Fukuda | first2 = Komei | author2-link = Komei Fukuda
+ | doi = 10.1007/BF02293050
+ | issue = 3
+ | journal = [[Discrete & Computational Geometry]]
+ | mr = 1174359
+ | pages = 295–313
+ | title = A pivoting algorithm for convex hulls and vertex enumeration of arrangements and polyhedra
+ | volume = 8
+ | year = 1992| doi-access = free
+ }}; preliminary version in Seventh Annual Symposium on Computational Geometry, 1991, {{doi|10.1145/109648.109659}}</ref>
+
+<ref name=polyhex>{{citation
+ | last1 = Caporossi | first1 = Gilles
+ | last2 = Hansen | first2 = Pierre
+ | date = May 1998
+ | doi = 10.1021/ci970116n
+ | issue = 4
+ | journal = [[Journal of Chemical Information and Computer Sciences]]
+ | pages = 610–619
+ | title = Enumeration of polyhex hydrocarbons to <math>h=21</math>
+ | volume = 38}}</ref>
+
+<ref name=polyiamond>{{citation
+ | last1 = Horiyama | first1 = Takashi
+ | last2 = Yamane | first2 = Shogo
+ | editor1-last = Akiyama | editor1-first = Jin | editor1-link = Jin Akiyama
+ | editor2-last = Jiang | editor2-first = Bo
+ | editor3-last = Kano | editor3-first = Mikio
+ | editor4-last = Tan | editor4-first = Xuehou
+ | contribution = Generation of polyiamonds for p6 tiling by the reverse search
+ | doi = 10.1007/978-3-642-24983-9_10
+ | mr = 2927314
+ | pages = 96–107
+ | publisher = Springer
+ | series = Lecture Notes in Computer Science
+ | date = 2011
+ | title = Computational Geometry, Graphs and Applications - 9th International Conference, CGGA 2010, Dalian, China, November 3-6, 2010, Revised Selected Papers
+ | volume = 7033
+ | isbn = 978-3-642-24982-2
+ }}</ref>
+
+<ref name=polyomino>{{citation
+ | last1 = Liang | first1 = Xiaodong
+ | last2 = Wang | first2 = Rui
+ | last3 = Meng | first3 = Ji xiang
+ | doi = 10.1007/s10878-015-9953-z
+ | issue = 1
+ | journal = Journal of Combinatorial Optimization
+ | mr = 3595411
+ | pages = 254–264
+ | title = Code for polyomino and computer search of isospectral polyominoes
+ | volume = 33
+ | year = 2017| s2cid = 254655722
+ }}</ref>
+
+<ref name=revised>{{citation
+ | last = Avis | first = David | author-link = David Avis
+ | editor1-last = Kalai | editor1-first = Gil | editor1-link = Gil Kalai
+ | editor2-last = Ziegler | editor2-first = Günter M. | editor2-link = Günter M. Ziegler
+ | contribution = A revised implementation of the reverse search vertex enumeration algorithm
+ | location = Basel
+ | mr = 1785299
+ | pages = 177–198
+ | publisher = Birkhäuser
+ | series = DMV Seminar
+ | title = Polytopes—combinatorics and computation: Including papers from the DMV-Seminar "Polytopes and Optimization" held in Oberwolfach, November 1997
+ | volume = 29
+ | year = 2000}}</ref>
+
+<ref name=rooted>{{citation
+ | last = Avis | first = David | author-link = David Avis
+ | doi = 10.1007/s004539900067
+ | issue = 6
+ | journal = [[Algorithmica]]
+ | mr = 1412663
+ | pages = 618–632
+ | title = Generating rooted triangulations without repetitions
+ | volume = 16
+ | year = 1996}}</ref>
+
+<ref name=rs4e>{{citation
+ | last1 = Avis | first1 = David | author1-link = David Avis
+ | last2 = Fukuda | first2 = Komei | author2-link = Komei Fukuda
+ | doi = 10.1016/0166-218X(95)00026-N
+ | issue = 1–3
+ | journal = [[Discrete Applied Mathematics]]
+ | mr = 1380066
+ | pages = 21–46
+ | title = Reverse search for enumeration
+ | url = http://cgm.cs.mcgill.ca/~avis/doc/avis/AF96a.ps
+ | volume = 65
+ | year = 1996| doi-access = free
+ }}</ref>
+
+<ref name=sibson>{{citation
+ | last = Sibson | first = R. | author-link = Robin Sibson
+ | doi = 10.1093/comjnl/21.3.243
+ | issue = 3
+ | journal = [[The Computer Journal]]
+ | mr = 0507358
+ | pages = 243–245
+ | title = Locally equiangular triangulations
+ | volume = 21
+ | year = 1973| doi-access = free
+ }}</ref>
+
+<ref name=sleumer>{{citation
+ | last = Sleumer | first = Nora H.
+ | issue = 2
+ | journal = Nordic Journal of Computing
+ | mr = 1709978
+ | pages = 137–147
+ | title = Output-sensitive cell enumeration in hyperplane arrangements
+ | volume = 6
+ | year = 1999}}</ref>
+
+<ref name=sparse-mis>{{citation
+ | last = Eppstein | first = David | author-link = David Eppstein
+ | doi = 10.1145/1597036.1597042
+ | issue = 4
+ | journal = [[ACM Transactions on Algorithms]]
+ | mr = 2571901
+ | page = A38:1–A38:14
+ | title = All maximal independent sets and dynamic dominance for sparse graphs
+ | volume = 5
+ | year = 2009| arxiv = cs/0407036
+ | s2cid = 2769046 }}</ref>
+
+<ref name=wagner>{{citation
+ | last1 = Deza | first1 = Antoine
+ | last2 = Fukuda | first2 = Komei | author2-link = Komei Fukuda
+ | last3 = Rosta | first3 = Vera
+ | contribution = Wagner's theorem and combinatorial enumeration of 3-polytopes
+ | mr = 1330480
+ | pages = 30–34
+ | series = RIMS Kôkyûroku Bessatsu
+ | title = Proceedings of a symposium held at the Research Institute for Mathematical Sciences, Kyoto University, Kyoto, May 17–19, 1993
+ | volume = 872
+ | year = 1994}}</ref>
+
+<ref name=weibel>{{citation
+ | last = Weibel | first = Christophe
+ | editor1-last = Blelloch | editor1-first = Guy E. | editor1-link = Guy Blelloch
+ | editor2-last = Halperin | editor2-first = Dan
+ | contribution = Implementation and parallelization of a reverse-search algorithm for Minkowski sums
+ | doi = 10.1137/1.9781611972900.4
+ | pages = 34–42
+ | publisher = Society for Industrial and Applied Mathematics
+ | title = Proceedings of the Twelfth Workshop on Algorithm Engineering and Experiments, ALENEX 2010, Austin, Texas, USA, January 16, 2010
+ | year = 2010| doi-access = free
+ | isbn = 978-0-89871-931-4
+ }}</ref>
+
+<ref name=yahouy>{{citation
+ | last1 = Yamanaka | first1 = Katsuhisa
+ | last2 = Avis | first2 = David | author2-link = David Avis
+ | last3 = Horiyama | first3 = Takashi
+ | last4 = Okamoto | first4 = Yoshio
+ | last5 = Uehara | first5 = Ryuhei
+ | last6 = Yamauchi | first6 = Tanami
+ | doi = 10.1016/j.dam.2020.03.034
+ | journal = [[Discrete Applied Mathematics]]
+ | mr = 4310502
+ | pages = 305–313
+ | title = Algorithmic enumeration of surrounding polygons
+ | url = http://cgm.cs.mcgill.ca/~avis/doc/avis/YAHOUY20.pdf
+ | volume = 303
+ | year = 2021}}</ref>
+
+<ref name=zonotope>{{citation
+ | last = Fukuda | first = Komei | author-link = Komei Fukuda
+ | doi = 10.1016/j.jsc.2003.08.007
+ | issue = 4
+ | journal = [[Journal of Symbolic Computation]]
+ | mr = 2094220
+ | pages = 1261–1272
+ | title = From the zonotope construction to the Minkowski addition of convex polytopes
+ | volume = 38
+ | year = 2004| doi-access = free
+ }}</ref>
+
+</references>
+
+[[Category:Search algorithms]]
+[[Category:Combinatorial algorithms]]

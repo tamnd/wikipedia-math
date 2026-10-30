@@ -1,0 +1,114 @@
+<!-- wikipedia: en
+     page: 7750796
+     title: Opportunistic TLS
+     revision: 1306602822
+     timestamp: 2025-08-18T17:44:18Z
+     history: https://en.wikipedia.org/w/index.php?curid=7750796&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1306602822 -->
+{{Short description|Communications protocol security extension}}
+{{Use dmy dates|date=May 2018}}
+{{Redirect|STARTTLS|the certificate authority|StartCom#StartSSL}}
+'''Opportunistic TLS''' (Transport Layer Security) refers to extensions in plain text communication protocols, which offer a way to upgrade a plain text connection to an encrypted ([[Transport Layer Security|TLS]] or [[Secure Sockets Layer|SSL]]) connection instead of using a separate port for encrypted communication. Several protocols use a command named "'''STARTTLS'''" or "'''Explicit TLS'''" for this purpose. It is a form of [[opportunistic encryption]] and is primarily intended as a countermeasure to [[passive monitoring]].
+
+The STARTTLS command for [[IMAP]] and [[POP3]] is defined in {{IETF RFC|2595}}, for [[SMTP]] in {{IETF RFC|3207}}, for [[XMPP]] in {{IETF RFC|6120}} and for [[NNTP]] in {{IETF RFC|4642}}. For [[IRC]], the IRCv3 Working Group defined a STARTTLS extension, though it was later deprecated.<ref>{{Cite web |title=tls Extension |url=https://ircv3.net/specs/deprecated/tls |publisher=IRCv3 Working Group |date=2012 |access-date=6 April 2024}}</ref> [[FTP]] uses the command "AUTH TLS" defined in {{IETF RFC|4217}} and [[LDAP]] defines a protocol extension [[Object identifier|OID]] in {{IETF RFC|2830}}. [[HTTP]] uses an [[HTTP/1.1_Upgrade_header#Use_with_TLS|upgrade header]].
+
+==Layering==
+TLS is application-neutral; in the words of {{IETF RFC|5246}}:
+
+:One advantage of TLS is that it is application protocol independent. Higher-level protocols can layer on top of the TLS protocol transparently.  The TLS standard, however, does not specify how protocols add security with TLS; the decisions on how to initiate TLS handshaking and how to interpret the authentication certificates exchanged are left to the judgment of the designers and implementors of protocols that run on top of TLS.<ref>{{Cite web |author=Tim Dierks |author2=Eric Rescorla  |title=The Transport Layer Security (TLS) Protocol |url=http://tools.ietf.org/html/rfc5246 |publisher=[[RFC Editor]] |date=August 2008 |access-date=8 October 2009}}</ref>
+
+The style used to specify how to use TLS matches the same layer distinction that is also  conveniently supported by several library implementations of TLS. E.g., the {{IETF RFC|3207}} SMTP extension illustrates with the following dialog how a client and server can start a secure session:<ref>{{Cite web|author=Paul Hoffman |title= SMTP Service Extension for Secure SMTP over Transport Layer Security |url=http://tools.ietf.org/html/rfc3207 |publisher=[[RFC Editor]] |date=February 2002 |access-date=8 October 2009}}</ref>
+
+   S: &lt;waits for connection on TCP port 25&gt;
+   C: &lt;opens connection&gt;
+   S: 220 mail.example.org ESMTP service ready
+   C: EHLO client.example.org
+   S: 250-mail.example.org offers a warm hug of welcome
+   S: 250 STARTTLS
+   C: STARTTLS
+   S: 220 Go ahead
+   C: &lt;starts TLS negotiation&gt;
+   C & S: &lt;negotiate a TLS session&gt;
+   C & S: &lt;check result of negotiation&gt;
+   C: EHLO client.example.org<ref>The last line in the example added for clarity. See e.g. the thread started by {{Cite web |author=Paul Smith |title=STARTTLS & EHLO |url=http://www.ietf.org/mail-archive/web/ietf-smtp/current/msg01818.html |work=ietf-smtp mailing list |publisher=[[Internet Mail Consortium]] |date=26 January 2009 |access-date=16 September 2015}}</ref>
+   . . .
+
+The last ''EHLO'' command above is issued over a secure channel. Note that authentication is optional in SMTP, and the omitted server reply may now safely advertise an ''AUTH PLAIN'' SMTP extension, which is not present in the plain-text reply.
+
+== SSL ports ==
+
+Besides the use of opportunistic TLS, a number of TCP ports were defined for SSL-secured versions of well-known protocols. These establish secure communications and then present a communication stream identical to the old un-encrypted protocol. Separate SSL ports have the advantage of fewer [[Round-trip delay time|round-trips]]; also less meta-data is transmitted in unencrypted form.<ref>[[Dovecot (software)|Dovecot]] SSL documentation: http://wiki2.dovecot.org/SSL{{Dead link|date=August 2025 |bot=InternetArchiveBot |fix-attempted=yes }}</ref> Some examples include:
+
+{| class="wikitable"
+|-
+! Protocol !! Purpose !! Normal port !! SSL variant !! SSL port
+|-
+| [[SMTP]] || Send email || 25/587 || [[SMTPS]]  || 465
+|-
+| [[POP3]] || Retrieve email || 110 || [[POP3S]] || 995
+|-
+| [[IMAP]] || Read email || 143 || [[IMAPS]] || 993
+|-
+| [[NNTP]] || News reader || 119/433 || [[NNTPS]] || 563
+|-
+| [[LDAP]] || Directory Access || 389 || [[LDAPS]] || 636
+|-
+| [[FTP]] || File transfer || 21 || [[FTPS]] || 990
+|-
+| [[XMPP]] || Instant messaging || 5222 ||  || 5223
+|}
+At least for the email related protocols, {{IETF RFC|8314}} favors ''Implicit TLS'' (using separate SSL ports) instead of STARTTLS.
+
+== Weaknesses and mitigations ==
+Opportunistic TLS is an [[opportunistic encryption]] mechanism. Because the initial handshake takes place in plain text, an attacker in control of the network can modify the server messages via a [[man-in-the-middle attack]] to make it appear that TLS is unavailable (called a '''STRIPTLS attack'''). Most SMTP clients will then send the email and possibly passwords in plain text, often with no notification to the user.{{citation needed|date=March 2018}} In particular, many SMTP connections occur between mail servers, where user notification is not practical.
+
+In September 2014, two ISPs in [[Thailand]] were found to be doing this to their own customers.<ref name="eff-isp-removing-encryption">{{cite news|last1=Hoffman-Andrews|first1=Jacob|title=ISPs Removing Their Customers' Email Encryption|url=https://www.eff.org/deeplinks/2014/11/starttls-downgrade-attacks|access-date=19 January 2019|date=11 November 2014|website=[[Electronic Frontier Foundation]]}}</ref><ref>{{cite news|title=Google, Yahoo SMTP email servers hit in Thailand|url=http://www.telecomasia.net/content/google-yahoo-smtp-email-severs-hit-thailand|access-date=31 July 2015|date=12 September 2014}}</ref> In October 2014, [[Cricket Wireless]], a subsidiary of [[AT&T]], was revealed to be doing this to their customers. This behavior started as early as September 2013 by [[Aio Wireless]], who later merged with Cricket where the practice continued.<ref>{{cite news|title=The FCC Must Prevent ISPs From Blocking Encryption|url=http://www.goldenfrog.com/blog/fcc-must-prevent-isps-blocking-encryption|access-date=31 July 2015|date=4 November 2014}}</ref><ref name="eff-isp-removing-encryption"/>
+
+STRIPTLS attacks can be blocked by configuring SMTP clients to require TLS for outgoing connections (for example, the [[Exim]] [[Message transfer agent]] can require TLS via the directive "hosts_require_tls"<ref>{{cite web|title=Exim Internet Mailer - The smtp transport|url=http://www.exim.org/exim-html-current/doc/html/spec_html/ch-the_smtp_transport.html|website=exim.org|quote=hosts_require_tls - Exim will insist on using a TLS session when delivering to any host that matches this list.}}</ref>). However, since not every mail server supports TLS, it is not practical to simply require TLS for all connections.
+
+An example of a STRIPTLS attack of the type used in Thai [[mass surveillance]] technology:<ref>{{cite journal|title=Who's That Knocking at my door? Understanding Surveillance in Thailand|journal=Privacy International|date=January 2017|pages=21|url=https://privacyinternational.org/sites/default/files/2017-10/thailand_2017_0.pdf|access-date=7 February 2020}}</ref>
+{{col-begin}}
+{{col-break}}
+    220 smtp.gmail.com ESMTP mail.redacted.com - gsmtp
+    ehlo a
+    250-smtp.gmail.com at your service, [REDACTED SERVICE]
+    250-SIZE 35882577
+    250-8BITMIME
+    # The STARTTLS command is stripped here
+    250-ENHANCEDSTATUSCODES
+    250-PIPELINING
+    250 SMTPUTF8
+{{col-break}}
+    220 smtp.gmail.com ESMTP - gsmtp
+    ehlo a
+    250-smtp.gmail.com at your service
+    250-SIZE 35882577
+    250-8BITMIME
+    250-STARTTLS
+    250-ENHANCEDSTATUSCODES
+    250-PIPELINING
+    250 SMTPUTF8
+{{col-end}}
+
+Supposing the client side supports it (name resolution of the client and upstream DNS server of the client), this problem can be addressed by [[DNS-based Authentication of Named Entities]] (DANE), a part of [[DNSSEC]], and in particular by {{IETF RFC|7672}} for SMTP. DANE allows to advertise support for secure SMTP via a TLSA record. This tells connecting clients they should require TLS, thus preventing STRIPTLS attacks. The STARTTLS Everywhere project from the [[Electronic Frontier Foundation]] works in a similar way. However, DNSSEC, due to deployment complexities and peculiar{{what|date=November 2020}} criticism,<ref>{{cite news|title=Against DNSSEC|url=http://sockpuppet.org/blog/2015/01/15/against-dnssec/|author=Thomas Ptacek|date=18 March 2016}}</ref> faced a low adoption rate and a new protocol called SMTP MTA Strict Transport Security or MTA-STS has been drafted<ref>{{Cite web|url=https://tools.ietf.org/html/rfc8461.html|title=SMTP MTA Strict Transport Security (MTA-STS)|last=Ramakrishnan|first=Binu|last2=Brotman|first2=Alexander|website=tools.ietf.org|language=en|access-date=2019-02-22|last3=Jones|first3=Janet|last4=Margolis|first4=Daniel|last5=Risher|first5=Mark}}</ref> by a group of major email service providers including Microsoft, Google and Yahoo. MTA-STS does not require the use of DNSSEC to authenticate DANE TLSA records but relies on the [[certificate authority]] (CA) system and a trust-on-first-use (TOFU) approach to avoid interceptions. The TOFU model reduces complexity but without the guarantees on first use offered by DNSSEC. In addition, MTA-STS introduces a mechanism for failure reporting and a report-only mode, enabling progressive roll-out and auditing for compliance.
+
+== Popularity ==
+{{Expand section|date=May 2016}}
+Following the revelations made by [[Edward Snowden]] in light of the [[Global surveillance disclosures (2013–present)|global mass surveillance scandal]], popular email providers have bettered their email security by enabling STARTTLS.<ref>{{Cite news |last1=Peterson |first1=Andrea |title=Facebook's security chief on the Snowden effect, the Messenger app backlash and staying optimistic |date=12 August 2014 |url= https://www.washingtonpost.com/blogs/the-switch/wp/2014/08/12/facebooks-security-chief-on-the-snowden-effect-the-messenger-app-backlash-and-staying-optimistic/ |newspaper=[[The Washington Post]] |access-date=2 November 2014}}</ref> [[Facebook]] reported that after enabling STARTTLS and encouraging other providers{{Ambiguous|date=February 2017}} to do the same, until Facebook discontinued its email service in February 2014, 95% of outbound email was encrypted with both [[Forward secrecy|perfect forward secrecy]] and strict certificate validation.<ref>{{Cite web|last1=Cohen|first1=David|date=19 August 2014|title=Facebook: 95% of Notification Emails Encrypted Thanks to Providers' STARTTLS Deployment|url=http://allfacebook.com/facebook-95-notification-emails-encrypted-thanks-providers-starttls-deployment_b134023|url-status=live|archive-url=https://web.archive.org/web/20140922222720/http://allfacebook.com/facebook-95-notification-emails-encrypted-thanks-providers-starttls-deployment_b134023|archive-date=22 September 2014|access-date=|website=allfacebook.com}}</ref>
+
+==References==
+{{Reflist}}
+
+==External links==
+* [https://www.checktls.com/TestReceiver Secure Email Tests and Tools] verify STARTTLS in real-time dialog like example above
+* [https://web.archive.org/web/20140610053143/https://starttls.info/ Verify if a receiving domain has STARTTLS enabled for email and with which security level]
+* {{cite web | url = https://tools.ietf.org/html/draft-ietf-uta-mta-sts | title = SMTP MTA Strict Transport Security (MTA-STS) | first1 = Daniel | last1 = Margolis | first2 = Mark | last2 = Risher | first3 = Binu | last3 = Ramakrishnan | first4 = Alexander | last4 = Brotman | first5 = Janet | last5 = Jones | publisher = IETF }} A mechanism enabling mail service providers to declare their ability to receive Transport Layer Security (TLS) secure SMTP connections.
+
+{{SSL/TLS}}
+
+{{DEFAULTSORT:Starttls}}
+[[Category:Internet mail protocols]]
+[[Category:Transport Layer Security]]
+
+[[fr:StartTLS]]

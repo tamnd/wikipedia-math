@@ -1,0 +1,59 @@
+<!-- wikipedia: en
+     page: 31577280
+     title: Ershov number
+     revision: 1372130248
+     timestamp: 2026-08-30T14:03:15Z
+     history: https://en.wikipedia.org/w/index.php?curid=31577280&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1372130248 -->
+{{Short description|Type of number used in code optimization}}
+{{use dmy dates|date=May 2022}}
+
+'''Ershov numbers''', named after [[Andrey_Yershov|Andrey Petrovich Yershov]],<ref name="ucalgary" /> are used in [[code optimization]] to minimize the amount of [[register allocation]]s. Ershov numbers can be used in methods to optimally select registers when there is only one expression in a code block. 
+Given an expression <code>E = E<sub>1</sub> ''op'' E<sub>2</sub></code> the goal is to generate code so as to either minimize the number of registers used, or, if an insufficient number of registers is available, to minimize the number of nonregister temporaries required.
+
+== Definition ==
+
+The Ershov number <math>n</math> of a node in a given [[expression tree]] is defined as follows:<ref>{{cite web|url=http://cglab.ca/~morin/teaching/3002/notes/dataflow.pdf|title=Optimal Code Generation (for Expressions) and Data-Flow Analysis|publisher=Carleton University|access-date=2022-05-30}}</ref><ref>{{cite web|url=https://cs.wmich.edu/~zijiang/CS5810/Chap8.pdf|title=Code Generation, Chapter 8|publisher=Western Michigan University|access-date=2022-05-30}}</ref>
+
+# Every leaf has <math>n = 1</math>.
+# For a node with one child, <math>n</math> is the same as the child's.
+# For a node with two children with Ershov numbers <math>n_1</math> and <math>n_2</math> , <math>n</math> is defined as:
+:<math>
+n = \begin{cases}
+    \max(n_1, n_2) & \text{if } n_1 \ne n_2,\\
+    n_1 + 1        & \text{if } n_1 = n_2.
+\end{cases}
+</math>
+
+The Ershov number of a [[Node (graph theory)|node]] represents the minimum number of registers required to evaluate the subexpression whose root is that node.  The idea is that we evaluate the child with the larger Ershov number first, then the other child, then perform the operation at the root.
+
+== Example ==
+Suppose we have an expression tree with a '+' operation at the root, and the left and right [[subtree]]s have Ershov numbers of 3 and 4, respectively.  The Ershov number of this node is 4, so we should be able to generate code for the expression using 4 registers.
+
+#  Generate code to evaluate the right child using registers r1, r2, r3, and r4.  Place the result in r1.
+#  Generate code to evaluate the left child using registers r2, r3, and r4.  Place the result in r2.
+#  Issue the instruction <code>ADD r1, r1, r2</code>, which adds r1 and r2 and stores the result in r1.
+
+== Code generation ==
+The general procedure for generating code using a minimal number of loads and stores from memory is as follows:
+
+# Generate code for the child with the largest Ershov number first
+# Issue an instruction to store the result in a temporary register, or, if none is available, a temporary location in memory
+# Generate code for the child with the smaller Ershov number
+# Issue an instruction to load the temporary variable back into a register
+# Issue an instruction to perform the operation at the root
+
+In the ideal case, if there are ''n'' registers and the first subexpression requires ''n'' registers and the next subexpression requires ''n - 1'' registers, a single register can be used to store the result of the first expression, and there will still be ''n - 1'' registers available to compute the next subexpression, therefore requiring no loads or stores from memory at all.<ref name="ucalgary">{{cite web|url=https://pages.cpsc.ucalgary.ca/~robin/class/510/cg-expressions.pdf|title=Notes on Code generation|publisher=Department of Computer Science, University of Calgary|date=September 14, 2007|access-date=2022-05-30}}</ref>
+
+If the Ershov number of the root of the expression tree is greater than the number of registers available, the Ershov number can also be used to determine the amount of additional temporary memory space required, for example on the [[Stack-based_memory_allocation|stack]].<ref name="ucalgary" />
+
+==See also==
+*[[Strahler number]], the minimum number of registers needed to evaluate an expression without any external storage
+*[[Sethi–Ullman algorithm]], basically the same concept
+
+==References==
+{{reflist}}
+
+[[Category:Syntax]]
+[[Category:Software optimization]]

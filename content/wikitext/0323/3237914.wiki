@@ -1,0 +1,110 @@
+<!-- wikipedia: en
+     page: 3237914
+     title: Branch and cut
+     revision: 1362914804
+     timestamp: 2026-07-07T00:01:30Z
+     history: https://en.wikipedia.org/w/index.php?curid=3237914&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1362914804 -->
+{{Short description|Combinatorial optimization method}}
+'''Branch and cut'''<ref>{{Cite journal|last=Padberg|first=Manfred|last2=Rinaldi|first2=Giovanni|date=1991|title=A Branch-and-Cut Algorithm for the Resolution of Large-Scale Symmetric Traveling Salesman Problems|journal=SIAM Review|language=en|volume=33|issue=1|pages=60–100|doi=10.1137/1033004|issn=0036-1445}}</ref> is a method of [[combinatorial optimization]] for solving [[integer linear program]]s (ILPs), that is, [[linear programming]] (LP) problems where some or all the unknowns are restricted to [[integer]] values.<ref>{{cite journal|last=John E.|first=Mitchell|title=Branch-and-Cut Algorithms for Combinatorial Optimization Problems|journal=Handbook of Applied Optimization|year=2002|pages=65–77|url=http://eaton.math.rpi.edu/faculty/Mitchell/papers/bc_hao.pdf}}</ref> Branch and cut involves running a [[branch and bound]] algorithm and using [[cutting plane]]s to tighten the linear programming relaxations.  Note that if cuts are only used to tighten the initial LP relaxation, the algorithm is called '''cut and branch.'''
+
+==Algorithm==
+This description assumes the ILP is a '''maximization''' problem.
+
+The method solves the [[Linear programming relaxation|linear program without the integer constraint]] using the regular [[simplex algorithm]]. When an optimal solution is obtained, and this solution has a non-integer value for a variable that is supposed to be integer, a [[Cutting-plane method|cutting plane algorithm]] may be used to find further linear constraints which are satisfied by all [[Feasible solution|feasible]] integer points but violated by the current fractional solution. These inequalities may be added to the linear program, such that resolving it will yield a different solution which is hopefully "less fractional".
+
+At this point, the [[branch and bound]] part of the algorithm is started. The problem is split into multiple (usually two) versions. The new linear programs are then solved using the simplex method and the process repeats.  During the branch and bound process, non-integral solutions to LP relaxations serve as upper bounds and integral solutions serve as lower bounds.  A node can be [[Search tree pruning|pruned]] if an upper bound is lower than an existing lower bound.  Further, when solving the LP relaxations, additional cutting planes may be generated, which may be either ''global cuts'', i.e., valid for all feasible integer solutions, or ''local cuts'', meaning that they are satisfied by all solutions fulfilling the side constraints from the currently considered branch and bound subtree.
+
+{{anchor|Algorithm summary}}The algorithm is summarized below.
+
+#Add the initial ILP to <math>L</math>, the list of active problems
+#Set <math>x^* = \text{null}</math> and <math>v^* = -\infty</math>
+#[[While loop|''while'']] <math>L</math> is not empty
+##Select and remove (de-queue) a problem from <math>L</math>
+##Solve the LP relaxation of the problem.
+##If the solution is infeasible, go back to 3 (while).  Otherwise denote the solution by <math>x</math> with objective value <math>v</math>.
+##If <math>v\le v^*</math>, go back to 3.
+##If <math>x</math> is integer, set <math>v^*\leftarrow v, x^* \leftarrow x</math> and go back to 3.
+##If desired, search for cutting planes that are violated by <math>x</math>.  If any are found, add them to the LP relaxation and return to 3.2.
+##Branch to partition the problem into new problems with restricted feasible regions.  Add these problem to <math>L</math> and go back to 3
+#return <math>x^*</math>
+
+=== <span class="anchor" id="Code"></span>Pseudocode ===
+In [[C++]]-like [[pseudocode]], this could be written:
+
+<syntaxhighlight lang="c++" line="1">
+// ILP branch and cut solution pseudocode, assuming objective is to be maximized
+ILP_solution branch_and_cut_ILP(IntegerLinearProgram initial_problem) {
+    queue active_list; // L, above
+    active_list.enqueue(initial_problem); // step 1
+    // step 2
+    ILP_solution optimal_solution; // this will hold x* above
+    double best_objective = -std::numeric_limits<double>::infinity; // will hold v* above
+    while (!active_list.empty()) { // step 3 above
+        LinearProgram& curr_prob = active_list.dequeue(); // step 3.1
+        do { // steps 3.2-3.7
+            RelaxedLinearProgram& relaxed_prob = LP_relax(curr_prob); // step 3.2
+            LP_solution curr_relaxed_soln = LP_solve(relaxed_prob); // this is x above
+            bool cutting_planes_found = false;
+            if (!curr_relaxed_soln.is_feasible()) { // step 3.3
+                continue; // try another solution; continues at step 3
+            }
+            double current_objective_value = curr_relaxed_soln.value(); // v above
+            if (current_objective_value <= best_objective) { // step 3.4
+                continue; // try another solution; continues at step 3
+            }
+            if (curr_relaxed_soln.is_integer()) { // step 3.5
+                best_objective = current_objective_value;
+                optimal_solution = cast_as_ILP_solution(curr_relaxed_soln);
+                continue; // continues at step 3
+            }
+            // current relaxed solution isn't integral
+            if (hunting_for_cutting_planes) { // step 3.6
+                violated_cutting_planes = search_for_violated_cutting_planes(curr_relaxed_soln);
+                if (!violated_cutting_planes.empty()) { // step 3.6
+                    cutting_planes_found = true; // will continue at step 3.2
+                    for (auto&& cutting_plane : violated_cutting_planes) {
+                        active_list.enqueue(LP_relax(curr_prob, cutting_plane));
+                    }
+                    continue; // continues at step 3.2
+                }
+            }
+            // step 3.7: either violated cutting planes not found, or we weren't looking for them
+            auto&& branched_problems = branch_partition(curr_prob);
+            for (auto&& branch : branched_problems) {
+                active_list.enqueue(branch);
+            }
+            continue; // continues at step 3
+        } while (hunting_for_cutting_planes /* parameter of the algorithm; see 3.6 */
+               && cutting_planes_found);
+        // end step 3.2 do-while loop
+    } // end step 3 while loop
+    return optimal_solution; // step 4
+}
+</syntaxhighlight>
+
+In the above pseudocode, the functions <code>LP_relax</code>, <code>LP_solve</code> and <code>branch_partition</code> called as subroutines must be provided as applicable to the problem. For example, <code>LP_solve</code> could call the [[revised simplex algorithm|simplex algorithm]].  Branching strategies for <code>branch_partition</code> are discussed below.
+
+==Branching strategies==
+
+An important step in the branch and cut algorithm is the branching step.  At this step, there are a variety of branching heuristics that can be used.  The branching strategies described below all involve what is called '''branching on a variable.'''<ref>{{Cite journal|last=Achterberg|first=Tobias|last2=Koch|first2=Thorsten|last3=Martin|first3=Alexander|date=2005|title=Branching rules revisited|journal=Operations Research Letters|language=en|volume=33|issue=1|pages=42–54|doi=10.1016/j.orl.2004.04.002}}</ref>  Branching on a variable involves choosing a variable, <math>x_i</math>, with a fractional value, <math>x_i'</math>, in the optimal solution to the current LP relaxation and then adding the constraints <math>x_i \le \left\lfloor x_i' \right\rfloor</math> and <math> x_i \ge \left\lceil x_i' \right\rceil</math>
+; Most infeasible branching: This branching strategy chooses the variable with the fractional part closest to 0.5.
+; Pseudo cost branching: The basic idea of this strategy is to keep track for each variable <math>x_i</math> the change in the objective function when this variable was previously chosen as the variable to branch on.  The strategy then chooses the variable that is predicted to have the most change on the objective function based on past changes when it was chosen as the branching variable.  Note that pseudo cost branching is initially uninformative in the search since few variables have been branched on.
+; Strong branching: Strong branching involves testing which of the candidate variable gives the best improvement to the objective function before actually branching on them.  '''Full strong branching''' tests all candidate variables and can be computationally expensive.  The computational cost can be reduced by only considering a subset of the candidate variables and not solving each of the corresponding LP relaxations to completion.
+
+There are also a large number of variations of these branching strategies, such as using strong branching early on when pseudo cost branching is relatively uninformative and then switching to pseudo cost branching later when there is enough branching history for pseudo cost to be informative.
+
+==References==
+{{Reflist}}
+
+==External links==
+* [https://web.archive.org/web/20050901073653/http://www.cs.sandia.gov/opt/survey/mip.html Mixed Integer Programming]
+* [http://scip.zib.de SCIP]: framework for branch-cut-and-price and a mixed integer programming solver 
+* [https://software.cs.uni-koeln.de/abacus/ ABACUS – A Branch-And-CUt System] – open source software
+* [https://github.com/coin-or/Cbc COIN-OR Cbc] – open source software on [[GitHub]]
+
+{{Optimization algorithms|combinatorial|state=expanded}}
+
+[[Category:Combinatorial optimization]]
+[[Category:Optimization algorithms and methods]]

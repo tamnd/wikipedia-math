@@ -1,0 +1,252 @@
+<!-- wikipedia: en
+     page: 40163231
+     title: Exponential integrator
+     revision: 1349175951
+     timestamp: 2026-04-16T03:43:59Z
+     history: https://en.wikipedia.org/w/index.php?curid=40163231&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1349175951 -->
+{{Short description|Class of numerical methods}}
+{{distinguish|text=[[exponential integral]] of [[exponential function]]s}}
+
+'''Exponential integrators''' are a class of [[numerical method]]s for the solution of [[ordinary differential equations]], specifically [[initial value problem]]s.  This large class of methods from [[numerical analysis]] is based on the exact integration of the [[Linear system|linear]] part of the initial value problem. Because the linear part is [[Integral|integrated]] exactly, this can help to mitigate the [[Stiff equation|stiffness]] of a differential equation. Exponential integrators can be constructed to be [[Explicit and implicit methods|explicit or implicit]] for [[Numerical methods for ordinary differential equations|numerical ordinary differential equations]] or serve as the [[integrator|time integrator]] for [[numerical partial differential equations]].
+
+== Background ==
+Dating back to at least the 1960s, these methods were recognized by Certaine<ref>{{harvtxt|Certaine|1960}}</ref> and Pope.<ref>{{harvtxt|Pope|1963}}</ref> As of late exponential integrators have become an active area of research, see [[Marlis Hochbruck|Hochbruck]] and Ostermann (2010).<ref name="Exponential integrators"/>  Originally developed for solving [[Stiff equation|stiff differential equations]], the methods have been used to solve [[partial differential equations]] including [[Hyperbolic partial differential equations|hyperbolic]] as well as [[Parabolic partial differential equation|parabolic]] problems<ref>{{harvtxt|Hochbruck|Ostermann|2005a}}, {{harvtxt|Hochbruck|Ostermann|2005b}}</ref> such as the [[heat equation]].
+
+==Introduction==
+
+We consider [[initial value problem]]s of the form,
+{{NumBlk||<math display="block">u'(t) = L u(t) + N(u(t) ), \qquad u(t_0)=u_0, </math>|{{EquationRef|1}}}}
+where <math>L</math> is composed of [[Linear system|linear terms]],
+and <math> N</math> is composed of the [[Nonlinear system|non-linear]] terms.
+These problems can come from a more typical initial value problem
+<math display="block">u'(t) = f(u(t)), \qquad u(t_0)=u_0, </math>
+after linearizing locally about a fixed or local state {{nowrap|<math>u^*</math>:}}
+<math display="block"> L = \frac{\partial f}{\partial u}(u^*); \qquad N = f(u) - L u.</math>
+Here, <math>\frac{\partial f}{\partial u}</math> refers to the [[partial derivative]] of <math>f</math> with respect to <math>u</math> (the Jacobian of ''f'').
+
+Exact integration of this problem from time 0 to a later time <math>t</math> can be performed using [[matrix exponential]]s to define an [[integral equation]] for the exact solution:<ref name="Exponential integrators">{{harvtxt|Hochbruck|Ostermann|2010}}</ref>
+{{NumBlk||<math display="block"> u(t) = e^{L t } u_0 + \int_0^t e^{ L (t-\tau) } N{\left( u{\left( \tau \right)} \right)}\, d\tau. </math>|{{EquationRef|2}}}}
+This is similar to the exact integral used in the [[Picard–Lindelöf theorem]].  In the case of <math>N \equiv 0</math>, this formulation is the exact solution to the [[linear differential equation]].
+
+Numerical methods require a [[discretization]] of equation (2). They can be based on
+[[Runge-kutta method|Runge-Kutta]] discretizations,<ref name="Cox and Matthews 2002">{{harvtxt|Cox|Matthews|2002}}</ref><ref>{{harvtxt|Tokman|2006}}</ref><ref>{{harvtxt|Tokman|2011}}</ref>
+[[linear multistep method]]s or a variety of other options.
+
+==Exponential Rosenbrock methods==
+Exponential Rosenbrock methods were shown to be very efficient in solving large systems of stiff ordinary differential equations, usually resulted from spatial discretization of time dependent (parabolic) PDEs. These integrators are constructed based on a continuous linearization of (1) along the numerical solution <math>u_n</math>
+{{NumBlk||<math display="block">
+u'(t) = L_n u(t)+ N_n(u(t)), \qquad u(t_0)=u_0, </math>|{{EquationRef|3}}}}
+where {{nowrap|<math> L_n = \frac{\partial f}{\partial u}(u_n)</math>,}} {{nowrap|<math> N_n (u)=f(u)-L_n u</math>.}}
+This procedure enjoys the advantage, in each step, that <math>\frac{\partial N_n}{\partial u}(u_n)= 0.</math>
+This considerably simplifies the derivation of the order conditions and improves the stability when integrating the nonlinearity <math>N(u(t))</math>.
+Again, applying the variation-of-constants formula (2) gives the exact solution at time <math>t_{n+1}</math> as
+{{NumBlk||<math display="block">
+u(t_{n+1})= e^{h_n L_n}u(t_n) + \int_0^{h_n} e^{(h_n-\tau) L_n}  N_n ( u(t_n+\tau ))  d\tau. </math>|{{EquationRef|4}}}}
+The idea now is to approximate the integral in (4) by some quadrature rule with nodes <math>c_i</math> and weights <math>b_i(h_n L_n)</math> (<math>1\leq i\leq s</math>).
+This yields the following class of <math> s</math>-stage  explicit exponential Rosenbrock methods, see Hochbruck and Ostermann (2006), Hochbruck, Ostermann and Schweitzer (2009):
+<math display="block">\begin{align}
+U_{ni} &= e^{c_i h_n L_n}u_n + h_n \sum_{j=1}^{i-1}a_{ij}(h_n L_n) N_n( U_{nj}), \\
+u_{n+1} &= e^{h_n L_n} u_n   + h_n \sum_{i=1}^s b_i(h_n L_n) N_n(U_{ni})
+\end{align}</math>
+with {{nowrap|<math>u_n \approx u(t_n)</math>,}} {{nowrap|<math>U_{ni}\approx u(t_n +c_i h_n)</math>,}} {{nowrap|<math>h_n = t_{n+1}-t_n </math>.}} The coefficients <math> a_{ij}(z), b_i (z)</math> are usually chosen as linear combinations of the entire functions <math>\varphi_k(c_i z), \varphi_k(z) </math>, respectively, where
+<math display="block">
+\varphi_0(z) = e^z,\quad \varphi _k(z)=\int_0^1 e^{(1-\theta )z} \frac{\theta ^{k-1}}{(k-1)!} d\theta , \quad k\geq 1.
+</math>
+These functions satisfy the recursion relation
+<math display="block">
+\varphi _{k+1}(z)=\frac{\varphi _k(z)-\varphi_k(0)}{z}, \ k\geq 0.
+</math>
+By introducing the difference <math>D_{ni}=N_n (U_{ni})-N_n (u_n)</math>, they can be reformulated in a more efficient way for implementation (see also <ref name="Exponential integrators"/>) as
+<math display="block">
+\begin{align}
+U_{ni} &= u_n + c_i h_n \varphi _1 ( c_i h_n L_n)f(u_n) +h_n \sum_{j=2}^{i-1}a_{ij}(h_n L_n) D_{nj}, \\
+u_{n+1}&= u_n + h_n \varphi _1 ( h_n L_n)f(u_n) + h_n \sum_{i=2}^s b_i(h_n L_n) D_{ni}.
+\end{align}
+</math>
+
+In order to implement this scheme with adaptive step size, one can consider, for the purpose of local error estimation, the following embedded methods
+<math display="block">
+\bar{u}_{n+1}= u_n + h_n \varphi _1 ( h_n L_n)f(u_n) + h_n \sum_{i=2}^s \bar{b}_i(h_n L_n) D_{ni},
+</math>
+which use the same stages <math>U_{ni}</math> but with weights <math>\bar{b}_i</math>.
+
+For convenience, the coefficients of the explicit exponential Rosenbrock methods together with their embedded methods can be represented by using the so-called reduced Butcher tableau as follows:
+
+{| style="text-align: center; margin-left: 1.5em;" cellpadding=3px cellspacing=0px
+| style="border-right:1px solid;" | <math> c_2 </math> ||
+|-
+| style="border-right:1px solid;" | <math> c_3 </math> || <math> a_{32} </math>
+|-
+| style="border-right:1px solid;" | <math> \vdots </math> || <math> \vdots </math> || || <math> \ddots </math>
+|-
+| style="border-right:1px solid; border-bottom:1px solid;" | <math> c_s </math>
+| style="border-bottom:1px solid;" | <math> a_{s2} </math>
+| style="border-bottom:1px solid;" | <math> a_{s3} </math>
+| style="border-bottom:1px solid;" | <math> \cdots </math>
+| style="border-bottom:1px solid;" | <math> a_{s,s-1} </math> || style="border-bottom:1px solid;" |
+|-
+| style="border-right:1px solid;" | || <math> b_2 </math> || <math> b_3 </math> || <math> \cdots </math> || <math> b_{s-1} </math> || <math> b_s </math>
+|-
+| style="border-right:1px solid;" | || <math> \bar{b}_2 </math> || <math> \bar{b}_3 </math> || <math> \cdots </math> || <math> \bar{b}_{s-1} </math> || <math> \bar{b}_s </math>
+|}
+
+===Stiff order conditions===
+Moreover, it is shown in Luan and Ostermann (2014a)<ref>{{harvtxt|Luan|Ostermann|2014a}}</ref> that the reformulation approach offers a new and simple way to analyze the local errors and thus to derive the stiff order conditions for exponential Rosenbrock methods up to order 5. With the help of this new technique together with an extension of the B-series concept, a theory for deriving the stiff order conditions for exponential Rosenbrock integrators of arbitrary order has been finally given in Luan and Ostermann (2013).<ref>{{harvtxt|Luan|Ostermann|2013}}</ref> As an example, in that work the stiff order conditions for exponential Rosenbrock methods up to order 6 have been derived, which are stated in the following table:
+
+{| class="wikitable" style="margin-left:1.5em;"
+! No. !! Stiff order condition !! Order
+|-
+| 1 || <math display="inline"> \sum_{i=2}^s b_i (Z)c^2_i=2\varphi_3 (Z) </math> || 3
+|-
+| 2 || <math display="inline"> \sum_{i=2}^s b_i (Z)c^3_i=6\varphi_4 (Z) </math> || 4
+|-
+| 3 || <math display="inline"> \sum_{i=2}^s b_i (Z)c^4_i=24\varphi_5 (Z) </math> || rowspan=2 | 5
+|-
+| 4 || <math display="inline"> \sum_{i=2}^s b_i (Z)c_i  K \psi _{3,i}(Z)=0 </math>
+|-
+| 5 || <math display="inline"> \sum_{i=2}^s b_i (Z)c_i  K \psi _{3,i}(Z)=0 </math> || rowspan=3 | 6
+|-
+| 6 || <math display="inline"> \sum_{i=2}^s b_i (Z) c_i^2 M \psi_{3,i}(Z)=0 </math>
+|-
+| 7 || <math display="inline"> \sum_{i=2}^s b_i (Z) c_i K \psi_{4,i}(Z)=0 </math>
+|}
+
+Here  <math> Z</math>, <math>K</math>, and <math>M </math> denote arbitrary square matrices.
+
+=== Convergence analysis===
+The stability and convergence results for exponential Rosenbrock methods are proved in the framework of strongly continuous semigroups in some Banach space.
+
+=== Examples===
+All the schemes presented below fulfill the stiff order conditions and thus are also suitable for solving stiff problems.
+
+==== Second-order method ====
+The simplest exponential Rosenbrock method is the exponential Rosenbrock–Euler scheme, which has order 2, see, for example Hochbruck et al. (2009):
+<math display="block">
+u_{n+1} = u_n + h_n \ \varphi_1(h_n L_n) f(u_n).
+</math>
+
+==== Third-order methods====
+A class of third-order exponential Rosenbrock methods was derived in Hochbruck et al. (2009), named as  exprb32, is given as:
+
+exprb32:
+{| style="text-align: center; margin-left: 1.5em;" cellpadding=3px cellspacing=0px
+| style="border-right:1px solid; border-bottom:1px solid;" | 1 || style="border-bottom:1px solid;" | || style="border-bottom:1px solid;" |
+|-
+| style="border-right:1px solid;" | || <math>2\varphi_3</math>
+|-
+| style="border-right:1px solid;" | || 0
+|}
+which reads as
+<math display="block">\begin{align}
+U_{n2} &= u_n + h_n \ \varphi_1( h_n L_n) f(u_n), \\[1ex]
+u_{n+1} &= u_n + h_n \ \varphi_1(h_n L_n) f(u_n)+ h_n \ 2\varphi_3(h_n L_n) D_{n2},
+\end{align}</math>
+where <math>D_{n2}=N_n (U_{n2})-N_n (u_n).</math>
+
+For a variable step size implementation of this scheme, one can embed it with the exponential Rosenbrock–Euler:
+<math display="block">
+\hat{u}_{n+1} =u_n + h_n \ \varphi_1(h_n L_n) f(u_n).
+</math>
+
+== Fourth-order ETDRK4 method of Cox and Matthews ==
+
+Cox and Matthews<ref name="Cox and Matthews 2002"/> describe a fourth-order method exponential time differencing (ETD) method that they used [[Maple (software)|Maple]] to derive.
+
+We use their notation, and assume that the unknown function is <math>u</math>, and that we have a known solution <math>u_n</math> at time <math>t_n</math>.
+Furthermore, we'll make explicit use of a possibly time dependent right hand side: <math>\mathcal{N} = \mathcal{N}( t, u )</math>.
+
+Three stage values are first constructed:
+<math display="block">\begin{align}
+a_n &= e^{ L h / 2 } u_n + L^{-1} \left( e^{Lh/2} - I \right) \mathcal{N}( t_n, u_n ) \\
+b_n &= e^{ L h / 2 } u_n + L^{-1} \left( e^{Lh/2} - I \right) \mathcal{N}( t_n{+}\tfrac{h}{2}, a_n ) \\
+c_n &= e^{ L h / 2 } a_n + L^{-1} \left( e^{Lh/2} - I \right) \left( 2 \mathcal{N}( t_n{+}\tfrac{h}{2}, b_n ) - \mathcal{N}(t_n,u_n) \right)
+\end{align}</math>
+The final update is given by,
+<math display="block">\begin{align}
+u_{n+1} = e^{L h} u_n + h^{-2} L^{-3} \Bigl\{ \hphantom{{}+2}
+&\left[ -4 - Lh + e^{Lh} \left( 4 - 3 L h + (L h)^2 \right)  \right] \mathcal{N}( t_n, u_n ) \\
+{}+
+2&\left[ 2 + L h + e^{Lh} \left( -2 + L h \right) \right] \left[ \mathcal{N}( t_n{+}\tfrac{h}{2}, a_n ) + \mathcal{N}( t_n{+}\tfrac{h}{2}, b_n ) \right] \\
+{}+\hphantom{2}
+&\left[ -4 - 3L h - (Lh)^2 + e^{Lh} \left(4 - Lh \right) \right] \mathcal{N}( t_n{+}h, c_n )
+\Bigr\}.
+\end{align}</math>
+
+If implemented naively, the above algorithm suffers from numerical instabilities due to [[floating point]] round-off errors.<ref name="Kassam and Trefethen 2005">{{harvtxt|Kassam|Trefethen|2005}}</ref>  To see why, consider the first function,
+<math display="block"> \varphi_1( z ) = \frac{ e^z-1 }{ z },</math>
+which is present in the first-order Euler method, as well as all three stages of ETDRK4.  For small values of <math>z</math>, this function suffers from numerical cancellation errors.  However, these numerical issues can be avoided by evaluating the <math> \varphi_1 </math> function via a contour integral approach <ref name="Kassam and Trefethen 2005"/> or by a [[Padé approximant]].<ref>{{harvtxt|Berland|Skaflestad|Wright|2007}}</ref>
+
+== Applications ==
+
+Exponential integrators are used for the simulation of stiff scenarios in [[Computational science|scientific]] and [[Visual computing|visual]] computing, for example in [[molecular dynamics]],<ref>{{harvtxt|Michels|Desbrun|2015}}</ref> for [[Very-large-scale integration|VLSI]] circuit simulation,<ref>{{harvtxt|Zhuang|Weng|Lin|Cheng|2014}}</ref><ref>{{harvtxt|Weng|Chen|Cheng|2012}}</ref> and in [[computer graphics]].<ref>{{harvtxt|Michels|Sobottka|Weber|2014}}</ref> They are also applied in the context of [[Hybrid Monte Carlo|hybrid monte carlo]] methods.<ref>{{harvtxt|Chao|Solomon|Michels|Sha|2015}}</ref> In these applications, exponential integrators show the advantage of large time stepping capability and high accuracy. To accelerate the evaluation of matrix functions in such complex scenarios, exponential integrators are often combined with Krylov subspace projection methods.
+
+== See also ==
+*[[General linear methods]]
+
+== Notes ==
+<references/>
+
+==References==
+{{refbegin}}
+* {{cite journal|title=B-series and Order Conditions for Exponential Integrators|first1=Havard|last1=Berland|first2=Brynjulf|last2=Owren|first3=Bard|last3=Skaflestad|journal=SIAM Journal on Numerical Analysis|volume=43|issue=4|pages=1715–1727|year=2005|doi=10.1137/040612683|citeseerx=10.1.1.216.5645}}
+* {{cite journal|last1=Berland|first1=Havard|last2=Skaflestad|first2=Bard|last3=Wright|first3=Will M.|title=EXPINT-A MATLAB Package for Exponential Integrators|journal=ACM Transactions on Mathematical Software|year=2007|volume=33|issue=1|pages=4–es|doi=10.1145/1206040.1206044|s2cid=1525599|url=https://cds.cern.ch/record/848126}}
+* {{cite journal|last1=Chao|first1=Wei-Lun|last2=Solomon|first2=Justin|last3=Michels|first3=Dominik L.|last4=Sha|first4=Fei|title=Exponential Integration for Hamiltonian Monte Carlo|journal=Proceedings of the 32nd International Conference on Machine Learning (ICML-15)|pages=1142–1151|year=2015}}
+* {{cite book| last=Certaine | first=John|chapter=The solution of ordinary differential equations with large time constants|year=1960|pages=128–132|publisher=Wiley|title=Mathematical methods for digital computers}}
+* {{cite journal|last1=Cox|first1=S. M.|last2=Matthews|first2=P.C.|
+title=Exponential time differencing for stiff systems|
+doi=10.1006/jcph.2002.6995|journal=Journal of Computational Physics|volume=176|issue=2| date=March 2002 |pages=430–455|bibcode=2002JCoPh.176..430C}}
+* {{cite journal|last1=Hochbruck|first1=Marlis|author1-link=Marlis Hochbruck|last2=Ostermann|first2=Alexander|title=Exponential integrators|journal=Acta Numerica| date=May 2010 |volume=19|pages=209–286|doi= 10.1017/S0962492910000048 |bibcode=2010AcNum..19..209H|citeseerx=10.1.1.187.6794|s2cid=4841957}}
+* {{cite journal|last1=Hochbruck|first1=Marlis|author1-link=Marlis Hochbruck|last2=Ostermann|first2=Alexander|
+title=Explicit exponential Runge-Kutta methods for semilinear parabolic problems|
+journal=SIAM Journal on Numerical Analysis|volume=43|issue=3|pages=1069–1090|year=2005a|doi=10.1137/040611434|url=https://publikationen.bibliothek.kit.edu/1000042061/3153602|citeseerx=10.1.1.561.5501}}
+* {{cite journal|last1=Hochbruck|first1=Marlis|author1-link=Marlis Hochbruck|last2=Ostermann|first2=Alexander|
+title=Exponential Runge–Kutta methods for parabolic problems|
+doi=10.1016/j.apnum.2004.08.005|
+journal=Applied Numerical Mathematics|
+volume=53|issue=2–4| date=May 2005b |pages=323–339|url=https://publikationen.bibliothek.kit.edu/1000042292/3168261}}
+* {{cite journal|last1=Luan|first1=Vu Thai|last2=Ostermann|first2=Alexander|
+title=Exponential Rosenbrock methods of order five-construction, analysis and numerical comparisons|
+journal=Journal of Computational and Applied Mathematics|
+volume=255|year=2014a|pages=417–431|doi=10.1016/j.cam.2013.04.041|doi-access=free}}
+* {{cite journal|last1=Luan|first1=Vu Thai|last2=Ostermann|first2=Alexander|
+title=Explicit exponential Runge-Kutta methods of high order for parabolic problems|
+journal=Journal of Computational and Applied Mathematics|
+volume=256|year=2014c|pages=168–179|doi=10.1016/j.cam.2013.07.027|arxiv=1307.0661|s2cid=18448807}}
+* {{cite journal|last1=Luan|first1=Vu Thai|last2=Ostermann|first2=Alexander|
+title=Exponential B-series: The stiff case|
+journal=SIAM Journal on Numerical Analysis|
+volume=51|issue=6|year=2013|pages=3431–3445|doi=10.1137/130920204}}
+* {{cite book|last1=Luan|first1=Vu Thai|last2=Ostermann|first2=Alexander|title=Modeling, Simulation and Optimization of Complex Processes – HPSC 2012: Proceedings of the Fifth International Conference on High Performance Scientific Computing, March 5–9, 2012, Hanoi, Vietnam |chapter=Stiff Order Conditions for Exponential Runge–Kutta Methods of Order Five |date=2014 |editor1-first= Hans Georg|editor1-last= Bock|editor2-first= Xuan Phu |editor2-last=Hoang|editor3-first= Rolf|editor3-last= Rannacher|editor4-first= Johannes P.|editor4-last= Schlöder|pages=133–143|doi=10.1007/978-3-319-09063-4_11|isbn=978-3-319-09062-7|publisher=Springer}}
+* {{cite journal|last1=Luan|first1=Vu Thai|last2=Ostermann|first2=Alexander|
+title=Parallel exponential Rosenbrock methods|
+journal=Computers and Mathematics with Applications|
+volume=71|issue=5|pages=1137–1150|year=2016|doi=10.1016/j.camwa.2016.01.020|doi-access=free}}
+* {{cite journal|last1=Michels|first1=Dominik L.|last2=Desbrun|first2=Mathieu|title=A Semi-analytical Approach to Molecular Dynamics|journal=Journal of Computational Physics|volume=303|pages=336–354|year=2015|doi=10.1016/j.jcp.2015.10.009|bibcode=2015JCoPh.303..336M|doi-access=free}}
+* {{cite journal|last1=Michels|first1=Dominik L.|last2=Sobottka|first2=Gerrit A.|last3=Weber|first3=Andreas G.|title=Exponential Integrators for Stiff Elastodynamic Problems|journal=ACM Transactions on Graphics|volume=33|pages=7:1–7:20|year=2014|doi=10.1145/2508462|s2cid=207207156}}
+* {{cite journal|last=Pope|first=David A|title=An exponential method of numerical integration of ordinary differential equations|journal=Communications of the ACM|volume=6|issue=8|pages=491–493|year=1963|doi=10.1145/366707.367592|s2cid=18598461|doi-access=free}}
+* {{cite journal|
+title=A new class of exponential propagation iterative methods of Runge–Kutta type (EPIRK)|
+last=Tokman|first=Mayya|
+doi=10.1016/j.jcp.2011.08.023|
+journal=Journal of Computational Physics|
+volume=230|issue=24| date=October 2011 |pages=8762–8778|bibcode=2011JCoPh.230.8762T}}
+* {{cite journal|title=Efficient integration of large stiff systems of ODEs with exponential propagation iterative (EPI) methods|
+last=Tokman|first=Mayya| date=April 2006 |doi=10.1016/j.jcp.2005.08.032|
+journal=Journal of Computational Physics|
+volume=213|issue=2|pages=748–776|bibcode=2006JCoPh.213..748T}}
+*{{cite journal |last1=Kassam |first1=Aly-Khan |last2=Trefethen |first2=Lloyd N. |title=Fourth-Order Time-Stepping for Stiff PDEs|journal=SIAM Journal on Scientific Computing|year=2005|volume=26|issue=4|pages=1214–1233|doi=10.1137/S1064827502410633|bibcode=2005SJSC...26.1214K |citeseerx=10.1.1.15.6467}}
+* {{cite book|doi=10.1145/2593069.2593160 |chapter-url=http://cseweb.ucsd.edu/~hazhuang/papers/dac14_matex.pdf|arxiv=1511.04519|chapter=MATEX|title=Proceedings of the 51st Annual Design Automation Conference on Design Automation Conference - DAC '14|pages=1–6|year=2014|last1=Zhuang|first1=Hao|last2=Weng|first2=Shih-Hung|last3=Lin|first3=Jeng-Hau|last4=Cheng|first4=Chung-Kuan|isbn=9781450327305|s2cid=10585362}}
+* {{cite journal|last1=Weng|first1=Shih-Hung|last2=Chen|first2=Quan|last3=Cheng|first3=Chung-Kuan|title=Time-Domain Analysis of Large-Scale Circuits by Matrix Exponential Method With Adaptive Control|journal=IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems|year=2012|volume=32|issue=8|pages=1180–1193|doi=10.1109/TCAD.2012.2189396|s2cid=14977067}}
+{{refend}}
+
+== External links ==
+* [http://hgpu.org/?p=6901|Exponential integrators on GPGPUs]
+* [http://www.mathworks.com/matlabcentral/fileexchange/40949-meshfree-exponential-integrator|MATLAB code for a meshfree exponential integrator]
+
+{{Numerical integrators}}
+
+[[Category:Numerical differential equations]]
+[[Category:Ordinary differential equations]]
+[[Category:Numerical analysis]]

@@ -1,0 +1,194 @@
+<!-- wikipedia: en
+     page: 37927149
+     title: SipHash
+     revision: 1332741595
+     timestamp: 2026-01-13T15:58:56Z
+     history: https://en.wikipedia.org/w/index.php?curid=37927149&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1332741595 -->
+{{Short description|Hash functions}}
+'''SipHash''' is an [[block cipher#ARX (add–rotate–XOR)|add–rotate–xor]] (ARX) based family of [[pseudorandom function]]s created by Jean-Philippe Aumasson and [[Daniel J. Bernstein]] in 2012,<ref>{{cite book|last1=Dobraunig|first1=Christoph|last2=Mendel|first2=Florian|last3=Schläffer|first3=Martin|title=Selected Areas in Cryptography -- SAC 2014 |chapter=Differential Cryptanalysis of SipHash |date=29 November 2014|volume=8781|issue=2014|pages=165–182|doi=10.1007/978-3-319-13051-4_10|url=https://eprint.iacr.org/2014/722|access-date=28 February 2018|ref=dcmfsm-sac2014-siphash|series=Lecture Notes in Computer Science|isbn=978-3-319-13050-7}}</ref>{{rp|165}}<ref name="paper">{{cite journal
+ |url=https://eprint.iacr.org/2012/351
+ |title=SipHash: a fast short-input PRF
+ |author1=Jean-Philippe Aumasson
+ |author2=Daniel J. Bernstein |journal=Cryptology ePrint Archive
+ |author-link2=Daniel J. Bernstein
+ |name-list-style=amp
+ |date=2012-09-18
+}}</ref> in response to a spate of [[Collision attack#Hash flooding|"hash flooding"]] [[denial-of-service attack]]s (HashDoS) in late 2011.<ref>{{cite news
+ |title=Hash Table Vulnerability Enables Wide-Scale DDoS Attacks
+ |first=Mike
+ |last=Lennon
+ |date=2011-12-28
+ |journal=SecurityWeek
+ |url=https://www.securityweek.com/hash-table-collision-attacks-could-trigger-ddos-massive-scale/
+}}</ref>
+
+SipHash is designed as a [[Pseudorandom function family|secure pseudorandom function]] and can also be used as a secure [[message authentication code]] (MAC). SipHash, however, is not a general purpose key-less [[hash function]] such as [[Secure Hash Algorithms]] (SHA) and therefore must always be used with a secret key in order to be secure. That is, SHA is designed so that it is difficult for an attacker to find two messages ''X'' and ''Y'' such that SHA(''X'') = SHA(''Y''), even though anyone may compute SHA(''X'').
+SipHash instead guarantees that, having seen ''X<sub>i</sub>'' and SipHash(''X<sub>i</sub>'', ''k''), an attacker who does not know the key ''k'' cannot find (any information about) ''k'' or SipHash(''Y'', ''k'') for any message ''Y'' ∉ {''X<sub>i</sub>''} which they have not seen before.
+
+==Overview==
+
+SipHash computes a [[64-bit computing|64-bit]] [[message authentication code]] from a variable-length message and 128-bit secret key. It was designed to be efficient even for short inputs, with performance comparable to non-cryptographic hash functions, such as [[CityHash]];<ref>{{cite book|last1=So|first1=Won|last2=Narayanan|first2=Ashok|last3=Oran|first3=David|last4=Stapp|first4=Mark|title=Proceedings of the ACM SIGCOMM 2013 conference on SIGCOMM |chapter=Named data networking on a router |pages=495–496|url=https://www.researchgate.net/publication/266654227|access-date=28 February 2018|ref=swnaodsmndn|quote=The recently proposed SipHash [1] offers a good balance as it provides collision resistance and comparable performance to non-crypto hashes|doi=10.1145/2486001.2491699|year=2013|isbn=9781450320566|s2cid=1457918}}</ref>{{rp|496}}<ref name="paper"/>
+this can be used to prevent denial-of-service attacks  against [[hash table]]s ("hash flooding"),<ref>{{Cite conference
+ |title=Hash-flooding DoS reloaded: attacks and defenses
+ |first1=Jean-Philippe |last1=Aumasson
+ |first2=Daniel J. |last2=Bernstein |author-link2=Daniel J. Bernstein
+ |first3=Martin |last3=Boßlet
+ |url=https://131002.net/siphash/siphashdos_appsec12_slides.pdf
+ |conference=Application Security Forum – Western Switzerland 2012
+ |conference-url=http://www.appsec-forum.ch/
+ |date=2012-11-08
+ |archive-url=https://web.archive.org/web/20130913185247/https://131002.net/siphash/siphashdos_appsec12_slides.pdf
+ |archive-date=2013-09-13
+}}</ref> or to authenticate [[network packet]]s.  A variant was later added which produces a 128-bit result.<ref name="ref_impl" />
+
+An unkeyed hash function such as SHA is collision-resistant only if the entire output is used.  If used to generate a ''small'' output, such as an index into a hash table of practical size, then no algorithm can prevent collisions; an attacker need only make as many attempts as there are possible outputs.
+
+For example, suppose a network server is designed to be able to handle up to a million requests at once.  It keeps track of incoming requests in a hash table with two million entries, using a hash function to map identifying information from each request to one of the two million possible table entries.  An attacker who knows the hash function need only feed it arbitrary inputs; one out of two million will have a specific hash value.  If the attacker now sends a few hundred requests all chosen to have the ''same'' hash value to the server, that will produce a large number of hash collisions, slowing (or possibly stopping) the server with an effect similar to a [[Denial-of-service attack#Application-layer attacks|packet flood]] of many million requests.<ref>{{cite conference
+| title=Denial of Service via Algorithmic Complexity Attacks
+| first1=Scott A. |last1=Crosby
+| first2=Dan S. |last2=Wallach 
+| conference=Usenix Security Symposium
+| location=Washington, D.C.
+| date=2003-08-06
+| url=https://www.usenix.org/legacy/events/sec03/tech/crosby.html
+| conference-url=https://www.usenix.org/legacy/events/sec03/tech.html}}</ref>
+
+By using a key unknown to the attacker, a keyed hash function like SipHash prevents this sort of attack.  While it is possible to add a key to an unkeyed hash function ([[HMAC]] is a popular technique), SipHash is much more efficient.
+
+Functions in SipHash family are specified as SipHash-''c''-''d'', where ''c'' is the number of rounds per message block and ''d'' is the number of finalization rounds. The recommended parameters are SipHash-2-4 for best performance, and SipHash-4-8 for conservative security. A few languages use SipHash-1-3 for performance at the risk of yet-unknown DoS attacks.<ref>{{cite web |last1=Aumasson |first1=Jean-Philippe (veorq) |title=Comment on: change Siphash to use one of the faster variants of the algorithm (Siphash13, Highwayhash) · Issue #29754 · rust-lang/rust |url=https://github.com/rust-lang/rust/issues/29754#issuecomment-156073946 |website=GitHub |access-date=28 February 2024 |language=en |quote=SipHash designer here, haven't changed my opinion about SipHash-1-3 :-) [...]  There's a "distinguisher" on 4 rounds[...], or in simplest terms a statistical bias that shows up given a specific difference pattern in the input of the 4-round sequence. But you can't inject that pattern in SipHash-1-3 because you don't control all the state. And even if you could inject that pattern the bias wouldn't be exploitable anyway.|date=Nov 12, 2015}}</ref>
+
+The [[reference implementation]] was released as [[public domain software|public domain-like software]] under the [[CC0]].<ref name="ref_impl">{{cite web
+| url=https://131002.net/siphash/
+| title=SipHash: a fast short-input PRF
+| quote=Intellectual property: We aren't aware of any patents or patent applications relevant to SipHash, and we aren't planning to apply for any. The reference code of SipHash is released under CC0 license, a public domain-like license.
+| date=2016-08-01
+| access-date=2017-01-21
+| archive-url=https://web.archive.org/web/20170202184819/https://131002.net/siphash/
+| archive-date=2017-02-02
+}}</ref>
+
+==Usage==
+
+SipHash is used in ''[[hash table]] implementations'' of various software:<ref>{{cite web
+| url=https://131002.net/siphash/#us
+| title=SipHash: a fast short-input PRF, Users
+| last1=Aumasson |first1=Jean-Philippe
+| last2=Bernstein |first2=Daniel J.
+| date=2016-08-01
+| access-date=2017-01-21
+| archive-url=https://web.archive.org/web/20170202184819/https://131002.net/siphash/#us
+| archive-date=2017-02-02
+}}</ref>
+
+* [[Programming language]]s
+** [[JavaScript]]
+*** [[Node.js]]<ref>{{cite web
+| url = https://github.com/nodejs/node/pull/26367
+| title = build: enable v8's SipHash for hash seed creation
+| last = Vagg | first = Rod
+| work = [[Node.js]]
+| via = [[GitHub]]
+| date = 2019-02-28
+| access-date = 2021-10-21
+}}</ref>
+**** [[V8 (JavaScript engine)]] (available as a compile-time option)<ref>{{cite web
+| url=https://chromium-review.googlesource.com/c/v8/v8/+/1382463/
+| title=Optionally use halfsiphash for integer hashing
+| last=Guo | first=Yang
+| work = [[V8 (JavaScript engine)|V8]]
+| date=2019-01-09
+| access-date=2021-10-21}}</ref>
+** [[OCaml]]<ref>{{cite web
+| url=https://v2.ocaml.org/api/Hashtbl.html
+| title=OCaml Library: Hashtbl
+| access-date=2024-02-17}}</ref>
+** [[Perl]] 5 (available as a [[compile time]] option)<ref>{{cite web
+| url = https://perldoc.perl.org/perlsec#Algorithmic-Complexity-Attacks
+| title = Perl security – Algorithmic Complexity Attacks
+| website = Perldoc Browser
+| date = 2016-05-16
+| access-date = 2021-10-21}}</ref>
+** [[Python (programming language)|Python]] (starting in version 3.4,<ref>{{cite web
+| url=https://www.python.org/dev/peps/pep-0456/
+| title=PEP 456 – Secure and interchangeable hash algorithm
+| last=Heimes |first=Christian
+| date=2013-09-27
+| access-date=2017-01-21}}</ref> SipHash 1-3 since 3.11<ref>{{cite web |title=Moving to SipHash-1-3 #73596 |website=[[GitHub]] |url=https://github.com/python/cpython/issues/73596}}</ref>)
+** [[Raku (programming language)|Raku]]<ref>{{cite web
+| url = https://github.com/MoarVM/MoarVM/commit/d9a3270aa290c8dd3b547d4deceb5e76dc8c8e47
+| title = Implement SipHash, use as our hashing function w/ 64-bit hashvals
+| last = McVey | first = Samantha
+| work = [[MoarVM]]
+| via = [[GitHub]]
+| date = 2018-07-16
+| access-date = 2018-07-16}}</ref>
+** [[Ruby (programming language)|Ruby]] (SipHash 1-3)<ref>{{cite web | url=https://bugs.ruby-lang.org/issues/13017 | title=Feature #13017: Switch SipHash from SipHash24 to SipHash13 - Ruby master - Ruby Issue Tracking System }}</ref>
+** [[Swift (programming language)|Swift]]
+** [[Rust (programming language)|Rust]]
+
+* [[Operating system]]s
+** [[Linux]]
+*** [[systemd]]<ref>{{cite web
+| url=https://cgit.freedesktop.org/systemd/systemd/commit/?id=9bf3b53533cdc9b95c921b71da755401f223f765
+| title=shared: switch our hash table implementation over to SipHash
+| last=Poettering | first=Lennart
+| author-link=Lennart Poettering
+| work = [[systemd]]
+| via = [[freedesktop.org]]
+| date=2013-12-22
+| access-date=2017-01-21}}</ref>
+** [[OpenBSD]]<ref>{{cite web | url=https://github.com/openbsd/src/blob/master/sys/crypto/siphash.h | title=SRC/Sys/Crypto/Siphash.h at master · openbsd/SRC | website=[[GitHub]] }}</ref>
+** [[FreeBSD]]<ref>{{cite web | url=https://svnweb.freebsd.org/base/head/sys/crypto/siphash/ | title=&#91;base&#93; Index of /Head/Sys/Crypto/Siphash }}</ref>
+** [[OpenDNS]]
+** [[WireGuard]]<ref>{{cite web | url=https://github.com/WireGuard/wg-dynamic/commit/360b9c8c8b4c4364b755dc0935f05e4ba4429cb0 | title=Use siphash for hashtables · WireGuard/Wg-dynamic@360b9c8 | website=[[GitHub]] }}</ref>
+
+The following programs use SipHash in other ways:
+* [[Bitcoin]] for short transaction IDs<ref>{{Cite web|url=https://github.com/bitcoin/bips/blob/master/bip-0152.mediawiki|title=Compact Block Relay|website=GitHub|language=en|access-date=2018-09-27}}</ref>
+* Bloomberg BDE as a [[C++]] [[Object (computer science)|object]] hasher<ref>[https://github.com/bloomberg/bde/blob/master/groups/bsl/bslh/bslh_siphashalgorithm.h bslh_siphashalgorithm.h]</ref>
+* [[InterPlanetary File System]] (IPFS) for its seven [[Bloom filter]] hashes<ref>{{cite web | url=https://github.com/ipfs/bbloom/blob/73e3f896a4f8bbed8589df6ff5c28ebfbd728e31/sipHash.go#L15 | title=Bbloom/SipHash.go at 73e3f896a4f8bbed8589df6ff5c28ebfbd728e31 · ipfs/Bbloom | website=[[GitHub]] }}</ref>
+
+'''Implementations'''
+* [https://github.com/veorq/SipHash C] (reference implementation)
+* [https://github.com/google/highwayhash C++] (Wassenberg & Alakuijala 2017, part of their "highwayhash" work)
+* [https://github.com/paya-cz/siphash C#]
+* [https://github.com/brown/sip-hash Common Lisp]
+* [[Crypto++]]
+* [https://github.com/dchest/siphash Go]
+* [https://gist.github.com/ar-nelson/12bd5ea968c145045200 Haskell]
+* [https://github.com/jedisct1/siphash-js JavaScript]
+* [https://web.archive.org/web/20180207062939if_/https://bitbucket.org/mihailp/tankfeeder/src/default/hash/siphash.l PicoLisp]
+* [https://github.com/jedisct1/rust-siphash Rust]
+* [https://github.com/attaswift/SipHash Swift]
+* [https://github.com/secworks/siphash Verilog]
+* [https://github.com/pemb/siphash VHDL]
+
+==See also==
+* [[Bloom filter]] (application for fast hashes) 
+* [[Cryptographic hash function]]
+* [[Hash function]]
+* [[Message authentication code]]
+* [[List of hash functions]]
+
+==References==
+{{Reflist|30em}}
+
+==External links==
+* {{cite web|url=https://github.com/veorq/SipHash|title=SipHash: a fast short-input PRF – Project Page|author1=Jean-Philippe Aumasson|author2=Daniel J. Bernstein|website=[[GitHub]] |date=2016-08-01}}
+* {{cite web|url=https://www.aumasson.jp/siphash/siphash.pdf|title=SipHash: a fast short-input PRF|author1=Jean-Philippe Aumasson|author2=Daniel J. Bernstein|date=2012-09-18}}
+* {{cite web|url=https://www.aumasson.jp/siphash/siphash_slides.pdf|title=SipHash: a fast short-input PRF – Presentation slides|author1=Jean-Philippe Aumasson|author2=Daniel J. Bernstein|date=2012-08-15}}
+* {{cite web
+| url=https://media.ccc.de/v/29c3-5152-en-hashflooding_dos_reloaded_h264
+| title=Hash-flooding DoS reloaded: attacks and defenses
+| author1=Jean-Philippe Aumasson
+| author2=Daniel J. Bernstein
+| author3=Martin Boßlet
+| date=2012-12-29}}
+* {{cite web |title=Hashing |url=https://nnethercote.github.io/perf-book/hashing.html |website=The Rust Performance Book}} &ndash; describes when SipHash is not fast enough
+
+{{Cryptography navbox | hash }}
+
+[[Category:Hash function (non-cryptographic)]]
+[[Category:Public-domain software with source code]]
+[[Category:Creative Commons-licensed works]]

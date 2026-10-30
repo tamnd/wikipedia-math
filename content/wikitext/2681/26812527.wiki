@@ -1,0 +1,282 @@
+<!-- wikipedia: en
+     page: 26812527
+     title: Barrett reduction
+     revision: 1321875534
+     timestamp: 2025-11-13T03:51:13Z
+     history: https://en.wikipedia.org/w/index.php?curid=26812527&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1321875534 -->
+{{Short description|Algorithm in modular arithmetic}}
+
+In [[modular arithmetic]], '''Barrett reduction''' is an [[algorithm]] designed to optimize the calculation of <math>a \,\bmod\, n \, </math><ref>The remainder of integer division of <math>a</math> by <math>n</math>.</ref> without needing a fast [[division algorithm]]. It replaces divisions with multiplications, and can be used when <math>n</math> is constant and <math>a<n^2</math>. It was introduced in 1986 by P.D. Barrett.<ref name = Barrett1986>
+{{Cite book | last1 = Barrett | first1 = P. | chapter = Implementing the Rivest Shamir and Adleman Public Key Encryption Algorithm on a Standard Digital Signal Processor | doi = 10.1007/3-540-47721-7_24 | title = Advances in Cryptology – CRYPTO' 86 | series = Lecture Notes in Computer Science | volume = 263 | pages = 311–323 | year = 1986 | isbn = 978-3-540-18047-0 }}
+</ref> 
+
+Historically, for values <math>a, b < n</math>, one computed <math>a b \, \bmod\, n \, </math> by applying
+Barrett reduction to the full product <math>a b </math>.
+In 2021, Becker et al. showed that the full product is unnecessary if we can perform [[precomputation]] on one of the operands.<ref name = NeonNTT2022> 
+{{citation 
+| last1 = Becker | first1 = Hanno
+| last2 = Hwang | first2 = Vincent
+| last3 = Kannwischer | first3 = Matthias J.
+| last4 = Yang | first4 = Bo-Yin
+| last5 = Yang | first5 = Shang-Yi
+| title = Neon NTT: Faster Dilithium, Kyber, and Saber on Cortex-A72 and Apple M1
+| url = https://tches.iacr.org/index.php/TCHES/article/view/9295
+| journal = IACR Transactions on Cryptographic Hardware and Embedded Systems
+| date = 2021
+| volume = 2022
+| number = 1
+| pages = 221–244
+| doi = 10.46586/tches.v2022.i1.221-244
+| doi-access = free
+}} 
+</ref>
+
+== General idea ==
+
+We call a function <math>\left[ \, \right]: \mathbb{R} \to \mathbb{Z}</math> an [[integer]] approximation if <math>|\left[z\right] - z| \leq 1</math>.
+For a modulus <math>n</math> and an integer approximation <math>\left[\,\right]</math>, 
+we define <math>\text{mod}^{\left[\,\right]} \, n: \mathbb{Z} \to (\mathbb{Z}/n\mathbb{Z}) </math> as
+: <math> a \, \text{mod}^{\left[\,\right]} \, n = a - \left[a / n\right] n </math>.
+Common choices of <math>\left[\,\right]</math> are [[floor function|floor]], [[ceiling function|ceiling]], and [[rounding]] functions.
+
+Generally, Barrett multiplication starts by specifying two integer approximations <math>\left[\,\right]_0, \left[\,\right]_1</math> and computes a reasonably close approximation of <math>ab \, \bmod \, n</math> as
+: <math> a b - \left[ \frac{a \, \left[ \frac{b R}{n} \right]_0 }{R} \right]_1 n</math>,
+where <math>R</math> is a fixed constant, typically a power of 2, chosen so that multiplication and division by <math>R</math> can be performed efficiently.
+
+The case <math>b = 1</math> was introduced by P.D. Barrett <ref name = Barrett1986/> for the floor-function case <math>\left[\,\right]_0 = \left[\,\right]_1 = \lfloor \, \rfloor</math>.
+The general case for <math>b</math> can be found in [[Number Theory Library|NTL]].<ref name = ShoupNTL>
+{{cite web
+| last = Shoup | first = Victor
+| title = Number Theory Library
+| url = https://libntl.org
+}}
+</ref>
+The integer approximation view and the correspondence between [[Montgomery multiplication]] and Barrett multiplication was discovered by Hanno Becker, Vincent Hwang, Matthias J. Kannwischer, Bo-Yin Yang, and Shang-Yi Yang.<ref name = NeonNTT2022/>
+
+== Single-word Barrett reduction ==
+
+Barrett initially considered an integer version of the above algorithm when the values fit into machine words.
+We illustrate the idea for the floor-function case with <math>b=1</math> and <math>R=2^k</math>.
+
+When calculating <math>a \,\bmod\, n</math> for unsigned integers, the obvious analog would be to use division by <math>n</math>:
+<syntaxhighlight lang="go">
+func reduce(a uint) uint {
+    q := a / n  // Division implicitly returns the floor of the result.
+    return a - q * n
+}
+</syntaxhighlight>
+
+However, division can be expensive and, in cryptographic settings, might not be a constant-time instruction on some CPUs, subjecting the operation to a [[timing attack]]. Thus Barrett reduction approximates <math>1/n</math> with a value <math>m/2^k</math> because division by <math>2^k</math> is just a right-shift, and so it is cheap.
+
+In order to calculate the best value for <math>m</math> given <math>2^k</math> consider:
+: <math>\frac{m}{2^k} = \frac{1}{n} \;\Longleftrightarrow\; m = \frac{2^k}{n}</math>
+
+For <math>m</math> to be an integer, we need to round <math>{2^k}/{n}</math> somehow. 
+Rounding to the nearest integer will give the best approximation but can result in <math>m/2^k</math> being larger than <math>1/n</math>, which can cause underflows. Thus <math>m = \lfloor {2^k}/{n} \rfloor</math> is used for unsigned arithmetic.
+
+Thus we can approximate the function above with the following:
+<syntaxhighlight lang="go">
+func reduce(a uint) uint {
+    q := (a * m) >> k // ">> k" denotes bitshift by k.
+    return a - q * n
+}
+</syntaxhighlight>
+
+However, since <math>m/2^k \le 1/n</math>, the value of <code>q</code> in that function can end up being one too small, and thus <code>a</code> is only guaranteed to be within <math>[0, 2n)</math> rather than <math>[0, n)</math> as is generally required. A conditional [[subtraction]] will correct this:
+<syntaxhighlight lang="go">
+func reduce(a uint) uint {
+    q := (a * m) >> k
+    a := a - q * n
+    if a >= n {
+        a := a - n
+    }
+    return a
+}
+</syntaxhighlight>
+
+== Single-word Barrett multiplication ==
+
+Suppose <math>b</math> is known.
+This allows us to precompute <math>\left\lfloor \frac{b R}{n} \right\rfloor</math> before we receive <math>a</math>.
+Barrett multiplication computes <math>a b</math>, approximates the high part of <math>a b</math>
+with 
+<math> \left\lfloor \frac{a \left\lfloor \frac{b R}{n} \right\rfloor}{R} \right\rfloor \, n </math>,
+and subtracts the approximation.
+Since 
+<math>\left\lfloor \frac{a \left\lfloor \frac{b R}{n} \right\rfloor}{R} \right\rfloor \, n</math> is a multiple of <math>n</math>,
+the resulting value 
+<math>a b - \left\lfloor \frac{a \left\lfloor \frac{b R}{n} \right\rfloor}{R} \right\rfloor \, n</math>
+is a representative of <math>a b \, \bmod \, n</math>.
+
+== Correspondence between Barrett and Montgomery multiplications ==
+
+Recall that unsigned [[Montgomery multiplication]] computes a representative of <math>a b \, \bmod \, n</math>
+as
+: <math>
+\frac{a \left(b R \, \bmod \, n \right) + \left( a \left( - b R \, \bmod \, n \right) n^{-1} \, \bmod \, R \right) n}{R}
+</math>.
+
+In fact, this value is equal to <math>a b - \left\lfloor \frac{a \left\lfloor \frac{b R}{n} \right\rfloor}{R} \right\rfloor \, n</math>.
+
+We prove the claim as follows.
+: <math>
+\begin{align}
+& & &
+a b - \left\lfloor \frac{a \left\lfloor \frac{b R}{n} \right\rfloor}{R} \right\rfloor \, n \\
+& = & &
+a b - \frac{a \left\lfloor \frac{bR}{n} \right\rfloor - \left( a \left\lfloor \frac{bR}{n} \right\rfloor \, \bmod \, R \right) }{R} \, n \\
+& = & &
+\left( \frac{a b R}{n} - a \left\lfloor \frac{bR}{n} \right\rfloor + \left( a \left\lfloor \frac{bR}{n} \right\rfloor \, \bmod \, R \right) \right) \frac{n}{R} \\
+& = & &
+\left( \frac{a b R}{n} - a \frac{bR - \left(b R \, \bmod \, n \right)}{n} + \left( a \left\lfloor \frac{bR}{n} \right\rfloor \, \bmod \, R \right) \right) \frac{n}{R} \\
+& = & &
+\left( \frac{a \left(b R \, \bmod \, n \right)}{n} + \left( a \left\lfloor \frac{bR}{n} \right\rfloor \, \bmod \, R \right) \right) \frac{n}{R} \\
+& = & &
+\left( \frac{a \left(b R \, \bmod \, n \right)}{n} + \left( a \left( - b R \, \bmod \, n \right) n^{-1} \, \bmod \, R \right) \right) \frac{n}{R} \\
+& = & &
+\frac{a \left(b R \, \bmod \, n \right) + \left( a \left( - b R \, \bmod \, n \right) n^{-1} \, \bmod \, R \right) n}{R}.
+\end{align}
+</math>
+
+Generally, for integer approximations <math>\left[\,\right]_0, \left[\,\right]_1</math>,
+we have
+: <math>
+a b - \left[ \frac{a \, \left[ \frac{b R}{n} \right]_0 }{R} \right]_1 \,  n
+=
+\frac{a \left( b R \, \text{mod}^{\left[\,\right]_0} \, n \right) + \left( a \left( - b R \, \text{mod}^{\left[\,\right]_0} \, q \right) n^{-1}  \, \text{mod}^{\left[\,\right]_1} \, R \right) n}{R}
+</math>.<ref name = NeonNTT2022/>
+
+== Range of Barrett multiplication ==
+
+We bound the output with
+: <math>
+a b - \left\lfloor \frac{a \left\lfloor \frac{b R}{n} \right\rfloor}{R} \right\rfloor \, n
+=
+\frac{a \left(b R \, \bmod \, n \right) + \left( a \left( - b R \, \bmod \, n \right) n^{-1} \, \bmod \, R \right) n}{R}
+\leq
+\frac{a n + R n}{R}
+=
+n \left(1 + \frac{a}{R}\right)
+</math>.
+
+Similar bounds hold for other kinds of integer approximation functions.
+For example, if we choose <math>\left[\,\right]_0 = \left[\,\right]_1 = \left\lfloor\,\right\rceil</math>, the [[rounding function|rounding half up]] function,
+then we have 
+: <math>\left| a b - \left\lfloor \frac{a \left\lfloor \frac{b R}{n} \right\rceil}{R} \right\rceil \, n \right|
+= 
+\left| \frac{a \left(b R \, \text{mod}^{\pm} \, n \right) + \left( a \left( - b R \, \text{mod}^{\pm} \, n \right) n^{-1} \, \text{mod}^{\pm} \, R \right) n}{R}
+\right|
+\leq 
+\frac{|a| \frac{n}{2} + \frac{R}{2} n}{R}
+= 
+\frac{n}{2} \left(1 + \frac{|a|}{R} \right).</math>
+It is common to select R such that <math>\frac{a}{R}<1</math> (or <math>\frac{\left|a\right|}{R}<1</math> in the <math>\left[\,\right]_{0}=\left[\,\right]_{1}=\left\lfloor \,\right\rceil</math>  case) so that the output remains within <math>0</math> and <math>2n</math> (<math>-n</math> and <math>n</math> resp.), and therefore only one check is performed to obtain the final result between <math>0</math> and <math>n</math>. Furthermore, one can skip the check and perform it once at the end of an algorithm at the expense of larger inputs to the field arithmetic operations.
+
+== Barrett multiplication non-constant operands ==
+
+The Barrett multiplication previously described requires a constant operand b to pre-compute <math>\left[\frac{bR}{n}\right]_{0}</math> ahead of time. Otherwise, the operation is not efficient. It is common to use [[Montgomery multiplication]] when both operands are non-constant as it has better performance. However, [[Montgomery multiplication]] requires a conversion to and from Montgomery domain which means it is expensive when a few modular multiplications are needed.
+
+To perform Barrett multiplication with non-constant operands, one can set <math>a</math> as the product of the operands and set <math>b</math> to <math>1</math>. This leads to
+
+<math>a-\left[\frac{a\,\left[\frac{R}{n}\right]_{0}}{R}\right]_{1}\,n=\frac{a\left(R\,\text{mod}^{\left[\,\right]_{0}}\,n\right)+\left(a\left(-R\,\text{mod}^{\left[\,\right]_{0}}\,q\right)n^{-1}\,\text{mod}^{\left[\,\right]_{1}}\,R\right)n}{R}</math>
+
+A quick check on the bounds yield the following in <math>\left[\,\right]_{0}=\left[\,\right]_{1}=\left\lfloor \,\right\rfloor</math>  case
+: <math>\begin{align}
+a-\left\lfloor \frac{a\,\left\lfloor \frac{R}{n}\right\rfloor }{R}\right\rfloor \,n
+&=\frac{a\left(R\,\bmod\,n\right)+\left(a\left(-R\,\bmod\,n\right)n^{-1}\,\bmod\,R\right)n}{R} \\
+&\leq\frac{a(R\,\bmod\,n)+Rn}{R}=n\left(1+\frac{a(R\,\bmod\,n)}{Rn}\right)
+\end{align}</math>
+
+and the following in <math>\left[\,\right]_{0}=\left[\,\right]_{1}=\left\lfloor \,\right\rceil</math>  case
+: <math>\begin{align}
+\left|a-\left\lfloor \frac{a\left\lfloor \frac{R}{n}\right\rceil }{R}\right\rceil \,n\right|
+&=\left|\frac{a\left(R\,\text{mod}^{\pm}\,n\right)+\left(a\left(-R\,\text{mod}^{\pm}\,n\right)n^{-1}\,\text{mod}^{\pm}\,R\right)n}{R}\right|\\
+&\leq\frac{|a(R\,\text{mod}^{\pm}\,n)|+\frac{R}{2}n}{R}
+=\frac{n}{2}\left(1+\frac{|a(R\,\text{mod}^{\pm}\,n)|}{Rn}\right)
+\end{align}</math>
+
+Setting <math>R>|a|</math> will always yield one check on the output. However, a tighter constraint on <math>R</math> might be possible since <math>R\,\text{mod}^{\left[\,\right]_{0}}\,n</math> is a constant that is sometimes significantly smaller than <math>n</math>.
+
+A small issue arises with performing the following product <math>a\,\left[\frac{R}{n}\right]_{0}</math> since <math>a</math> is already a product of two operands. Assuming <math>n</math> fits in <math>w</math> bits, then <math>a</math> would fit in <math>2w</math> bits and <math>\left[\frac{R}{n}\right]_{0}</math> would fit in <math>w</math> bits. Their product would require a <math>2w\times w</math> multiplication which might require fragmenting in systems that cannot perform the product in one operation.
+
+An alternative approach is to perform the following Barrett reduction:
+: <math>a-\left[\frac{\left[\frac{a}{R_{0}}\right]_{2}\,\left[\frac{R}{n}\right]_{0}}{R_{1}}\right]_{1}\,n
+=\frac{
+a\left(R\,\text{mod}^{\left[\,\right]_{0}}\,n\right)+
+\left(a\,\text{mod}^{\left[\,\right]_{2}}\,R_{0}\right)\left(R-R\,\text{mod}^{\left[\,\right]_{0}}\,n\right) +
+\left(\left[\frac{a}{R_{0}}\right]_{2}\,\left[\frac{R}{n}\right]_{0}\,\text{mod}^{\left[\,\right]_{1}}\,R_{1}\right)R_{0}n
+}{R} </math>
+where <math>R_{0}=2^{k-\beta}</math>, <math>R_1=2^{\alpha+\beta}</math>, <math>R=R_{0}\cdot R_{1}=2^{k+\alpha}</math>, and <math>k</math> is the [[bit-length]] of <math>n</math>.
+
+Bound check in the case <math>\left[\,\right]_{0}=\left[\,\right]_{1}=\left[\,\right]_{2}=\left\lfloor \,\right\rfloor</math>  yields the following
+: <math>\begin{align}
+a-\left\lfloor \frac{\left\lfloor \frac{a}{R_{0}}\right\rfloor \,\left\lfloor \frac{R}{n}\right\rfloor }{R_{1}}\right\rfloor \,n&\le\frac{a\left(R\,\bmod\,n\right)+R_{0}R-R_{0}\left(R\,\bmod\,n\right)+Rn}{R}\\
+&=n\left(1+\frac{a(R\,\bmod\,n)}{Rn}+\frac{R_{0}}{n}-\frac{R\,\bmod\,n}{R_{1}n}\right)
+\end{align}</math>
+and for the case <math>\left[\,\right]_{0}=\left[\,\right]_{1}=\left[\,\right]_{2}=\left\lfloor \,\right\rceil</math>  yields the following
+: <math>\begin{align}
+\left|a-\left\lfloor \frac{\left\lfloor \frac{a}{R_{0}}\right\rceil \left\lfloor \frac{R}{n}\right\rceil }{R_{1}}\right\rceil \,n\right|
+&\le\frac{|a\left(R\,\text{mod}^{\pm}\,n\right)|+R_{0}R/2+R_{0}|(R\,\text{mod}^{\pm}\,n)|/2+Rn/2}{R}\\
+&=\frac{n}{2}\left(1+\frac{2|a(R\,\text{mod}^{\pm}\,n)|}{Rn}+\frac{R_{0}}{n}+\frac{|R\,\text{mod}^{\pm}\,n|}{R_{1}n}\right)
+\end{align}</math>
+
+For any modulus and assuming <math>|a|<2^{k+\gamma}</math>, the bound inside the parenthesis in both cases is less than or equal:
+: <math>1+\frac{(2^{k+\gamma})(n)}{(2^{k+\alpha})(n)}+\frac{2^{k-\beta}}{n}+\epsilon\le1+\frac{2^{k+\gamma}}{2^{k+\alpha}}+\frac{2^{k-\beta}}{2^{k-1}}+\epsilon=1+2^{\gamma-\alpha}+2^{1-\beta}+\epsilon</math>
+where <math>\epsilon=-\frac{1}{R_{1}}</math> in the <math>\left\lfloor \,\right\rfloor</math>  case and <math>\epsilon=\frac{1}{2R_{1}}</math> in the <math>\left\lfloor \,\right\rceil</math> case.
+
+Setting <math>\beta=2</math> and <math>\alpha=\gamma+1</math>  (or  <math>\alpha=\gamma+2</math> in the <math>\left\lfloor \,\right\rceil</math> case) will always yield one check. In some cases, testing the bounds might yield a lower <math>\alpha</math> and/or <math>\beta</math> values.
+
+== Small Barrett reduction ==
+
+It is possible to perform a Barrett reduction with one less multiplication as follows
+: <math>a-\left[\frac{a}{R}\right]_{1}\,n</math>            where <math>R=2^{k}</math> and  <math>k</math> is the bit-length of <math>n</math>
+
+Every modulus can be written in the form <math>n=2^{k}-c=R-c</math> for some integer <math>c</math>.
+: <math>\begin{align}
+a-\left[\frac{a}{R}\right]_{1}\,n&=a-\frac{a-(a\,\text{mod}^{\left[\,\right]_{1}}\,R)}{R}n \\
+&=\frac{aR-an+(a\,\text{mod}^{\left[\,\right]_{1}}\,R)n}{R} \\
+&=\frac{ac+(a\,\text{mod}^{\left[\,\right]_{1}}\,R)n}{R}\\
+&=n\left(\frac{a\,\text{mod}^{\left[\,\right]_{1}}\,R}{R}+\frac{ac}{Rn}\right)\\
+&=n\left(\frac{a\,\text{mod}^{\left[\,\right]_{1}}\,R}{R}+\frac{a}{\frac{R^{2}}{c}-R}\right)
+\end{align}</math>
+
+Therefore, reducing any <math>a<\frac{R^{2}}{c}-R</math> for <math>\left[\,\right]_{1}=\left\lfloor \,\right\rfloor</math> or any <math>|a|<\left(\frac{R^{2}}{c}-R\right)/\,2</math> for <math>\left[\,\right]_{1}=\left\lfloor \,\right\rceil</math>  yields one check.
+
+From the analysis of the constraint, it can be observed that the bound of <math>a</math> is larger when <math>c</math> is smaller. In other words, the bound is larger when <math>n</math> is closer to <math>R</math>.
+
+== Barrett Division ==
+
+Barrett reduction can be used to compute floor, round or ceil division <math>\left[\frac{a}{n}\right]</math> without performing expensive long division. Furthermore it can be used to compute <math>\left[\frac{ab}{n}\right]</math>. After pre-computing the constants, the steps are as follows:
+# Compute the approximate quotient <math>\tilde{q}=\left[\frac{a\,\left[\frac{bR}{n}\right]_{0}}{R}\right]_{1}</math>.
+# Compute the Barrett remainder <math>\tilde{r}=ab-\tilde{q}n</math>.
+# Compute the quotient error <math>e=(\tilde{r}-r)/n</math> where <math>r=a\,\text{mod}^{\left[\,\right]}\,n</math>. This is done by subtracting a multiple of <math>n</math> to <math>\tilde{r}</math> until <math>r</math> is obtained.
+# Compute the quotient <math>q=\tilde{q}+e</math>.
+
+If the constraints for the Barrett reduction are chosen such that there is one check, then the [[absolute value]] of <math>e</math> in step 3 cannot be more than 1. Using <math>\left[\,\right]_{0}=\left[\,\right]_{1}=\left\lfloor \,\right\rceil</math> and appropriate constraints, the error <math>e</math> can be obtained from the sign of <math>\tilde{r}</math>.
+
+== Multi-word Barrett reduction ==
+
+Barrett's primary motivation for considering reduction was the implementation of [[RSA (cryptosystem)|RSA]], where the values in question will almost certainly exceed the size of a machine word. In this situation, Barrett provided an algorithm that approximates the single-word version above but for multi-word values. For details see section 14.3.3 of the ''Handbook of Applied Cryptography''.<ref>{{cite book |last1=Menezes |first1=Alfred |url=https://cacr.uwaterloo.ca/hac/ |title=Handbook of Applied Cryptography |last2=Oorschot |first2=Paul |last3=Vanstone |first3=Scott |publisher=CRC Press |year=1997 |isbn=0-8493-8523-7 |edition=5th |doi=10.1201/9780429466335}}</ref>
+
+== Barrett algorithm for polynomials ==
+
+It is also possible to use Barrett algorithm for polynomial division, by reversing polynomials and using X-adic arithmetic.<ref>{{Cite web |title=Barrett reduction for polynomials |url=https://www.corsix.org/content/barrett-reduction-polynomials |access-date=2022-09-07 |website=www.corsix.org}}</ref>
+
+== See also ==
+
+* [[Montgomery reduction]] is another similar algorithm.
+
+== References ==
+
+{{reflist}}
+
+== Sources ==
+{{refbegin}}
+* {{cite book |last1=Bosselaers |first1=A. |first2=R. |last2=Govaerts |first3=J. |last3=Vandewalle |chapter=Comparison of Three Modular Reduction Functions |title=Advances in Cryptology – Crypto'93 |year=1993 |chapter-url=https://books.google.com/books?id=sqqoCAAAQBAJ&pg=PA175 |pages=175–186 |publisher=Springer |isbn=3540483292 |volume=773 |series=Lecture Notes in Computer Science |editor-first=Douglas R. |editor-last=Stinson |citeseerx=10.1.1.40.3779}}
+* {{cite book |first1=W. |last1=Hasenplaugh |first2=G. |last2=Gaubatz |first3=V. |last3=Gopal |chapter-url=http://www.acsel-lab.com/arithmetic/arith18/papers/ARITH18_Hasenplaugh.pdf  |chapter=Fast Modular Reduction |title=18th IEEE Symposium on Computer Arithmetic(ARITH'07) |year=2007 |isbn=978-0-7695-2854-0 |pages=225–229 |doi=10.1109/ARITH.2007.18|s2cid=14801112 }}
+{{refend}}
+
+[[Category:Computer arithmetic]]
+[[Category:Modular arithmetic]]

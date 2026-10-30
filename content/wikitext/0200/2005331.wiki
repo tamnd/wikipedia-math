@@ -1,0 +1,238 @@
+<!-- wikipedia: en
+     page: 2005331
+     title: UMAC (cryptography)
+     revision: 1262898815
+     timestamp: 2024-12-13T16:39:02Z
+     history: https://en.wikipedia.org/w/index.php?curid=2005331&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1262898815 -->
+{{Short description|Type of message authentication code}}
+{{multiple issues|
+{{Expert needed|cryptography|talk=Example implementation|reason=confusion between UMAC as a general concept and the RFC 4418 UMAC algorithm; Need someone to split this into "universal hashing in MAC" and "UMAC and friends".|date=September 2019}}
+{{Notability |date=October 2024 |reason=I see only one citation to an independent reliable source (the Thorup conference paper). It does not discuss the topic in detail (mentioning it only as a background citation to explain one detail, on page 8 of the paper). The Miller reference is a draft that officially expired in March 6, 2008. It says very little and its body is only two pages long. It does not appear to be a peer-reviewed formal publication. The other cited sources appear to be descriptions of the scheme itself by those who designed it. Citations should be added to show that this scheme is historically important or used in important contexts.}}
+}}
+In [[cryptography]], a '''universal hashing message authentication code''', or '''UMAC''', is a [[message authentication code]] (MAC) calculated using [[universal hashing]], which involves choosing a hash function from a class of hash functions according to some secret (random) process and applying it to the message. The resulting digest or fingerprint is then encrypted to hide the identity of the hash function that was used.  A variation of the scheme was first published in 1999.<ref name=black/> As with any MAC, it may be used to simultaneously verify both the ''[[data integrity]]'' and the ''authenticity'' of a [[message]]. In contrast to traditional MACs, which are [[serialization|serializable]], a UMAC can be executed in [[Parallel computing|parallel]]. Thus, as machines continue to offer more parallel-processing capabilities, the speed of implementing UMAC can increase.<ref name=black>{{cite conference  | last1 = Black | first1 = J.  | last2 = Halevi | first2 = S.  | last3 = Krawczyk | first3 = H. | last4 = Krovetz | first4 = T.  | title = UMAC: Fast and Secure Message Authentication
+  | work = Advances in Cryptology (CRYPTO '99)  | year = 1999  | url = http://www.cs.ucdavis.edu/~rogaway/papers/umac-full.pdf  | archive-url = https://web.archive.org/web/20120310090322/http://www.cs.ucdavis.edu/~rogaway/papers/umac-full.pdf  | archive-date = 2012-03-10}}, Equation 1 and also section 4.2 "Definition of NH".</ref>
+
+A specific type of UMAC, also commonly referred to just as "UMAC", is described in an [[informational RFC]] published as RFC 4418 in March 2006. It has provable cryptographic strength and is usually substantially less computationally intensive than other MACs. UMAC's design is optimized for 32-bit architectures with [[SIMD]] support, with a performance of 1 CPU cycle per byte (cpb) with SIMD and 2 cpb without SIMD. A closely related variant of UMAC that is optimized for 64-bit architectures is given by [[VMAC]], which was submitted to the IETF as a draft in April 2007 ({{mono|draft-krovetz-vmac-01}}) but never gathered enough attention to be approved as an RFC.
+
+== Background ==
+===Universal hashing===
+{{main | universal hashing}}
+Let's say the [[hash function]] is chosen from a class of hash functions H, which maps messages into D, the set of possible message digests. This class is called [[Universal hashing|universal]] if, for any distinct pair of messages, there are at most |H|/|D| functions that map them to the same member of D.
+
+This means that if an attacker wants to replace one message with another and, from his point of view, the hash function was chosen completely randomly, the probability that the UMAC will not detect his modification is at most 1/|D|.
+
+But this definition is not strong enough &mdash; if the possible messages are 0 and 1, D={0,1} and H consists of the identity operation and ''not'', H is universal. But even if the digest is encrypted by modular addition, the attacker can change the message and the digest at the same time and the receiver wouldn't know the difference.
+
+===Strongly universal hashing===
+A class of hash functions H that is good to use will make it difficult for an attacker to guess the correct digest ''d'' of a fake message ''f'' after intercepting one message ''a'' with digest ''c''. In other words,
+
+:<math>\Pr_{h \in H}[h(f)=d|h(a)=c]\,</math>
+
+needs to be very small, preferably 1/|''D''|.
+<!-- Say the combination of the hash function and the encryption function is chosen from a class M.
+We must require that for any two distinct messages ''a'' and ''b'' and two (possibly equal) digests ''c'' and ''d'', the number of members of M that map ''a'' to ''c'' and ''b'' to ''d'' must of the order |M|/|D|. -->
+
+It is easy to construct a class of hash functions when ''D'' is [[Finite field|field]]. For example, if |''D''| is [[Prime number|prime]], all the operations are taken [[modular arithmetic|modulo]] |''D''|. The message ''a'' is then encoded as an ''n''-dimensional vector over {{math|''D'' (''a''<sub>1</sub>, ''a''<sub>2</sub>, ..., ''a''<sub>''n''</sub>)}}.  ''H'' then has |''D''|<sup>''n''+1</sup> members, each corresponding to an {{math|(''n'' + 1)}}-dimensional vector over {{math|''D'' (''h''<sub>0</sub>, ''h''<sub>1</sub>, ..., ''h''<sub>''n''</sub>)}}. If we let
+
+: <math>h(a) = h_0 + \sum_{i=1}^n {h_i}{a_i}</math>
+
+we can use the rules of probabilities and combinatorics to prove that
+
+: <math>\Pr_{h \in H}[h(f)=d|h(a)=c]={1 \over |D|}</math>
+
+If we properly encrypt all the digests (e.g. with a [[one-time pad]]), an attacker cannot learn anything from them and the same hash function can be used for all communication between the two parties. This may not be true for [[Block cipher mode of operation|ECB]] encryption because it may be quite likely that two messages produce the same hash value. Then some kind of [[initialization vector]] should be used, which is often called the [[cryptographic nonce|nonce]]. It has become common practice to set ''h''<sub>0</sub> = ''f''(nonce), where ''f'' is also secret.
+
+Notice that having massive amounts of computer power does not help the attacker at all. If the recipient limits the amount of forgeries it accepts (by sleeping whenever it detects one), |''D''| can be 2<sup>32</sup> or smaller.
+
+===Example===
+The following [[C (programming language)|C]] function generates a 24 bit UMAC. It assumes that <code>secret</code> is a multiple of 24 bits, <code>msg</code> is not longer than <code>secret</code> and <code>result</code> already contains the 24 secret bits e.g. f(nonce). nonce does not need to be contained in <code>msg</code>.
+
+{{Hidden begin|title = C language code (original)}}
+<syntaxhighlight lang="c">
+/* DUBIOUS: This does not seem to have anything to do with the (likely long) RFC
+ * definition. This is probably an example for the general UMAC concept.
+ * Who the heck from 2007 (Nroets) chooses 3 bytes in an example?
+ *
+ * We gotta move this along with a better definition of str. uni. hash into
+ * uni. hash. */
+#define uchar uint8_t
+void UHash24 (uchar *msg, uchar *secret, size_t len, uchar *result)
+{
+  uchar r1 = 0, r2 = 0, r3 = 0, s1, s2, s3, byteCnt = 0, bitCnt, byte;
+  
+  while (len-- > 0) {
+    /* Fetch new secret for every three bytes. */
+    if (byteCnt-- == 0) {
+      s1 = *secret++;
+      s2 = *secret++;
+      s3 = *secret++;
+      byteCnt = 2;   
+    }
+    byte = *msg++;
+    /* Each byte of the msg controls whether a bit of the secrets make it into the hash.、
+     *
+     * I don't get the point about keeping its order under 24, because with a 3-byte thing
+     * it by definition only holds polynominals order 0-23. The "sec" code have identical
+     * behavior, although we are still doing a LOT of work for each bit
+     */
+    for (uchar bitCnt = 0; bitCnt < 8; bitCnt++) {
+      /* The last bit controls whether a secret bit is used. */
+      if (byte & 1) {
+        r1 ^= s1; /* (sec >> 16) & 0xff */
+        r2 ^= s2; /* (sec >>  8) & 0xff */
+        r3 ^= s3; /* (sec      ) & 0xff */
+      }
+      byte >>= 1; /* next bit. */
+      /* and multiply secret with x (i.e. 2), subtracting (by XOR)
+         the polynomial when necessary to keep its order under 24 (?!)  */
+      uchar doSub = s3 & 0x80;
+      s3 <<= 1;
+      if (s2 & 0x80) s3 |= 1;
+      s2 <<= 1;
+      if (s1 & 0x80) s2 |= 1;
+      s1 <<= 1;
+      if (doSub) {  /* 0b0001 1011 --> */
+        s1 ^= 0x1B; /* x^24 + x^4 + x^3 + x + 1 [16777243 -- not a prime] */
+      }
+    } /* for each bit in the message */
+  } /* for each byte in the message */
+  *result++ ^= r1;
+  *result++ ^= r2;
+  *result++ ^= r3;
+}
+</syntaxhighlight>
+{{Hidden end}}
+{{Hidden begin|title = C language code (revised)}}
+<syntaxhighlight lang="c">
+#define uchar     uint8_t
+#define swap32(x) ((x) & 0xff) << 24 | ((x) & 0xff00) << 8 | ((x) & 0xff0000) >> 8 | (x) & 0xff000000) >> 24)
+/* This is the same thing, but grouped up (generating better assembly and stuff).
+   It is still bad and nobody has explained why it's strongly universal. */
+void UHash24Ex (uchar *msg, uchar *secret, size_t len, uchar *result)
+{
+  uchar byte, read;
+  uint32_t sec = 0, ret = 0, content = 0;
+
+  while (len > 0) {
+    /* Read three in a chunk. */
+    content = 0;
+    switch (read = (len >= 3 ? 3 : len)) {
+      case 2: content |= (uint32_t) msg[2] << 16; /* FALLTHRU */
+      case 1: content |= (uint32_t) msg[1] << 8;  /* FALLTHRU */
+      case 0: content |= (uint32_t) msg[0];
+    }
+    len -= read; msg += read;
+
+    /* Fetch new secret for every three bytes. */
+    sec = (uint32_t) secret[2] << 16 | (uint32_t) secret[1] << 8 | (uint32_t) secret[0];
+    secret += 3;
+
+    /* The great compressor. */
+    for (bitCnt = 0; bitCnt < 24; bitCnt++) {
+      /* A hard data dependency to remove: output depends
+       * on the intermediate.
+       * Doesn't really work with CRC byte-tables. */
+      if (byte & 1) {
+        ret ^= sec;
+      }
+      byte >>= 1; /* next bit. */
+      /* Shift register. */
+      sec <<= 1;
+      if (sec & 0x01000000)
+        sec ^= 0x0100001B;
+      sec &= 0x00ffffff;
+    } /* for each bit in the message */
+  } /* for each 3 bytes in the message */
+  result[0] ^= ret & 0xff;
+  result[1] ^= (ret >>  8) & 0xff;
+  result[2] ^= (ret >> 16) & 0xff;
+}</syntaxhighlight>
+{{Hidden end}}
+
+== NH and the RFC UMAC ==
+
+=== NH ===
+Functions in the above unnamed{{citation needed|date=June 2015}} strongly universal hash-function family uses ''n'' multiplies to compute a hash value.
+
+The NH family halves the number of multiplications, which roughly translates to a two-fold speed-up in practice.<ref>{{cite conference  | last = Thorup   | first = Mikkel   | authorlink = Mikkel Thorup  | title = String hashing for linear probing  | work = Proc. 20th ACM-SIAM Symposium on Discrete Algorithms (SODA)  | pages = 655–664  | year = 2009  | archive-url = https://web.archive.org/web/20131012004656/http://www.siam.org/proceedings/soda/2009/SODA09_072_thorupm.pdf  | archive-date = 2013-10-12  | url-status = live  | doi = 10.1137/1.9781611973068.72  | isbn = 978-0-89871-680-1 | url = http://epubs.siam.org/doi/pdf/10.1137/1.9781611973068.72| citeseerx = 10.1.1.215.4253  }}, section 5.3</ref> For speed, UMAC uses the NH hash-function family. NH is specifically designed to use [[SIMD]] instructions, and hence UMAC is the first MAC function optimized for SIMD.<ref name=black />
+
+The following hash family is <math>2^{-w}</math>-universal:<ref name=black>{{cite conference  | last1 = Black | first1 = J.  | last2 = Halevi | first2 = S.  | last3 = Krawczyk | first3 = H. | last4 = Krovetz | first4 = T.  | title = UMAC: Fast and Secure Message Authentication
+  | work = Advances in Cryptology (CRYPTO '99)  | year = 1999  | url = http://www.cs.ucdavis.edu/~rogaway/papers/umac-full.pdf  | archive-url = https://web.archive.org/web/20120310090322/http://www.cs.ucdavis.edu/~rogaway/papers/umac-full.pdf  | archive-date = 2012-03-10}}, Equation 1 and also section 4.2 "Definition of NH".</ref>
+
+: <math>\operatorname{NH}_{K}(M) = \left( \sum_{i=0}^{ (n/2)-1 } ((m_{2i} + k_{2i}) \bmod ~ 2^w ) \cdot ((m_{2i+1} + k_{2i+1}) \bmod ~ 2^w ) \right)  \bmod ~ 2^{2w} </math>.
+
+where
+
+* The message M is encoded as an ''n''-dimensional vector of ''w''-bit words (''m''<sub>0</sub>, ''m''<sub>1</sub>, ''m''<sub>2</sub>, ..., ''m''<sub>''n-1''</sub>).
+* The intermediate key K is encoded as an ''n+1''-dimensional vector of ''w''-bit words (''k''<sub>0</sub>, ''k''<sub>1</sub>, ''k''<sub>2</sub>, ..., ''k''<sub>''n''</sub>). A [[pseudorandom generator]] generates K from a shared secret key.
+
+Practically, NH is done in unsigned integers. All multiplications are mod 2^''w'', all additions mod  2^''w''/2, and all inputs as are a vector of half-words (<math>w/2 = 32</math>-bit integers). The algorithm will then use <math>\lceil k/2 \rceil</math> multiplications, where <math>k</math> was the number of half-words in the vector. Thus, the algorithm runs at a "rate" of one multiplication per word of input.
+
+=== RFC 4418 ===
+RFC 4418 is an [[informational RFC]] that describes a wrapping of NH for UMAC. The overall UHASH ("Universal Hash Function") routine produces a variable length of tags, which corresponds to the number of iterations (and the total lengths of keys) needed in all three layers of its hashing. Several calls to an AES-based [[key derivation function]] is used to provide keys for all three keyed hashes.
+* Layer 1 (1024 byte chunks -> 8 byte hashes concatenated) uses NH because it is fast.
+* Layer 2 hashes everything down to 16 bytes using a POLY function that performs prime modulus arithmetics, with the prime changing as the size of the input grows.
+* Layer 3 hashes the 16-byte string to a fixed length of 4 bytes. This is what one iteration generates.
+
+In RFC 4418, NH is rearranged to take a form of:
+ Y = 0
+ '''for''' (i = 0; i < t; i += 8) '''do'''
+     <math>
+     \begin{align}
+     \mathtt{Y} &= \mathtt{Y +_{64} ((M_{i+0} +_{32} K_{i+0}) *_{64} (M_{i+4} +_{32} K_{i+4}))} \\
+     \mathtt{Y} &= \mathtt{Y +_{64} ((M_{i+1} +_{32} K_{i+1}) *_{64} (M_{i+5} +_{32} K_{i+5}))} \\
+     \mathtt{Y} &= \mathtt{Y +_{64} ((M_{i+2} +_{32} K_{i+2}) *_{64} (M_{i+6} +_{32} K_{i+6}))} \\
+     \mathtt{Y} &= \mathtt{Y +_{64} ((M_{i+3} +_{32} K_{i+3}) *_{64} (M_{i+7} +_{32} K_{i+7}))}
+     \end{align}
+     </math>
+ '''end for'''
+This definition is designed to encourage programmers to use SIMD instructions on the accumulation, since only data with four indices away are likely to not be put in the same SIMD register, and hence faster to multiply in bulk. On a hypothetical machine, it could simply translate to:
+
+{{hidden begin|title=Hypothetical assembly}}
+<syntaxhighlight lang=nasm>
+movq        $0,   regY  ; Y = 0
+movq        $0,   regI  ; i = 0
+loop:
+add         reg1, regM, regI ; reg1 = M + i
+add         reg2, regM, regI
+vldr.4x32   vec1, reg1       ; load 4x32bit vals from memory *reg1 to vec1
+vldr.4x32   vec2, reg2
+vmul.4x64   vec3, vec1, vec2 ; vec3 = vec1 * vec2
+uaddv.4x64  reg3, vec3       ; horizontally sum vec3 into reg3
+add         regY, regY, reg3 ; regY = regY + reg3
+add         regI, regI, $8
+cmp         regI, regT
+jlt         loop
+</syntaxhighlight>
+{{hidden end}}
+
+==See also==
+* [[Poly1305]], another fast MAC based on strongly universal hashing
+* [[MMH-Badger MAC]], another fast MAC
+
+==References==
+{{Reflist}}
+
+== External links ==
+
+* {{cite web
+| url=http://fastcrypto.org/umac/
+| title=UMAC: Fast and Provably Secure Message Authentication
+| author=Ted Krovetz}}
+
+* {{cite web
+| url=https://tools.ietf.org/html/draft-miller-secsh-umac-01
+| title=The use of UMAC in the SSH Transport Layer Protocol: draft-miller-secsh-umac-01.txt
+| date=2007-09-03
+| publisher=[[IETF]]
+| last1=Miller
+| first1=Damien
+| last2=Valchev
+| first2=Peter
+}}
+
+{{Cryptography navbox | hash}}
+
+[[Category:Message authentication codes]]

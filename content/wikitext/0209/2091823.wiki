@@ -1,0 +1,478 @@
+<!-- wikipedia: en
+     page: 2091823
+     title: Stiff equation
+     revision: 1373038254
+     timestamp: 2026-09-03T17:48:58Z
+     history: https://en.wikipedia.org/w/index.php?curid=2091823&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373038254 -->
+{{Short description|Differential equation exhibiting high rate of dissipation}}
+In computational [[mathematics]], a '''stiff equation''' is an initial value problem
+ 
+:<math>
+\dot u = f(u)\,,\qquad u(0)=u_0\,, \qquad t\in[0,T] \, ,
+</math>
+
+where <math>f : {\mathbb R}^d \rightarrow {\mathbb R}^d</math>, requiring [[numerical ordinary differential equations|dedicated implicit time stepping methods]] for its efficient numerical integration. The simplest mathematical characterization of a stiff equation is the necessary condition
+
+:<math>
+{\frac {T}{d}} \big({\mathrm {div}}_u\,f\big)(u) \ll -1 \, .
+</math>
+
+Since <math>\big({\mathrm {div}}_u\,f\big)(u) = {\mathrm {trace}}({\mathrm {grad}}_u\,f)(u) = {\mathrm {trace}}\,f'(u)</math>, where <math>f'(u) \in {\mathbb R}^{d\times d}</math> is the [[Jacobian matrix]] of <math>f</math> at the point <math>u</math>, the criterion above is easily evaluated and quantifies stiffness. The criterion is derived, explained and illustrated for nonlinear stiff equations below.
+
+For a ''linear system'' with constant coefficients  <math>\dot u = Au</math>, the divergence is constant, making stiffness a global characteristic whose magnitude is related to the time scale <math>T</math>. 
+
+For a ''nonlinear system'', stiffness usually varies in space and time along the solution trajectory <math>u(t)</math>, where the criterion quantifies stiffness locally. In practical computations, stiff equations are invariably solved using adaptive methods. <ref>G Söderlind, LO Jay, M Calvo (2015). "Stiffness 1952--2012: Sixty years in search of a definition." BIT 55, pp 531-558.</ref><ref>G Söderlind (2024). "Logarithmic Norms." Berlin-Heidelberg-New York: Springer Series in Computational Mathematics SCM vol 63. </ref>
+
+== Background ==
+
+There is a rich literature on stiff differential equations, but intuitive descriptions and heuristics are far more common than attempts at a rigorous definition of the concept. Hairer and Wanner<ref>E. Hairer, G. Wanner (1996). "Solving orindary differential equations II. Stiff and differential-algebraic problems", 2nd ed. Berlin-Heidelberg-New York: Springer</ref> concisely describe the most obvious feature:
+
+<blockquote>
+Stiff equations are problems for which explicit methods don't work.
+</blockquote>
+
+This refers to the observation that '''explicit integration methods''' are forced to use exceedingly small time steps <math>h</math> to maintain numerical stability, preventing such methods from being competitive. Although each step is inexpensive, the total number of steps <math>N = T/h</math> becomes prohibitively large, and the integration over <math>[0,T]</math> effectively stalls. 
+
+By contrast, '''implicit methods''' for stiff equations require costly "algebraic" equation solving on each step. The extra work per step is offset by superior stability properties, allowing the use of large time steps. Without crippling stability restrictions, the total computational effort is manageable, and the requested accuracy can be achieved without loss of efficiency. For some stiff equations, the efficiency may be several orders of magnitude higher than that of even the best explicit methods.
+
+== Analogous efficiency issues in other fields of scientific computing ==
+
+The phenomenon of stiffness is analogous to well-known performance issues in other areas of [[numerical analysis]]. For example, in [[Mathematical optimization|'''optimization''']], [[gradient method]]s have similar limitations. Using the steepest descent method to minimize a convex functional <math>F(x)</math> leads to the iteration
+
+:<math>
+x^{k+1} = x^{k} - h\,{\mathrm {grad}}_xF(x^{k}) \, ,
+</math>
+
+where <math>h</math> is the line search step size. This is merely the explicit Euler method for the [[differential equation]] <math>\dot x = -{\mathrm {grad}}_xF(x^{k})</math>. Problems with steep gradients are known for their slow convergence, due to restrictions on the choice of <math>h</math>. The typical remedy is to replace the gradient method by some Newton-type method, which essentially corresponds to using an "implicit" method for differential equations. 
+
+Another example is in solving '''nonlinear equations''' of the form <math>x = g(x)</math>. Simple [[Fixed-point iteration|fixed point iteration]], <math>x^{k+1} = g(x^k)</math>, does not converge for problems where the [[Lipschitz continuity|Lipschitz constant]] <math>L[g]</math> is large, but only for contractions. Yet the equation may have a unique solution under much weaker but common conditions, e.g. when the map <math>g-I</math> is monotone and the [[Logarithmic norm|logarithmic Lipschitz constant]] of <math>g</math> satisfies <math>M[g] < 1</math>. Since fixed point iterations diverge, it is necessary to use a Newton-type iteration.
+
+A third example is '''iterative solvers''' for the (discretized) [[Poisson's equation|Poisson equation]] <math>-\Delta u = f</math>. Here, the [[Jacobi method]] (which attempts to avoid matrix algebra) is equivalent to using the explicit Euler method (in pseudo time) for the corresponding [[Method of lines|method-of-lines]] discretization of the [[diffusion equation]] <math>u_t = \Delta u + f</math>, seeking its stationary solution. The diffusion equation is a prototypical example of a stiff equation: the time step of the explicit recursion is severely restricted by a [[Courant–Friedrichs–Lewy condition|CFL condition]] and required to be proportional to the square of the mesh width in space. This makes the convergence of the Jacobi iteration painfully slow. As before the remedy is to use some form of algebraic equation solving, e.g. by using a [[preconditioner]] or a [[multigrid method]]. 
+
+Thus there are many different mathematical problems, where computational efficiency necessitates the use of dedicated numerical methods, typically of a considerable complexity. ''Stiff equations is the particular instance for initial value problems in ordinary differential equations.'' Nevertheless, with a well designed adaptive stiff solver, the efficient numerical integration of most stiff equations is now a routine task.
+
+== History and origins of a mathematical characterization ==
+
+The first mention of stiff equations is found in Curtiss and Hirschfelder in 1952 <ref>C.F. Curtiss, J.O. Hirschfelder (1952). "Integration of stiff equations". Proc. Nat. Acad. Sci. 38, pp 235-243. </ref>. The authors discuss a scalar model equation equivalent to
+
+:<math>
+\dot x=\frac{1}{a(t,x)}\big(x-g(t)\big) 
+</math>
+
+and characterize stiffness as follows:
+
+<blockquote>
+If <math>\Delta t</math> is the desired resolution of <math>t</math> or the interval which will be used in the numerical integration, the equation is "stiff" if
+
+:<math>
+\left|\frac{a(t,x)}{\Delta t}\right|\ll 1
+</math>
+
+and <math>g</math> is well behaved.
+</blockquote>
+
+This characterization relates a time scale <math>\Delta t</math> to the decay rate of transients, governed by the coefficient <math>a(t,x)</math>, which is assumed to be negative. As <math>a(t,x)</math> varies in time and space, it allows stiffness to vary accordingly. Prothero and Robinson introduced a similar but more instructive model problem,<ref>A. Prothero, A. Robinson (1974). "On the stability and accuracy of one-step methods for solving stiff systems of ordinary differential equations". Math. Comp. 28, 145-162.</ref>
+essentially taking <math>a(t,x) = 1/\lambda < 0</math> constant and studying the equation 
+
+:<math>
+\dot x = \lambda \big(x-g(t)\big) + \dot g(t)\,,\qquad x(0) = x_0 \neq g(0)\,, \qquad t\in[0,T].
+</math>
+
+The solution consists of a decaying transient <math>\big(x_0 - g(0)\big)\,{\mathrm {e}}^{t\lambda}</math>, together with the particular solution <math>g(t)</math>, which is supposed to be bounded and smooth. The mathematical solution <math>x(t)</math> is then obviously bounded. Contrasting the explicit and implicit Euler methods, one can investigate under what circumstances the numerical methods replicate the properties of the mathematical solution. The Curtiss-Hirschfelder criterion will be considered for <math>\Delta t = T</math> and <math>\Delta t = h</math>, corresponding to the conditions <math>T\lambda \ll -1</math> and <math>h\lambda \ll -1</math>, respectively. 
+
+The ''explicit Euler method'' for a differential equation <math>\dot u = f(u)</math> is defined by 
+
+:<math>
+u_{n+1} = u_n + hf(u_n) \, ,
+</math>
+
+while the ''implicit Euler method'' is defined by the recursion 
+
+:<math>
+u_{n+1} = u_n + hf(u_{n+1}) \, .
+</math>
+
+Here <math>h</math> is the (constant) time step, and <math>u_n</math> approximates the exact solution <math>u(t_n)</math> at time <math>t_n = nh</math>. In the explicit method <math>u_{n+1}</math> is computed directly by an evaluation of the [[vector field]] <math>f</math>. In the implicit method, however, one must solve the "algebraic" equation <math>u_{n+1} - hf(u_{n+1}) = u_n</math> for <math>u_{n+1}</math>. This improves the stability of the recursion. 
+
+For the Prothero-Robinson problem the explicit Euler method produces the numerical solution (on integrated form)
+
+:<math>
+x_n = \left(1+h\lambda\right)^nx_0 + \sum_{k=0}^{n-1} \left(1+h\lambda\right)^{n-k-1} h\big(\dot g(t_k) - \lambda g(t_k)\big) \, .
+</math>
+
+The impediment is clearly visible: positive powers of the factor <math>1 + h\lambda</math> produce exponential growth (numerical instability) unless we impose the stability condition <math>|1+h\lambda| \leq 1</math>. Since <math>\lambda</math> is real and negative, this implies <math>-2 \leq h\lambda \leq 0</math>. Thus the explicit Euler method cannot use step sizes adapted to the regularity of <math>g(t)</math>. Instead the total number of steps to complete the integration, <math>N = T/h \sim T|\lambda|</math>, becomes extremely large. Efficiency is inversely proportional to stiffness as quantified by the product <math>T|\lambda| \gg 1</math>. 
+
+As a consequence the explicit Euler method may take "forever" to solve a scalar problem with a perfectly smooth mathematical solution <math>\sim g(t)</math> once the (fast) transient has decayed. This is also the case even if the initial value is <math>x(0)=g(0)</math>. Thus, ''the step size restriction is not a matter of whether the transient is present''. It is due to the fact that any step size <math>h</math> such that <math>|1+h\lambda| > 1</math> ''inevitably excites numerical instability''.
+
+If instead the implicit Euler method is used, the numerical solution becomes 
+
+:<math>
+x_n = \left(1-h\lambda\right)^{-n}x_0 + \sum_{k=0}^{n-1} \left(1-h\lambda\right)^{k-n} h\big(\dot g(t_{k+1}) - \lambda g(t_{k+1})\big) \, .
+</math>
+
+Here, the stability requirement is <math>|1-h\lambda|^{-1} \leq 1</math>, which is satisfied for all <math>h > 0</math> when <math>{\mathrm {Re}}\,\lambda < 0</math>, no matter how large <math>h|\lambda|</math> is. A minor issue is that in practice one needs to resolve the transient (this may initially call for a short step size), but once it has decayed, one can use "large" step sizes, in the sense that <math>h</math> is adapted to the regularity of <math>g(t)</math>, irrespective of the magnitude of <math>|h\lambda|</math>. Of the two methods above, only the implicit Euler method can handle stiff equations efficiently.
+
+'''Example'''  Consider the Prothero-Robinson test problem
+
+:<math>
+\dot x \, = \, \lambda (x - \sin\omega t) + \omega\cos\omega t \, ; \qquad x(0)=x_0 \, ,
+</math>
+
+with exact solution <math>x(t) = x_0\,{\mathrm e}^{\lambda t} + \sin\omega t</math>. Taking <math>x_0=0</math>, the homogeneous solution is not present in the exact solution <math>x(t) = \sin\omega t</math>, but the exponential term will show up in the local solutions passing through the points <math>x_n</math> generated by the numerical methods. Taking <math>\omega = \pi</math> the problem is solved on <math>[0,1]</math>, using <math>N=5</math> and <math>10</math> steps, respectively (<math>h=0.2</math> and <math>h=0.1</math>). The experiment demonstrates the impact of varying <math>h\lambda</math>, which affects the stability/damping of the numerical methods. We take <math>\lambda = -20</math>, using the same computational setup for the explicit and implicit Euler methods.
+
+[[File:Eulerdemo.pdf|thumb|Euler methods applied to Prothero-Robinson problem]]
+
+The results are shown in [https://commons.wikimedia.org/wiki/File:Eulerdemo.pdf Figure 1.] With <math>T\lambda = -20</math>, there is a moderately strong exponential damping, as is evident from the fast contracting local solutions. The setup is deliberately understated for visualization purposes; in real stiff equations much larger values would be typical. Nevertheless, <math>\lambda</math> is sufficiently large and negative to demonstrate the step size limitations of the explicit Euler method. For <math>N=5</math>, its computed solution becomes oscillatory and diverges from the exact solution, even though the initial value was taken on the exact solution. Repeating the same exercise for <math>T\lambda = -2000</math>, say, shows how the difference between the two methods grows with increasing stiffness. 
+
+In more realistic problems, the instability is often more dramatic and referred to  as the solution "blowing up". Here, the maximum stable step size (<math>h = 0.1</math>) has only been exceeded by a small factor. Meanwhile, the implicit Euler method proceeds without loss of stability, and is able to produce accurate results also for the larger step size. 
+
+In real computations, stiff equations are solved using adaptive methods. These select the step size automatically to keep the computational process in check, usually controlling both accuracy and stability. Thus, if an adaptive explicit method is used, the solution may not go unstable, as the adaptivity takes measures not to exceed the maximum stable step size. Instead, the method proceeds at the (prohibitive) cost of low efficiency.  
+
+The essence of the analysis is that a problem parameter, <math>\lambda</math>, which is characteristic of the vector field and related to the transient behavior of solutions, is linked to a time scale, either the step size <math>h</math> or the range of integration <math>T</math> directly. The products <math>h\lambda</math> or <math>T\lambda</math> are both dimensionless, scaling invariant, and negative. A general stiffness concept must reflect these properties, and also be able to address stiffness in nonlinear differential equations.
+
+== Systems of stiff equations ==
+
+The scalar Prothero-Robinson problem can be extended to linear systems of equations, 
+
+:<math>
+\dot x = A\big(x-g(t)\big) + \dot g(t)\,, \quad A\in {\mathbb R}^{d\times d}
+</math>
+
+as well as nonlinear systems, 
+
+:<math>
+\dot x = f\big(x-g(t)\big) + \dot g(t)\,, \quad f : {\mathbb R}^{d} \rightarrow {\mathbb R}^{d}
+</math>
+
+provided that <math>f(0)=0</math>. The general stiffness concept needs to specify what is meant by a vector field being "large and negative". The analysis above also shows that the smooth function <math>g</math> at most plays a minor role. Thus, by substituting <math>u</math> for <math>x-g(t)</math>, we have three types of problems,
+
+:<math>
+\begin{align}
+\dot u \, &= \, \lambda u \\
+\dot u \, &= \, Au \\
+\dot u \, &= \, f(u) \, . 
+\end{align}
+</math>
+
+Here stiffness needs to be characterized for matrices <math>A</math> as well as for nonlinear maps <math>f</math>. The first equation above is the well known ''Dahlquist linear test equation'', primarily used to determine the stability region of a time stepping method. The stability region <math>S</math> of a method is the set of all <math>h\lambda \in \mathbb C</math> such that the numerical method produces bounded solutions. The previous discussion of stiffness is effectively based on the Dahlquist test equation.
+  
+In order to consider the second, linear system of equations, it is common to make use of the eigenvalues <math>\lambda_k</math> of the matrix <math>A</math>. After all, for a numerical method to produce bounded (stable) solutions to <math>\dot u = Au</math>, it is necessary and sufficient that all eigenvalues satisfy <math>h\lambda_k \in S</math>. The previous discussion carries over by considering one eigenvalue at a time. The linear problem is then stiff if all eigenvalues have negative real parts, and at least one of them satisfies <math>T\lambda_k \ll -1</math>; the latter eigenvalue will then cause the typical step size restrictions experienced by an explicit method, due to the fact that all explicit methods have bounded stability regions, and require <math>h\lambda_k \in S</math>. The step size has to be selected small enough to fulfill this requirement, see [https://commons.wikimedia.org/wiki/File:Eulerstab2.pdf Figure 2].
+
+[[File:Eulerstab2.pdf|thumb|Stability regions of Euler methods]]
+
+Yet, it is common to find a different characterization of stiffness, in terms of the "stiffness ratio", defined by
+
+:<math>
+{\frac {\max_k |{\mathrm {Re}}\,\lambda_k|}{\min_k |{\mathrm {Re}}\,\lambda_k|}} \, ,
+</math>
+
+assuming that <math>\lambda_k\in{\mathbb C}^{-}</math>.<ref>J.D. Lambert (1992). "Numerical Methods for Ordinary Differential Systems", pp 216-217. New York: Wiley, ISBN 978-0-471-92990-1.</ref> Although stiff systems often do have a large stiffness ratio, Byrne and Hindmarsh emphasize that this is ''neither necessary nor sufficient'' for <math>\dot u = Au</math> to be a stiff equation.<ref>G.D. Byrne and A.C. Hindmarsh (1987). "Stiff ODE Solvers: A review of current and coming attractions", p. 3ff. J. Comp. Phys. 70, 1-62.</ref>  
+
+First, there is no comparison with the time scale <math>T</math>, but only an intrinsic comparison of "time constants" <math>1/\lambda_k</math>, where a large stiffness ratio merely implies that there are "faster" and "slower" transient components, often referred to as widely different time scales. Second, as noted above, there are scalar stiff equations; these have stiffness ratio <math>1</math>. And third, the stiffness ratio breaks down for problems with a singular matrix <math>A</math>, which is common in some applications. (An example is chemical reaction kinetics, where the singularity corresponds to conservation of mass.)  
+
+Thus the stiffness ratio is misleading: ''it fails to characterize the most important aspects of stiff equations''.
+
+In a similar vein, it has been suggested that the nonlinear problem is stiff if the Jacobian matrix <math>f'(u)</math> has a large stiffness ratio.<ref>J.D. Lambert (1973). "Cmmputational methods in ordinary differential equations", p. 232.  London: John Wiley & Sons.</ref> 
+Naturally, this too fails, as noted by Artemiev and Averina:<ref>S. Artemiev, T. Averina (1997). "Numerical analysis of systems of ordinary and stochastic differential equations", p. 6. Utrecht: VSP.</ref>
+
+<blockquote>
+For example, a nonlinear autonomous ODE system with <math>f(0)=0</math> can be called stiff if real parts [sic] of the eigenvalues of the Jacobi matrix [<math>f'(0)</math>] satisfy the above conditions. However, the famous van der Pol equation, which is frequently used as an example of stiff ODEs, does not satisfy this definition ... it is impossible to determine stiffness only by means of eigenvalues of the Jacobi matrix for nonlinear systems
+</blockquote>
+
+Although in part valid, this argument too is off the mark, as the zero solution of the van der Pol equation is an ''unstable equilibrium''. Thus stiffness does not occur near the origin, but only ''along the limit cycle'' as will be seen below, where the van der Pol equation is analyzed in full detail. A precise stiffness characterization must therefore be local, capturing the behavior of (small) perturbations near the actual solution. 
+
+== Modern characterization: The stiffness indicator ==
+
+Replacing the stiffness ratio, the modern approach is to construct a functional <math>s_2[\cdot]</math>, called the ''stiffness indicator'', such that the criteria <math>s_2[A] \!\cdot\! T \ll -1</math> and <math>s_2[f] \!\cdot\! T \ll -1</math>, respectively, quantify stiffness by relating a distinct vector field property to the time scale <math>T</math>. This characterization is based on additional observations. Thus Dekker and Verwer<ref>K. Dekker, J.G. Verwer (1984). "Stability of Runge-Kutta methods for stiff nonlinear differential equations", p. 5. New York: North Holland.</ref> write (original emphasis):
+
+<blockquote>
+''The essence of stiffness is that the solution to be computed is slowly varying but that perturbations exist which are rapidly damped.''
+</blockquote>
+
+Shampine<ref>L.F. Shampine (1985). "What is Stiffness?" In: R.C. Aiken (ed.), "Stiff Computation", p. 4. New York: Oxford University Press</ref> expresses a similar view, but is conceptually more specific, relating stiffness to dissipation, and what in practice is ''irreversibility'':
+
+<blockquote>
+A way we prefer for describing the latter condition is that [the solution] is
+very unstable in the opposite direction [of time].
+</blockquote>
+
+The reverse instability can easily be characterized using [[logarithmic norm]]s. Thus, for <math>\dot u = Au</math>, the norm of the solution can be bounded using ''differential inequalities''. Let <math>\|u\|_2^2 = u^*u</math> be the Euclidean norm, possibly with <math>u\in{\mathbb C}^d</math>. Then 
+:<math>
+m_2[A]\cdot\|u\|_2 \, \leq \, {\mathrm D}_t \, \|u\|_2 \, \leq \, M_2[A]\cdot\|u\|_2 \, ,
+</math>
+where <math>{\mathrm D}_t</math> denotes the time derivative and <math>m_2[A]</math> and <math>M_2[A]</math> are the lower and upper logarithmic norms of <math>A</math>, respectively. These are the extrema of a symmetric quadratic form,
+:<math>
+m_2[A] \, \leq \, {\frac {u^*{\mathrm {He}}(A)u}{u^*u}} \, \leq \, M_2[A] \, ,
+</math>
+where <math>{\mathrm {He}}(A) = (A+A^*)/2</math> denotes the Hermitian part of <math>A</math>. Its stationary points are found from the symmetric eigenvalue problem 
+:<math>
+{\mathrm {He}}(A)v = \mu v \,,
+</math> 
+whose <math>d</math> real eigenvalues <math>\mu_1 \geq \mu_2 \geq \dots \geq \mu_d</math> are referred to as the [[logarithmic norm|logarithmic values]] of <math>A</math>. In relation to the eigenvalues <math>\lambda_k</math> of <math>A</math>, the logarithmic values satisfy
+:<math>
+m_2[A] \, \equiv \, \mu_d \, \leq \, \min_k {\mathrm {Re}}\,\lambda_k \,; \qquad \max_k {\mathrm {Re}}\,\lambda_k \, \leq \, \mu_1 \, \equiv \, M_2[A] \, ,
+</math>
+together with the ''trace identity''
+:<math>
+{\mathrm {Re}}\,{\mathrm {trace}}\,A \, = \, \sum_k {\mathrm {Re}}\,\lambda_k \, = \, \sum_k \mu_k \, = \, {\mathrm {trace}}\, {\mathrm {He}}(A) \, .
+</math>
+Since <math>u(t) = {\mathrm e}^{tA}u_0</math> it follows from the differential inequality above that
+:<math>
+{\mathrm e}^{tm_2[A]} \, \leq \, \|{\mathrm e}^{tA}\|_2 \, \leq \, {\mathrm e}^{tM_2[A]}\, \qquad t\geq 0 \, , 
+</math>
+bounding the maximum growth and decay rates in the system. Thus, over a time interval of length <math>T > 0</math>, the maximum possible forward time growth is <math>{\mathrm e}^{TM_2[A]}</math>, while the maximum ''reverse time'' growth is <math>{\mathrm e}^{-Tm_2[A]}</math>. 
+
+Söderlind et al.<ref>G. Söderlind, L.O. Jay, M. Calvo (2015). "Stiffness 1952-2012. Sixty years in search of a definition. BIT Numerical Mathematics 55, 531-558.</ref> now quantify Shampine's observation. Thus, in a stiff system, 
+:<math>
+{\mathrm e}^{-Tm_2[A]} \, \gg \, {\mathrm e}^{TM_2[A]} \,,
+</math>
+from which it follows that <math>{\mathrm e}^{T\big(m_2[A] + M_2[A]\big)} \ll 1</math>, i.e., <math>T\big(m_2[A] + M_2[A]\big) \ll -1</math>. The '''stiffness indicator''' is defined<ref>ibid.</ref> 
+:<math>
+s_2[A] \, = \, {\frac {m_2[A] + M_2[A]}{2}} \, , 
+</math>
+and a stiff equation is characterized by the condition 
+:<math>
+s_2[A] \cdot T \ll -1\,.
+</math> 
+The reason for including <math>M_2[A]</math> in the definition of the stiffness indicator is that it may often happen in nonlinear systems that <math>M_2[A]</math> is positive, offsetting stiffness. This is then accounted for by defining the stiffness indicator so as to have ''odd parity'', i.e., <math>s_2[-A] = -s_2[A]</math>.
+
+Shampine's criterion implies that <math>m_2[A]</math> is large and negative, i.e., the lower bound on <math>\|{\mathrm e}^{tA}\|_2</math> is extremely small. In other words, the flow is nearly a [[C0-semigroup|semigroup]], and <math>{\mathrm e}^{tA}</math> is "close to singular". Unlike in a Lipschitz system, where one can solve (theoretically) the differential equation also in reverse time, this is effectively impossible in a stiff system. The reverse time stiff equation corresponds to an extremely ill conditioned "inverse problem".
+
+Using logarithmic norms for nonlinear maps<ref>G. Söderlind (2024). "Logarithmic Norms". Springer Series in Computational Mathematics vol 63.</ref>
+the same arguments apply to a nonlinear vector field <math>f</math>, but since <math>s_2[f]</math> is defined globally, the stiffness indicator is instead ''defined locally'' as <math>s_2[f'(u)]</math> along the trajectory. 
+
+In addition to the stiffness indicator, Söderlind et al.<ref>G. Söderlind, L.O. Jay, M. Calvo (2015). "Stiffness 1952-2012. Sixty years in search of a definition. BIT Numerical Mathematics 55, 531-558.</ref> introduce a local ''reference time scale'' <math>\Delta t(u)</math> defined by
+:<math>
+\Delta t(u) \, = \, 1/\max\big(1/T,-s_2[f'(u)]\big) \, .
+</math>
+Stiffness is then characterized by the method independent condition <math>T/\Delta t(u) \gg 1</math>, referred to as the (local) ''stiffness factor''. A large stiffness factor is a necessary condition for stiffness. But method dependent criteria can also be assessed. In numerical computations, <math>\Delta t(u)</math> can be compared to the actual step size <math>h</math>, whose local step size stiffness factor <math>h/\Delta t(u)</math> depends on the choice of integration method and the accuracy requirement. Only implicit methods can use step sizes with <math>h/\Delta t(u) \gg 1</math>, but there may also be parts of the integration where the step size stiffness factor is only moderate.
+
+An important aspect of implicit time stepping methods is the need to solve equations of the form
+:<math>
+u = \gamma h f(u) + \psi
+</math>
+for <math>u</math> on every step. Here <math>\gamma > 0</math> is a method characteristic constant of moderate size, and <math>\psi</math> is a known vector. The question arises whether this equation has a (unique) solution when <math>hf</math> is "large", in the sense that <math>hs_2[f'] \ll -1</math>, which represents stiff computation. Rewriting the equation as
+:<math>
+\big(\gamma hf - I\big)(u) = -\psi \, ,
+</math>
+the uniform monotonicity theorem applies: the equation has a unique solution if the map <math>\gamma hf - I</math> is (negative) monotone, i.e., if <math>M_2[\gamma hf - I] < 0</math>. Since 
+:<math>
+M_2[\gamma hf - I] < 0 \quad \Leftrightarrow \quad M_2[\gamma hf] < 1 \, ,
+</math>
+this condition is usually satisfied by a fair margin in stiff computation. If <math>M_2[f] < 0</math>, it is satisfied for all <math>h>0</math>, but if <math>M_2[f] > 0</math>, it may require a minor step size restriction. In the Shampine criterion, as well as in the stiffness indicator, it holds that
+:<math>
+{\frac {m_2[\gamma hf] + M_2[\gamma hf]}{2}} \, = \, \gamma h\!\cdot\!s_2[f] \ll -1 \,,
+</math>
+where <math>m_2[\gamma hf] \ll -1</math>, and where <math>M_2[\gamma hf]</math> is moderate if it is positive. Therefore, although the equation typically requires Newton iteration in stiff computation (<math>\gamma hf</math> is not a contraction), existence and uniqueness are usually guaranteed also when the step size stiffness factor is large.
+
+== A simplified stiffness indicator ==
+
+Because it is relatively expensive to compute the stiffness indicator by solving the symmetric eigenvalue problem <math>\, {\mathrm {He}}\big(f'(u)\big)v = \mu v \,</math> for <math>\mu_1</math> and <math>\mu_d</math>, an inexpensive alternative is of interest. Noting that the stiffness indicator is the arithmetic average of the largest and the smallest logarithmic value, an option is to replace this average by the average of ''all'' logarithmic values. With the aforementioned trace identity (see above), we define the scaled (arithmetic average) real trace functional<ref>G. Söderlind (2024). "Logarithmic Norms", Ch. 15. Springer Series in Computational Mathematics, vol 63.</ref>
+:<math>
+\tau[A] \, = \, {\frac {1}{d}} \, {\mathrm {Re}}\,{\mathrm {trace}}(A) \, = \, {\frac {1}{d}} \, \sum_{k=1}^{d} {\mathrm {Re}}\,a_{kk} \, = \, {\frac {1}{d}} \, \sum_{k=1}^{d} {\mathrm {Re}}\,\lambda_{k} \, = \, {\frac {1}{d}} \, \sum_{k=1}^{d} \mu_{k} \, ,
+</math>        
+noting that the computation of <math>\tau[A]</math> is both inexpensive and trivial: ''no eigenvalue computations are required''. The scaled trace (as well as the divergence) is a linear functional, hence <math>\tau[-A] = -\tau[A]</math>, sharing the odd parity of <math>s_2[A]</math>. Moreover, for a nonlinear map,
+:<math>
+\tau[f'(u)] \, = \, {\frac {1}{d}} \, {\mathrm {trace}}\,f'(u) \, = \, {\frac {1}{d}} \, {\mathrm {trace}}({\mathrm {grad}}_u\,f)(u) \, = \, {\frac {1}{d}} \, ({\mathrm {div}}_u\,f)(u) \, . 
+</math> 
+The functional <math>\,\tau[f'(u)]\,</math> serves as an alternative stiffness indicator. Stiffness can therefore also be characterized by the '''divergence condition'''
+:<math>
+{\frac {T}{d}} \, \big({\mathrm {div}}_u\,f\big)(u) \, \ll \, -1 \, , 
+</math> 
+which is readily evaluated for most problems.
+
+For a linear system <math>\dot u = Au</math>, it holds that 
+:<math>
+{\mathrm D}_t\,{\mathrm {det}}\,{\mathrm e}^{tA} \, = \, {\mathrm  {trace}}\,A \cdot {\mathrm {det}}\,{\mathrm e}^{tA} \, .
+</math>
+Defining a scaled (geometric average) absolute determinant <math>\, \delta[A] = |{\mathrm {det}}\,A|^{1/d} \,</math> we have <math>\,\delta[I] = 1\,</math> and <math>\,\delta[\alpha A] = |\alpha| \!\cdot\! \delta[A]\,</math>, avoiding the standard determinant's direct dependence on the dimension <math>d</math>. (This is of special importance when the differential equation is derived from a method-of-lines discretization of a partial differential equation.) Here <math>\,\delta[A]\,</math> is the linear "size" of the phase space volume spanned by the column vectors of <math>A</math>, such as in <math>\,\delta[2I] = 2\,</math>, independent of <math>d</math>. The differential equation for the determinant of the flow can now be rewritten
+:<math>
+{\mathrm D}_t\, \delta\big[{\mathrm e}^{tA}\big] \, = \, \tau[A] \cdot \delta\big[{\mathrm e}^{tA}\big] \, .
+</math>
+Hence 
+:<math>
+\delta\big[{\mathrm e}^{tA}\big] \, = \, {\mathrm e}^{t\,\tau[A]}\,,
+</math> 
+expressing that an initial (linear) phase volume changes by a factor <math>\,\delta\big[{\mathrm e}^{tA}\big]\,</math> over a time <math>t</math>. If <math>\,\tau[A] < 0\,</math>, ''phase volume is compressed'' by the flow <math>\,{\mathrm e}^{tA}\,</math> for <math>t\geq 0</math>.
+
+It follows that <math>\,\tau[A] \leq 0\,</math> is a ''necessary condition for stability''. (Compare the sufficient criterion <math>\,M_2[A] \leq 0\,</math> for the stability of the zero solution.) Shampine's characterization of stiffness, in terms of strongly unstable solutions in reverse time, can be written as <math>\,T\!\cdot \tau[-A] \gg 1\,</math>, which, due to the odd parity of the trace, is equivalent to the stiffness condition <math>T\!\cdot \tau[A] \ll -1</math>. These observations, concepts and constructions provide the key to characterizing and quantifying stiffness, with the divergence criterion <math>\,T\!\cdot \tau[f'] \ll -1\,</math> being the simplest.
+
+== Examples of nonlinear stiff equations and their properties ==
+
+A large number of nontrivial test problems have been collected in the Bari Test Set for Initial Value Problem Solvers.<ref> F. Mazzia, F. Iavernaro (2003). "Test Set for Initial Value Problem Solvers". Department of Mathematics, University of Bari, ITALY. http://archimede.dm.uniba.it/~testset/CWI_reports/testset2003r22.pdf</ref>
+This contains detailed examples of problems, solvers, and results achieved under specified conditions by well-known codes. 
+
+Here three stiff nonlinear problems are selected to illustrate how the (simplified) stiffness indicator is used to identify and characterize stiffness correctly. This includes the ability to distinguish the complex and rapidly changing behavior at (locally unstable) turning points, such as those observed in the van der Pol and Oregonator equations. Further, the stiffness indicator also distinguishes between subintervals where stiffness is prominent and where the problem is nonstiff. Finally in some cases it is even possible to identify which of the dependent variables contributes most to stiffness. 
+
+Operational criteria, such as how the adaptive time step depends on the accuracy requirements and varies along the solution, are also illustrated while quantifying the step size stiffness factor accordingly. Taken together, a detailed insight can be derived from the stiffness indicator, some of it even before the actual computation begins.  
+
+'''Problem 1. (Flame propagation)'''  Consider the scalar flame propagation model<ref>L.F. Shampine. https://es.mathworks.com/company/newsletters/articles/stiff-differential-equations.html</ref> for <math>t\in[0,1]</math>, 
+:<math>
+\varepsilon \, \dot u \, = \, 2\, (u^2 - u^3) \, ; \qquad u(0) = \varepsilon \ll 1 \, .
+</math>
+The two terms on the right-hand side reflect the fact that the combustion inside the flame requires oxygen, supplied through the surface of the flame; as <math>u</math> increases the surface <math>\sim u^2</math> eventually becomes too small to sustain the combustion in a larger volume <math>\sim u^3</math>. This simplified model is commonly used as a test problem to challenge the time step adaptivity of software for stiff equations, checking whether the sharp transition between a nonstiff and a stiff region is correctly resolved.
+
+For <math>u\in (0,1)</math>, the right hand side is positive and the solution <math>u(t)</math> is monotonically increasing. Starting at <math>u(0)=\varepsilon</math>, it moves away from the unstable equilibrium at <math>u=0</math>. The divergence of the vector field (stiffness indicator) is simply <math>f'(u) = 2\,(2u-3u^2)/\varepsilon</math>. Since
+:<math>
+f'(\epsilon) \approx 4 \, ; \qquad f'(1) = -\,{\frac {2}{\varepsilon}} \ll -1 \, ,
+</math>
+the solution starts out nonstiff, when <math>u\ll 1</math>. At <math>t\approx 0.5</math> when <math>u \sim 1/2</math>, instability has become catastrophic, with an extremely rapid transition towards the second, stable equilibrium <math>u=1</math>. 
+
+When <math>u > 2/3</math>, stability is regained, and the solution enters the stiff regime, see [https://commons.wikimedia.org/wiki/File:FlameProp.pdf Figure 3], where we have used <math>\varepsilon = 10^{-3}</math>. The equation is stiffer the smaller <math>\,\varepsilon\,</math> is chosen, and the closer to <math>\,u=1\,</math> the solution moves.
+[[File:FlameProp.pdf|thumb|Flame propagation test problem]]
+
+The demonstration compares an explicit third order Runge-Kutta method with a second order error estimator, with a third order A-stable implicit Runge-Kutta method, also with a second order error estimator. The implicit method has no advantage in the nonstiff regime, but in the stiff regime it can use much larger steps. The difference between the two methods increases for smaller <math>\,\varepsilon</math>. 
+
+'''Problem 2. (van der Pol equation)'''  The van der Pol equation is usually presented in a couple of alternate forms, with different scalings. It is a nonlinear problem whose solutions approach a limit cycle. Here we scale time to write the system as
+:<math>
+\begin{align}
+    \dot x &= 2\kappa\cdot y\\
+    \dot y &= 2\kappa^2\cdot(1-x^2)\,y - 2\kappa\cdot x \, ,
+\end{align}
+</math>
+with initial conditions <math>x(0) = 2</math>, <math>y(0)=0</math> chosen on the limit cycle. The time scaling has been chosen so as to make the period of the limit cycle <math>\mathrm O(1)</math> nearly independent of the parameter <math>\kappa</math>. The problem can then be solved on <math>[0,1]</math>, accounting for a full period. The problem originates in the study of nonlinear oscillations in electric circuits.
+ 
+For large values of <math>\kappa</math> (see [https://commons.wikimedia.org/wiki/File:VdPolDemo.pdf Figure 4], where <math>\kappa = 200</math>), the limit cycle consists of two stable branches, connected by nearly discontinuous transitions showing a catastrophic loss of stability. Due to the trace identity, the stiffness indicator <math>s_2[f'(u)]</math> coincides with the scaled trace <math>\tau[f'(u)]</math>, given by
+:<math>
+s_2[f'(u)] \, = \, \tau[f'(u)] \, = \, \kappa^2\,(1-x^2) \, ,
+</math>
+where <math>u</math> is the vector <math>(x,y)^{\mathrm {T}}</math>. The stiffness indicator is readily identified in the second equation of the van der Pol system, hiding in plain sight. 
+
+[[File:VdPolDemo.pdf|thumb|van der Pol test problem]]
+
+The scaled trace has a constant term, <math>\kappa^2</math>, which represents the contribution from the linear part of the system. As this term is positive it is destabilizing. The equilibrium <math>x=y=0</math> is unstable, since <math>\tau[f'(0)] = \kappa^2 > 0</math>. The scaled trace also has a negative term <math>-\kappa^2x^2</math> representing the nonlinear contribution to stiffness. As the scaled trace is independent of <math>y</math>, the latter variable has no particular influence on stiffness.
+
+The solution enters the stiff regime when <math>\tau[f'(u)] \ll -1</math>. Since <math>\tau[f'(u)] = \kappa^2\,(1-x^2)</math> it follows that ''stiffness only occurs for'' <math>\,|x| > 1</math>, i.e., along the two stable branches, where ''stiffness is proportional to'' <math>\,\kappa^2</math>, and can be arbitrarily large. In particular, it follows that if an explicit method were to be used to solve the problem along the stable branch, the computational effort is <math>\mathrm O(\kappa^2)</math>. By contrast, the effort is <math>\mathrm O(1)</math> for a stiff solver.<ref>G Söderlind, LO Jay, M Calvo (2015). "Stiffness 1952--2012: Sixty years in search of a definition." BIT 55, pp 531-558.</ref> 
+
+Note that all this information is available a priori. It is confirmed by the numerical solution of the problem. 
+
+'''Problem 3. (Oregonator equation)''' Chemical reaction kinetics is a rich source of stiff differential equations. The Oregonator equation models an autocatalytic reaction involving three reactions. For suitable initial conditions, it has a limit cycle of period <math>T \approx 305</math>. The equations are 
+:<math>\begin{align}
+\dot x \, &= \, s\cdot (x - xy + y - q\,x^2)\\
+\dot y \, &= \, (z - y - xy)/s\\
+\dot z \, &= \, w\cdot(x - z)\, .
+\end{align}
+</math>
+The test problem uses the parameters <math>s=77.27</math>, <math>q=8.375\cdot 10^{-6}</math>, <math>w=0.161</math>, together with initial conditions <math>x(0)=3.2,\,y(0)=1.45,\,z(0)=2.5</math>.<ref>G Söderlind (2024). Logarithmic Norms, Ch. 21. Springer Series in Computational Mathematics vol 63.</ref>
+
+Because the dimension of the system is <math>d=3</math>, the stiffness indicator <math>s_2[f']</math> and the scaled trace (divergence) <math>\tau[f'(u)</math> do not coincide, although the differences are small. More importantly, because the equation is a more intricate example of stiffness, we need to gain preliminary insight by keeping the parameters as long as possible in the analysis. We therefore choose the scaled divergence, which offers this advantage. Thus we find 
+:<math>
+T \cdot \tau[f'(u)] \, = \, \alpha + \beta\,x + \gamma\,y ,
+</math>
+where
+:<math>
+\begin{align}
+\alpha \, &= \, T\cdot(s^2-sw-1)/(3s) \, \approx \, 7.838\cdot 10^{3} \\
+\beta \, &= \, -T\cdot(2qs^2 + 1)/(3s) \, \approx \, -1.447\\
+\gamma \, &= \, -T\cdot s/3 \, \approx \, -7.856\cdot 10^{3}.
+\end{align}
+</math>
+Here the constant term <math>\alpha</math> is the linear contribution to the divergence. It is positive, therefore destabilizing. The two other terms represent nonlinear contributions, as they multiply <math>x</math> and <math>y</math>. Their coefficients <math>\beta</math> and <math>\gamma</math> are negative, and will contribute to stiffness. But as the divergence is independent of <math>z</math>, the latter variable does not contribute to stiffness other than to the constant term <math>\alpha</math>. The largest coefficient is <math>\gamma</math>, indicating that stiffness will be particularly strong when <math>y</math> is large and positive. Whether <math>x</math> will contribute depends on what magnitude it will reach. In [https://commons.wikimedia.org/wiki/File:OregonatorData.pdf Figure 5], the actual data are collected during one full period <math>[0,305]</math> plotted on the normalized interval <math>[0,1]</math>.
+
+[[File:OregonatorData.pdf|thumb|Oregonator test equation]]
+
+During a brief interval when <math>x</math> is large, the scaled divergence is of order <math>T \cdot \tau[f'(u)] \approx -10^5</math> (just barely visible as a notch in the upper left corner of the high resolution scaled trace graph), making the problem stiff there. But the worse is yet to come; when <math>y</math> becomes large stiffness becomes severe, with scaled divergence at <math>T \cdot \tau[f'(u)] \approx -10^7</math>. 
+
+When an adaptive third order A-stable Runge-Kutta method is used, the step sizes exceed the reference time scale by three to four orders of magnitude. This corresponds to the efficiency gain of the stiff solver over the potential use of an explicit method.
+
+== Methods and software for stiff equations ==
+
+As noted above, stiff equations require implicit time stepping methods, either Runge-Kutta methods or linear multistep methods. There are also alternatives based on extrapolation techniques. But not all implicit methods are suitable. A good method must have a stability region <math>S</math> covering all or most of the negative half-plane <math>{\mathbb C}^{-}</math>. 
+
+The stability region is determined by applying the method to the Dahlquist test equation<ref>G. Dahlquist (1963). "A special stability problem for linear multistep methods". BIT 3, 27–43, doi:10.1007/BF01963532, hdl:10338.dmlcz/103497, S2CID 120241743</ref> <math>\,\dot u = \lambda u</math>, and the stability region <math>S</math> is the set of <math>h\lambda\in{\mathbb C}</math> for which the method produces bounded solutions. A method with <math>S \supset {\mathbb C}^{-}</math>, i.e., where <math>S</math> contains the entire left half-plane, is called A-stable. 
+
+There are many A-stable Runge-Kutta methods of high order to choose from, but unfortunately, for A-stable linear multistep methods the convergence order is limited to <math>p=2</math>. Therefore one usually has to settle for less. Among multistep methods the best choice for stiff equations are the [[backward differentiation formula|backward differentiation]] (BDF) methods, to which the implicit Euler method belongs. There are BDF methods of convergence orders <math>p=1:6</math>, but only orders <math>p \leq 2</math> are A-stable. While the stability region remains large for higher orders, it eventually deteriorates, and only methods up to order <math>p=5</math> are regularly used. 
+
+Software based on BDF-type methods (or similar) are Matlab's ode15s, and C or Fortran codes such as CVODE, LSODE, MEBDF, DASSL. The software is elaborate, robust and of high complexity, uses variable order and variable time step adaptivity, and usually offers many options for problems with special structure, or for special handling of Jacobian matrices. Accuracy criteria can be specified both for absolute and relative error estimates. Some codes include options for nonstiff equations, or for differential-algebraic equations.    
+
+For implicit Runge-Kutta methods applied to the test equation, the differential equation is replaced by a recursion <math>u_{n+1} = R(h\lambda)\,u_n</math>, where the rational function <math>R</math> is referred to as the stability function. If 
+:<math>
+{\mathrm {Re}}\,z \leq 0 \, \Rightarrow \, |R(z)| \leq 1 \,,
+</math>
+the method is A-stable. There are A-stable methods of high order, but few implementations. An advantage of A-stable Runge-Kutta methods is that 
+:<math>
+M_2[hA] \leq 0 \, \Rightarrow \, \|R(hA)\|_2 \leq 1 \,,
+</math>
+i.e., if <math>A</math> is negative definite, then the method produces a contractive recursion. (This is a variant of the [[von Neumann's inequality|von Neumann inequality]].) Unfortunately, this only carries over to nonlinear problems under additional conditions. B-stable Runge-Kutta methods are a subset of A-stable methods, such that if <math>\,M_2[hf] \leq 0\,</math> in a nonlinear problem, then the method produces a contractive recursion.<ref>J.C. Butcher (1975). "A stability property of implicit Runge–Kutta methods". BIT 15, 358–361</ref><ref> J.C. Butcher (2008). "Numerical Methods for Ordinary Differential Equations", 2nd ed. New York: Wiley</ref><ref>E. Hairer, E., G. Wanner (1991). "Solving Ordinary Differential Equations II. Stiff and Differential–
+Algebraic Problems". Berlin–Heidelberg–New York: Springer.</ref> Other special stability requirements are also common, such as L-stability.<ref>{{harvtxt|Ehle|1969}}.</ref> This is another subset of A-stable method, with the additional requirement <math>\,R(\infty) = 0\,</math> for improved damping of eigenmodes for which <math>\,{\mathrm {Re}}\,h\lambda \ll -1</math>.
+
+Because implicit Runge-Kutta methods have high computational complexity, special efficiency requirements are also considered when software is developed. Among efficient Runge-Kutta software for stiff problems are Matlab's ode23s of orders <math>2</math> and <math>3</math>, and the Fortran code RADAU5<ref>E. Hairer, E., G. Wanner (1991). "Solving Ordinary Differential Equations II. Stiff and Differential–
+Algebraic Problems". Berlin–Heidelberg–New York: Springer.</ref>, implementing the B- and L-stable <math>5^{\mathrm {th}}</math> order Radau IIa method. For a general survey of diagonally implicit Runge-Kutta methods used for stiff equations, see Kennedy and Carpenter.<ref>C.A. Kennedy, M.H. Carpenter (2016). "Diagonally Implicit Runge–Kutta Methods for Ordinary
+Differential Equations. A Review". NASA/TM-2016-219173, https://ntrs.nasa.gov/citations/20160005923</ref>
+
+In all cases, the practical numerical solution of stiff equations needs dedicated, professional software. Even though it is a routine task, success may often require a careful study of the suitable settings of the codes and a proper understanding of the problem to be solved.
+
+== Notes and remarks ==
+
+'''1. Is stiffness fully understood?''' In the literature it is sometimes suggested that no precise definition of stiffness exists. This appears to be due to the widespread mention or use of the stiffness ratio, whose obvious shortcomings are long since recognized. Sometimes operational criteria such as the actual discretization method and accuracy requirements are brought in to resolve the issues. But this over-complicates what is basically a simple issue. Thus, to the practitioner it is obvious that there is a distinction between nonstiff and stiff equations; it must therefore be possible to describe this distinction mathematically. The stiffness indicator provides a simple ''necessary criterion'' characterizing and quantifying this distinction. Today it is safe to say that stiffness is a complex but fully understood phenomenon, with excellent, efficient, and reliable dedicated software available. 
+
+'''2. Stiffness indicator.''' The stiffness indicator <math>s_2[f']</math> is more robust than the scaled divergence <math>\tau[f']</math>. While the former only involves the two extreme logarithmic values, the latter makes use of the intermediate logarithmic values as well, in spite of the fact that they do not have a similar impact on stability. The advantage of the scaled divergence is that it bypasses eigenvalue computations and supports an a priori analytical understanding of the dynamics, as illustrated in the examples above. An approximate quantification is usually sufficient, as stiffness typically is a matter of ''orders of magnitude''.  
+
+'''3. Dissipative vs. conservative systems.''' The notion of stiffness as discussed above is a measure of dissipativity, i.e., of damping or energy loss. Some sources suggest that there are also stiff conservative systems, in particular if derived from [[Method of lines|method-of-lines]] discretizations of [[Hyperbolic partial differential equation|hyperbolic PDEs]]. But such systems belong in a different category, of (potentially) highly oscillatory systems. With eigenvalues located far out on the imaginary axis, the corresponding high frequencies can be suppressed by choosing an implicit method using large steps. However, in accordance with the [[Nyquist–Shannon sampling theorem|sampling theorem]], high frequency phenomena are then no longer resolved and wave forms may be distorted. The distinction between dissipative and conservative problems is significant, and the computational approach is different. While stiffness is closely related to the irreversibility of [[Parabolic partial differential equation|parabolic problems]], hyperbolic problems have no intrinsic damping and feature invariants, such as conserving energy. Similarly, separable [[Hamiltonian system|Hamiltonian systems]] have a divergence free vector field and hence are "area preserving" (conserve phase volume). Due to this structure, the stiffness indicator is zero.
+
+'''4. Etymology.''' The term "stiff" was introduced by Curtiss and Hirschfelder. According to Hirschfelder,<ref>J.O. Hirshfelder (1963). "Applied Mathematics as used in Theoretical Chemistry". American Mathematical Society Symposium: 367–376.</ref> the term was chosen because the first examples were associated with servo systems, in which there was a "tight coupling" between the servo and the controlled system. A similar effect can also be seen in control systems with a high gain negative feedback, where higher gain increases stiffness. Another suggested connection is the (mechanical) notion of stiffness, as represented by the second order equation
+:<math>
+m\ddot x + c\dot x + k x = F \, ,
+</math>
+where <math>m</math> represents mass, <math>c</math> the damping coefficient, <math>k</math> the spring constant, and <math>F</math> an external applied force. The idea is that equations with "stiff springs" (large <math>k</math>) cause stiffness in the mathematical sense. Taking <math>m=1</math>, the equation is rewritten as
+:<math>
+\begin{align}
+\dot x &= y\\
+\dot y &= -kx -cy + F \, ,
+\end{align}
+</math>
+which is a system of the form <math>\dot u = Au + g</math>. The eigenvalues of <math>A</math> are 
+:<math>
+\lambda_{1,2} \, = \, {\frac {-c \pm \sqrt{c^2-4k}}{2}} \,; 
+</math>
+these are claimed to be large if <math>k</math> is large. For [[damping|critical damping]], the parameters must satisfy <math>c = 2\sqrt{mk}</math>, which with <math>m=1</math> leads to 
+:<math>
+\lambda_{1,2} \, = \, -c/2 \, .
+</math>
+Interestingly, computing the stiffness indicator (here identical to the scaled divergence) of the vector field one obtains
+:<math>
+s_2[A] \, = \, \tau[A] \, = \, -c/2 \, ,
+</math>
+which is large if and ''only if'' the damping constant <math>c</math> is large, ''independent of the spring constant''. Thus the single cause of stiffness is the damper, which dissipates energy. It is difficult to avoid the conclusion that the term "stiff" is a misnomer, which quickly got established in a new context with a different meaning. While in mechanical engineering a large spring constant typically goes with a large damping constant in order to have (near) critical damping, the confusion can be understood.
+
+==See also==
+* [[Backward differentiation formula]], a family of implicit methods especially used for the solution of stiff differential equations
+* [[Condition number]]
+* [[Differential inclusion]], an extension of the notion of differential equation that allows discontinuities, in part as way to sidestep some stiffness issues
+* [[Explicit and implicit methods]]
+
+
+== Notes ==
+<references/>
+
+== References ==
+{{refbegin}}
+* {{citation | first1 = Richard L. | last1 = Burden | first2 = J. Douglas | last2 = Faires | year = 1993 | isbn = 0-534-93219-3 | title = Numerical Analysis | edition = 5th | publisher = [[Prindle, Weber and Schmidt]] | location = Boston | url = https://archive.org/details/numericalanalysi00burd }}.
+* {{citation | first1 = Germund | last1 = Dahlquist | author1-link = Germund Dahlquist | year = 1963 | title = A special stability problem for linear multistep methods | journal = BIT | volume = 3 | issue = 1 | pages = 27–43 | doi = 10.1007/BF01963532 | hdl = 10338.dmlcz/103497 | s2cid = 120241743 | hdl-access = free }}.
+* {{citation | first1 = David | last1 = Eberly| year = 2008 | title = Stability analysis for systems of differential equations | url =https://www.geometrictools.com/Documentation/StabilityAnalysis.pdf }}.
+* {{citation | first1 = B. L. | last1 = Ehle | year = 1969 | title = On Padé approximations to the exponential function and A-stable methods for the numerical solution of initial value problems | publisher = [[University of Waterloo]] | url=https://cs.uwaterloo.ca/research/tr/1969/CS-RR-2010.pdf }}.
+* {{citation | first1 = C. W. | last1 = Gear | year = 1971 | title = Numerical Initial-Value Problems in Ordinary Differential Equations | publisher = [[Prentice Hall]] | location = Englewood Cliffs | bibcode = 1971nivp.book.....G }}.
+* {{citation | first1 = C. W. | last1 = Gear | year = 1981 | title = Numerical solution of ordinary differential equations: Is there anything left to do? | journal = [[Society for Industrial and Applied Mathematics|SIAM Review]] | volume = 23 | issue = 1 | pages = 10–24 | doi = 10.1137/1023002 }}.
+* {{citation | first1 = Ernst | last1 = Hairer | first2 = Gerhard | last2 = Wanner | year = 1996 | title = Solving ordinary differential equations II: Stiff and differential-algebraic problems | edition = second | publisher = [[Springer-Verlag]] | location = Berlin | isbn = 978-3-540-60452-5 }}.
+* {{citation | first1 = J. O. | last1 = Hirshfelder | year = 1963 | title = Applied Mathematics as used in Theoretical Chemistry | journal = [[American Mathematical Society|American Mathematical Society Symposium]] | pages = 367–376 }}.
+* {{citation | first1 = Arieh | last1 = Iserles | first2 = Syvert | last2 = Nørsett | year = 1991 | title = Order Stars | publisher = [[Chapman & Hall]] | isbn = 978-0-412-35260-7 }}.
+* {{citation | first1 = Erwin | last1 = Kreyszig | year = 1972 | isbn = 0-471-50728-8 | title = Advanced Engineering Mathematics | edition = 3rd | publisher = [[John Wiley & Sons|Wiley]] | location = New York | url = https://archive.org/details/advancedengineer00krey }}.
+* {{citation | first1 = J. D. | last1 = Lambert | year = 1977 | title = The initial value problem for ordinary differential equations | journal = The State of the Art in Numerical Analysis | editor = D. Jacobs | publisher = [[Academic Press]] | location = New York | pages = 451–501 }}.
+* {{citation | first1 = J. D. | last1 = Lambert | year = 1992 | isbn = 978-0-471-92990-1 | title = Numerical Methods for Ordinary Differential Systems | publisher = [[John Wiley & Sons|Wiley]] | location = New York }}.
+*{{citation | first1 = John  | last1 = Mathews |first2= Kurtis|last2= Fink| year = 1992 | title = Numerical methods using MATLAB}}.
+*{{Cite book | last1=Press | first1=WH | last2=Teukolsky | first2=SA | last3=Vetterling | first3=WT | last4=Flannery | first4=BP | year=2007 | title=Numerical Recipes: The Art of Scientific Computing | edition=3rd | publisher=Cambridge University Press | location=New York | isbn=978-0-521-88068-8 | chapter=Section 17.5. Stiff Sets of Equations | chapter-url=http://apps.nrbook.com/empanel/index.html#pg=931 | access-date=2011-08-17 | archive-date=2011-08-11 | archive-url=https://web.archive.org/web/20110811154417/http://apps.nrbook.com/empanel/index.html#pg=931 | url-status=dead }}
+* {{citation | first1 = L. F. | last1 = Shampine | first2 = C. W. | last2 = Gear | year = 1979 | title = A user's view of solving stiff ordinary differential equations | journal = [[Society for Industrial and Applied Mathematics|SIAM Review]] | volume = 21 | issue = 1 | pages = 1–17 | url = https://hal.archives-ouvertes.fr/hal-01711390/document | doi = 10.1137/1021001 }}.
+* {{citation | first1 = Gerhard | last1 = Wanner | first2 = Ernst | last2 = Hairer | first3 = Syvert | last3 = Nørsett | year = 1978 | title = Order stars and stability theory | journal = BIT | volume = 18 | issue = 4 | pages = 475–489 | doi = 10.1007/BF01932026 | s2cid = 8824105 }}.
+*Stability of Runge–Kutta Methods [http://homepages.cwi.nl/~jason/Classes/numwisk/ch10.pdf]
+{{refend}}
+
+== External links ==
+* [https://www.cs.cmu.edu/~baraff/pbm/energons.pdf An Introduction to Physically Based Modeling: Energy Functions and Stiffness]
+* [http://www.scholarpedia.org/article/Stiff_systems Stiff systems] [[Lawrence F. Shampine]] and [[Skip Thompson]] [[Scholarpedia]], 2(3):2855.	[[doi:10.4249/scholarpedia.2855]]
+
+{{DEFAULTSORT:Stiff Equation}}
+{{Authority control}}
+
+[[Category:Numerical differential equations]]

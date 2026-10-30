@@ -1,0 +1,78 @@
+<!-- wikipedia: en
+     page: 75993105
+     title: Consensus based optimization
+     revision: 1349105675
+     timestamp: 2026-04-15T20:05:42Z
+     history: https://en.wikipedia.org/w/index.php?curid=75993105&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1349105675 -->
+{{Short description|Iterative simulation method}}
+
+'''Consensus-based optimization (CBO)'''<ref name=":0">{{Cite journal |last1=Pinnau |first1=René |last2=Totzeck |first2=Claudia |last3=Tse |first3=Oliver |last4=Martin |first4=Stephan |date=January 2017 |title=A consensus-based model for global optimization and its mean-field limit |url=https://www.worldscientific.com/doi/abs/10.1142/S0218202517400061 |journal=Mathematical Models and Methods in Applied Sciences |language=en |volume=27 |issue=1 |pages=183–204 |doi=10.1142/S0218202517400061 |arxiv=1604.05648 |s2cid=119296432 |issn=0218-2025}}</ref> is a multi-agent [[derivative-free optimization]] method, designed to obtain solutions for [[global optimization]] problems of the form <math display="block">\min_{x\in \cal{X}} f(x),</math>
+[[File:CBORastrigin.gif|thumb|Behavior of CBO on the [[Rastrigin function]]. '''Blue:''' Particles, '''Pink:''' drift vectors and consensus point.]]
+where <math>f:\mathcal{X}\to\R</math> denotes the objective function acting on the state space <math>\cal{X}</math>, which is assumed to be a [[normed vector space]]. The function <math>f</math> can potentially be nonconvex and nonsmooth. The algorithm employs particles or agents to explore the state space, which communicate with each other to update their positions. Their dynamics follows the paradigm of [[Metaheuristic|metaheuristics]], which blend exploration with exploitation. In this sense, CBO is comparable to [[Ant colony optimization algorithms|ant colony optimization]], wind driven optimization,<ref>{{Cite journal |title=The Wind Driven Optimization Technique and its Application in Electromagnetics  |date=2013 |doi=10.1109/TAP.2013.2238654 |last1=Bayraktar |first1=Zikri |last2=Komurcu |first2=Muge |last3=Bossard |first3=Jeremy A. |last4=Werner |first4=Douglas H. |journal=IEEE Transactions on Antennas and Propagation |volume=61 |issue=5 |pages=2745–2757 |bibcode=2013ITAP...61.2745B |s2cid=38181295 }}</ref> [[particle swarm optimization]] or [[Simulated annealing]].
+
+== Algorithm ==
+
+Consider an ensemble of points <math>x_t = (x_t^1,\dots, x_t^N) \in {\cal{X}}^N</math>, dependent of the time <math>t\in[0,\infty)</math>. Then the update for the <math>i</math>th particle is formulated as a [[stochastic differential equation]],
+
+<math>dx^i_t = -\lambda\, \underbrace{(x^i_t-c_\alpha(x_t))\,dt}_{\text{consensus drift}} + \sigma \underbrace{D(x^i_t-c_{\alpha}(x_t))\,dB^i_t}_{\text{scaled diffusion}},</math>
+
+with the following components:
+
+* '''The consensus point''' <math>c_{\alpha}(x)</math>: The key idea of CBO is that in each step the particles “agree” on a common consensus point, by computing an average of their positions, weighted by their current objective function value <math display="block">c_\alpha(x_t) = \frac{1}{\sum_{i=1}^N \omega_\alpha(x^i_t)} \sum_{i=1}^N x^i_t\ \omega_\alpha(x^i_t), \quad\text{ with }\quad \omega_\alpha(\,\cdot\,) = \mathrm{exp}(-\alpha f(\,\cdot\,)).
+</math>This point is then used in the '''drift''' term <math>x^i_t-c_\alpha(x_t)</math>, which moves each particle into the direction of the consensus point.
+* '''Scaled noise:''' For each <math>t\geq 0</math> and <math>i=1,\dots,N</math>, we denote by <math>B^i_t</math> independent standard Brownian motions. The function <math>D:{\cal{X}}\to\R^s</math> incorporates the drift of the <math>i</math>th particle and determines the noise model. The most common choices are:
+** ''Isotropic noise'', <math>D(\cdot) = \|\cdot \|</math>: In this case <math>s=1</math> and every component of the noise vector is scaled equally. This was used in the original version of the algorithm.<ref name=":0" />
+** ''Anisotropic noise<ref>{{cite arXiv |last1=Carrillo |first1=José A. |title=A consensus-based global optimization method for high dimensional machine learning problems |date=2020-03-04  |eprint=1909.09249 |last2=Jin |first2=Shi |last3=Li |first3=Lei |last4=Zhu |first4=Yuhua|class=math.OC }}</ref>'', <math>D(\cdot) = |\cdot|</math>: In the special case, where <math>{\cal{X}}\subset \R^d</math>, this means that <math>s=d</math> and <math>D</math> applies the [[absolute value]] function component-wise. Here, every component of the noise vector is scaled, dependent on the corresponding entry of the drift vector.
+* '''Hyperparameters:''' The parameter <math>\sigma \geq 0</math> scales the influence of the noise term. The parameter <math>\alpha \geq 0</math> determines the separation effect of the particles:<ref name=":0" />
+** in the limit <math>\alpha\to 0</math> every particle is assigned the same weight and the consensus point is a regular mean.
+** In the limit <math>\alpha\to\infty</math> the consensus point corresponds to the particle with the best objective value, completely ignoring the position of other points in the ensemble.
+
+== Convergence ==
+An attractive property of CBO is that it allows for mathematical guarantees, especially through its mean-field interpretation. Global convergence of the numerical method can be established<ref>{{Cite journal |last=Fornasier |first=Massimo |last2=Klock |first2=Timo |last3=Riedl |first3=Konstantin |date=2024-09-30 |title=Consensus-Based Optimization Methods Converge Globally |url=https://epubs.siam.org/doi/10.1137/22M1527805 |journal=SIAM Journal on Optimization |volume=34 |issue=3 |pages=2973–3004 |doi=10.1137/22M1527805 |issn=1052-6234|url-access=subscription }}</ref>.
+
+== Implementation notes ==
+In practice, the SDE is discretized via the [[Euler–Maruyama method]] such that the following explicit update formula for the ensemble <math>x = (x^1,\dots,x^N)</math> is obtained,<math display="block">x^i \gets x^i-\lambda\, (x^i-c_\alpha(x))\,dt + \sigma D(x^i-c_{\alpha}(x))\, B^i.</math>If one can employ an efficient implementation of the [[LogSumExp]] functions, this can be beneficial for [[numerical stability]] of the consensus point computation. We refer to existing implementation in [[Python (programming language)|Python]] [https://pdips.github.io/CBXpy/] and [[Julia (programming language)|Julia]] [https://github.com/PdIPS/CBX.jl]. 
+
+== Variants ==
+
+=== Sampling ===
+
+Consensus-based optimization can be transformed into a sampling method<ref>{{Citation |last1=Carrillo |first1=J. A. |title=Consensus Based Sampling |date=2021-11-04 |arxiv=2106.02519 |last2=Hoffmann |first2=F. |last3=Stuart |first3=A. M. |last4=Vaes |first4=U.}}</ref> by modifying the noise term and choosing appropriate hyperparameters. Namely, one considers the following SDE
+
+<math>dx^i_t = -(x^i_t-c_\alpha(x_t))\,dt + \sqrt{2 \tilde{\lambda}^{-1}\, C_\alpha(x_t)}\,dB^i_t,</math>
+
+where the weighted [[covariance matrix]] is defined as
+
+<math>C_\alpha(x_t) := \frac{1}{\sum_{i=1}^N \omega_\alpha(x_t^i)}\sum_{i=1}^N (x_t^i - c(x_t)) \otimes (x_t^i - c(x_t)) \omega(x_t^i) </math>.
+
+If the parameters are chosen such that <math>\tilde{\lambda}^{-1} = (1 + \alpha)</math> the above scheme creates approximate samples of a [[probability distribution]] with a density, that is proportional to <math>\exp(-\alpha f)</math>.
+
+=== Polarization ===
+If the function <math> f</math> is multi-modal, i.e., has more than one global minimum, the standard CBO algorithm can only find one of these points. However, one can “polarize”<ref>{{cite arXiv |last1=Bungert |first1=Leon |title=Polarized consensus-based dynamics for optimization and sampling |date=2023-10-09 |eprint=2211.05238 |last2=Roith |first2=Tim |last3=Wacker |first3=Philipp|class=math.OC }}</ref> the consensus computation by introducing a kernel <math>k: \cal{X}\times\cal{X}\to[0,\infty)</math> that includes local information into the weighting. In this case, every particle has its own version of the consensus point, which is computed as<math display="block">c_\alpha^j(x) = \frac{1}{\sum_{i=1}^N \omega_\alpha^j(x^i)} \sum_{i=1}^N x^i\ \omega_\alpha^j(x^i), \quad\text{ with }\quad \omega_\alpha^j(\,\cdot\,) = \mathrm{exp}(-\alpha f(\,\cdot\,))\, k(\cdot,x^j).
+</math>In this case, the drift is a [[vector field]] over the state space <math>\cal{X}
+</math>. Intuitively, particles are now not only attracted to other particles based on their objective value, but also based on their spatial locality. For a constant kernel function, the polarized version corresponds to standard CBO and is therefore a generalization. We briefly give some examples of common configurations:
+
+* '''Gaussian kernel''' <math>k(\cdot,\cdot) = \exp\left(- \frac{1}{2\kappa^{2} \alpha} \|\cdot-\cdot\|^2_2 \right)
+</math>: the parameter <math>\kappa
+</math> determines the communication radius of particles. This choice corresponds to a local convex regularization of the objective function <math>f
+</math>.
+* '''[[Mean-shift algorithm]]''':<ref>{{Cite journal |last1=Fukunaga |first1=K. |last2=Hostetler |first2=L. |date=January 1975 |title=The estimation of the gradient of a density function, with applications in pattern recognition |journal=IEEE Transactions on Information Theory |language=en |volume=21 |issue=1 |pages=32–40 |doi=10.1109/TIT.1975.1055330 |bibcode=1975ITIT...21...32F |issn=0018-9448}}</ref> Employing polarized CBO for a constant objective function <math>f
+</math>, together with no noise (i.e. <math>\sigma = 0
+</math>) and an Euler–Maruyama [[discretization]] with step size <math>dt=1
+</math>, corresponds to the mean-shift algorithm.
+* '''Bounded confidence model''': When choosing a constant objective function, no noise model, but also the special kernel function <math>k(x,\tilde x) = 1_{\|x-\tilde x\| \leq \kappa}
+</math>, the SDE in transforms to a ODE known as the bounded confidence model,<ref>{{Cite journal |last1=Deffuant |first1=Guillaume |last2=Neau |first2=David |last3=Amblard |first3=Frederic |last4=Weisbuch |first4=Gérard |date=January 2000 |title=Mixing beliefs among interacting agents |url=https://www.worldscientific.com/doi/abs/10.1142/S0219525900000078 |journal=Advances in Complex Systems |language=en |volume=03 |issue=1n04 |pages=87–98 |doi=10.1142/S0219525900000078 |s2cid=15604530 |issn=0219-5259|url-access=subscription }}</ref> which arises in opinion dynamics.
+A further modification is to also scale the kernel with the objective function, which leads to a provably globally convergent scheme<ref>{{Cite journal |last=Fornasier |first=Massimo |last2=Sun |first2=Lukang |date=2025-04-03 |title=A PDE framework of consensus-based optimization for objectives with multiple global minimizers |url=https://www.tandfonline.com/doi/full/10.1080/03605302.2025.2459194 |journal=Communications in Partial Differential Equations |language=en |volume=50 |issue=4 |pages=493–541 |doi=10.1080/03605302.2025.2459194 |issn=0360-5302|doi-access=free }}</ref>.
+
+== See also ==
+* [[Particle Swarm Optimization]]
+* [[Simulated annealing]]
+* [[Ant colony optimization algorithms]]
+
+== References ==
+{{reflist}}
+
+[[Category:Optimization algorithms and methods]]
+[[Category:Metaheuristics]]

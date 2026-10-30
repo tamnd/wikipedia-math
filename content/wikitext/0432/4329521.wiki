@@ -1,0 +1,244 @@
+<!-- wikipedia: en
+     page: 4329521
+     title: Generalized minimal residual method
+     revision: 1365676878
+     timestamp: 2026-07-23T20:29:36Z
+     history: https://en.wikipedia.org/w/index.php?curid=4329521&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1365676878 -->
+{{Short description|Method for numerical solution of certain systems of equations}}
+In [[mathematics]], the '''generalized minimal residual method (GMRES)''' is an [[iterative method]] for the [[numerical analysis|numerical]] solution of an indefinite nonsymmetric [[system of linear equations]]. The method approximates the solution by the vector in a [[Krylov subspace]] with minimal [[residual (numerical analysis)|residual]]. The [[Arnoldi iteration]] is used to find this vector.
+
+The GMRES method was developed by [[Yousef Saad]] and Martin H. Schultz in 1986.<ref>{{Cite journal |last1=Saad |first1=Youcef |last2=Schultz |first2=Martin H. |date=1986 |title=GMRES: A Generalized Minimal Residual Algorithm for Solving Nonsymmetric Linear Systems |url=http://epubs.siam.org/doi/10.1137/0907058 |journal=SIAM Journal on Scientific and Statistical Computing |language=en |volume=7 |issue=3 |pages=856–869 |doi=10.1137/0907058 |issn=0196-5204|url-access=subscription }}</ref> It is a generalization and improvement of the [[MINRES]] method due to Paige and Saunders in 1975.<ref>Paige and Saunders, "Solution of Sparse Indefinite Systems of Linear Equations", SIAM J. Numer. Anal., vol 12, page 617 (1975) https://doi.org/10.1137/0712047</ref><ref>{{cite thesis | first = Naoufal | last = Nifa | title= Solveurs performants pour l'optimisation sous contraintes en identification de paramètres | trans-title = Efficient solvers for constrained optimization in parameter identification problems | language = fr | year = 2017 | url = https://theses.hal.science/tel-01661459 }}</ref> The MINRES method requires the matrix to be [[Symmetric matrix|symmetric]], but has the advantage that it only requires handling of three vectors. GMRES is a special case of the [[DIIS]] method developed by Peter Pulay in 1980. DIIS is applicable to [[Non-Linear Systems|non-linear systems]].
+
+== The method ==
+
+Denote the [[Euclidean norm]] of any vector '''v '''by <math>\|v\|</math>. Denote the (square) system of linear equations to be solved by <math display="block"> Ax = b. </math>
+The matrix  ''A'' is assumed to be [[invertible matrix|invertible]] of size ''m''-by-''m''. Furthermore, it is assumed that '''b''' is normalized, i.e., that <math>\|b\| = 1</math>.
+
+The ''n''-th [[Krylov sequence|Krylov subspace]] for this problem is <math display="block"> K_n = K_n(A,r_0) = \operatorname{span} \, \{ r_0, Ar_0, A^2r_0, \ldots, A^{n-1}r_0 \}. \, </math>
+where <math>r_0 = b - A x_0</math> is the initial residual given an initial guess <math>x_0 \ne 0</math>. Clearly <math>r_0 = b</math> if <math>x_0 = 0</math>.
+
+GMRES approximates the exact solution of <math>Ax = b</math> by the vector <math>x_n \in x_0 + K_n </math> that minimizes the Euclidean norm of the [[Residual (numerical analysis)|residual]] <math>r_n= b - Ax_n</math>.
+
+The vectors <math>r_0,Ar_0,\ldots A^{n-1}r_0</math> might be close to [[linear independence|linearly dependent]], so instead of this basis, the [[Arnoldi iteration]] is used to find orthonormal vectors <math> q_1, q_2, \ldots, q_n \, </math> which form a basis for <math>K_n</math>. In particular, <math>q_1=\|r_0\|_2^{-1}r_0</math>.
+
+Therefore, the vector <math>x_n \in x_0 + K_n </math> can be written as <math>x_n = x_0 + Q_n y_n </math> with <math> y_n \in \mathbb{R}^n </math>, where <math> Q_n </math> is the ''m''-by-''n'' matrix formed by <math> q_1,\ldots,q_n</math>. In other words, finding the ''n''-th approximation of the solution (i.e., <math>x_n</math>) is reduced to finding the vector <math>y_n</math>, which is determined via minimizing the residue as described [[#Solving the least squares problem|below]].
+
+The Arnoldi process also constructs <math>\tilde{H}_n</math>, an (<math>n+1</math>)-by-<math>n</math> upper [[Hessenberg matrix]] which satisfies <math display="block"> AQ_n = Q_{n+1} \tilde{H}_n \, </math>
+an equality which is used to simplify the calculation of <math>y_n</math> (see {{slink||Solving the least squares problem}}). Note that, for symmetric matrices, a symmetric tri-diagonal matrix is actually achieved, resulting in the [[MINRES]] method.
+
+Because columns of <math>Q_n</math> are orthonormal, we have<math display="block"> \begin{align}
+\left\| r_n \right\|
+&= \left\| b - A x_n \right\| \\
+&= \left\| b - A(x_0 + Q_n y_n) \right\| \\
+&= \left\| r_0 - A Q_n y_n \right\| \\
+&= \left\| \beta q_1 - A Q_n y_n \right\| \\
+&= \left\| \beta q_1 - Q_{n+1} \tilde{H}_n y_n \right\| \\
+&= \left\| Q_{n+1} (\beta e_1 - \tilde{H}_n y_n) \right\| \\
+&= \left\| \beta e_1 - \tilde{H}_n y_n \right\|
+\end{align}</math>
+where <math display="block"> e_1 = (1,0,0,\ldots,0)^T \, </math> is the first vector in the [[standard basis]] of <math>\mathbb{R}^{n+1} </math>, and<math display="block"> \beta = \|r_0\| \, ,</math> 
+<math>r_0</math> being the first trial residual vector (usually <math>b</math>). Hence, <math>x_n</math> can be found by minimizing the Euclidean norm of the residual<math display="block"> r_n = \tilde{H}_n y_n - \beta e_1. </math>
+This is a [[linear least squares (mathematics)|linear least squares]] problem of size ''n''.
+
+This yields the GMRES method. On the <math>n</math>-th iteration:
+# calculate <math> q_n </math> with the Arnoldi method;
+# find the <math> y_n </math> which minimizes <math>\|r_n\|</math>;
+# compute <math> x_n = x_0 + Q_n y_n </math>;
+# repeat if the residual is not yet small enough.
+At every iteration, a matrix-vector product <math>A q_n </math> must be computed. This costs about <math>2m^2 </math> [[floating point|floating-point operations]] for general dense matrices of size <math>m</math>, but the cost can decrease to <math>O(m)</math> for [[sparse matrix|sparse matrices]]. In addition to the matrix-vector product, <math>O(nm)</math> floating-point operations must be computed at the ''n'' -th iteration.
+
+== Convergence ==
+
+The ''n''th iterate minimizes the residual in the Krylov subspace <math>K_n</math>. Since every subspace is contained in the next subspace, the residual does not increase. After ''m'' iterations, where ''m'' is the size of the matrix ''A'', the Krylov space ''K''<sub>''m''</sub> is the whole of '''R'''<sup>''m''</sup> and hence the GMRES method arrives at the exact solution. However, the idea is that after a small number of iterations (relative to ''m''), the vector ''x''<sub>''n''</sub> is already a good approximation to the 
+exact solution.
+
+This does not happen in general. Indeed, a theorem of Greenbaum, Pták and Strakoš states that for every nonincreasing sequence ''a''<sub>1</sub>, ..., ''a''<sub>''m''&minus;1</sub>, ''a''<sub>''m''</sub> = 0, one can find a matrix ''A'' such that the {{norm|''r''<sub>''n''</sub>}} = ''a''<sub>''n''</sub> for all ''n'', where ''r''<sub>''n''</sub> is the residual defined above. In particular, it is possible to find a matrix for which the residual stays constant for ''m''&nbsp;&minus;&nbsp;1 iterations, and only drops to zero at the last iteration.
+
+In practice, though, GMRES often performs well. This can be proven in specific situations. If the symmetric part of ''A'', that is <math>(A^T + A)/2</math>, is [[positive-definite matrix|positive definite]], then
+<math display="block"> \|r_n\| \leq \left( 1-\frac{\lambda_{\min}^2(1/2(A^T + A))}{ \lambda_{\max}(A^T A)} \right)^{n/2} \|r_0\|, </math>
+where <math>\lambda_{\mathrm{min}}(M)</math> and <math>\lambda_{\mathrm{max}}(M)</math> denote the smallest and largest [[eigenvalue]] of the matrix <math>M</math>, respectively.<ref>{{harvnb|Eisenstat|Elman|Schultz|1983|at=Thm 3.3}}. NB all results for GCR also hold for GMRES, cf. {{harvnb|Saad|Schultz|1986}}</ref>
+
+If ''A'' is [[symmetric matrix|symmetric]] and positive definite, then we even have
+<math display="block"> \|r_n\| \leq \left( \frac{\kappa_2(A)^2-1}{\kappa_2(A)^2} \right)^{n/2} \|r_0\|. </math>
+where <math>\kappa_2(A)</math> denotes the [[condition number]] of ''A'' in the Euclidean norm.
+
+In the general case, where ''A'' is not positive definite, we have
+<math display="block"> \frac{\|r_n\|}{\|b\|} \le \inf_{p \in P_n} \|p(A)\| \le \kappa_2(V) \inf_{p \in P_n} \max_{\lambda \in \sigma(A)} |p(\lambda)|, \, </math>
+where ''P''<sub>''n''</sub> denotes the set of polynomials of degree at most ''n'' with ''p''(0) = 1, ''V'' is the matrix appearing in the [[Eigendecomposition of a matrix|spectral decomposition]] of ''A'', and ''σ''(''A'') is the [[spectrum of a matrix|spectrum]] of ''A''. Roughly speaking, this says that fast convergence occurs when the eigenvalues of ''A'' are clustered away from the origin and ''A'' is not too far from [[normal matrix|normality]].<ref>{{Cite book |last1=Trefethen |first1=Lloyd N. |last2=Bau |first2=David, III. |title=Numerical Linear Algebra |date=1997 |publisher=Society for Industrial and Applied Mathematics |isbn=978-0-89871-361-9 |location=Philadelphia | at = Theorem 35.2 }}</ref>
+
+All these inequalities bound only the residuals instead of the actual error, that is, the distance between the current iterate ''x''<sub>''n''</sub> and the exact solution.
+
+== Extensions of the method ==
+
+Like other iterative methods, GMRES is usually combined with a [[preconditioning]] method in order to speed up convergence.
+
+The cost of the iterations grow as O(''n''<sup>2</sup>), where ''n'' is the iteration number. Therefore, the method is sometimes restarted after a number, say ''k'', of iterations, with ''x''<sub>''k''</sub> as initial guess. The resulting method is called GMRES(''k'') or Restarted GMRES. For non-positive definite matrices, this method may suffer from stagnation in convergence as the restarted subspace is often close to the earlier subspace.
+
+The shortcomings of GMRES and restarted GMRES are addressed by the recycling of Krylov subspace in the GCRO type methods such as GCROT and GCRODR.<ref>{{Cite journal|doi=10.1016/j.jcp.2015.09.040|title=Recycling Krylov subspaces for CFD applications and a new hybrid recycling solver|year=2015|last1=Amritkar|first1=Amit|last2=de Sturler|first2=Eric| last3=Świrydowicz|first3=Katarzyna | last4=Tafti|first4=Danesh | last5=Ahuja|first5=Kapil | journal = Journal of Computational Physics | volume = 303 | page = 222 | arxiv = 1501.03358 | bibcode = 2015JCoPh.303..222A | s2cid = 2933274 }}</ref>
+Recycling of Krylov subspaces in GMRES can also speed up convergence when sequences of linear systems need to be solved.<ref>{{Cite thesis |type=Ph.D. |doi=10.14279/depositonce-4147 |title=Recycling Krylov subspace methods for sequences of linear systems |year=2014 |last=Gaul |first=André |publisher=TU Berlin}}</ref>
+
+== Comparison with other solvers ==
+
+The Arnoldi iteration reduces to the [[Lanczos iteration]] for symmetric matrices. The corresponding [[Krylov subspace]] method is the minimal residual method (MinRes) of Paige and Saunders. Unlike the unsymmetric case, the MinRes method is given by a three-term [[recurrence relation]]. It can be shown that there is no Krylov subspace method for general matrices, which is given by a short recurrence relation and yet minimizes the norms of the residuals, as GMRES does.
+
+Another class of methods builds on the [[unsymmetric Lanczos iteration]], in particular the [[Biconjugate gradient method|BiCG method]]. These use a three-term recurrence relation, but they do not attain the minimum residual, and hence the residual does not decrease monotonically for these methods. Convergence is not even guaranteed.
+
+The third class is formed by methods like [[Conjugate gradient squared method|CGS]] and [[Biconjugate gradient stabilized method|BiCGSTAB]]. These also work with a three-term recurrence relation (hence, without optimality) and they can even terminate prematurely without achieving convergence. The idea behind these methods is to choose the generating polynomials of the iteration sequence suitably.
+
+None of these three classes is the best for all matrices; there are always examples in which one class outperforms the other. Therefore, multiple solvers are tried in practice to see which one is the best for a given problem.
+
+== Solving the least squares problem ==
+
+One part of the GMRES method is to find the vector <math>y_n</math> which minimizes
+<math display="block"> \left\| \tilde{H}_n y_n - \beta e_1 \right\|.  </math>
+Note that <math>\tilde{H}_n</math> is an (''n''&nbsp;+&nbsp;1)-by-''n'' matrix, hence it gives an over-constrained linear system of ''n''+1 equations for ''n'' unknowns.
+
+The minimum can be computed using a [[QR decomposition]]: find an (''n''&nbsp;+&nbsp;1)-by-(''n''&nbsp;+&nbsp;1) [[orthogonal matrix]] &Omega;<sub>''n''</sub> and an (''n''&nbsp;+&nbsp;1)-by-''n'' upper [[triangular matrix]] <math>\tilde{R}_n</math> such that
+<math display="block"> \Omega_n \tilde{H}_n = \tilde{R}_n. </math>
+The triangular matrix has one more row than it has columns, so its bottom row consists of zero. Hence, it can be decomposed as
+<math display="block"> \tilde{R}_n = \begin{bmatrix} R_n \\ 0 \end{bmatrix}, </math>
+where <math>R_n</math> is an ''n''-by-''n'' (thus square) triangular matrix.
+
+The QR decomposition can be updated cheaply from one iteration to the next, because the Hessenberg matrices differ only by a row of zeros and a column:
+<math display="block">\tilde{H}_{n+1} = \begin{bmatrix} \tilde{H}_n & h_{n+1} \\ 0 & h_{n+2,n+1} \end{bmatrix}, </math> 
+where ''h''<sub>''n+1''</sub> = (''h''<sub>1,''n''+1</sub>, ..., ''h''<sub>''n''+1,''n''+1</sub>)<sup>T</sup>. This implies that premultiplying the Hessenberg matrix with &Omega;<sub>''n''</sub>, augmented with zeroes and a row with multiplicative identity, yields almost a triangular matrix:
+<math display="block"> \begin{bmatrix} \Omega_n & 0 \\ 0 & 1 \end{bmatrix} \tilde{H}_{n+1} = \begin{bmatrix} R_n & r_{n+1} \\ 0 & \rho \\ 0 & \sigma \end{bmatrix} </math>
+This would be triangular if &sigma; is zero. To remedy this, one needs the [[Givens rotation]]
+<math display="block"> G_n = \begin{bmatrix} I_{n} & 0 & 0 \\ 0 & c_n & s_n \\ 0 & -s_n & c_n \end{bmatrix} </math>
+where
+<math display="block"> c_n = \frac{\rho}{\sqrt{\rho^2+\sigma^2}} \quad\text{and}\quad s_n = \frac{\sigma}{\sqrt{\rho^2+\sigma^2}}. </math>
+With this Givens rotation, we form
+<math display="block"> \Omega_{n+1} = G_n \begin{bmatrix} \Omega_n & 0 \\ 0 & 1 \end{bmatrix}. </math>
+Indeed,
+<math display="block"> \Omega_{n+1} \tilde{H}_{n+1} = \begin{bmatrix} R_n & r_{n+1} \\ 0 & r_{n+1,n+1} \\ 0 & 0 \end{bmatrix}</math> is a triangular matrix with <math display="inline">r_{n+1,n+1} = \sqrt{\rho^2+\sigma^2}</math>.
+
+Given the QR decomposition, the minimization problem is easily solved by noting that
+<math display="block">
+\begin{align}
+\left\| \tilde{H}_n y_n - \beta e_1 \right\| 
+&= \left\| \Omega_n (\tilde{H}_n y_n - \beta e_1) \right\| \\
+&= \left\| \tilde{R}_n y_n - \beta \Omega_n e_1 \right\|. \end{align}</math>
+Denoting the vector <math>\beta\Omega_ne_1</math> by
+<math display="block"> \tilde{g}_n = \begin{bmatrix} g_n \\ \gamma_n \end{bmatrix} </math>
+with ''g''<sub>''n''</sub> &isin; '''R'''<sup>''n''</sup> and &gamma;<sub>''n''</sub> &isin; '''R''', this is
+<math display="block">
+\begin{align}
+\left\| \tilde{H}_n y_n - \beta e_1 \right\| 
+&= \left\| \tilde{R}_n y_n - \beta \Omega_n e_1 \right\| \\
+&= \left\| \begin{bmatrix} R_n \\ 0 \end{bmatrix} y_n - \begin{bmatrix} g_n \\ \gamma_n \end{bmatrix} \right\|. 
+\end{align}</math>
+The vector ''y'' that minimizes this expression is given by 
+<math display="block"> y_n = R_n^{-1} g_n. </math>
+Again, the vectors <math>g_n</math> are easy to update.<ref>{{Cite book | last1 = Stoer | first1 = Josef | last2 = Bulirsch | first2 = Roland | title = Introduction to Numerical Analysis | date = 2002 | edition = 3rd | publisher = Springer |isbn = 978-0-387-95452-3 | series = Texts in Applied Mathematics | location = New York | at = §8.7.2 }}</ref>
+
+==Example code==
+===Regular GMRES (MATLAB / GNU Octave)===
+<syntaxhighlight lang="matlab">
+function [x, e] = gmres(A, b, x, max_iterations, threshold)
+  n = length(A);
+  m = max_iterations;
+
+  % use x as the initial vector
+  r = b - A * x;
+
+  beta = norm(r);
+  % Relative residual will be tracked and compared to input threshold for convergence check
+  b_norm = norm(b);
+
+  % initialize the 1D vectors
+  sn = zeros(m, 1);
+  cs = zeros(m, 1);
+  g = zeros(m+1, 1);
+  g(1) = beta;
+  Q(:,1) = r / beta;
+  for k = 1:m
+
+    % Run arnoldi
+    [H(1:k+1, k), Q(:, k+1)] = arnoldi(A, Q, k);
+    
+    % Eliminate the last element in H ith row (thus computing R in-place), and update the rotation matrix
+    [H(1:k+1, k), cs(k), sn(k)] = apply_givens_rotation(H(1:k+1,k), cs, sn, k);
+    
+    % Apply Givens rotation to compute newly extended g
+    g(k + 1) = -sn(k) * g(k);
+    g(k)     =  cs(k) * g(k);
+
+    % At minimum, ||r_k|| = |g(k+1)|
+    current_relative_tol = abs(g(k + 1)) / b_norm;
+    if (current_relative_tol <= threshold)
+      break;
+    end
+  end
+  % if threshold is not reached, k = m at this point (and not m+1) 
+  
+  % calculate the result
+  y = H(1:k, 1:k) \ g(1:k);
+  x = x + Q(:, 1:k) * y;
+end
+
+%----------------------------------------------------%
+%                  Arnoldi Function                  %
+%----------------------------------------------------%
+function [h, q] = arnoldi(A, Q, k)
+  q = A*Q(:,k);   % Krylov Vector
+  for i = 1:k     % Modified Gram-Schmidt, keeping the Hessenberg matrix
+    h(i) = q' * Q(:, i);
+    q = q - h(i) * Q(:, i);
+  end
+  h(k + 1) = norm(q);
+  q = q / h(k + 1);
+end
+
+%---------------------------------------------------------------------%
+%                  Applying Givens Rotation to H col                  %
+%---------------------------------------------------------------------%
+function [h, cs_k, sn_k] = apply_givens_rotation(h, cs, sn, k)
+  % apply for ith column
+  for i = 1:k-1
+    temp   =  cs(i) * h(i) + sn(i) * h(i + 1);
+    h(i+1) = -sn(i) * h(i) + cs(i) * h(i + 1);
+    h(i)   = temp;
+  end
+
+  % update the next sin cos values for rotation
+  [cs_k, sn_k] = givens_rotation(h(k), h(k + 1));
+
+  % eliminate H(i + 1, i)
+  h(k) = cs_k * h(k) + sn_k * h(k + 1);
+  h(k + 1) = 0.0;
+end
+
+%%----Calculate the Givens rotation matrix----%%
+function [cs, sn] = givens_rotation(v1, v2)
+%  if (v1 == 0)
+%    cs = 0;
+%    sn = 1;
+%  else
+    t = sqrt(v1^2 + v2^2);
+%    cs = abs(v1) / t;
+%    sn = cs * v2 / v1;
+    cs = v1 / t;  % see http://www.netlib.org/eispack/comqr.f
+    sn = v2 / t;
+%  end
+end
+</syntaxhighlight>
+
+== See also==
+* [[Biconjugate gradient method]]
+
+== References ==
+{{reflist}}
+{{refbegin}}
+* {{Cite book |last1=Meister |first1=Andreas |title=Numerik linearer Gleichungssysteme |last2=Vömel |first2=Christof |date=2005 |publisher=Vieweg |isbn=978-3-528-13135-7 |location=Wiesbaden}}
+* {{Cite book |last=Saad |first=Y. |title=Iterative Methods for Sparse Linear Systems |date=2003 |publisher=SIAM |isbn=978-0-89871-534-7 |edition=2nd |location=Philadelphia}}
+* {{Cite journal | last1 = Eisenstat | first1 = Stanley C. | last2 = Elman | first2 = Howard C. | last3 = Schultz | first3 = Martin H. | date = 1983 | title = Variational Iterative Methods for Nonsymmetric Systems of Linear Equations | journal = SIAM Journal on Numerical Analysis | volume = 20 | issue = 2 | pages = 345–357 | doi = 10.1137/0720023 | issn = 0036-1429}}
+* [http://www.netlib.org/linalg/html_templates/node29.html#SECTION00734000000000000000|J. Dongarra et al., ''Templates for the Solution of Linear Systems: Building Blocks for Iterative Methods''], 2nd Edition, SIAM, Philadelphia, 1994
+* {{Cite journal |last1=Imankulov |first1=Timur |last2=Lebedev |first2=Danil |last3=Matkerim |first3=Bazargul |last4=Daribayev |first4=Beimbet |last5=Kassymbek |first5=Nurislam |date=2021-10-08 |title=Numerical Simulation of Multiphase Multicomponent Flow in Porous Media: Efficiency Analysis of Newton-Based Method |journal=Fluids |language=en |volume=6 |issue=10 |pages=355 |doi=10.3390/fluids6100355 |doi-access=free |issn=2311-5521}}
+{{refend}}
+
+{{Numerical linear algebra}}
+
+[[Category:Numerical linear algebra]]
+[[Category:Articles with example pseudocode]]

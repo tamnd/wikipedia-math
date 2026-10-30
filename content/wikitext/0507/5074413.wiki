@@ -1,0 +1,514 @@
+<!-- wikipedia: en
+     page: 5074413
+     title: Lattice Boltzmann methods
+     revision: 1374572098
+     timestamp: 2026-09-12T21:34:37Z
+     history: https://en.wikipedia.org/w/index.php?curid=5074413&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374572098 -->
+{{Short description|Class of computational fluid dynamics methods}}
+The '''lattice Boltzmann methods (LBM)''', originated from the [[lattice gas automata]] (LGA) method (Hardy-[[Yves Pomeau|Pomeau]]-Pazzis and [[Uriel Frisch|Frisch]]-[[Brosl Hasslacher|Hasslacher]]-[[Yves Pomeau|Pomeau]] models), is a class of [[computational fluid dynamics]] (CFD) methods for [[fluid simulation]]. Instead of solving the [[Navier–Stokes equations]] directly, a fluid density on a lattice is simulated with streaming and collision (relaxation) processes.<ref name=":0" /> The method is versatile<ref name=":0" /> as the model fluid can straightforwardly be made to mimic common fluid behaviour like vapour/liquid coexistence, and so fluid systems such as liquid droplets can be simulated. Also, fluids in complex environments such as porous media can be straightforwardly simulated, whereas with complex boundaries other CFD methods can be hard to work with. [[File:Lattice Boltzmann computer simulation of initially stretched droplet relaxing to a sphere.webm|thumb|Computer simulation in two dimensions, using Lattice Boltzmann method, of a droplet that starts stretched and relaxes to its equilibrium circular shape]]
+
+==Algorithm==
+[[File:D2Q9 lattice vectors for 2D Lattice Boltzmann.svg|thumb|Schematic of D2Q9 lattice vectors for 2D Lattice Boltzmann]]
+
+Unlike CFD methods that solve the conservation equations of macroscopic properties (i.e., mass, momentum, and energy) numerically, LBM models the fluid consisting of fictive particles, and such particles perform consecutive propagation and collision processes over a discrete lattice. Due to its particulate nature and local dynamics, LBM has several advantages over other conventional CFD methods, especially in dealing with complex boundaries, incorporating microscopic interactions, and parallelization of the algorithm.<ref>{{Cite journal |last1=Axner |first1=L. |last2=Bernsdorf |first2=J. |last3=Zeiser |first3=T. |last4=Lammers |first4=P. |last5=Linxweiler |first5=J. |last6=Hoekstra |first6=A. G. |date=2008-05-01 |title=Performance evaluation of a parallel sparse lattice Boltzmann solver |url=https://www.sciencedirect.com/science/article/pii/S002199910800051X |journal=Journal of Computational Physics |volume=227 |issue=10 |pages=4895–4911 |doi=10.1016/j.jcp.2008.01.013 |bibcode=2008JCoPh.227.4895A |issn=0021-9991|url-access=subscription }}</ref> A different interpretation of the lattice Boltzmann equation is that of a discrete-velocity [[Boltzmann equation]]. The numerical methods of solution of the system of partial differential equations then give rise to a discrete map, which can be interpreted as the propagation and collision of fictitious particles.
+
+In an algorithm, there are collision and streaming steps. These evolve the density of the fluid <math>\rho(\vec{x},t)</math>, for <math>\vec{x}</math> the position and <math>t</math> the time. As the fluid is on a lattice, the density has a number of components <math>f_i, i=0,\ldots, a</math> equal to the number of lattice vectors connected to each lattice point. As an example, the lattice vectors for a simple lattice used in simulations in two dimensions is shown here. This lattice is usually denoted D2Q9, for two dimensions and nine vectors: four vectors along north, east, south and west, plus four vectors to the corners of a [[unit square]], plus a vector with both components zero. Then, for example vector <math>\vec{e}_4=(0,-1)</math>, i.e., it points due south and so has no <math>x</math> component but a <math>y</math> component of <math>-1</math>. So one of the nine components of the total density at the central lattice point, <math>f_4(\vec{x},t)</math>, is that part of the fluid at point <math>\vec{x}</math> moving due south, at a speed in lattice units of one. 
+
+Then the steps that evolve the fluid in time are:<ref name=":0">{{Cite journal|last1=Chen|first1=Shiyi|last2=Doolen|first2=Gary D.|date=1998|journal=Annual Review of Fluid Mechanics|language=en|volume=30|issue=1|pages=329–364|doi=10.1146/annurev.fluid.30.1.329|issn=0066-4189|title=Lattice Boltzmann Method for Fluid Flows|bibcode=1998AnRFM..30..329C}}</ref>
+
+; The collision step:
+For the Bhatnagar Gross and Krook (BGK)<ref>{{Cite journal|last1=Bhatnagar|first1=P. L.|last2=Gross|first2=E. P.|last3=Krook|first3=M.|date=1954-05-01|title=A Model for Collision Processes in Gases. I. Small Amplitude Processes in Charged and Neutral One-Component Systems|journal=Physical Review|language=en|volume=94|issue=3|pages=511–525|doi=10.1103/PhysRev.94.511|bibcode=1954PhRv...94..511B|issn=0031-899X}}</ref> model, which leads relaxation to equilibrium via collisions between the molecules of a fluid, we have
+: <math>f_i^{\ast}(\vec{x} ,t) = f_i(\vec{x},t) + \frac{f_i^{eq}(\vec{x},t)-f_i(\vec{x},t)}{\tau_f} \,\!</math>,
+where <math>f_i^{\ast}(\vec{x} ,t)</math> is the new lattice density, and  <math>f_i^{eq}(\vec{x},t)</math> is the equilibrium density along direction ''i'' which can be expressed by using a Taylor expansion (see below, in [[Lattice Boltzmann methods#Mathematical equations for simulations|Mathematical equations for simulations]]):
+: <math>f_i^{eq}=\omega_i\rho \left (1+\frac{3\vec{e}_i\cdot\vec{u}}{c^2}+\frac{9(\vec{e}_i\cdot\vec{u})^2}{2c^4}- \frac{3(\vec{u}\cdot\vec{u})}{2c^2} \right)  </math>.
+The model assumes that the fluid locally relaxes to equilibrium over a characteristic timescale <math>\tau_f</math>. This timescale determines the [[kinematic viscosity]], the larger it is, the larger is the kinematic viscosity.
+; The streaming step:
+: <math>f_i(\vec{x}+\vec{e}_i \delta_t,t+\delta_t) =f_i^{\ast}(\vec{x},t) \,\! </math>
+As <math>f_i^{\ast}(\vec{x},t)</math> is, by definition, the fluid density at point <math>\vec{x}</math> at time <math>t</math>, that is moving at a velocity of <math>\vec{e}_i</math> per time step, then at the next time step <math>t+\delta_t</math> it will have flowed to point <math>\vec{x}+\vec{e}_i \delta_t</math>.
+
+==Advantages==
+
+* The LBM was designed from scratch to run efficiently on [[Massively parallel (computing)|massively parallel architectures]], ranging from inexpensive embedded [[Field-programmable gate array|FPGAs]] and [[Digital signal processor|DSPs]] up to [[Graphics processing unit|GPUs]] and heterogeneous clusters and supercomputers (even with a slow interconnection network). It enables complex physics and sophisticated algorithms. Efficiency leads to a qualitatively new level of understanding since it allows solving problems that previously could not be approached (or only with insufficient accuracy).
+* The method originates from a molecular description of a fluid and can directly incorporate physical terms stemming from a knowledge of the interaction between molecules. Hence it is an indispensable instrument in fundamental research, as it keeps the cycle between the elaboration of a theory and the formulation of a corresponding numerical model short.
+* Automated data pre-processing and lattice generation in a time that accounts for a small fraction of the total simulation.
+* Parallel data analysis, post-processing and evaluation.
+* Fully resolved multi-phase flow with small droplets and bubbles.
+* Fully resolved flow through complex geometries and porous media.
+* Complex, coupled flow with heat transfer and chemical reactions.
+
+==Limitations and development==
+As with Navier–Stokes based CFD, LBM methods have been successfully coupled with thermal-specific solutions to enable heat transfer (solids-based conduction, convection and radiation) simulation capability.  For multiphase/multicomponent models, the interface thickness is usually large and the density ratio across the interface is small when compared with real fluids.  Recently this problem has been resolved by Yuan and [[Laura A. Schaefer|Schaefer]] who improved on models by Shan and Chen, Swift, and He, Chen, and Zhang.  They were able to reach density ratios of 1000:1 by simply changing the [[equation of state]]. It has been proposed to apply [[Galilean transformation|Galilean Transformation]] to overcome the limitation of modelling high-speed fluid flows.<ref>Amir H. Hedjripour, David P. Callaghan & Tom E. Baldock, Generalized transformation of the lattice Boltzmann method for shallow water flows, https://doi.org/10.1080/00221686.2016.1168881</ref>
+The fast advancements of this method had also successfully simulated [[microfluidics]],<ref>{{Cite journal |last=Zhang |first=Junfeng |date=2011-01-01 |title=Lattice Boltzmann method for microfluidics: models and applications |journal=Microfluidics and Nanofluidics |language=en |volume=10 |issue=1 |pages=1–28 |doi=10.1007/s10404-010-0624-1 |issn=1613-4990}}</ref>  However, as of now, LBM is still limited in simulating high [[Knudsen number]] flows where [[Monte Carlo methods]] are instead used, and high-Mach number flows in [[aerodynamics]] are still difficult for LBM, and a consistent thermo-hydrodynamic scheme is absent.<ref>{{Cite book |last1=Tu |first1=Jiyuan |url=https://www.worldcat.org/title/on1022830545 |title=Computational fluid dynamics: a practical approach |last2=Yeoh |first2=Guan Heng |last3=Liu |first3=Chaoqun |date=2018 |publisher=Butterworth-Heinemann |isbn=978-0-08-101127-0 |edition=Third |location=Oxford; Cambridge, MA |oclc=on1022830545}}</ref>
+
+==Development from the LGA method==
+LBM originated from the [[lattice gas automata]] (LGA) method, which can be considered as a simplified fictitious molecular dynamics model in which space, time, and particle velocities are all discrete. For example, in the 2-dimensional [[Lattice gas automaton#Hexagonal grids|FHP Model]] each lattice node is connected to its neighbors by 6 lattice velocities on a triangular lattice; there can be either 0 or 1 particles at a lattice node moving with a given lattice velocity. After a time interval, each particle will move to the neighboring node in its direction; this process is called the propagation or streaming step. When more than one particle arrives at the same node from different directions, they collide and change their velocities according to a set of collision rules. Streaming steps and collision steps alternate.  Suitable collision rules should conserve the [[particle number]] (mass), momentum, and energy before and after the collision.  LGA suffer from several innate defects for use in hydrodynamic simulations: lack of [[Galilean invariance]] for fast flows, [[statistical noise]] and poor [[Reynolds number]] scaling with lattice size.  LGA are, however, well suited to simplify and extend the reach of [[reaction diffusion]] and [[molecular dynamics]] models.
+
+The main motivation for the transition from LGA to LBM was the desire to remove the statistical noise by replacing the Boolean particle number in a lattice direction with its ensemble average, the so-called density distribution function. Accompanying this replacement, the discrete collision rule is also replaced by a [[continuous function]] known as the collision operator. In the LBM development, an important simplification is to approximate the collision operator with the [[Bhatnagar-Gross-Krook]] (BGK) relaxation term. This lattice BGK (LBGK) model makes simulations more efficient and allows flexibility of the transport coefficients. On the other hand, it has been shown that the LBM scheme can also be considered as a special discretized form of the continuous Boltzmann equation. From [[Chapman-Enskog theory]], one can recover the governing continuity and Navier–Stokes equations from the LBM algorithm.
+
+==Lattices and the D''n''Q''m'' classification==
+Lattice Boltzmann models can be operated on a number of different lattices, both cubic and triangular, and with or without rest particles in the discrete distribution function.
+
+A popular way of classifying the different methods by lattice is the D''n''Q''m'' scheme. Here "D''n''" stands for "''n'' dimensions", while "Q''m''" stands for "''m'' speeds". For example, D3Q15 is a 3-dimensional lattice Boltzmann model on a cubic grid, with rest particles present. Each node has a crystal shape and can deliver particles to 15 nodes: each of the 6 neighboring nodes that share a surface, the 8 neighboring nodes sharing a corner, and itself.<ref>Succi, p. 68</ref> (The D3Q15 model does not contain particles moving to the 12 neighboring nodes that share an edge; adding those would create a "D3Q27" model.)
+
+Real quantities as space and time need to be converted to lattice units prior to simulation. Nondimensional quantities, like the [[Reynolds number]], remain the same.
+
+==Lattice units conversion==
+In most Lattice Boltzmann simulations <math>\delta_x\,\!</math> is the basic unit for lattice spacing, so if the domain of length <math>L\,\!</math> has <math>N\,\!</math> lattice units along its entire length, the space unit is simply defined as <math>\delta_x=L/N\,\!</math>. Speeds in lattice Boltzmann simulations are typically given in terms of the speed of sound. The discrete time unit can therefore be given as <math>\delta_t = \frac{\delta_x}{C_s}\,\!</math>, where the denominator <math>C_s</math> is the physical speed of sound.<ref>Succi, Appendix D (p. 261-262)</ref>
+
+For small-scale flows (such as those seen in [[porous media]] mechanics), operating with the true speed of sound can lead to unacceptably short time steps. It is therefore common to raise the lattice [[Mach number]] to something much larger than the real Mach number, and compensating for this by raising the [[viscosity]] as well in order to preserve the [[Reynolds number]].<ref>Succi, chapter 8.3, p. 117-119</ref>
+
+==Simulation of mixtures==
+Simulating multiphase/multicomponent flows has always been a challenge to conventional CFD because of the moving and deformable [[Interface (chemistry)|interfaces]]. More fundamentally, the interfaces between different [[Phase (matter)|phase]]s (liquid and vapor) or components (e.g., oil and water) originate from the specific interactions among fluid molecules. Therefore, it is difficult to implement such microscopic interactions into the macroscopic Navier–Stokes equation. However, in LBM, the particulate kinetics provides a relatively easy and consistent way to incorporate the underlying microscopic interactions by modifying the collision operator. Several LBM multiphase/multicomponent models have been developed. Here phase separations are generated automatically from the particle dynamics and no special treatment is needed to manipulate the interfaces as in traditional CFD methods. Successful applications of multiphase/multicomponent LBM models can be found in various [[complex fluid]] systems, including interface instability, [[Liquid bubble|bubble]]/[[droplet]] dynamics, [[wetting]] on solid surfaces, interfacial slip, and droplet electrohydrodynamic deformations.
+
+A lattice Boltzmann model for simulation of gas mixture combustion capable of accommodating significant density variations at low-Mach number regime has been recently proposed.<ref>{{cite journal|last1=Di Rienzo|first1=A. Fabio|last2=Asinari|first2=Pietro|last3=Chiavazzo|first3=Eliodoro|last4=Prasianakis|first4=Nikolaos|last5=Mantzaras|first5=John|title=Lattice Boltzmann model for reactive flow simulations|journal=EPL|date=2012|volume=98|issue=3|doi=10.1209/0295-5075/98/34001|bibcode = 2012EL.....9834001D|article-number=34001|s2cid=121908046 |url=http://porto.polito.it/2496261/1/REACTIVE_resubmission_fin.pdf}}</ref>
+
+To this respect, it is worth to notice that, since LBM deals with a larger set of fields (as compared to conventional CFD), the simulation of reactive gas mixtures presents some additional challenges in terms of memory demand as far as large detailed combustion mechanisms are concerned. Those issues may be addressed, though, by resorting to systematic model reduction techniques.<ref>{{cite journal|last1=Chiavazzo|first1=Eliodoro|last2=Karlin|first2=Ilya|last3=Gorban|first3=Alexander|last4=Boulouchos|first4=Konstantinos|title=Coupling of the model reduction technique with the Lattice Boltzmann method for combustion simulations|journal=Combust. Flame|date=2010|volume=157|issue=10|pages=1833–1849|doi=10.1016/j.combustflame.2010.06.009|bibcode=2010CoFl..157.1833C |hdl=2381/20404|hdl-access=free}}</ref><ref>{{cite journal|last1=Chiavazzo|first1=Eliodoro|last2=Karlin|first2=Ilya|last3=Gorban|first3=Alexander|last4=Boulouchos|first4=Konstantinos|title=Efficient simulations of detailed combustion fields via the Lattice Boltzmann method|journal=International Journal of Numerical Methods for Heat & Fluid Flow|date=2012|volume=21|issue=5|doi=10.1108/09615531111135792|pages=494–517|s2cid=122060895 |url=http://porto.polito.it/2375176/|hdl=2381/20528|hdl-access=free}}<!--http://porto.polito.it/2375176/1/s1_ln717172695844769_1939656818Hwf_1852670004IdV_9634528827171726PDF_HI0001.pdf--></ref><ref>{{cite journal|last1=Chiavazzo|first1=Eliodoro|last2=Karlin|first2=Ilya|last3=Gorban|first3=Alexander|last4=Boulouchos|first4=Konstantinos|title=Combustion simulation via Lattice Boltzmann and reduced chemical kinetics|journal=Journal of Statistical Mechanics: Theory and Experiment|date=2009|doi=10.1088/1742-5468/2009/06/P06013|bibcode = 2009JSMTE..06..013C|volume=2009|issue=6|article-number=P06013|s2cid=6459762 |hdl=2381/20343|hdl-access=free}}</ref>
+
+==Thermal lattice-Boltzmann method==
+
+Currently (2009), a thermal lattice-Boltzmann method (TLBM) falls into one of three categories: the multi-speed approach,<ref>McNamara, G., Garcia, A., and Alder, B., "A hydrodynamically correct thermal lattice boltzmann model", Journal of Statistical Physics, vol. 87, no. 5, pp. 1111-1121, 1997.</ref> the passive scalar approach,<ref>{{cite journal | arxiv=comp-gas/9612001 | doi=10.1103/PhysRevE.55.2780 | title=Simulation of Rayleigh-Bénard convection using a lattice Boltzmann method | date=1997 | last1=Shan | first1=Xiaowen | journal=Physical Review E | volume=55 | issue=3 | pages=2780–2788 | bibcode=1997PhRvE..55.2780S }}</ref> and the thermal energy distribution.<ref>{{cite journal | url=https://www.sciencedirect.com/science/article/pii/S0021999198960570 | doi=10.1006/jcph.1998.6057 | title=A Novel Thermal Model for the Lattice Boltzmann Method in Incompressible Limit | journal=Journal of Computational Physics | date=10 October 1998 | volume=146 | issue=1 | pages=282–300 | last1=He | first1=Xiaoyi | last2=Chen | first2=Shiyi | last3=Doolen | first3=Gary D. | bibcode=1998JCoPh.146..282H | url-access=subscription }}</ref>
+
+==Derivation of Navier–Stokes equation from discrete LBE==
+{{See also|Derivation of the Navier–Stokes equations}}
+
+Starting with the discrete lattice Boltzmann equation (also referred to as LBGK equation due to the collision operator used).  We first do a 2nd-order [[Taylor series]] expansion about the left side of the LBE.  This is chosen over a simpler 1st-order Taylor expansion as the discrete LBE cannot be recovered.  When doing the 2nd-order Taylor series expansion, the zero derivative term and the first term on the right will cancel, leaving only the first and second derivative terms of the Taylor expansion and the collision operator:
+
+:<math>f_i(\vec{x}+\vec{e}_i\delta_t,t+\delta_t) = f_i(\vec{x},t) + \frac{\delta_t}{\tau_f} (f_i^{eq}-f_i).</math>
+
+For simplicity, write <math>f_i(\vec{x},t)</math> as <math>f_i</math>.  The slightly simplified Taylor series expansion is then as follows, where ":" is the colon product between dyads:
+
+:<math>\frac{\partial f_i}{\partial t} + \vec{e}_i\cdot \nabla f_i + \left( \frac{1}{2}\vec{e}_i\vec{e}_i : \nabla\nabla f_i +\vec{e}_i\cdot\nabla\frac{\partial f_i}{\partial t} + \frac{1}{2}\frac{\partial^2 f_i}{\partial t^2} \right) = \frac{1}{\tau}(f_i^{eq}-f_i).</math>
+
+By expanding the particle distribution function into equilibrium and non-equilibrium components and using the Chapman-Enskog expansion, where <math>K</math> is the Knudsen number, the Taylor-expanded LBE can be decomposed into different magnitudes of order for the Knudsen number in order to obtain the proper continuum equations:
+
+:<math>f_i = f_i^\text{eq} + K f_i^\text{neq},</math>
+:<math>f_i^\text{neq} = f_i^{(1)} + K f_i^{(2)}+O(K^2).</math>
+
+The equilibrium and non-equilibrium distributions satisfy the following relations to their macroscopic variables (these will be used later, once the particle distributions are in the "correct form" in order to scale from the particle to macroscopic level):
+
+:<math>\rho = \sum_i f_i^\text{eq},</math>
+:<math>\rho \vec{u} = \sum_i f_i^\text{eq} \vec{e}_i,</math>
+:<math>0 = \sum_i f_i^{(k)} \qquad  \text{for } k = 1,2,</math>
+:<math>0 = \sum_i f_i^{(k)} \vec{e}_i.</math>
+
+The Chapman-Enskog expansion is then:
+
+:<math>\frac{\partial}{\partial t} = K\frac{\partial}{\partial t_1} + K^2\frac{\partial}{\partial t_2} \qquad  \text{for } t_2(\text{diffusive time-scale})  \ll t_1(\text{convective time-scale}),</math>
+:<math>\frac{\partial}{\partial x} = K\frac{\partial}{\partial x_1}.</math>
+
+By substituting the expanded equilibrium and non-equilibrium into the Taylor expansion and separating into different orders of <math>K</math>, the continuum equations are nearly derived.
+
+For order <math>K^0</math>:
+
+:<math>\frac{\partial f_i^\text{eq}}{\partial t_1} + \vec{e}_i \nabla_1 f_i^\text{eq} = -\frac{f_i^{(1)}}{\tau}.</math>
+
+For order <math>K^1</math>:
+
+:<math>\frac{\partial f_i^{(1)}}{\partial t_1} + \frac{\partial f_i^\text{eq}}{\partial t_2} + \vec{e}_i \nabla f_i^{(1)} + \frac{1}{2}\vec{e}_i\vec{e}_i : \nabla\nabla f_i^\text{eq} +\vec{e}_i \cdot \nabla\frac{\partial f_i^\text{eq}}{\partial t_1} + \frac{1}{2}\frac{\partial^2 f_i^\text{eq}}{\partial t_1^2} = -\frac{f_i^{(2)}}{\tau}.</math>
+
+Then, the second equation can be simplified with some algebra and the first equation into the following:
+
+:<math>\frac{\partial f_i^\text{eq}}{\partial t_2} + \left( 1 - \frac{1}{2\tau} \right) \left[ \frac{\partial f_i^{(1)}}{\partial t_1} + \vec{e}_i \nabla_1 f_i^{(1)} \right] = -\frac{f_i^{(2)}}{\tau}.</math>
+
+Applying the relations between the particle distribution functions and the macroscopic properties from above, the mass and momentum equations are achieved:
+
+:<math>\frac{\partial \rho}{\partial t} + \nabla \cdot \rho \vec{u} = 0,</math>
+
+:<math>\frac{\partial \rho\vec{u}}{\partial t} + \nabla \cdot \Pi = 0.</math>
+
+The momentum flux tensor <math>\Pi</math> has the following form then:
+
+:<math>\Pi_{xy} = \sum_{i}\vec{e}_{ix}\vec{e}_{iy} \left[ f_i^{eq} + \left( 1 - \frac{1}{2 \tau} \right) f_i^{(1)} \right],</math>
+
+where <math>\vec{e}_{ix}\vec{e}_{iy}</math> is shorthand for the square of the sum of all the components of <math>\vec{e}_{i}</math> (i. e. <math>\textstyle\left(\sum_{x}\vec{e}_{ix}\right)^2 = \sum_{x}\sum_{y}\vec{e}_{ix}\vec{e}_{iy}</math>), and the equilibrium particle distribution with second order to be comparable to the Navier–Stokes equation is:
+
+:<math>f_i^\text{eq} = \omega_i\rho \left( 1 + \frac{\vec{e}_i \vec{u}}{c_{s}^{2}} + \frac{(\vec{e}_i \vec{u})^{2}}{2c_{s}^{4}} - \frac{\vec{u}^2}{2c_{s}^{2}} \right).</math>
+
+The equilibrium distribution is only valid for small velocities or small [[Mach number]]s.  Inserting the equilibrium distribution back into the flux tensor leads to:
+
+:<math> \Pi_{xy}^{(0)} = \sum_{i}\vec{e}_{ix}\vec{e}_{iy}  f_i^{eq} = p\delta_{xy} + \rho u_x u_y,</math>
+:<math> \Pi_{xy}^{(1)} = \left( 1 - \frac{1}{2 \tau} \right) \sum_{i}\vec{e}_{ix}\vec{e}_{iy} f_i^{(1)} = \nu\left(\nabla_x \left( \rho \vec{u}_y \right) + \nabla_y \left( \rho \vec{u}_x \right)\right).</math>
+
+Finally, the [[Navier–Stokes equation]] is recovered under the assumption that density variation is small:
+
+:<math> \rho \left( \frac{\partial \vec{u}_{x}}{\partial t} + \nabla_{y}\cdot\vec{u}_{x}\vec{u}_{y}\right) = -\nabla_{x}p + \nu\nabla_{y}\cdot\left(\nabla_x \left( \rho \vec{u}_y \right) + \nabla_y \left( \rho \vec{u}_x \right)\right).</math>
+
+This derivation follows the work of Chen and Doolen.<ref>Chen, S., and Doolen, G. D., "[https://pdfs.semanticscholar.org/65af/ba3daff41d488f11e017bc02ba99854e52b7.pdf Lattice Boltzmann Method for Fluid Flows] {{Webarchive|url=https://web.archive.org/web/20190225165809/http://pdfs.semanticscholar.org/65af/ba3daff41d488f11e017bc02ba99854e52b7.pdf |date=2019-02-25 }}", Annual Review of Fluid Mechanics, vol. 30, p. 329–364, 1998.</ref>
+
+==Mathematical equations for simulations==
+The continuous Boltzmann equation is an evolution equation for a single particle probability distribution function <math>f(\vec{x},\vec{e}_i,t)</math> and the [[internal energy]] density distribution function <math>g(\vec{x},\vec{e}_i,t)</math> (He et al.) are each respectively:
+
+:<math>\partial_t f + (\vec{e}\cdot \nabla) f + F\partial_v f = \Omega(f),</math>
+:<math>\partial_t g + (\vec{e}\cdot \nabla) g + G\partial_v f = \Omega(g),</math>
+
+where <math>g(\vec{x},\vec{e}_i,t)</math> is related to <math>f(\vec{x},\vec{e}_i,t)</math> by
+
+:<math>g(\vec{x},\vec{e}_i,t) = \frac{(\vec{e}-\vec{u})^2}{2}f(\vec{x},\vec{e}_i,t),</math>
+
+<math>F</math> is an external force, <math>\Omega</math> is a collision integral, and <math>\vec{e}</math> (also labeled by <math>\vec{\xi}</math> in literature) is the microscopic velocity.  The external force <math>F</math> is related to temperature external force <math>G</math> by the relation below.  A typical test for one's model is the [[Rayleigh–Bénard convection]] for <math>G</math>.
+
+:<math> F = \frac{\vec{G}\cdot(\vec{e} - \vec{u})}{RT}f^\text{eq},</math>
+:<math> \vec{G} = \beta g_0(T - T_{avg})\vec{k}.</math>
+
+Macroscopic variables such as density <math>\rho</math>, velocity <math>\vec{u}</math>, and temperature <math>T</math> can be calculated as the moments of the density distribution function:
+
+:<math> \rho = \int f \, d\vec{e},</math>
+:<math> \rho\vec{u} = \int \vec{e}f \, d\vec{e},</math>
+:<math> \frac{\rho DRT}{2} = \rho\epsilon =  \int g \, d\vec{e}.</math>
+
+The lattice Boltzmann method discretizes this equation by limiting space to a lattice and the velocity space to a discrete set of microscopic velocities (i. e. <math>\vec{e}_i = (\vec{e}_{ix},\vec{e}_{iy})</math>).  The microscopic velocities in D2Q9, D3Q15, and D3Q19 for example are given as:
+
+:<math>\vec{e}_i = c\times
+\begin{cases} 
+  (0,0)                        & i = 0 \\
+  (1,0),(0,1),(-1,0),(0,-1)    & i = 1,2,3,4 \\
+  (1,1),(-1,1),(-1,-1),(1,-1)  & i = 5,6,7,8 \\
+\end{cases}</math>
+
+:<math>\vec{e}_i = c\times
+\begin{cases} 
+  (0,0,0)                        & i = 0 \\
+  (\plusmn 1,0,0),(0,\plusmn 1,0),(0,0,\plusmn 1)    & i = 1,2,...,5,6 \\
+  (\plusmn1,\plusmn1,\plusmn1)  & i = 7,8,...,13,14 \\
+\end{cases}</math>
+
+:<math>\vec{e}_i = c\times
+\begin{cases} 
+  (0,0,0)                        & i = 0 \\
+  (\plusmn 1,0,0),(0,\plusmn 1,0),(0,0,\plusmn 1)    & i = 1,2,...,5,6 \\
+  (\plusmn1,\plusmn1,0),(\plusmn1,0,\plusmn1),(0,\plusmn1,\plusmn1)  & i = 7,8,...,17,18 \\
+\end{cases}</math>
+
+The single-phase discretized Boltzmann equation for mass density and internal energy density are:
+
+:<math>f_i(\vec{x}+\vec{e}_i\delta_t,t+\delta_t)-f_i(\vec{x},t) + F_i = \Omega(f),</math>
+
+:<math>g_i(\vec{x}+\vec{e}_i\delta_t,t+\delta_t)-g_i(\vec{x},t) + G_i = \Omega(g).</math>
+
+The collision operator is often approximated by a BGK collision operator under the condition it also satisfies the conservation laws:
+
+:<math>\Omega(f) = \frac{1}{\tau_f} (f_i^\text{eq} - f_i),</math>
+
+:<math>\Omega(g) = \frac{1}{\tau_g} (g_i^\text{eq} - g_i).</math>
+
+In the collision operator <math>f_i^\text{eq}</math> is the discrete, [[Maxwell–Boltzmann distribution|equilibrium particle probability distribution function]].  In D2Q9 and D3Q19, it is shown below for an [[incompressible flow]] in continuous and discrete form where ''D'', ''R'', and ''T'' are the dimension, universal [[gas constant]], and absolute temperature respectively.  The partial derivation for the continuous to discrete form is provided through a simple derivation to second order accuracy.
+
+:<math>f^\text{eq} = \frac{\rho}{(2 \pi RT)^{D/2}}e^{-\frac{(\vec{e}-\vec{u})^2}{2RT}}</math>
+::<math>= \frac{\rho}{(2 \pi RT)^{D/2}}e^{-\frac{(\vec{e})^2}{2RT}}e^{\frac{\vec{e}\vec{u}}{RT}-\frac{\vec{u}^2}{2RT}} </math>
+::<math>= \frac{\rho}{(2 \pi RT)^{D/2}}e^{-\frac{(\vec{e})^2}{2RT}}\left(1+\frac{\vec{e}\vec{u}}{RT}+\frac{(\vec{e}\vec{u})^2}{2(RT)^2}-\frac{\vec{u}^2}{2RT}+...\right) </math>
+
+Letting <math>c=\sqrt{3RT}</math> yields the final result:
+
+:<math>f_i^{eq}=\omega_i\rho \left (1+\frac{3\vec{e}_i\vec{u}}{c^2}+\frac{9(\vec{e}_i\vec{u})^2}{2c^4}- \frac{3(\vec{u})^2}{2c^2} \right)    </math>
+
+:<math>g^{eq}=\frac{\rho(\vec{e}-\vec{u})^2}{2(2 \pi RT)^{D/2}}e^{-\frac{(\vec{e}-\vec{u})^2}{2RT}} </math>
+
+:<math>\omega_i = 
+\begin{cases} 
+  4/9    & i = 0 \\
+  1/9    & i = 1,2,3,4 \\
+  1/36   & i = 5,6,7,8 \\
+\end{cases}</math>
+
+:<math>\omega_i = 
+\begin{cases} 
+  1/3    & i = 0 \\
+  1/18    & i = 1,2,...,5,6 \\
+  1/36   & i = 7,8,...,17,18 \\
+\end{cases}</math>
+
+As much work has already been done on a single-component flow, the following TLBM will be discussed.  The multicomponent/multiphase TLBM is also more intriguing and useful than simply one component.  To be in line with current research, define the set of all components of the system (i. e. walls of porous media, multiple fluids/gases, etc.) <math>\Psi</math> with elements <math>\sigma_j</math>.
+
+:<math>f_i^{\sigma}(\vec{x}+\vec{e}_i\delta_t,t+\delta_t)-f_i^{\sigma}(\vec{x},t) + F_i=\frac{1}{\tau_f^{\sigma}} (f_i^{\sigma,eq}(\rho^{\sigma},v^{\sigma})-f_i^{\sigma})</math>
+
+The relaxation parameter,<math>\tau_f^{\sigma_j}\,\!</math>, is related to the [[kinematic viscosity]],<math>\nu_f^{\sigma_j}\,\!</math>, by the following relationship:
+
+:<math>\nu_f^{\sigma_j} = (\tau_f^{\sigma_j}-0.5)c_s^2\delta_t.</math>
+
+The [[Moment (mathematics)|moments]] of the <math>f_i\,\!</math> give the local conserved quantities. The density is given by
+
+:<math>\rho=\sum_{\sigma}\sum_i f_i\,\!</math>
+
+:<math>\rho\epsilon =\sum_i g_i\,\!</math>
+
+:<math>\rho^{\sigma}=\sum_i f_i^{\sigma}\,\!</math>
+
+and the weighted average velocity, <math>\vec{u'} \,\!</math>, and the local momentum are given by
+
+:<math> \vec{u'}=\left (\sum_{\sigma}\frac{\rho^{\sigma}\vec{u^{\sigma}}}{\tau_f^{\sigma}}\right)/\left(\sum_{\sigma}\frac{\rho^{\sigma}}{\tau_f^{\sigma}}\right)   </math>
+
+:<math>\rho^{\sigma} \vec{u^{\sigma}} = \sum_i f_i^{\sigma} \vec{e}_i.</math>
+
+:<math>v^{\sigma} = \vec{u'}+ \frac{\tau_f^{\sigma}}{\rho^{\sigma}}\vec{F}^{\sigma}</math>
+
+In the above equation for the equilibrium velocity <math>v^{\sigma}\,\!</math>, the <math>\vec{F}^{\sigma}\,\!</math> term is the interaction force between a component and the other components.  It is still the subject of much discussion as it is typically a tuning parameter that determines how fluid-fluid, fluid-gas, etc. interact.  Frank et al. list current models for this force term.  The commonly used derivations are Gunstensen chromodynamic model, Swift's free energy-based approach for both liquid/vapor systems and binary fluids, He's intermolecular interaction-based model, the Inamuro approach, and the Lee and Lin approach.<ref>Frank, X., Almeida, G., Perre, P., "[https://www.sciencedirect.com/science/article/pii/S0301932210000832 Multiphase flow in the vascular system of wood: From microscopic exploration to 3-D Lattice Boltzmann experiments]", International Journal of Multiphase Flow, vol. 36, pp. 599-607, 2010.</ref>
+
+The following is the general description for <math>\vec{F}^{\sigma}\,\!</math> as given by several authors.<ref>Yuan, P., [[Laura A. Schaefer|Schaefer, L.]], "Equations of State in a Lattice Boltzmann model", Physics of Fluids, vol. 18, 2006.</ref><ref>{{cite journal | arxiv=cs/0501021 | doi=10.1098/rsta.2005.1618 | title=Large-scale lattice Boltzmann simulations of complex fluids: Advances through the advent of computational Grids | date=2005 | last1=Harting | first1=Jens | last2=Chin | first2=Jonathan | last3=Venturoli | first3=Maddalena | last4=Coveney | first4=Peter V. | journal=Philosophical Transactions of the Royal Society A: Mathematical, Physical and Engineering Sciences | volume=363 | issue=1833 | pages=1895–1915 | pmid=16099756 | bibcode=2005RSPTA.363.1895H }}</ref>
+
+<math>\vec{F}^{\sigma} = -\psi^{\sigma}(\vec{x})\sum_{\sigma_j}H^{\sigma\sigma_j}(\vec{x},\vec{x}')\sum_i\psi^{\sigma_j}(\vec{x}+\vec{e}_i)\vec{e}_i    \,\!</math>
+
+<math>\psi(\vec{x})\,\!</math> is the effective mass and <math>H(\vec{x},\vec{x}')\,\!</math> is Green's function representing the interparticle interaction with <math>\vec{x}'\,\!</math> as the neighboring site.  Satisfying <math>H(\vec{x},\vec{x}')=H(\vec{x}',\vec{x})\,\!</math> and where <math>H(\vec{x},\vec{x}')>0\,\!</math> represents repulsive forces.  For D2Q9 and D3Q19, this leads to
+
+<math>H^{\sigma\sigma_j}(\vec{x},\vec{x}') = 
+\begin{cases} 
+  h^{\sigma\sigma_j}    & \left | \vec{x}-\vec{x}' \right | \le c \\
+  0    & \left | \vec{x}-\vec{x}' \right | > c \\
+\end{cases} </math>
+
+<math>H^{\sigma\sigma_j}(\vec{x},\vec{x}') = 
+\begin{cases} 
+  h^{\sigma\sigma_j}    & \left | \vec{x}-\vec{x}' \right | = c \\
+h^{\sigma\sigma_j}/2    & \left | \vec{x}-\vec{x}' \right |  =\sqrt{2c} \\
+  0    &  \text{otherwise} \\
+\end{cases} </math>
+
+The effective mass as proposed by Shan and Chen uses the following effective mass for a ''single-component, multiphase system''.  The [[equation of state]] is also given under the condition of a single component and multiphase.
+
+:<math>\psi(\vec{x})=\psi(\rho^{\sigma})=\rho_0^{\sigma}\left[1-e^{(-\rho^{\sigma}/\rho_0^{\sigma})} \right]\,\!</math>
+
+:<math>p=c_s^2 \rho+c_0h[\psi(\vec{x})]^2\,\!</math>
+
+So far, it appears that <math>\rho_0^{\sigma}\,\!</math> and <math>h^{\sigma \sigma_j}\,\!</math> are free constants to tune but once plugged into the system's [[equation of state]](EOS), they must satisfy the thermodynamic relationships at the critical point such that <math>(\partial P / \partial {\rho})_T=(\partial^2 P / \partial {\rho^2})_T=0\,\!</math> and <math>p=p_c\,\!</math>.  For the EOS, <math>c_0\,\!</math> is 3.0 for D2Q9 and D3Q19 while it equals 10.0 for D3Q15.<ref>Yuan, P., [[Laura A. Schaefer|Schaefer, L.]], "[http://fluidsengineering.asmedigitalcollection.asme.org/article.aspx?articleid=1430274 A Thermal Lattice Boltzmann Two-Phase Flow Model and its Application to Heat Transfer Problems-Part 1.  Theoretical Foundation]", Journal of Fluid Engineering 142-150, vol. 128, 2006.</ref>
+
+It was later shown by Yuan and Schaefer<ref>{{cite journal | last1 = Yuan | first1 = P. | last2 = Schaefer | first2 = L. | author2-link=Laura A. Schaefer | year = 2006 | title = Equations of State in a Lattice Boltzmann model | journal = Physics of Fluids | volume = 18 | issue = 4| pages = 042101–042101–11| doi=10.1063/1.2187070|bibcode = 2006PhFl...18d2101Y }}</ref> that the effective mass density needs to be changed to simulate [[multiphase flow]] more accurately.  They compared the Shan and Chen (SC), Carnahan-Starling (C–S), van der Waals (vdW), Redlich–Kwong (R–K), Redlich–Kwong Soave (RKS), and Peng–Robinson (P–R) EOS.  Their results revealed that the SC EOS was insufficient and that C–S, P–R, R–K, and RKS EOS are all more accurate in modeling multiphase flow of a single component.
+
+For the popular isothermal Lattice Boltzmann methods these are the only conserved quantities. Thermal models also conserve energy and therefore have an additional conserved quantity:
+
+:<math>\rho \theta + \rho u u =\sum_i f_i \vec{e}_i \vec{e}_i.</math>
+
+== Unstructured grids ==
+Normally, the lattice Boltzmann methods is implemented on regular grids, However the use of unstructured grid can help with solving complex boundaries, unstructured grids are made of triangles or tetrahedra with variations.
+
+Assuming <math>\Omega^j</math> is a volume made by all [[Center of mass|barycenters]] of tetrahedra, faces and edges connected to vertex <math>\boldsymbol v^j</math>, the discrete velocity density function:
+
+<math>f_i(\boldsymbol v^j,t+\delta t) = f_i(\boldsymbol v^j,t)-\delta t \sum_k S^{jk}_{i}f_i(\boldsymbol v^k,t) - {\delta t \over \tau}\sum_k C^{jk}(f_i(\boldsymbol v^k,t)-f^{eq}_i(\boldsymbol v^k))</math>
+
+where <math>\boldsymbol v^k</math> are position of a vertex and its neighbors, and:
+
+<math>C^{jk} = {1\over V^j} \int_{\Omega^j}w_k(\boldsymbol{x}) d \Omega</math>
+
+<math>S^{jk}_i = {1\over V^j} \oint_{\partial\Omega^j}(\vec{e_i} \vec{n})w_k(\boldsymbol{x}) d \Omega</math>
+
+where <math>w_k(\boldsymbol x)</math> is wights of a linear interpolation of <math>\boldsymbol x</math> by vertices of triangle or tetrahedra that <math>\boldsymbol x</math> lies within.<ref>{{cite arXiv |last1=Misztal |first1=Marek Krzysztof |title=Detailed analysis of the lattice Boltzmann method on unstructured grids |date=2014-09-09 |last2=Hernandez-Garcia |first2=Anier |last3=Matin |first3=Rastin |last4=Sørensen |first4=Henning Osholm |last5=Mathiesen |first5=Joachim|class=physics.flu-dyn |eprint=1409.2754 }}</ref>
+
+==Applications==
+
+During the last years, the LBM has proven to be a powerful tool for solving problems at different length and time scales. 
+Some of the applications of LBM include:
+
+* Porous Media flows <ref>{{cite journal |last1=Fu |first1=Jinlong |last2=Dong |first2=Jiabin |last3=Wang |first3=Yongliang |last4=Ju |first4=Yang |last5=Owen |first5=D. Roger J. |last6=Li |first6=Chenfeng |title=Resolution Effect: An Error Correction Model for Intrinsic Permeability of Porous Media Estimated from Lattice Boltzmann Method |journal=Transport in Porous Media |date=April 2020 |volume=132 |issue=3 |pages=627–656 |doi=10.1007/s11242-020-01406-z|bibcode=2020TPMed.132..627F |s2cid=214648297 }}</ref>
+* Biomedical Flows
+* Earth sciences (Soil filtration).
+* Energy Sciences (Fuel Cells<ref>{{cite journal|doi=10.1002/er.3348 | volume=39 | issue=11 | title=Compress effects on porosity, gas-phase tortuosity, and gas permeability in a simulated PEM gas diffusion layer | year=2015 | journal=[[International Journal of Energy Research]] | pages=1528–1536 | last1 = Espinoza | first1 = Mayken| s2cid=93173199 | doi-access=free | bibcode=2015IJER...39.1528E }}</ref>).
+
+== Example implementation ==
+This is a barebone implementation of LBM on a 100x100 grid, Using [[Python (programming language)|Python]]:
+<syntaxhighlight lang="python3">
+# This is a fluid simulator using the lattice Boltzmann method.
+# Using D2Q9 and periodic boundary, and used no external library.
+# It generates two ripples at 50,50 and 50,40.
+# Reference: Erlend Magnus Viggen's Master thesis, "The Lattice Boltzmann Method with Applications in Acoustics".
+# For Wikipedia under CC-BY-SA license.
+import math
+
+
+# Define some utilities
+def sum(a):
+    s = 0
+    for e in a:
+        s = s + e
+    return s
+
+
+# Weights in D2Q9
+Weights = [1 / 36, 1 / 9, 1 / 36, 1 / 9, 4 / 9, 1 / 9, 1 / 36, 1 / 9, 1 / 36]
+# Discrete velocity vectors
+DiscreteVelocityVectors = [
+    [-1, 1],
+    [0, 1],
+    [1, 1],
+    [-1, 0],
+    [0, 0],
+    [1, 0],
+    [-1, -1],
+    [0, -1],
+    [1, -1],
+]
+
+
+# A Field2D class
+class Field2D:
+    def __init__(self, res: int):
+        self.field = []
+        for b in range(res):
+            fm = []
+            for a in range(res):
+                fm.append([0, 0, 0, 0, 1, 0, 0, 0, 0])
+            self.field.append(fm[:])
+        self.res = res
+
+    # This visualize the simulation, can only be used in a terminal
+    @staticmethod
+    def VisualizeField(a, sc, res):
+        stringr = ""
+        for u in range(res):
+            row = ""
+            for v in range(res):
+                n = int(u * a.res / res)
+                x = int(v * a.res / res)
+                vx = velocityField[n][x][0]
+                vy = velocityField[n][x][1]
+                r = max(0, min(255, int(127 + sc * vx)))
+                g = max(0, min(255, int(127 + sc * vy)))
+                col = "\033[38;2;{0};{1};{2}m██".format(r, g, 0)
+                row = row + col
+            print(row)
+            stringr = stringr + row + "\n"
+        return stringr
+
+    # Momentum of the field
+    def Momentum(self, x, y):
+        return velocityField[y][x][0] * sum(self.field[y][x]), velocityField[y][x][
+            1
+        ] * sum(self.field[y][x])
+
+
+# Resolution of the simulation
+res = 100
+a = Field2D(res)
+# The velocity field
+velocityField = []
+for DummyVariable in range(res):
+    DummyList = []
+    for DummyVariable2 in range(res):
+        DummyList.append([0, 0])
+    velocityField.append(DummyList[:])
+# The density field
+DensityField = []
+for DummyVariable in range(res):
+    DummyList = []
+    for DummyVariable2 in range(res):
+        DummyList.append(1)
+    DensityField.append(DummyList[:])
+# Set initial condition
+DensityField[50][50] = 2
+DensityField[40][50] = 2
+# Maximum solving steps
+MaxSteps = 120
+# The speed of sound, specifically 1/sqrt(3) ~ 0.57
+SpeedOfSound = 1 / math.sqrt(3)
+# time relaxation constant
+TimeRelaxationConstant = 0.5
+# Solve
+for s in range(MaxSteps):
+    # Collision Step
+    df = Field2D(res)
+    for y in range(res):
+        for x in range(res):
+            for v in range(9):
+                Velocity = a.field[y][x][v]
+                FirstTerm = Velocity
+                # The Flow Velocity
+                FlowVelocity = velocityField[y][x]
+                Dotted = (
+                    FlowVelocity[0] * DiscreteVelocityVectors[v][0]
+                    + FlowVelocity[1] * DiscreteVelocityVectors[v][1]
+                )
+                # #The taylor expainsion of equilibrium term
+                taylor = (
+                    1
+                    + ((Dotted) / (SpeedOfSound**2))
+                    + ((Dotted**2) / (2 * SpeedOfSound**4))
+                    - (
+                        (FlowVelocity[0] ** 2 + FlowVelocity[1] ** 2)
+                        / (2 * SpeedOfSound**2)
+                    )
+                )
+                # The current density
+                density = DensityField[y][x]
+                # The equilibrium
+                equilibrium = density * taylor * Weights[v]
+                SecondTerm = (equilibrium - Velocity) / TimeRelaxationConstant
+                df.field[y][x][v] = FirstTerm + SecondTerm
+    # Streaming Step
+    for y in range(0, res):
+        for x in range(0, res):
+            for v in range(9):
+                # Target, the lattice point this iteration is solving
+                TargetY = y + DiscreteVelocityVectors[v][1]
+                TargetX = x + DiscreteVelocityVectors[v][0]
+                # Peiodic Boundary
+                if TargetY == res and TargetX == res:
+                    a.field[TargetY - res][TargetX - res][v] = df.field[y][x][v]
+                elif TargetX == res:
+                    a.field[TargetY][TargetX - res][v] = df.field[y][x][v]
+                elif TargetY == res:
+                    a.field[TargetY - res][TargetX][v] = df.field[y][x][v]
+                elif TargetY == -1 and TargetX == -1:
+                    a.field[TargetY + res][TargetX + res][v] = df.field[y][x][v]
+                elif TargetX == -1:
+                    a.field[TargetY][TargetX + res][v] = df.field[y][x][v]
+                elif TargetY == -1:
+                    a.field[TargetY + res][TargetX][v] = df.field[y][x][v]
+                else:
+                    a.field[TargetY][TargetX][v] = df.field[y][x][v]
+    # Calculate macroscopic variables
+    for y in range(res):
+        for x in range(res):
+            # Recompute Density Field
+            DensityField[y][x] = sum(a.field[y][x])
+            # Recompute Flow Velocity
+            FlowVelocity = [0, 0]
+            for DummyVariable in range(9):
+                FlowVelocity[0] = (
+                    FlowVelocity[0]
+                    + DiscreteVelocityVectors[DummyVariable][0]
+                    * a.field[y][x][DummyVariable]
+                )
+            for DummyVariable in range(9):
+                FlowVelocity[1] = (
+                    FlowVelocity[1]
+                    + DiscreteVelocityVectors[DummyVariable][1]
+                    * a.field[y][x][DummyVariable]
+                )
+            FlowVelocity[0] = FlowVelocity[0] / DensityField[y][x]
+            FlowVelocity[1] = FlowVelocity[1] / DensityField[y][x]
+            # Insert to Velocity Field
+            velocityField[y][x] = FlowVelocity
+    # Visualize
+    Field2D.VisualizeField(a, 5000, 100)
+</syntaxhighlight>
+
+== See also ==
+{{Div col|colwidth=25em}}
+* [[Lattice Boltzmann methods for solids]]
+* [[Meshfree methods]]
+{{Div col end}}
+
+==References==
+<references />
+
+==Further reading==
+* {{cite book|author1=Deutsch, Andreas  |author2=Sabine Dormann|title=Cellular Automaton Modeling of Biological Pattern Formation |publisher=[[Birkhäuser Verlag]]|year=2004|isbn=978-0-8176-4281-5}}
+* {{cite book|author=Succi, Sauro|title=The Lattice Boltzmann Equation for Fluid Dynamics and Beyond|publisher=[[Oxford University Press]]|year=2001|isbn=978-0-19-850398-9|author-link=Sauro Succi}}
+* {{cite book|author=Wolf-Gladrow, Dieter|title=Lattice-Gas Cellular Automata and Lattice Boltzmann Models|publisher=[[Springer Verlag]]|year=2000|isbn=978-3-540-66973-9}}
+* {{cite book|author1=Sukop, Michael C.  |author2=Daniel T. Thorne, Jr.|title=Lattice Boltzmann Modeling: An Introduction for Geoscientists and Engineers|publisher = [[Springer Science+Business Media|Springer]]|year=2007|isbn=978-3-540-27981-5}}
+* {{cite book|author=Jian Guo Zhou|title=Lattice Boltzmann Methods for Shallow Water Flows|publisher = [[Springer Science+Business Media|Springer]]|year=2004|isbn=978-3-540-40746-1}}
+* {{cite book|author=He, X., Chen, S., Doolen, G.|title=A Novel Thermal Model for the Lattice Boltzmann Method in Incompressible Limit|publisher = [[Journal of Computational Physics|Academic Press]]|year=1998}}
+* {{cite book|author1=Guo, Z. L. |author2=Shu, C|title=Lattice Boltzmann Method and Its Applications in Engineering|publisher = [[World Scientific Publishing]]|year=2013}}
+* {{cite book|author1=Huang, H. |author2= M.C. Sukop |author3=X-Y. Lu|title=Multiphase Lattice Boltzmann Methods: Theory and Application|publisher = [[Wiley-Blackwell]]|year=2015|isbn=978-1-118-97133-8}}
+* {{cite book|author1=Krüger, T. |author2=Kusumaatmaja, H. |author3=Kuzmin, A. | author4=Shardt, O. | author5=Silva, G. | author6=Viggen, E. M.|title=The Lattice Boltzmann Method: Principles and Practice|publisher=[[Springer Verlag]]|year=2017|isbn=978-3-319-44647-9}}
+
+==External links==
+* [https://web.archive.org/web/20081112022707/http://www.science.uva.nl/research/scs/projects/lbm_web/lbm.html LBM Method]
+* [https://web.archive.org/web/20120707152058/http://www.frontierlattices.ch/indepth/elbm Entropic Lattice Boltzmann Method (ELBM)]
+* [http://dsfd.org/ dsfd.org: Website of the annual DSFD conference series (1986 -- now) where advances in theory and application of the lattice Boltzmann method are discussed]
+* [http://www.icmmes.org/ Website of the annual ICMMES conference on lattice Boltzmann methods and their applications]
+
+{{Computational science}}
+
+[[Category:Computational fluid dynamics]]
+[[Category:Lattice models]]
+[[Category:Navier–Stokes]]

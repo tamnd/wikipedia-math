@@ -1,0 +1,332 @@
+<!-- wikipedia: en
+     page: 6160804
+     title: Polyharmonic spline
+     revision: 1374808949
+     timestamp: 2026-09-14T05:11:48Z
+     history: https://en.wikipedia.org/w/index.php?curid=6160804&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374808949 -->
+{{short description|Method of function approximation and data interpolation}}
+
+In [[applied mathematics]], '''polyharmonic splines''' are used for [[function approximation]] and data [[interpolation]].  They are very useful for interpolating and fitting scattered data in many dimensions. Special cases include [[thin plate spline|thin plate splines]]<ref>R.L. Harder and R.N. Desmarais: [http://www.mendeley.com/research/interpolation-using-surface-splines-1 Interpolation using surface splines]. Journal of Aircraft, 1972, Issue 2, pp. 189−191</ref><ref>J. Duchon: Splines minimizing rotation-invariant semi-norms in Sobolev spaces. Constructive Theory of Functions of Several Variables, W. Schempp and K. Zeller (eds), Springer, Berlin, pp. 85−100</ref> and natural cubic splines in one dimension.<ref>{{cite book |last1=Wendland |first1=Holger |title=Scattered Data Approximation |url=https://archive.org/details/scattereddataapp00libg_040 |url-access=limited |date=2005 |publisher=Cambridge University Press |isbn=0521843359 |page=[https://archive.org/details/scattereddataapp00libg_040/page/n16 9]}}</ref>
+
+== Definition ==
+A polyharmonic spline is a linear combination of polyharmonic [[radial basis function]]s (RBFs) denoted by <math>\varphi</math> plus a polynomial term:
+{{NumBlk|:|<math>
+f(\mathbf{x})  =  
+\sum_{i=1}^N w_i  \varphi(|\mathbf{x} -\mathbf{c}_i|) + 
+                  \mathbf{v}^{\textrm{T}} 
+ \begin{bmatrix} 1 \\ \mathbf{x} \end{bmatrix} 
+</math>|{{EquationRef|1}}}}
+
+where
+
+[[Image:Polyharmonic-splines-basic-functions.png|thumb|350px|right|Polyharmonic basis functions]]
+* <math>\mathbf{x} = [x_1 \ x_2 \ \cdots \ x_{d}]^{\textrm{T}}</math> (<math>\textrm{T}</math> denotes matrix transpose, meaning <math>\mathbf{x}</math> is a column vector) is a real-valued vector of <math>d</math> independent variables,
+* <math>\mathbf{c}_i = [c_{i,1} \ c_{i,2} \ \cdots \ c_{i,d}]^{\textrm{T}}</math> are <math>N</math> vectors of the same size as <math>\mathbf{x}</math> (often called centers) that the curve or surface must interpolate,
+* <math>\mathbf{w} = [w_1 \ w_2 \ \cdots \ w_N]^{\textrm{T}}</math> are the <math>N</math> weights of the RBFs,
+* <math>\mathbf{v} = [v_1 \ v_2 \ \cdots \ v_{d+1}]^{\textrm{T}}</math> are the <math>d+1</math> weights of the polynomial.
+
+The polynomial with the coefficients <math>\mathbf{v}</math> improves fitting accuracy for polyharmonic smoothing splines and also improves extrapolation away from the centers <math>\mathbf{c}_i.</math> See figure below for comparison of splines with polynomial term and without polynomial term.
+
+The polyharmonic RBFs are of the form:
+
+:<math> 
+\begin{align}
+  \varphi(r) &= \begin{cases}
+                r^k & \text{with } k=1,3,5,\ldots, \\
+                r^k \ln(r) & \text{with } k=2,4,6,\ldots
+            \end{cases} \\[5mm]
+   r &= |\mathbf{x} - \mathbf{c}_i| 
+    = \sqrt{ (\mathbf{x} - \mathbf{c}_i)^\mathrm{T} \, (\mathbf{x} - \mathbf{c}_i) }.
+ \end{align} 
+</math>
+
+Other values of the exponent <math>k</math> are not useful (such as <math> \varphi(r) = r^2 </math>), because a solution of the interpolation problem might not exist. To avoid problems at <math>r=0</math> (since <math>\log(0) = -\infty</math>), the polyharmonic RBFs with the [[natural logarithm]] might be implemented as:
+
+:<math>
+\varphi(r) = \begin{cases}
+             r^{k-1} \ln(r^r) & \text{for } r < 1, \quad \text {(this works because }0^0\text{ is defined)} \\
+             r^k \ln(r)       & \text{for } r \ge 1.
+          \end{cases}
+</math>
+
+or, more simply adding a continuity extension in <math>r=0</math>
+:<math>
+\varphi(r) = \begin{cases}
+             0 & \text{for } r< \epsilon,  \quad \text{(for some very small value of }\epsilon\text{, e.g. if using floating point numbers in double precisions, } \epsilon=10^{-200}\text{)}\\
+             r^k \ln(r)       & \text{for } r \ge \epsilon.
+          \end{cases}
+</math>
+
+The weights <math>w_i</math> and <math>v_j</math> are determined such that the function interpolates <math>N</math> given points <math>(\mathbf{c}_i, f_i)</math>  (for <math>i=1,2,\ldots,N</math>) and fulfills the <math>d+1</math> orthogonality conditions
+
+:<math> 
+  \sum_{i=1}^N w_i=0, \;\; \sum_{i=1}^N w_i \mathbf{c}_i=\mathbf{0}.
+</math>
+
+All together, these constraints are equivalent to the symmetric linear system of equations
+
+{{NumBlk|:|<math> 
+\begin{bmatrix}
+  A & B \\
+  B^{\textrm{T}} & 0 \end{bmatrix}
+\;
+\begin{bmatrix}
+  \mathbf{w} \\
+  \mathbf{v}
+\end{bmatrix} \; = \; 
+\begin{bmatrix}
+  \mathbf{f} \\
+  \mathbf{0}
+\end{bmatrix}\;\;\;\;
+</math>|{{EquationRef|2}}}}
+
+where
+
+:<math> 
+  A_{i,j} =  \varphi(|\mathbf{c}_i - \mathbf{c}_j|), \quad
+  B =  
+  \begin{bmatrix}
+         1       &       1      & \cdots & 1 \\
+    \mathbf{c}_1 & \mathbf{c}_2 & \cdots & \mathbf{c}_N
+  \end{bmatrix}^{\textrm{T}}, \quad
+  \mathbf{f}  = [f_1, f_2, \ldots, f_N]^{\textrm{T}}.
+</math>
+
+In order for this system of equations to have a unique solution, <math>B</math> must be full rank.  <math>B</math> is full rank for very mild conditions on the input data.  For example, in two dimensions, three centers forming a non-degenerate triangle ensure that <math>B</math> is full rank, and in three dimensions, four centers forming a non-degenerate tetrahedron ensure that B is full rank.  As explained later, the linear transformation resulting from the restriction of the domain of the linear transformation <math>A</math> to the [[Kernel (linear algebra)|null space]] of <math display="inline"> B^{\textrm{T}}</math> is positive definite.  This means that if <math>B</math> is full rank, the system of equations ({{EquationNote|2}}) always has a unique solution and it can be solved using a linear solver specialised for symmetric matrices.  The computed weights allow evaluation of the spline for any <math>\mathbf{x}\in\mathbb{R}^d</math> using equation ({{EquationNote|1}}).  Many practical details of implementing and using polyharmonic splines are explained in Fasshauer.<ref>G.F. Fasshauer G.F.: [https://books.google.com/books?id=gtqBdMEqryEC Meshfree Approximation Methods with MATLAB]. World Scientific Publishing Company, 2007, ISPN-10: 9812706348</ref> In Iske<ref>A. Iske: [http://www.springeronline.com/sgw/cda/frontpage/0,10735,5-10042-22-22344683-0,00.html Multiresolution Methods in Scattered Data Modelling], Lecture Notes in Computational Science and Engineering, 2004, Vol. 37, {{ISBN|3-540-20479-2}}, Springer-Verlag, Heidelberg.</ref> polyharmonic splines are treated as special cases of other multiresolution methods in scattered data modelling.
+
+== Discussion ==
+The main advantage of polyharmonic [[spline interpolation]] is that usually very good interpolation results are obtained for scattered data without performing any "tuning", so automatic interpolation is feasible. This is not the case for other radial basis functions. For example, the Gaussian function <math>e^{-k\cdot r^2}</math> needs to be tuned, so that <math>k</math> is selected according to the underlying grid of the independent variables. If this grid is non-uniform, a proper selection of <math>k</math> to achieve a good interpolation result is difficult or impossible.
+
+Main disadvantages are:
+
+* To determine the weights, a dense linear system of equations must be solved.  Solving a dense linear system becomes impractical if the dimension <math>N</math> is large, since the memory required is <math>O(N^2)</math> and the number of operations required is <math>O(N^3).</math> 
+* Evaluating the computed polyharmonic spline function at <math>M</math> data points requires <math>O(MN)</math> operations. In many applications (image processing is an example), <math>M</math> is much larger than <math>N,</math> and if both numbers are large, this is not practical.
+
+== Fast construction and evaluation methods ==
+
+
+One straightforward approach to speeding up model construction and evaluation is to use a subset of <math>k</math> nearest interpolation nodes to build a local model every time we evaluate the spline. 
+As a result, the total time needed for model construction and evaluation at <math>M</math> points changes from <math>O(N^3+MN)</math> to <math>O(k^3*M)</math>.
+This can yield better timings if <math>k</math> is much less than <math>N</math>. 
+Such an approach is advocated by some software libraries, the most notable being [https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.RBFInterpolator.html scipy.interpolate.RBFInterpolator].
+The main drawback is that it introduces small discontinuities in the spline and requires problem-specific tuning: a proper choice of the neighbors count, <math>k</math>.
+Recently, methods have been developed to overcome the aforementioned difficulties without sacrificing main advantages of polyharmonic splines.
+
+First, a bunch of methods for fast <math>O(\log N)</math> evaluation were proposed:
+
+* Beatson et al.<ref>R.K. Beatson, M.J.D. Powell, and A.M. Tan: {{Deprecated archive|url=https://archive.today/20120720154538/http://imajna.oxfordjournals.org/cgi/content/short/27/3/427|title=Fast evaluation of polyharmonic splines in three dimensions}}. IMA Journal of Numerical Analysis, 2007, 27, pp. 427–450.</ref> present a method to interpolate polyharmonic splines with <math>r^{2k-1}</math> being a basis function at one point in 3 dimensions or less
+* Cherrie et al. <ref>{{citation
+| title = Fast evaluation of radial basis functions: methods for four-dimensional polyharmonic splines
+| author = J. B. Cherrie
+| author2 = R. K. Beatson
+| author3 = D. L. Ragozin
+| year = 2000
+}}</ref> present a method to interpolate polyharmonic splines with <math>r^{2k}\log r</math> as a basis function at one point in 4 dimensions or less
+
+Second, an accelerated model construction by applying an iterative solver to an ACBF-preconditioned linear system was proposed by Brown et al.<ref>{{citation
+| title = On Approximate Cardinal Preconditioning Methods for Solving PDEs with Radial Basis Functions
+| author = Damian Brown
+| author2 = Leevan Ling
+| author3 = Edward Kansa
+| author4 = Jeremy Levesley
+| year = 2000
+}}</ref> This approach reduces running time from <math>O(N^3)</math> to <math>O(N^2)</math>,
+and further to <math>O(N\log N)</math> when combined with accelerated evaluation techniques.
+
+The approaches above are often employed by commercial geospatial data analysis libraries and by some open source implementations (e.g. [[ALGLIB]]).
+Sometimes [[domain decomposition methods]] are used to improve asymptotic behavior,
+reducing memory requirements from <math>O(N^2)</math> to <math>O(N)</math>, thus making polyharmonic splines suitable for datasets with more than 1.000.000 points.
+
+== Reason for the name "polyharmonic" ==
+A polyharmonic equation is a [[partial differential equation]] of the form <math>\Delta^m f = 0</math> for any natural number <math>m</math>, where <math>\Delta</math> is the [[Laplace operator]].  For example, the [[biharmonic equation]] is <math>\Delta^2 f = 0</math> and the triharmonic equation is <math>\Delta^3 f = 0</math>.  All the polyharmonic radial basis functions are solutions of a polyharmonic equation (or more accurately, a modified polyharmonic equation with a [[Dirac delta function]] on the right hand side instead of 0).  For example, the thin plate radial basis function is a solution of the modified 2-dimensional biharmonic equation.<ref name=":0">{{Cite journal|url = http://www.univie.ac.at/nuhag-php/bibtex/open_files/po94_M%20J%20D%20Powell%2003%2093.pdf|title = Some algorithms for thin plate spline interpolation to functions of two variables | last = Powell|first = M. J. D.|date = 1993|journal = Cambridge University Dept. Of Applied Mathematics and Theoretical Physics Technical Report|archive-url = https://web.archive.org/web/20160125162849/http://www.univie.ac.at/nuhag-php/bibtex/open_files/po94_M%20J%20D%20Powell%2003%2093.pdf |access-date = January 7, 2016|archive-date = 2016-01-25 }}</ref>  Applying the 2D Laplace operator (<math>\Delta = \partial_{xx} + \partial_{yy}</math>) to the thin plate radial basis function <math display="inline">f_{\text{tp}}(x,y) = (x^2+y^2) \log \sqrt{x^2+y^2}</math> either by hand or using a [[computer algebra system]] shows that <math>\Delta f_{\text{tp}} = 4 + 4\log r</math>.  Applying the Laplace operator to <math>\Delta f_{\text{tp}}</math> (this is <math>\Delta^2 f_{\text{tp}}</math>) yields 0.  But 0 is not exactly correct.  To see this, replace <math>r^2=x^2+y^2</math> with <math>\rho^2 = x^2+y^2+h^2</math> (where <math>h</math> is some small number tending to 0).  The Laplace operator applied to <math>4 \log \rho</math> yields <math>\Delta^2 f_{\text{tp}} = 8h^2 / \rho^4</math>.  For <math>(x,y)=(0,0),</math> the right hand side of this equation approaches infinity as <math>h</math> approaches 0.  For any other <math>(x,y)</math>, the right hand side approaches 0 as <math>h</math> approaches 0.  This indicates that the right hand side is a Dirac delta function.  A computer algebra system will show that
+
+:<math>\lim_{h \to 0}\int_{-\infty}^\infty \int_{-\infty}^\infty 8h^2/(x^2+y^2+h^2)^2 \,dx \,dy = 8\pi.</math>
+
+So the thin plate radial basis function is a solution of the equation <math>\Delta^2 f_{\text{tp}} = 8\pi\delta(x,y)</math>.
+
+Applying the 3D Laplacian (<math>\Delta = \partial_{xx} + \partial_{yy} + \partial_{zz}</math>) to the biharmonic RBF <math display="inline">f_{\text{bi}}(x,y,z)=\sqrt{x^2+y^2+z^2}</math> yields <math>\Delta f_{\text{bi}} = 2/r</math> and applying the 3D <math>\Delta^2</math> operator to the triharmonic RBF <math>f_{\text{tri}}(x,y,z) = (x^2+y^2+z^2)^{3/2}</math> yields <math>\Delta^2 f_{\text{tri}} = 24/r</math>.  Letting <math>\rho^2 = x^2+y^2+z^2+h^2</math> and computing <math>\Delta(1/\rho) = -3h^2 / \rho^5</math> again indicates that the right hand side of the PDEs for the biharmonic and triharmonic RBFs are Dirac delta functions.  Since
+
+:<math>\lim_{h \to 0}\int_{-\infty}^\infty\int_{-\infty}^\infty\int_{-\infty}^\infty -3h^2/(x^2+y^2+z^2+h^2)^{5/2} \,dx \,dy \,dz = -4\pi,</math>
+
+the exact PDEs satisfied by the biharmonic and triharmonic RBFs are <math>\Delta^2 f_{\text{bi}} = -8\pi\delta(x,y,z)</math> and <math>\Delta^3 f_{\text{tri}} = -96\pi\delta(x,y,z)</math>.
+
+== Polyharmonic smoothing splines ==
+Polyharmonic splines minimize
+
+{{NumBlk|:|<math>\sum_{i=1}^N (f(\mathbf{c}_i) - f_i)^2 + \lambda \int_{\mathcal{B} \subset \mathbb{R}^d} |\nabla^m f|^2 \,d\mathbf{x}</math> |{{EquationRef|3}}}}
+
+where <math>\mathcal{B}</math> is some box in <math>\mathbb{R}^d</math> containing a neighborhood of all the centers, <math>\lambda</math> is some positive constant, and <math>\nabla^m f</math> is the vector of all <math>m</math>th order partial derivatives of <math>f.</math>  For example, in 2D <math>\nabla^1 f = (f_x\ f_y)</math> and  <math>\nabla^2 f = (f_{xx} \ f_{xy} \ f_{yx} \ f_{yy})</math> and in 3D <math>\nabla^2 f = (f_{xx} \ f_{xy} \ f_{xz} \ f_{yx} \ f_{yy} \ f_{yz} \ f_{zx} \ f_{zy} \ f_{zz})</math>.  In 2D <math>|\nabla^2 f|^2 = f_{xx}^2 + 2f_{xy}^2 + f_{yy}^2,</math> making the integral the simplified [[thin plate energy functional]].
+
+To show that polyharmonic splines minimize equation ({{EquationNote|3}}), the fitting term must be transformed into an integral using the definition of the Dirac delta function:
+
+:<math>\sum_{i=1}^N (f(\mathbf{c}_i) - f_i)^2 = \int_{\mathcal{B}}\sum_{i=1}^N (f(\mathbf{x}) - f_i)^2 \delta(\mathbf{x} - \mathbf{c}_i) \,d\mathbf{x}.</math>
+
+So equation ({{EquationNote|3}}) can be written as the functional
+
+:<math>J[f] = \int_{\mathcal{B}} F(\mathbf{x},f, \partial^{\alpha_1}f, \partial^{\alpha_2}f, \ldots, \partial^{\alpha_n}f ) \,d\mathbf{x} = \int_{\mathcal{B}} \left[ \sum_{i=1}^N (f(\mathbf{x}) - f_i)^2 \delta(\mathbf{x} - \mathbf{c}_i) + \lambda |\nabla^m f|^2 \right]\,d\mathbf{x}.</math>
+
+where <math>\alpha_i</math> is a [[Multi-index notation|multi-index]] that ranges over all partial derivatives of order <math>m</math> for <math>\mathbb{R}^d.</math>  In order to apply the [[Euler–Lagrange equation]] for a single function of multiple variables and higher order derivatives, the quantities
+
+:<math>{\partial F \over\partial f} = 2\sum_{i=1}^N (f(\mathbf{x}) - f_i) \delta(\mathbf{x} - x_i)</math>
+
+and
+
+:<math>\sum_{i=1}^n \partial^{\alpha_i} {\partial F \over\partial (\partial^{\alpha_i}f)} = 2\lambda \Delta^m f</math>
+
+are needed.  Inserting these quantities into the  E−L equation shows that
+
+{{NumBlk|:|<math>\left( \sum_{i=1}^N (f(\mathbf{x}) - f_i) \delta(\mathbf{x} - \mathbf{c}_i) \right) + (-1)^{m} \lambda \Delta^m f = 0.</math> |{{EquationRef|4}}}}
+
+A weak solution <math>f(\mathbf{x})</math> of ({{EquationNote|4}}) satisfies
+
+{{NumBlk|::|
+<math>\int_{\mathcal{B}}  
+\left( \sum_{i=1}^N (f(\mathbf{x}) - f_i) \delta(\mathbf{x} - \mathbf{c}_i) \right) g(\mathbf{x}) + (-1)^m\lambda (\Delta^m f) g(\mathbf{x}) \,d\mathbf{x} = 0</math> 
+| {{EquationRef|5}}}}
+
+for all smooth test functions <math>g</math> that vanish outside of <math>\mathcal{B}.</math>  A weak solution of equation ({{EquationNote|4}}) will still minimize ({{EquationNote|3}}) while getting rid of the delta function through integration.<ref>{{Cite book|title=Partial Differential Equations|url=https://archive.org/details/partialdifferent00evan_947|url-access=limited|last=Evans|first=Lawrence|author-link=Lawrence C. Evans|publisher=American Mathematical Society|year=1998|isbn=0-8218-0772-2|location=Providence|pages=[https://archive.org/details/partialdifferent00evan_947/page/n452 450]−452}}</ref>
+
+Let <math>f</math> be a polyharmonic spline as defined by equation ({{EquationNote|1}}).  The following calculations will show that <math>f</math> satisfies ({{EquationNote|5}}).  Applying the <math>\Delta^m</math> operator to equation ({{EquationNote|1}}) yields
+
+:<math> \Delta^m f  = \sum_{i=1}^M w_i C_{m,d} \delta(\mathbf{x} - \mathbf{c}_i)</math>
+
+where <math>C_{2,2} = 8\pi, </math> <math>C_{2,3}=-8\pi,</math> and <math>C_{3,3}=-96\pi.</math>  So ({{EquationNote|5}}) is equivalent to
+
+{{NumBlk|:|
+<math>
+\begin{align}
+\int_{\mathcal{B}} & \sum_{i=1}^N \delta(\mathbf{x} - \mathbf{c}_i) (f(\mathbf{x}) - f_i + (-1)^m\lambda C_{m,d} w_i) g(\mathbf{x}) \,d\mathbf{x} \\
+&= \sum_{i=1}^N  (f(\mathbf{c}_i) - f_i + (-1)^m\lambda C_{m,d} w_i) g(\mathbf{c}_i) \\
+&= 0.
+\end{align}
+</math> |{{EquationRef|6}}}}
+
+The only possible solution to ({{EquationNote|6}}) for all test functions <math>g</math> is
+
+{{NumBlk|:|<math> f(\mathbf{c}_j) - f_j + (-1)^m\lambda C_{m,d} w_j = 0 \quad \text{for} \ j=1,2,\ldots,N </math> |{{EquationRef|7}}}}
+
+(which implies interpolation if <math>\lambda=0</math>).  Combining the definition of <math> f </math> in equation ({{EquationNote|1}}) with equation ({{EquationNote|7}}) results in almost the same linear system as equation ({{EquationNote|2}}) except that the matrix <math> A </math> is replaced with <math> A + (-1)^m C_{m,d}\lambda I </math> where <math> I </math> is the <math> N\times N </math> identity matrix.  For example, for the 3D triharmonic RBFs, <math>A</math> is replaced with <math>A + 96\pi\lambda I.</math>
+
+== Explanation of additional constraints ==
+In ({{EquationNote|2}}), the bottom half of the system of equations (<math>B^{\textrm{T}}\mathbf{w} = 0</math>) is given without explanation.  The explanation first requires deriving a simplified form of <math display="inline"> \int_{\mathcal{B}} |\nabla^m f|^2 \,d\mathbf{x}</math> when <math>\mathcal{B}</math> is all of <math>\mathbb{R}^d.</math>
+
+First, require that <math display="inline"> \sum_{i=1}^N w_i =0. </math>  This ensures that all derivatives of order <math>m</math> and higher of <math display="inline"> f(\mathbf{x}) = \sum_{i=1}^N w_i \varphi(|\mathbf{x} - \mathbf{c}_i|) </math> vanish at infinity.  For example, let <math>m=3</math> and <math>d=3</math> and <math>\varphi</math> be the triharmonic RBF.  Then <math>\varphi_{zzy} = 3y(x^2+y^2) / (x^2+y^2+z^2)^{3/2}</math> (considering <math>\varphi</math> as a mapping from <math>\mathbb{R}^3</math> to <math>\mathbb{R}</math>).  For a given center <math>\mathbf{P} = (P_1,P_2,P_3),</math>
+
+:<math>\varphi_{zzy}(\mathbf{x} - \mathbf{P}) = \frac{3(y-P_2)((y-P_2)^2 + (x-P_1)^2)}{((x-P_1)^2 + (y-P_2)^2 + (z-P_3)^2)^{3/2}}.</math>
+
+On a line <math>\mathbf{x} = \mathbf{a} + t\mathbf{b}</math> for arbitrary point <math>\mathbf{a}</math> and unit vector <math>\mathbf{b},</math>
+
+:<math>\varphi_{zzy}(\mathbf{x} - \mathbf{P}) = \frac{3(a_2+b_2t - P_2)((a_2+b_2t-P_2)^2 + (a_1+b_1t-P_1)^2)}{((a_1+b_1t-P_1)^2 + (a_2+b_2t-P_2)^2 + (a_3+b_3t-P_3)^2)^{3/2}}.</math>
+
+Dividing both numerator and denominator of this by <math>t^3</math> shows that <math display="inline"> \lim_{t \to \infty} \varphi_{zyy}(\mathbf{x}-\mathbf{P}) = 3b_2(b_2^2 + b_1^2) / (b_1^2 + b_2^2 + b_3^2)^{3/2},</math> a quantity independent of the center <math>\mathbf{P}.</math>  So on the given line,
+
+:<math> \lim_{t\to\infty} f_{zyy}(\mathbf{x}) = \lim_{t\to\infty}\sum_{i=1}^N w_i \varphi_{zyy}(\mathbf{x} - \mathbf{c}_i) = \left(\sum_{i=1}^N w_i\right)3b_2(b_2^2 + b_1^2) / (b_1^2 + b_2^2 + b_3^2)^{3/2} = 0.  </math>
+
+It is not quite enough to require that  <math display="inline">\sum_{i=1}^N w_i =0,</math> because in what follows it is necessary for <math>f_{\alpha}g_{\beta}</math> to vanish at infinity, where <math>\alpha</math> and <math>\beta</math> are multi-indices such that <math>|\alpha|+|\beta|=2m-1.</math>  For triharmonic <math>\varphi,</math> <math>w_i u_j\varphi_\alpha(\mathbf{x}-\mathbf{c}_i) \varphi_\beta(\mathbf{x} - \mathbf{d}_j)</math> (where <math>u_j</math> and <math>\mathbf{d}_j</math> are the weights and centers of <math>g</math>) is always a sum of total degree 5 polynomials in <math>x,</math> <math>y,</math> and <math>z</math> divided by the square root of a total degree 8 polynomial.  Consider the behavior of these terms on the line <math>\mathbf{x} = \mathbf{a} + t\mathbf{b}</math> as <math>t</math> approaches infinity.  The numerator is a degree 5 polynomial in <math>t.</math>  Dividing numerator and denominator by <math>t^4</math> leaves the degree 4 and 5 terms in the numerator and a function of <math>\mathbf{b}</math> only in the denominator.  A degree 5 term divided by <math>t^4</math> is a product of five <math>b</math> coordinates and <math>t.</math>  The <math display="inline">\sum w = 0</math> (and <math display="inline">\sum u=0</math>) constraint makes this vanish everywhere on the line.  A degree 4 term divided by <math>t^4</math> is either a product of four <math>b</math> coordinates and an <math>a</math> coordinate or a product of four <math>b</math> coordinates and a single <math>c_i</math> or <math>d_j</math> coordinate.  The <math display="inline">\sum w = 0</math> constraint makes the first type of term vanish everywhere on the line.  The additional constraints <math display="inline"> \sum_{i=1}^N w_i \mathbf{c}_i = 0 </math> will make the second type of term vanish.
+
+Now define the inner product of two functions <math>f,g:\mathbb{R}^d \to \mathbb{R}</math> defined as a linear combination of polyharmonic RBFs <math>\varphi_{m,d}</math> with <math display=inline>\sum w = 0</math> and <math display=inline> \sum w \mathbf{c}=0</math> as
+
+:<math>\langle f, g \rangle = \int_{\mathbb{R}^d} (\nabla^m f) \cdot (\nabla^m g) \, d\mathbf{x}.</math>
+
+Integration by parts shows that
+
+{{NumBlk|:|
+<math> \langle f,g\rangle = (-1)^m \int_{\mathbb{R}^d} f (\Delta^mg) \,d\mathbf{x}.  </math>
+|{{EquationRef|8}}}}
+
+For example, let <math> m=2  </math> and <math> d=2.  </math>  Then
+
+{{NumBlk|:|
+<math>\langle f,g\rangle = \int_{-\infty}^\infty \int_{-\infty}^\infty (f_{xx}g_{xx} + 2f_{xy}g_{xy} + f_{yy}g_{yy}) \,dx \,dy.</math>
+|{{EquationRef|9}}}}
+
+Integrating the first term of this by parts once yields
+
+:<math>\int_{-\infty}^\infty \int_{-\infty}^\infty f_{xx}g_{xx} \,dx \,dy = \int_{-\infty}^\infty f_x g_{xx}\big|_{-\infty}^{\infty} \,dy - \int_{-\infty}^{\infty}\int_{-\infty}^{\infty}f_x g_{xxx} \,dx \,dy = - \int_{-\infty}^\infty \int_{-\infty}^\infty f_x g_{xxx} \,dx \,dy</math>
+
+since <math>f_x g_{xx}</math> vanishes at infinity.  Integrating by parts again results in <math display=inline>\int_{-\infty}^\infty \int_{-\infty}^\infty f g_{xxxx} \,dx \,dy.</math>
+
+So integrating by parts twice for each term of ({{EquationNote|9}}) yields
+
+:<math> \langle f,g\rangle = \int_{-\infty}^\infty \int_{-\infty}^\infty f (g_{xxxx} + 2g_{xxyy} + g_{yyyy}) \,dx \,dy = \int_{-\infty}^\infty \int_{-\infty}^\infty f (\Delta^2 g) \,dx \,dy.</math>
+
+Since <math display="inline">(\Delta^m f)(\mathbf{x}) = \sum_{i=1}^N w_i C_{m,d}\delta(\mathbf{x - \mathbf{c}_i}),</math> ({{EquationNote|8}}) shows that
+
+:<math> 
+\begin{align}
+\langle f,f\rangle &= (-1)^m \int_{\mathbb{R}^d} f(\mathbf{x}) \sum_{i=1}^N w_i (-1)^m C_{m,d}\delta(\mathbf{x - \mathbf{c}_i}) \,d\mathbf{x}
+   = (-1)^m C_{m,d} \sum_{i=1}^N w_i f(\mathbf{c}_i) \\
+      &= (-1)^m C_{m,d} \sum_{i=1}^N \sum_{j=1}^N w_i w_j \varphi(\mathbf{c}_i - \mathbf{c}_j) = (-1)^m C_{m,d} \mathbf{w}^{\textrm{T}} A \mathbf{w}. 
+\end{align}
+</math>
+
+So if <math display="inline"> \sum w = 0 </math> and <math display="inline"> \sum w\mathbf{c} = 0 , </math>
+
+{{NumBlk|:|
+<math>
+\int_{\mathbb{R}^d} |\nabla^m f|^2 \,d\mathbf{x} = (-1)^m C_{m,d} \mathbf{w}^{\textrm{T}} A \mathbf{w}.
+</math>
+|{{EquationRef|10}}}}
+
+Now the origin of the constraints <math>B^{\textrm{T}}\mathbf{w} = 0</math> can be explained.  Here <math>B</math> is a generalization of the <math>B</math> defined above to possibly include monomials up to degree <math>m-1.</math>  In other words,
+<math display="block">B=\begin{bmatrix} 1 & 1 & \dots & 1\\ \mathbf{c}_1 & \mathbf{c}_2 & \dots & \mathbf{c}_N \\ 
+\vdots & \vdots & \dots & \vdots \\
+\mathbf{c}_1^{m-1} & \mathbf{c}_2^{m-1} & \dots & \mathbf{c}_N^{m-1}
+\end{bmatrix} ^ {\textrm{T}}</math>
+where <math>\mathbf{c}_i^j</math> is a column vector of all degree <math>j</math> monomials of the coordinates of <math>\mathbf{c}_i.</math>  The top half of ({{EquationNote|2}}) is equivalent to <math>A\mathbf{w} + B\mathbf{v} - \mathbf{f} = 0.</math>  So to obtain a smoothing spline, one should minimize the scalar field <math>F:\mathbb{R}^{N+d+1}\rightarrow \mathbb{R}</math> defined by
+
+:<math>
+F(\mathbf{w}, \mathbf{v}) = |A\mathbf{w} + B\mathbf{v} - \mathbf{f}|^2 + \lambda C \mathbf{w}^{\textrm{T}} A \mathbf{w}.
+</math>
+
+The equations
+
+:<math>
+\frac{\partial F}{\partial w_i} = 2 A_{i*} (A\mathbf{w} + B\mathbf{v} - \mathbf{f}) + 2\lambda C A_{i*}\mathbf{w}=0 \quad 
+\textrm{for} \ i=1,2,\ldots,N
+</math>
+
+and
+
+:<math>
+\frac{\partial F}{\partial v_i} = 2 B^{\textrm{T}}_{i*} (A\mathbf{w} + B\mathbf{v} - \mathbf{f})=0 \quad
+\textrm{for} \ i=1,2,\ldots,d+1
+</math>
+
+(where <math>A_{i*}</math> denotes row <math>i</math> of <math>A</math>) are equivalent to the two systems of linear equations <math> A(A\mathbf{w} + B\mathbf{v} - \mathbf{f} +\lambda C \mathbf{w}) = 0 </math> and <math> B^{\textrm{T}}(A\mathbf{w} + B\mathbf{v} - \mathbf{f}) = 0. </math>  Since <math>A</math> is invertible, the first system is equivalent to <math> A\mathbf{w} + B\mathbf{v} - \mathbf{f} +\lambda C \mathbf{w} = 0. </math>  So the first system implies the second system is equivalent to <math>B^{\textrm{T}}\mathbf{w} = 0.</math>  Just as in the previous smoothing spline coefficient derivation, the top half of ({{EquationNote|2}}) becomes <math>(A+\lambda C I)\mathbf{w} + B\mathbf{v} = \mathbf{f}.</math>
+
+This derivation of the polyharmonic smoothing spline equation system did not assume the constraints necessary to guarantee that <math display="inline"> \int_{\mathcal{\mathbb{R}}^d} |\nabla^m f|^2 \,d\mathbf{x} = C w^{\textrm{T}}Aw.</math>  But the constraints necessary to guarantee this, <math display="inline"> \sum w = 0</math> and <math display="inline"> \sum w \mathbf{c} = 0 ,</math> are a subset of <math>B^{\textrm{T}}w=0 </math> which is true for the critical point <math>w</math> of <math>F.</math>  So <math display="inline"> \int_{\mathcal{\mathbb{R}}^d} |\nabla^m f|^2 \,d\mathbf{x} = C w^{\textrm{T}}Aw</math> is true for the <math>f</math> formed from the solution of the polyharmonic smoothing spline equation system.  Because the integral is positive for all <math>w\neq 0,</math> the linear transformation resulting from the restriction of the domain of linear transformation <math>A</math> to <math>w</math> such that <math>B^T w = 0</math> must be positive definite.  This fact enables transforming the polyharmonic smoothing spline equation system to a symmetric positive definite system of equations that can be solved twice as fast using the Cholesky decomposition.<ref name=":0" />
+
+== Examples ==
+The next figure shows the interpolation through four points (marked by "circles") using different types of polyharmonic splines. The "curvature" of the interpolated curves grows with the order of the spline and the extrapolation at the left boundary (''x''&nbsp;<&nbsp;0) is reasonable. The figure also includes the radial basis functions ''&phi;'' = exp(−''r''<sup>2</sup>) which gives a good interpolation as well. Finally, the figure includes also the non-polyharmonic spline phi = r<sup>2</sup> to demonstrate, that this radial basis function is not able to pass through the predefined points (the linear equation has no solution and is solved in a least squares sense).
+
+[[Image:Polyharmonic-splines-example1.png|frame|none|Interpolation with different polyharmonic splines that shall pass the 4 predefined points marked by a circle (the interpolation with phi = r<sup>2</sup> is not useful, since the linear equation system of the interpolation problem has no solution; it is solved in a least squares
+sense, but then does not pass the centers)]]
+
+The next figure shows the same interpolation as in the first figure, with the only exception that the points to be interpolated are scaled by a factor of 100 (and the case phi = r<sup>2</sup> is no longer included). Since ''&phi;'' = (scale·''r'')<sup>''k''</sup> = (scale<sup>''k''</sup>)·''r''<sup>''k''</sup>, the factor (scale<sup>''k''</sup>) can be extracted from matrix '''A''' of the linear equation system and therefore the solution is not influenced by the scaling. This is different for the logarithmic form of the spline, although the scaling has not much influence. This analysis is reflected in the figure, where the interpolation shows not much differences. Note, for other radial basis functions, such as ''&phi;'' =&nbsp;exp(−''kr''<sup>2</sup>) with ''k''&nbsp;=&nbsp;1, the interpolation is no longer reasonable and it would be necessary to adapt&nbsp;''k''.
+
+[[Image:Polyharmonic-splines-example1-scale100.png|frame|none| The same interpolation as in the first figure, but the points to be interpolated are scaled by 100]]
+
+The next figure shows the same interpolation as in the first figure, with the only exception that the polynomial term of the function is not taken into account (and the case phi = r<sup>2</sup> is no longer included). As can be seen from the figure, the extrapolation for ''x''&nbsp;<&nbsp;0 is no longer as "natural" as in the first figure for some of the basis functions. This indicates, that the polynomial term is useful if extrapolation occurs.
+
+[[Image:Polyharmonic-splines-example1-no-polynomial.png|frame|none| The same interpolation as in the first figure, but without the polynomial term]]
+
+== See also ==
+* [[Inverse distance weighting]] 
+* [[Radial basis function]]
+* [[Subdivision surface]] (emerging alternative to spline-based surfaces)
+* [[Spline (mathematics)|Spline]]
+
+== References ==
+{{Reflist}}
+
+[[Category:Splines (mathematics)]]
+[[Category:Interpolation]]
+[[Category:Multivariate interpolation]]
+
+== External links ==
+
+'''Computer Code'''
+* [https://mathsfromnothing.au/polyharmonic-spline/ Polyharmonic Spline], ''An interactive example with Matlab/Octave source code''

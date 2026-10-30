@@ -1,0 +1,120 @@
+<!-- wikipedia: en
+     page: 60207552
+     title: HEAAN
+     revision: 1325132449
+     timestamp: 2025-12-01T09:13:10Z
+     history: https://en.wikipedia.org/w/index.php?curid=60207552&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1325132449 -->
+{{Infobox software
+| title = HEAAN
+| developer = Cryptography LAB in Seoul National University
+| released = {{Start date and age|2016|5|15}}
+| programming language = [[C++]]
+| genre = [[Homomorphic encryption]]
+| license = [[CC BY-NC]] 3.0
+}}
+
+'''HEAAN''' ('''Homomorphic Encryption for Arithmetic of Approximate Numbers''') is an open source [[homomorphic encryption]] (HE) library which implements an approximate HE scheme proposed by [[Cheon Jung-hee|Cheon]], Kim, Kim and Song (CKKS).<ref name="CKKS17">
+{{cite conference 
+|last1=Cheon |first1=Jung Hee 
+|last2=Kim |first2=Andrey 
+|last3=Kim |first3=Miran 
+|last4=Song |first4=Yongsoo 
+|title=Homomorphic encryption for arithmetic of approximate numbers 
+|publisher=Springer, Cham 
+|conference=ASIACRYPT 2017 |date=2017 |book-title=Takagi T., Peyrin T. (eds) Advances in Cryptology – ASIACRYPT 2017 |pages=409–437|doi=10.1007/978-3-319-70694-8_15 }}
+</ref>
+The first version of HEAAN was published on [[GitHub]]<ref name="HEAAN">
+{{cite web
+|title=An approximate HE library HEAAN
+|url=https://github.com/snucrypto/HEAAN
+|author=Andrey Kim|author2=Kyoohyung Han|author3=Miran Kim|author4=Yongsoo Song
+|website=[[GitHub]]
+|accessdate=15 May 2016}}
+</ref> on 15 May 2016, and later a new version of HEAAN with a [[bootstrapping]] algorithm<ref name="CHK+18">[[Cheon Jung-hee|Jung Hee Cheon]], Kyoohyung Han, Andrey Kim, Miran Kim and Yongsoo Song. [https://eprint.iacr.org/2018/153 Bootstrapping for Approximate Homomorphic Encryption]. In ''EUROCRYPT 2018(springer)''.</ref>
+was released.
+Currently, the latest regular version is version 1.1<ref>{{Cite web |title=Release HEAAN with BOOTSTRAPPING · snucrypto/HEAAN |url=https://github.com/snucrypto/HEAAN/releases/tag/1.1 |access-date=2024-12-10 |website=GitHub |language=en}}</ref> and the latest pre-release version is 2.1.<ref>{{Citation |title=Release HEAAN with Faster Multiplication · snucrypto/HEAAN |date=Sep 5, 2018 |url=https://github.com/snucrypto/HEAAN/releases/tag/2.1 |access-date=2024-12-10 |publisher=Cryptography LAB in Seoul National University}}</ref>
+
+==CKKS plaintext space==
+Unlike other HE schemes, the CKKS scheme supports approximate arithmetics over complex numbers (hence, real numbers). 
+More precisely, the plaintext space of the CKKS scheme is <math> \mathbb{C}^{n/2} </math> for some power-of-two integer <math> n </math>. To deal with the complex plaintext vector efficiently, Cheon et al. proposed plaintext encoding/decoding methods which exploits a [[Ring homomorphism|ring isomorphism]] <math> \phi: \mathbb{R}[X]/(X^n+1) \rightarrow \mathbb{C}^{n/2} </math>.
+
+===Encoding method===
+With a plaintext vector <math> \vec z = (z_1,z_2,...,z_{n/2}) \in \mathbb{C}^{n/2} </math> and a scaling factor <math> \Delta > 1 </math>, the plaintext vector is encoded as a polynomial <math> m(X) \in R:= \mathbb{Z}[X]/(X^n+1) </math>
+by computing <math> m(X) = \lfloor \Delta \cdot \phi^{-1}(\vec z) \rceil \in R</math> where <math> \lfloor \cdot \rceil </math> denotes the coefficient-wise rounding function.
+
+===Decoding method===
+Given a message polynomial <math> m(X) \in R </math> and a scaling factor <math> \Delta > 1 </math>, the message polynomial  is decoded to a complex vector <math> \vec z \in \mathbb{C}^{n/2} </math> by computing <math> \vec z = \Delta^{-1}\cdot \phi(m(X)) \in \mathbb{C}^{n/2}</math>.
+
+Here the scaling factor <math> \Delta > 1</math> enables us to control the encoding/decoding error which is occurred by the rounding process. Namely, one can obtain the approximate equation  <math> \text{Dcd}(\text{Ecd}(\vec z; \Delta); \Delta) \approx \vec z </math> by controlling <math> \Delta </math> where <math> \text{Ecd}  </math> and <math> \text{Dcd} </math> denote the encoding and decoding algorithm, respectively.
+
+From the ring-isomorphic property of the mapping <math> \phi: \mathbb{R}[X]/(X^n+1) \rightarrow \mathbb{C}^{n/2} </math>, for <math> m_1 = \text{Ecd}(\vec z_1;\Delta) </math> and <math> m_2 = \text{Ecd}(\vec z_2;\Delta) </math>, the following hold:
+* <math> \text{Dcd}(m_1 + m_2;\Delta) \approx \vec z_1 + \vec z_2 </math>, 
+* <math> \text{Dcd}(m_1\cdot m_2;\Delta) \approx \vec z_1 \circ \vec z_2 </math>,
+
+where <math>\circ </math> denotes the [[Hadamard product (matrices)|Hadamard product]] of the same-length vectors.
+These properties guarantee the approximate correctness of the computations in the encoded state when the scaling factor <math>\Delta </math> is chosen appropriately.
+
+==Algorithms==
+The CKKS scheme basically consists of those algorithms: [[Key generation|key Generation]], encryption, decryption, homomorphic addition and multiplication, and rescaling. For a positive integer <math>q</math>, let <math>R_q := R/qR </math> be the [[quotient ring]] of <math> R </math> modulo <math>q</math>. Let <math>\chi_s</math>, <math>\chi_r</math> and <math>\chi_e</math> be distributions over <math>R</math> which output polynomials with small coefficients. These distributions, the initial modulus <math> Q </math>, and the ring dimension <math>n </math> are predetermined before the key generation phase.
+
+===Key generation===
+The key generation algorithm is following:
+* Sample a secret polynomial <math> s \leftarrow \chi_s </math>.
+* Sample <math> a </math> (resp. <math>a' </math>) uniform randomly from <math> R_Q </math> (resp. <math>R_{PQ} </math>), and  <math> e,e' \leftarrow \chi_e  </math>.
+* Output a secret key <math> sk \leftarrow (1, s)\in R_Q^2 </math>, a public key <math> pk \leftarrow (b = -a \cdot s + e, a) \in R_Q^2  </math>, and an evaluation key <math>evk \leftarrow (b' = -a' \cdot s + e' + P\cdot s^2, a') \in R_{PQ}^2</math>.
+
+===Encryption===
+The encryption algorithm is following:
+* Sample an ephemeral secret polynomial <math> r \leftarrow \chi_r </math>.
+* For a given message polynomial <math> m \in R </math>, output a ciphertext <math> ct \leftarrow (c_0 = r\cdot b + e_0 + m, c_1 = r\cdot a + e_1) \in R_Q^2 </math>.
+
+===Decryption===
+The decryption algorithm is following:
+* For a given ciphertext <math> ct \in R_q^2  </math>, output a message <math> m' \leftarrow \langle ct, sk \rangle </math> <math> (\text{mod } q) </math>.
+
+The decryption outputs an approximate value of the original message, i.e., <math> \text{Dec}(sk, \text{Enc}(pk, m)) \approx m</math>, and the [[approximation error]] is determined by the choice of distributions <math> \chi_s, \chi_e, \chi_r </math>. 
+When considering homomorphic operations, the evaluation errors are also included in the approximation error. 
+Basic homomorphic operations, addition and multiplication, are done as follows.
+
+===Homomorphic addition===
+The homomorphic addition algorithm is following:
+* Given two ciphertexts <math>ct </math> and <math> ct'</math> in <math> R_q^2</math>, output <math> ct_{\text{add}} \leftarrow ct + ct' \in R_q^2</math>.
+
+The correctness holds as <math> \text{Dec}(sk, ct_\text{add}) \approx \text{Dec}(sk, ct) + \text{Dec}(sk, ct') </math>.
+
+===Homomorphic multiplication===
+The homomorphic multiplication algorithm is following:
+* Given two ciphertext <math> ct =(c_0, c_1) </math> and <math> ct' =(c_0', c_1')</math> in <math> R_q^2</math>, compute <math> (d_0, d_1, d_2) = (c_0c_0', c_0c_1'+c_1c_0', c_1c_1')</math> <math> (\text{mod } q)</math>. Output <math> ct_{\text{mult}} \leftarrow (d_0, d_1) + \lfloor P^{-1}\cdot d_2 \cdot evk \rceil  \in R_q^2</math>.
+
+The correctness holds as <math> \text{Dec}(sk, ct_\text{mult}) \approx \text{Dec}(sk, ct) \cdot \text{Dec}(sk, ct') </math>.
+
+Note that the approximation error (on the message) exponentially grows up on the number of homomorphic multiplications. To overcome this problem, most of HE schemes usually use a modulus-switching technique which was introduced by Brakerski, Gentry and Vaikuntanathan.<ref name=BGV12>Z. Brakerski, C. Gentry, and V. Vaikuntanathan. [https://eprint.iacr.org/2011/277 Fully Homomorphic Encryption without Bootstrapping]. In ''ITCS 2012''</ref>
+In case of HEAAN, the modulus-switching procedure is called rescaling. The Rescaling algorithm is very simple compared to Brakerski-Gentry-Vaikuntanathan's original algorithm.
+Applying the rescaling algorithm after a homomomorphic multiplication, the approximation error grows linearly, not exponentially.
+
+===Rescaling===
+The rescaling algorithm is following:
+* Given a ciphertext <math> ct \in R_q^2</math> and a new modulus <math> q' < q</math>, output a rescaled ciphertext <math> ct_{\text{rs}}\leftarrow \lfloor (q'/q)\cdot ct\rceil \in R_{q'}^2</math>.
+
+The total procedure of the CKKS scheme is as following: Each plaintext vector  <math>\vec z </math> which consists of complex (or real) numbers is firstly encoded as a polynomial  <math> m(X) \in R </math> by the encoding method, and then encrypted as a ciphertext  <math>ct \in R_q^2 </math>. After several homomorphic operations, the resulting ciphertext is decrypted as a polynomial <math> m'(X) \in R </math> and then decoded as a plaintext vector <math> \vec z' </math> which is the final output.
+
+== Security ==
+The [[IND-CPA]] security of the CKKS scheme is based on the hardness assumption of the [[ring learning with errors]] (RLWE) problem, the ring variant of very promising lattice-based hard problem [[Learning with errors]] (LWE).
+Currently the best known attacks for RLWE over a power-of-two cyclotomic ring are general LWE attacks such as dual attack and primal attack.
+The bit security of the CKKS scheme based on known attacks was estimated by Albrecht's LWE estimator.<ref>
+Martin Albrecht. Security Estimates for the Learning with Errors Problem, https://bitbucket.org/malb/lwe-estimator</ref>
+
+== Library ==
+Version 1.0, 1.1 and 2.1 have been released so far. Version 1.0 is the first implementation of the CKKS scheme without bootstrapping.
+In the second version, the bootstrapping algorithm was attached so that users are able to address large-scale homomorphic computations.
+In Version 2.1, currently the latest version, the multiplication of ring elements in <math> R_q </math> was accelerated by utilizing [[fast Fourier transform]] (FFT)-optimized [[number theoretic transform]] (NTT) implementation.
+
+== References ==
+{{reflist}}
+
+[[Category:Cryptographic primitives]]
+[[Category:Public-key cryptography]]
+[[Category:Lattice-based cryptography]]
+[[Category:Homomorphic encryption]]

@@ -1,0 +1,114 @@
+<!-- wikipedia: en
+     page: 10782256
+     title: Dm-crypt
+     revision: 1365375848
+     timestamp: 2026-07-22T00:49:03Z
+     history: https://en.wikipedia.org/w/index.php?curid=10782256&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1365375848 -->
+{{Short description|Disk encryption software}}
+{{lowercase}}
+'''dm-crypt''' is a transparent [[disk encryption|block device encryption]] [[subsystem]] in [[Linux kernel]] versions 2.6 and later and in [[DragonFly BSD]]. It is part of the [[device mapper]] (dm) infrastructure, and uses cryptographic routines from the kernel's [[Crypto API (Linux)|Crypto API]]. Unlike its predecessor [[cryptoloop]], dm-crypt was designed to support advanced modes of operation, such as [[Disk_encryption_theory#XTS|XTS]], [[Disk encryption theory#Liskov, Rivest, and Wagner (LRW)|LRW]] and [[Disk encryption theory#Encrypted salt-sector initialization vector (ESSIV)|ESSIV]], in order to avoid [[watermarking attack]]s.<ref name=new-methods>{{cite web |last1=Fruhwirth |first1=Clemens |title=New Methods in Hard Disk Encryption |url=https://clemens.endorphin.org/nmihde/nmihde-A4-ds.pdf |publisher=[[Vienna University of Technology]] |access-date=22 August 2024 |format=PDF |date=18 July 2005}}</ref> In addition to that, dm-crypt addresses some reliability problems of cryptoloop.<ref>{{cite web |last1=Peters |first1=Mike |title=Encrypting partitions using dm-crypt and the 2.6 series kernel |url=http://archive09.linux.com/feature/36596 |website=[[Linux.com]] |access-date=22 August 2024 |archive-url=https://web.archive.org/web/20120711175449/http://archive09.linux.com/feature/36596 |archive-date=11 July 2012 |url-status=dead}}</ref>
+
+dm-crypt is implemented as a device mapper target and may be stacked on top of other device mapper transformations. It can thus encrypt whole disks (including [[removable media]]), [[disk partitioning|partition]]s, [[software RAID]] volumes, [[logical volume]]s, as well as [[computer file|file]]s. It appears as a block device, which can be used to back [[file systems]], [[swap partition|swap]] or as an [[Logical Volume Manager (Linux)|LVM]] [[physical volume]].
+
+Some [[Linux distribution]]s support the use of dm-crypt on the root file system. These distributions use [[initrd]] to prompt the user to enter a passphrase at the console, or insert a [[smart card]] prior to the normal boot process.<ref name=crypt-fedora/>
+
+==Frontends==
+The dm-crypt device mapper target resides entirely in kernel space, and is only concerned with encryption of the [[block device]]{{snd}} it does not interpret any data itself. It relies on [[user space]] [[front and back ends|front-ends]] to create and activate encrypted volumes, and manage authentication. At least two frontends are currently available: <code>cryptsetup</code> and <code>cryptmount</code>.
+
+===cryptsetup===
+{{Infobox software
+| name = cryptsetup
+| logo =
+| logo alt =
+| logo caption =
+| screenshot =
+| screenshot size =
+| screenshot alt =
+| caption =
+| collapsible =
+| author = Jana Saout, Clemens Fruhwirth, Milan Broz<ref>{{cite web |title=AUTHORS |url=https://gitlab.com/cryptsetup/cryptsetup/blob/master/AUTHORS |website=GitLab |access-date=7 September 2019}}</ref>
+| developer =
+| released = <!-- {{Start date and age|YYYY|MM|DD|df=yes/no}} -->
+| discontinued = <!-- Set yes if discontinued, otherwise omit. -->
+| ver layout =
+| latest release version = 2.8.7<ref name="cryptsetup">{{Cite web |date=22 July 2026 |title=v2.8.7 · Tags |url=https://gitlab.com/cryptsetup/cryptsetup/-/tags/v2.8.7 |access-date=22 July 2026 |website=GitLab |language=en}}</ref>
+| latest release date = {{Start date and age|2026|07|22|df=yes}}
+| latest preview version = <!-- 2.7.0-rc1<ref name=cryptsetup/> -->
+| latest preview date =
+| repo = https://gitlab.com/cryptsetup/cryptsetup
+| programming language = [[C (programming language)|C]]
+| engine =
+| operating system = [[Unix-like]]
+| platform = [[x86]], [[x86-64]], [[ARM architecture#64/32-bit_architecture|ARMv8]], [[ARM architecture#32-bit_architecture|ARMv7]], [[ppc64le]], [[MIPS architecture|MIPS]]
+| included with = 
+| size = 7 MB
+| language = English, Portuguese, Chinese (Simplified), Czech, Danish, Dutch, Finnish, French, German, Italian, Japanese, Polish, Russian, Spanish, Swedish, Ukrainian
+| language count = 16
+| language footnote = <ref>{{cite web |title=The cryptsetup textual domain |url=http://translationproject.org/domain/cryptsetup.html |website=Translation Project |access-date=7 September 2019}}</ref>
+| genre = [[Disk encryption software]]
+| license =[[GPL#Version_2|GPLv2]]<ref>{{cite web |title=COPYING |url=https://gitlab.com/cryptsetup/cryptsetup/blob/master/COPYING |website=GitLab |access-date=7 September 2019}}</ref><br /> Sub-Libraries:<br /> [[LGPL|LGPLv2.1+]]<ref>{{cite web |title=COPYING.LGPL |url=https://gitlab.com/cryptsetup/cryptsetup/blob/master/COPYING.LGPL |website=GitLab |access-date=7 September 2019}}</ref> 
+| alexa =
+| website =
+| standard =
+| AsOf =
+}}
+The <code>cryptsetup</code> command-line interface, by default, does not write any headers to the encrypted volume, and hence only provides the bare essentials: encryption settings have to be provided every time the disk is mounted (although usually employed with automated scripts), and only one [[key (cryptography)|key]] can be used per volume; the [[Symmetric-key algorithm|symmetric encryption]] key is directly derived from the supplied [[passphrase]].
+
+Because it lacks a "[[Salt (cryptography)|salt]]", using cryptsetup is less secure in this mode than is the case with [[Linux Unified Key Setup]] (LUKS).<ref>{{cite web |title=cryptsetup FAQ |url=https://gitlab.com/cryptsetup/cryptsetup/wikis/FrequentlyAskedQuestions}}</ref>  However, the simplicity of cryptsetup makes it useful when combined with third-party software, for example, with [[smart card]] authentication.
+
+<code>cryptsetup</code> also provides commands to deal with the LUKS on-disk format. This format provides additional features such as [[key management]] and [[key stretching]] (using [[PBKDF2]]), and remembers encrypted volume configuration across reboots.<ref name=crypt-fedora/><ref name=tks1>{{cite journal |author=Clemens Fruhwirth |title=TKS1 – An anti-forensic, two level, and iterated key setup scheme |journal=Draft |url=http://clemens.endorphin.org/TKS1-draft.pdf |date=2004-07-15 |access-date=2006-12-12 }}</ref>
+
+===cryptmount===
+The <code>cryptmount</code> interface is an alternative to the "cryptsetup" tool that allows any user to [[mount (computing)|mount]] and unmount a dm-crypt file system when needed, without needing [[superuser]] privileges after the device has been configured by a superuser.
+
+==Features==
+The fact that disk encryption (volume encryption) software like dm-crypt only deals with transparent encryption of abstract [[block device]]s gives it a lot of flexibility. This means that it can be used for encrypting any disk-backed [[file system]]s supported by the [[operating system]], as well as [[swap space]]; [[write barrier]]s implemented by file systems are preserved.<ref>{{cite web
+ | url = http://www.saout.de/pipermail/dm-crypt/2012-April/002441.html
+ | title = &#91;dm-crypt&#93; Does dm-crypt support journaling filesystem transactional guarantees?
+ | date = 2012-04-24 | access-date = 2014-07-08
+ | author = Milan Broz | publisher = saout.de
+}}</ref><ref>{{cite web
+ | url = https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=647c7db14ef9cacc4ccb3683e206b61f0de6dc2b
+ | title = kernel/git/torvalds/linux.git | work = Linux kernel source tree
+ | date = 2009-06-22 | access-date = 2014-07-08
+ | author = Mikulas Patocka | publisher = kernel.org
+}}</ref> Encrypted volumes can be stored on [[disk partition]]s, [[logical volume]]s, whole disks as well as [[computer file|file]]-backed [[disk image]]s (through the use of [[loop device]]s with the losetup utility). dm-crypt can also be configured to encrypt [[RAID]] volumes and [[Logical volume management|LVM]] physical volumes.
+
+dm-crypt can also be configured to provide [[booting|pre-boot]] authentication through an [[initrd]], thus encrypting all the data on a computer{{snd}} except the bootloader, the kernel and the initrd image itself.<ref name=crypt-fedora>{{cite web |author=W. Michael Petullo |date=2007-01-18 |title=Disk encryption in Fedora: Past, present and future |publisher=Red Hat Magazine |url=http://www.redhatmagazine.com/2007/01/18/disk-encryption-in-fedora-past-present-and-future/ |access-date=2007-04-20 |archive-date=2008-10-10 |archive-url=https://web.archive.org/web/20081010124017/http://www.redhatmagazine.com/2007/01/18/disk-encryption-in-fedora-past-present-and-future |url-status=dead }}</ref>
+
+When using the [[block cipher modes of operation#Cipher Block Chaining (CBC)|cipher block chaining]] (CBC) mode of operation with predictable [[initialization vector]]s as other disk encryption software, the disk is vulnerable to [[watermarking attack]]s. This means that an attacker is able to detect the presence of specially crafted data on the disk. To address this problem in its predecessors, dm-crypt included provisions for more elaborate, disk encryption-specific modes of operation.<ref name=new-methods/> Support for [[ESSIV]] (encrypted salt-sector initialization vector) was introduced in Linux kernel version 2.6.10, [[disk encryption theory#LRW|LRW]] in 2.6.20 and [[disk encryption theory#XTS|XTS]] in 2.6.24. A [[disk encryption theory#narrow and wide block|wide-block]] disk encryption algorithm, [[Adiantum (cipher)|Adiantum]], was added in 5.0, and its AES-based cousin HCTR2 in 6.0.
+
+The Linux Crypto API includes support for most popular [[block cipher]]s and [[hash function]]s, which are all usable with dm-crypt.
+
+Crypted FS support include LUKS (versions 1 and 2) volumes, [[loop-AES]], [[TrueCrypt]]/[[VeraCrypt]] (since Linux kernel 3.13),<ref>{{cite web|url=https://gitlab.com/cryptsetup/cryptsetup/wikis/DMCrypt#iv-generators|title=dm-crypt: Linux kernel device-mapper crypto target – IV generators|publisher=cryptsetup|date=2014-01-11|access-date=2015-04-05}}</ref><ref>{{cite web|url=https://gitlab.com/cryptsetup/cryptsetup/wikis/DMCrypt|title=dm-crypt: Linux kernel device-mapper crypto target| access-date=2015-04-05}}</ref><ref>{{cite web|url=http://www.redhat.com/archives/dm-devel/2013-October/msg00081.html|title=[dm-devel] [PATCH 2/2] dm-crypt: Add TCW IV mode for old CBC TCRYPT containers.|publisher=redhat.com|access-date=2014-06-17}}</ref> and [[BitLocker]]-encrypted NTFS (since cryptsetup 2.3.0).<ref>{{cite conference |conference=DevConf CZ |last1=Trefny |first1=Vojtech |title=BitLocker disk encryption on Linux |url=https://vtrefny.fedorapeople.org/misc/devconf-bitlocker.pdf |date=25 Jan 2020}}</ref> TrueCrypt/VeraCrypt (TCRYPT) and BitLocker (BITLK) support require the kernel userspace crypto API.<ref>{{man|8|cryptsetup|Linux}}</ref>
+
+==Compatibility==
+dm-crypt and LUKS encrypted disks can be accessed and used under MS Windows using the now defunct [[FreeOTFE]] (formerly DoxBox, LibreCrypt), provided that the filesystem used is supported by Windows (e.g. [[File Allocation Table|FAT]]/FAT32/[[NTFS]]).  Encrypted [[ext2]] and [[ext3]] filesystems are supported by using [[Ext2Fsd]] or so-called "Ext2 Installable File System for Windows";<ref>{{cite web|url=http://www.fs-driver.org/|title=Ext2 IFS For Windows|work=fs-driver.org|access-date=15 February 2015}}</ref> FreeOTFE also supports them.
+
+Cryptsetup/LUKS and the required infrastructure have also been implemented on the DragonFly BSD operating system.<ref>{{cite web |author=Alex Hornung
+ |date=2010-07-23 |title=HEADS UP: dm, lvm, cryptsetup and initrd on master|url=http://leaf.dragonflybsd.org/mailarchive/users/2010-07/msg00036.html }}</ref>
+
+== See also ==
+{{Portal|Linux}}
+
+* [[Comparison of disk encryption software]]
+
+== References ==
+{{Reflist|30em}}
+
+==External links==
+* Official {{Official website|https://gitlab.com/cryptsetup/cryptsetup/wikis/DMCrypt|dm-crypt}}, {{Official website|https://gitlab.com/cryptsetup/cryptsetup/|cryptsetup-luks}} and {{Official website|http://cryptmount.sourceforge.net|cryptmount}} websites
+* [https://web.archive.org/web/20150917051251/http://www.markus-gattol.name/ws/dm-crypt_luks.html All about dm-crypt and LUKS on one page (on archive.org)]{{snd}} a page covering dm-crypt/LUKS, starting with theory and ending with many practical examples about its usage.
+
+{{Clear}}
+
+{{Linux kernel}}
+{{Linux}}
+{{Operating system}}
+
+{{DEFAULTSORT:Dm-Crypt}}
+[[Category:Device mapper]]
+[[Category:Disk encryption]]
+[[Category:Cryptographic software]]

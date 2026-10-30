@@ -1,0 +1,127 @@
+<!-- wikipedia: en
+     page: 7139248
+     title: Milstein method
+     revision: 1362749224
+     timestamp: 2026-07-05T23:55:26Z
+     history: https://en.wikipedia.org/w/index.php?curid=7139248&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1362749224 -->
+{{Short description|Numerical method for solving stochastic differential equations}}
+In [[mathematics]], the '''Milstein method''' is a technique for the approximate [[numerical analysis|numerical solution]] of a [[stochastic differential equation]]. It is named after [[Grigori Milstein]] who first published it in 1974.<ref>{{cite journal|first=G. N.|last=Mil'shtein |title=Приближенное интегрирование стохастических дифференциальных уравнений |trans-title=Approximate integration of stochastic differential equations|journal=Teoriya Veroyatnostei i ee Primeneniya|volume=19|issue=3|year=1974| pages=583–588| url =http://www.mathnet.ru/php/archive.phtml?wshow=paper&jrnid=tvp&paperid=2929&option_lang=eng|language=ru}}</ref><ref>{{Cite journal | last1 = Mil’shtein | first1 = G. N. | title = Approximate Integration of Stochastic Differential Equations | doi = 10.1137/1119062 | journal = Theory of Probability & Its Applications | volume = 19 | issue = 3 | pages = 557–000 | year = 1975 }}</ref>
+
+==Description==
+Consider the [[autonomous equation|autonomous]] [[Itō calculus|Itō]] stochastic differential equation:
+<math display="block">\mathrm{d} X_t = a(X_t) \, \mathrm{d} t + b(X_t) \, \mathrm{d} W_t</math>
+with [[initial condition]] <math>X_{0} = x_{0}</math>, where <math>W_{t}</math> denotes the [[Wiener process]], and suppose that we wish to solve this SDE on some interval of time&nbsp;<math>[0,T]</math>. Then the '''Milstein approximation''' to the true solution <math>X</math> is the [[Markov chain]] <math>Y</math> defined as follows:
+
+* Partition the interval <math>[0,T]</math> into <math>N</math> equal subintervals of width <math>\Delta t>0</math>: <math display="block">0 = \tau_0 < \tau_1 < \dots < \tau_N = T\text{ with }\tau_n:=n\Delta t\text{ and }\Delta t = \frac{T}{N}</math>
+* Set <math>Y_0 = x_0;</math>
+* Recursively define <math>Y_n</math> for <math>1 \leq n \leq N</math> by: <math display="block">Y_{n + 1} = Y_n + a(Y_n) \Delta t + b(Y_n) \Delta W_n + \frac{1}{2} b(Y_n) b'(Y_n) \left( (\Delta W_n)^2 - \Delta t \right)</math> where <math>b'</math> denotes the [[derivative]] of <math>b(x)</math> with respect to <math>x</math> and: <math display="block">\Delta W_n = W_{\tau_{n + 1}} - W_{\tau_n}</math> are [[independent and identically distributed]] [[normal distribution|normal random variables]] with [[expected value]] zero and [[variance]] <math>\Delta t</math>. Then <math>Y_n</math> will approximate <math>X_{\tau_n}</math> for <math>0 \leq n \leq N</math>, and increasing <math>N</math> will yield a better approximation.
+
+Note that when <math> b'(Y_n) = 0 </math> (i.e. the diffusion term does not depend on <math>X_{t}</math>) this method is equivalent to the [[Euler–Maruyama method]].
+
+The Milstein scheme has both weak and strong order of convergence <math>\Delta t</math> which is superior to the [[Euler–Maruyama method]], which in turn has the same weak order of convergence <math>\Delta t</math> but inferior strong order of convergence <math>\sqrt{\Delta t}</math>.<ref>{{cite book |first=V. |last=Mackevičius |title=Introduction to Stochastic Analysis |publisher=Wiley |year=2011 |isbn=978-1-84821-311-1 }}</ref>
+
+== Intuitive derivation ==
+
+For this derivation, we will only look at [[geometric Brownian motion]] (GBM), the stochastic differential equation of which is given by:
+<math display="block">\mathrm{d} X_t = \mu X \mathrm{d} t + \sigma X d W_t</math>
+with real constants <math>\mu</math> and <math>\sigma</math>. Using [[Itō's lemma]] we get:
+<math display="block">\mathrm{d}\ln X_t= \left(\mu - \frac{1}{2} \sigma^2\right)\mathrm{d}t+\sigma\mathrm{d}W_t</math>
+
+Thus, the solution to the GBM SDE is:
+<math display="block">
+\begin{align}
+X_{t+\Delta t}&=X_t\exp\left\{\int_t^{t+\Delta t}\left(\mu-\frac{1}{2}\sigma^2\right)\mathrm{d}t+\int_t^{t+\Delta t}\sigma\mathrm{d}W_u\right\} \\
+&\approx X_t\left(1+\mu\Delta t-\frac{1}{2} \sigma^2\Delta t+\sigma\Delta W_t+\frac{1}{2}\sigma^2(\Delta W_t)^2\right) \\
+&= X_t + a(X_t)\Delta t+b(X_t)\Delta W_t+\frac{1}{2}b(X_t)b'(X_t)((\Delta W_t)^2-\Delta t)
+\end{align}</math>
+where
+<math display="block"> a(x) = \mu x, ~b(x) = \sigma x </math>
+
+The numerical solution is presented in the graphic for three different trajectories.<ref>{{cite web |first=Umberto |last=Picchini |title=SDE Toolbox: simulation and estimation of stochastic differential equations with Matlab |url=https://sdetoolbox.sourceforge.net/ }}</ref>
+[[File:SDE 2.jpg|thumbnail|Numerical solution for the stochastic differential equation where the drift is twice the diffusion coefficient.]]
+
+=== Computer implementation ===
+The following [[Python (programming language)|Python]] code implements the Milstein method and uses it to solve the SDE describing geometric Brownian motion defined by
+<math display="block">\begin{cases}
+dY_t= \mu Y \, {\mathrm d}t + \sigma Y \, {\mathrm d}W_t \\
+Y_0=Y_\text{init}
+\end{cases}</math>
+
+<syntaxhighlight lang="numpy" line="1">
+# -*- coding: utf-8 -*-
+# Milstein Method
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+class Model:
+    """Stochastic model constants."""
+    mu = 3
+    sigma = 1
+
+
+def dW(dt):
+    """Random sample normal distribution."""
+    return np.random.normal(loc=0.0, scale=np.sqrt(dt))
+
+
+def run_simulation():
+    """ Return the result of one full simulation."""
+    # One second and thousand grid points
+    T_INIT = 0
+    T_END = 1
+    N = 1000 # Compute 1000 grid points
+    DT = float(T_END - T_INIT) / N
+    TS = np.arange(T_INIT, T_END + DT, DT)
+
+    Y_INIT = 1
+
+    # Vectors to fill
+    ys = np.zeros(N + 1)
+    ys[0] = Y_INIT
+    for i in range(1, TS.size):
+        t = (i - 1) * DT
+        y = ys[i - 1]
+        dw = dW(DT)
+
+        # Sum up terms as in the Milstein method
+        ys[i] = y + \
+            Model.mu * y * DT + \
+            Model.sigma * y * dw + \
+            (Model.sigma**2 / 2) * y * (dw**2 - DT)
+
+    return TS, ys
+
+
+def plot_simulations(num_sims: int):
+    """Plot several simulations in one image."""
+    for _ in range(num_sims):
+        plt.plot(*run_simulation())
+
+    plt.xlabel("time (s)")
+    plt.ylabel("y")
+    plt.grid()
+    plt.show()
+
+
+if __name__ == "__main__":
+    NUM_SIMS = 2
+    plot_simulations(NUM_SIMS)
+
+</syntaxhighlight>
+
+== See also ==
+* [[Euler–Maruyama method]]
+
+==References==
+
+{{Reflist}}
+
+==Further reading==
+* {{cite book|author1-link=Peter Kloeden | author=Kloeden, P.E. |author2= Platen, E. | title=Numerical Solution of Stochastic Differential Equations | publisher=Springer |location=Berlin | year=1999 | isbn=3-540-54062-8 }}
+
+[[Category:Numerical differential equations]]
+[[Category:Stochastic differential equations]]

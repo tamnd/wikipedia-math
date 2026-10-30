@@ -1,0 +1,76 @@
+<!-- wikipedia: en
+     page: 34073580
+     title: Dynamic topic model
+     revision: 1365160207
+     timestamp: 2026-07-20T17:09:33Z
+     history: https://en.wikipedia.org/w/index.php?curid=34073580&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1365160207 -->
+{{Short description|Time-series clustering method}}
+{{Update|date=July 2026}}
+'''Dynamic topic models''' are [[generative model]]s in [[natural language processing]] that analyze the evolution of latent topics within a collection of documents over time. This family of [[topic model]]s was proposed by [[David Blei]] and John Lafferty and was initially an extension to [[Latent Dirichlet Allocation]] (LDA) that can handle sequential documents.<ref name='dtm'>{{cite book|last=Blei|first=David M|author2=Lafferty, John D|title=Proceedings of the 23rd international conference on Machine learning - ICML '06 |chapter=Dynamic topic models |s2cid=5405229|year=2006|pages=113–120|series=ICML'06|isbn=978-1-59593-383-6|doi=10.1145/1143844.1143859}}</ref>
+
+In LDA, both the order the words appear in a document and the order the documents appear in the corpus are oblivious to the model. Whereas words are still assumed to be [[De Finetti's theorem|exchangeable]], in a dynamic topic model the order of the documents plays a fundamental role. More precisely, the documents are [[Data binning|binned]] by time period, with the assumption that the topics of each group persist and evolved from the set of the previous slice.
+
+Since its inception, dynamic topic modeling has seen the introduction of several new models, including BERTopic.<ref>{{Cite journal |last1=Karakkaparambil James |first1=Charu |last2=Nagda |first2=Mayank |last3=Haji Ghassemi |first3=Nooshin |last4=Kloft |first4=Marius |last5=Fellenz |first5=Sophie |date=2024 |editor-last=Ku |editor-first=Lun-Wei |editor2-last=Martins |editor2-first=Andre |editor3-last=Srikumar |editor3-first=Vivek |title=Evaluating Dynamic Topic Models |url=https://aclanthology.org/2024.acl-long.11/ |journal=Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) |location=Bangkok, Thailand |publisher=Association for Computational Linguistics |pages=160–176 |doi=10.18653/v1/2024.acl-long.11}}</ref><ref>{{cite arXiv |last=Grootendorst |first=Maarten |title=BERTopic: Neural topic modeling with a class-based TF-IDF procedure |date=2022-03-11 |class=cs.CL |eprint=2203.05794 }}</ref>
+
+==Topics==
+Similarly to [[Latent Dirichlet allocation|LDA]] and [[pLSA]], in a dynamic topic model, each document is viewed as a mixture of unobserved topics. Furthermore, each topic defines a [[multinomial distribution]] over a set of terms. Thus, for each word of each document, a topic is drawn from the mixture and a term is subsequently drawn from the multinomial distribution corresponding to that topic.
+
+The topics, however, evolve over time. For instance, the two most likely terms of a topic at time {{math|t}} could be "network" and "Zipf" (in descending order) while the most likely ones at time {{math|t+1}} could be "Zipf" and "percolation" (in descending order).
+
+==Model==
+
+Define
+: <math>\alpha_t</math> as the per-document topic distribution at time ''t''.
+: <math>\beta_{t,k}</math> as the word distribution of topic ''k'' at time ''t''.
+: <math>\eta_{t,d}</math> as the topic distribution for document ''d'' in time ''t'',
+: <math>z_{t,d,n}</math> as the topic for the ''n''th word in document ''d'' in time ''t'', and
+: <math>w_{t,d,n}</math> as the specific word.
+
+In this model, the multinomial distributions <math>\alpha_{t+1}</math> and <math>\beta_{t+1,k}</math> are generated from <math>\alpha_t</math> and <math>\beta_{t,k}</math>, respectively.
+Even though multinomial distributions are usually written in terms of the mean parameters, representing them in terms of the natural parameters is better in the context of dynamic topic models.
+
+The former representation has some disadvantages due to the fact that the parameters are constrained to be non-negative and sum to one.<ref>{{cite web|last=Rennie|first=Jason D. M.|title=Mixtures of Multinomials|url=http://people.csail.mit.edu/~jrennie/writing/mixtureMultinomials.pdf|access-date=5 December 2011}}</ref> When defining the evolution of these distributions, one would need to assure that such constraints were satisfied. Since both distributions are in the [[exponential family]], one solution to this problem is to represent them in terms of the natural parameters, that can assume any real value and can be individually changed.
+
+Using the natural parameterization, the dynamics of the topic model are given by
+:<math>\beta_{t,k}|\beta_{t-1,k} \sim N(\beta_{t-1,k},\sigma^2 I)</math>
+and
+:<math>\alpha_{t}|\alpha_{t-1} \sim N(\alpha_{t-1},\delta^2 I)</math>.
+
+The generative process at time slice 't' is therefore:
+# Draw topics <math>\beta_{t,k}|\beta_{t-1,k} \sim N(\beta_{t-1,k},\sigma^2 I) \forall k</math>
+# Draw mixture model <math>\alpha_{t}|\alpha_{t-1} \sim N(\alpha_{t-1},\delta^2 I)</math>
+# For each document:
+## Draw <math>\eta_{t,d} \sim N(\alpha_t,a^2 I)</math>
+## For each word:
+### Draw topic <math>Z_{t,d,n} \sim \textrm{Mult}(\pi(\eta_{t,d}))</math>
+### Draw word <math>W_{t,d,n} \sim \textrm{Mult}(\pi(\beta_{t,Z_{t,d,n}}))</math>
+
+where <math>\pi(x)</math> is a mapping from the natural parameterization ''x'' to the mean parameterization, namely
+:<math>\pi(x_i) = \frac{\exp(x_i)}{\sum_i \exp(x_i)}</math>.
+
+==Inference==
+
+In the dynamic topic model, only <math>W_{t,d,n}</math> is observable. Learning the other parameters constitutes an inference problem. Blei and Lafferty argue that applying [[Gibbs sampling]] to do inference in this model is more difficult than in static models, due to the nonconjugacy of the Gaussian and multinomial distributions. They propose the use of [[variational methods]], in particular, the Variational Kalman Filtering and the Variational Wavelet Regression.
+
+==Applications==
+
+In the original paper, a dynamic topic model is applied to the corpus of Science articles published between 1881 and 1999 aiming to show that this method can be used to analyze the trends of word usage inside topics.<ref name="dtm" /> The authors also show that the model trained with past documents is able to fit documents of an incoming year better than LDA.
+
+A continuous dynamic topic model was developed by Wang et al. and applied to predict the timestamp of documents.<ref>{{cite journal|last=Wang|first=Chong |author2=Blei, David |author3=Heckerman, David|title=Continuous Time Dynamic Topic Models|journal=Proceedings of ICML|year=2008|series=ICML '08}}</ref>
+
+Going beyond text documents, dynamic topic models were used to study musical influence, by learning musical topics and how they evolve in recent history.<ref>{{Cite journal|last1=Shalit|first1=Uri|last2=Weinshall|first2=Daphna|last3=Chechik|first3=Gal|date=2013|title=Modeling musical influence with topic models|url=http://proceedings.mlr.press/v28/shalit13.pdf|journal=Journal of Machine Learning Research}}</ref>
+
+== References ==
+{{reflist}}
+*
+*
+*
+*
+
+{{Natural language processing}}
+
+[[Category:Latent variable models]]
+[[Category:Tasks of natural language processing]]
+[[Category:Natural language processing]]

@@ -1,0 +1,156 @@
+<!-- wikipedia: en
+     page: 1254323
+     title: Brent's method
+     revision: 1345526860
+     timestamp: 2026-03-26T15:10:50Z
+     history: https://en.wikipedia.org/w/index.php?curid=1254323&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1345526860 -->
+{{Short description|Root-finding algorithm}}
+{{For|Brent's cycle-detection algorithm|Cycle detection#Brent's algorithm}}
+In [[numerical analysis]], '''Brent's method''' is a hybrid [[root-finding algorithm]] combining the [[bisection method]], the [[secant method]] and [[inverse quadratic interpolation]]. It has the reliability of bisection but it can be as quick as some of the less-reliable methods. The algorithm tries to use the potentially fast-converging secant method or inverse quadratic interpolation if possible, but it falls back to the more robust bisection method if necessary. Brent's method is due to [[Richard Brent (scientist)|Richard Brent]]<ref>{{harvnb|Brent|1973}}</ref> and builds on an earlier algorithm by [[Theodorus Dekker]].<ref>{{harvnb|Dekker|1969}}</ref> Consequently, the method is also known as the '''Brent–Dekker method'''.
+
+Modern improvements on Brent's method include Chandrupatla's method, which is simpler and faster for functions that are flat around their roots;<ref>{{Cite journal |doi = 10.1016/S0965-9978(96)00051-8|title = A new hybrid quadratic/Bisection algorithm for finding the zero of a nonlinear function without using derivatives|journal = Advances in Engineering Software|volume = 28|issue = 3|pages = 145–149|year = 1997|last1 = Chandrupatla|first1 = Tirupathi R.}}</ref><ref>{{Cite web | url=https://www.embeddedrelated.com/showarticle/855.php | title=Ten Little Algorithms, Part 5: Quadratic Extremum Interpolation and Chandrupatla's Method - Jason Sachs}}</ref> [[Ridders' method]], which performs exponential interpolations instead of quadratic providing a simpler closed formula for the iterations; and the [[ITP Method|ITP method]] which is a hybrid between regula-falsi and bisection that achieves optimal worst-case and asymptotic guarantees.
+
+== Dekker's method ==
+
+The idea to combine the bisection method with the secant method goes back to {{Harvtxt|Dekker|1969}}.
+
+Suppose that one wants to solve the equation ''f''(''x'') = 0. As with the bisection method, one needs to initialize Dekker's method with two points, say ''a''<sub>0</sub> and ''b''<sub>0</sub>, such that ''f''(''a''<sub>0</sub>) and ''f''(''b''<sub>0</sub>) have opposite signs. If ''f'' is continuous on [''a''<sub>0</sub>, ''b''<sub>0</sub>], the [[intermediate value theorem]] guarantees the existence of a solution between ''a''<sub>0</sub> and ''b''<sub>0</sub>.
+
+Three points are involved in every iteration:
+* ''b''<sub>''k''</sub> is the current iterate, i.e., the current guess for the root of ''f''.
+* ''a''<sub>''k''</sub> is the "contrapoint", i.e., a point such that ''f''(''a''<sub>''k''</sub>) and ''f''(''b''<sub>''k''</sub>) have opposite signs, so the interval [''a''<sub>''k''</sub>, ''b''<sub>''k''</sub>] contains the solution. Furthermore, |''f''(''b''<sub>''k''</sub>)| should be less than or equal to |''f''(''a''<sub>''k''</sub>)|, so that ''b''<sub>''k''</sub> is a better guess for the unknown solution than ''a''<sub>''k''</sub>.
+* ''b''<sub>''k''&minus;1</sub> is the previous iterate (for the first iteration, one sets ''b''<sub>''k''&minus;1</sub> = ''a''<sub>0</sub>).
+
+Two provisional values for the next iterate are computed. The first one is given by linear interpolation, also known as the secant method:
+::<math> s = \begin{cases}  b_k - \frac{b_k-b_{k-1}}{f(b_k)-f(b_{k-1})} f(b_k), & \mbox{if }  f(b_k)\neq f(b_{k-1})  \\ m & \mbox{otherwise } \end{cases} </math>
+
+and the second one is given by the bisection method
+::<math> m = \frac{a_k+b_k}{2}. </math>
+If the result of the secant method, ''s'', lies strictly between ''b''<sub>''k''</sub> and ''m'', then it becomes the next iterate (''b''<sub>''k''+1</sub> = ''s''), otherwise the midpoint is used (''b''<sub>''k''+1</sub> = ''m'').
+
+Then, the value of the new contrapoint is chosen such that ''f''(''a''<sub>''k''+1</sub>) and ''f''(''b''<sub>''k''+1</sub>) have opposite signs. If ''f''(''a''<sub>''k''</sub>) and ''f''(''b''<sub>''k''+1</sub>) have opposite signs, then the contrapoint remains the same: ''a''<sub>''k''+1</sub> = ''a''<sub>''k''</sub>. Otherwise, ''f''(''b''<sub>''k''+1</sub>) and ''f''(''b''<sub>''k''</sub>) have opposite signs, so the new contrapoint becomes ''a''<sub>''k''+1</sub> = ''b''<sub>''k''</sub>.
+
+Finally, if |''f''(''a''<sub>''k''+1</sub>)| < |''f''(''b''<sub>''k''+1</sub>)|, then ''a''<sub>''k''+1</sub> is probably a better guess for the solution than ''b''<sub>''k''+1</sub>, and hence the values of ''a''<sub>''k''+1</sub> and ''b''<sub>''k''+1</sub> are exchanged.
+
+This ends the description of a single iteration of Dekker's method.
+
+Dekker's method performs well if the function ''f'' is reasonably well-behaved. However, there are circumstances in which every iteration employs the secant method, but the iterates ''b''<sub>''k''</sub> converge very slowly (in particular, |''b''<sub>''k''</sub> &minus; ''b''<sub>''k''&minus;1</sub>| may be arbitrarily small). Dekker's method requires far more iterations than the bisection method in this case.
+
+== Brent's method ==
+{{Harvtxt|Brent|1973}} proposed a small modification to avoid the problem with Dekker's method. He inserts an additional test which must be satisfied before the result of the secant method is accepted as the next iterate. Two inequalities must be simultaneously satisfied:
+
+Given a specific numerical tolerance <math>\delta</math>, if the previous step used the bisection method, the inequality <math display=inline> |\delta| < |b_k - b_{k-1}| </math> must hold to perform interpolation, otherwise the bisection method is performed and its result used for the next iteration.
+
+If the previous step performed interpolation, then the inequality <math display=inline>|\delta| < |b_{k-1} - b_{k-2}|</math> is used instead to perform the next  action (to choose) interpolation (when inequality is true) or bisection method (when inequality is not true).
+
+Also, if the previous step used the bisection method, the inequality <math display=inline>|s-b_k| < \begin{matrix} \frac12 \end{matrix} |b_k - b_{k-1}|</math>
+must hold, otherwise the bisection method is performed and its result used for the next iteration. If the previous step performed interpolation, then the  inequality <math display=inline>|s-b_k| < \begin{matrix} \frac12 \end{matrix} |b_{k-1} - b_{k-2}|</math>
+is used instead.
+
+This modification ensures that at the ''k''th iteration, a bisection step will be performed in at most <math>2\log_2(|b_{k-1}-b_{k-2}|/\delta)</math> additional iterations, because the above conditions force consecutive interpolation step sizes to halve every two iterations, and after at most <math>2\log_2(|b_{k-1}-b_{k-2}|/\delta)</math> iterations, the step size will be smaller than <math>\delta</math>, which invokes a bisection step. Brent proved that his method requires at most ''N''<sup>2</sup> iterations, where ''N'' denotes the number of iterations for the bisection method. If the function ''f'' is well-behaved, then Brent's method will usually proceed by either inverse quadratic or linear interpolation, in which case it will converge [[rate of convergence|superlinearly]].
+
+Furthermore, Brent's method uses [[inverse quadratic interpolation]] instead of [[linear interpolation]] (as used by the secant method). If ''f''(''b''<sub>''k''</sub>), ''f''(''a''<sub>''k''</sub>) and ''f''(''b''<sub>''k''&minus;1</sub>) are distinct, it slightly increases the efficiency. As a consequence, the condition for accepting ''s'' (the value proposed by either linear interpolation or inverse quadratic interpolation) has to be changed: ''s'' has to lie between (3''a''<sub>''k''</sub> + ''b''<sub>''k''</sub>) / 4 and ''b''<sub>''k''</sub>.
+
+==Algorithm==
+
+ '''input''' ''a'', ''b'', and (a pointer to) a function for ''f''
+ calculate ''f''(''a'')
+ calculate ''f''(''b'')
+ '''if''' ''f''(''a'')''f''(''b'') &ge; 0 '''then''' 
+     exit function because the root is not bracketed.
+ '''end if'''
+ '''if''' |''f''(''a'')| < |''f''(''b'')| '''then'''
+     swap (''a'',''b'')
+ '''end if'''
+ ''c'' := ''a''
+ '''set''' mflag
+ '''repeat until''' ''f''(''b'' or ''s'') = 0 '''or''' |''b'' &minus; ''a''| '''is''' small enough ''(convergence)''
+     '''if''' ''f''(''a'') ≠ ''f''(''c'') '''and''' ''f''(''b'') ≠ ''f''(''c'') '''then'''
+         {{nowrap|1=<math display=inline> s := \frac{af(b)f(c)}{(f(a)-f(b))(f(a)-f(c))} + \frac{bf(a)f(c)}{(f(b)-f(a))(f(b)-f(c))} + \frac{cf(a)f(b)}{(f(c)-f(a))(f(c)-f(b))} </math>}} ''([[inverse quadratic interpolation]])''
+     '''else'''
+         {{nowrap|<math display=inline> s := b - f(b) \frac{b-a}{f(b)-f(a)} </math>}} ''([[secant method]])''
+     '''end if'''
+     '''if''' ''(condition 1)'' ''s'' '''is not''' {{nowrap|between <math>(3a+b)/4</math> and {{var|b}}}} '''or'''
+        ''(condition 2)'' (mflag '''is''' set '''and''' <span class="nowrap">|''s''&minus;''b''| ≥ |''b''&minus;''c''|/2)</span> '''or'''
+        ''(condition 3)'' (mflag '''is''' cleared '''and''' <span class="nowrap">|''s''&minus;''b''| ≥ |''c''&minus;''d''|/2)</span> '''or'''
+        ''(condition 4)'' (mflag '''is''' set '''and''' <span class="nowrap">|''b''&minus;''c''| < |{{mvar|&delta;}}|)</span> '''or'''
+        ''(condition 5)'' (mflag '''is''' cleared '''and''' <span class="nowrap">|''c''&minus;''d''| < |{{mvar|&delta;}}|)</span> '''then'''
+         <math display=inline> s := \frac{a+b}{2} </math> ''([[bisection method]])''
+         '''set''' mflag
+     '''else'''
+         '''clear''' mflag
+     '''end if'''
+     calculate ''f''(''s'')
+     ''d'' := ''c''  ''(d is assigned for the first time here; it won't be used above on the first iteration because mflag is set)''
+     ''c'' := ''b''
+     '''if''' ''f''(''a'')''f''(''s'') < 0 '''then'''
+         ''b'' := ''s'' 
+     '''else'''
+         ''a'' := ''s'' 
+     '''end if'''
+     '''if''' |''f''(''a'')| < |''f''(''b'')| '''then'''
+         swap (''a'',''b'') 
+     '''end if'''
+ '''end repeat'''
+ '''output''' ''b'' ''or s (return the root)''
+
+==Example==
+
+Suppose that we are seeking a zero of the function defined by {{math|1=''f''(''x'') = (''x'' + 3)(''x'' &minus; 1)<sup>2</sup>}}.
+
+We take {{math|1=[''a''<sub>0</sub>, ''b''<sub>0</sub>] = [&minus;4, 4/3]}} as our initial interval.
+
+We have ''f''(''a''<sub>0</sub>) = &minus;25 and ''f''(''b''<sub>0</sub>) = 0.48148 (all numbers in this section are rounded), so the conditions ''f''(''a''<sub>0</sub>) ''f''(''b''<sub>0</sub>) < 0 and |''f''(''b''<sub>0</sub>)| ≤ |''f''(''a''<sub>0</sub>)| are satisfied.
+
+[[Image:Brent method example.svg|thumb|Graph of ''f''(''x'') = (''x'' + 3)(''x'' &minus; 1)<sup>2</sup>]]
+# In the first iteration, we use linear interpolation between (''b''<sub>&minus;1</sub>, ''f''(''b''<sub>&minus;1</sub>)) = (''a''<sub>0</sub>, ''f''(''a''<sub>0</sub>)) = (&minus;4, &minus;25) and (''b''<sub>0</sub>, ''f''(''b''<sub>0</sub>)) = (1.33333, 0.48148), which yields ''s'' = 1.23256. This lies between (3''a''<sub>0</sub> + ''b''<sub>0</sub>) / 4 and ''b''<sub>0</sub>, so this value is accepted. Furthermore, ''f''(1.23256) = 0.22891, so we set ''a''<sub>1</sub> = ''a''<sub>0</sub> and ''b''<sub>1</sub> = ''s'' = 1.23256.
+# In the second iteration, we use inverse quadratic interpolation between (''a''<sub>1</sub>, ''f''(''a''<sub>1</sub>)) = (&minus;4, &minus;25) and (''b''<sub>0</sub>, ''f''(''b''<sub>0</sub>)) = (1.33333, 0.48148) and (''b''<sub>1</sub>, ''f''(''b''<sub>1</sub>)) = (1.23256, 0.22891). This yields 1.14205, which lies between (3''a''<sub>1</sub> + ''b''<sub>1</sub>) / 4 and ''b''<sub>1</sub>. Furthermore, the inequality |1.14205 &minus; ''b''<sub>1</sub>| ≤ |''b''<sub>0</sub> &minus; ''b''<sub>&minus;1</sub>| / 2 is satisfied, so this value is accepted. Furthermore, ''f''(1.14205) = 0.083582, so we set ''a''<sub>2</sub> = ''a''<sub>1</sub> and ''b''<sub>2</sub> = 1.14205.
+# In the third iteration, we use inverse quadratic interpolation between (''a''<sub>2</sub>, ''f''(''a''<sub>2</sub>)) = (&minus;4, &minus;25) and (''b''<sub>1</sub>, ''f''(''b''<sub>1</sub>)) = (1.23256, 0.22891) and (''b''<sub>2</sub>, ''f''(''b''<sub>2</sub>)) = (1.14205, 0.083582). This yields 1.09032, which lies between (3''a''<sub>2</sub> + ''b''<sub>2</sub>) / 4 and ''b''<sub>2</sub>. But here Brent's additional condition kicks in: the inequality |1.09032 &minus; ''b''<sub>2</sub>| ≤ |''b''<sub>1</sub> &minus; ''b''<sub>0</sub>| / 2 is not satisfied, so this value is rejected. Instead, the midpoint ''m'' = &minus;1.42897 of the interval [''a''<sub>2</sub>, ''b''<sub>2</sub>] is computed. We have ''f''(''m'') = 9.26891, so we set ''a''<sub>3</sub> = ''a''<sub>2</sub> and ''b''<sub>3</sub> = &minus;1.42897.
+# In the fourth iteration, we use inverse quadratic interpolation between (''a''<sub>3</sub>, ''f''(''a''<sub>3</sub>)) = (&minus;4, &minus;25) and (''b''<sub>2</sub>, ''f''(''b''<sub>2</sub>)) = (1.14205, 0.083582) and (''b''<sub>3</sub>, ''f''(''b''<sub>3</sub>)) = (&minus;1.42897, 9.26891). This yields 1.15448, which is not in the interval between (3''a''<sub>3</sub> + ''b''<sub>3</sub>) / 4  and ''b''<sub>3</sub>). Hence, it is replaced by the midpoint ''m'' = &minus;2.71449. We have ''f''(''m'') = 3.93934, so we set ''a''<sub>4</sub> = ''a''<sub>3</sub> and ''b''<sub>4</sub> = &minus;2.71449.
+# In the fifth iteration, inverse quadratic interpolation yields &minus;3.45500, which lies in the required interval. However, the previous iteration was a bisection step, so the inequality |&minus;3.45500 &minus; ''b''<sub>4</sub>| ≤ |''b''<sub>4</sub> &minus; ''b''<sub>3</sub>| / 2 need to be satisfied. This inequality is false, so we use the midpoint ''m'' = &minus;3.35724. We have ''f''(''m'') = &minus;6.78239, so ''m'' becomes the new contrapoint (''a''<sub>5</sub> = &minus;3.35724) and the iterate remains the same (''b''<sub>5</sub> = ''b''<sub>4</sub>). 
+# In the sixth iteration, we cannot use inverse quadratic interpolation because ''b''<sub>5</sub> = ''b''<sub>4</sub>. Hence, we use linear interpolation between (''a''<sub>5</sub>, ''f''(''a''<sub>5</sub>)) = (&minus;3.35724, &minus;6.78239) and (''b''<sub>5</sub>, ''f''(''b''<sub>5</sub>)) = (&minus;2.71449, 3.93934). The result is ''s'' = &minus;2.95064, which satisfies all the conditions. But since the iterate did not change in the previous step, we reject this result and fall back to bisection. We update ''s'' = &minus;3.03587, and ''f''(''s'') = &minus;0.58418.
+# In the seventh iteration, we can again use inverse quadratic interpolation. The result is ''s'' = &minus;3.00219, which satisfies all the conditions. Now, ''f''(''s'') = &minus;0.03515, so we set ''a''<sub>7</sub> = ''b''<sub>6</sub> and ''b''<sub>7</sub> = &minus;3.00219 (''a''<sub>7</sub> and ''b''<sub>7</sub> are exchanged so that the condition |''f''(''b''<sub>7</sub>)| ≤ |''f''(''a''<sub>7</sub>)| is satisfied). (''Correct'' : linear interpolation {{tmath|1=s = -2.99436, f(s) = 0.089961}})
+# In the eighth iteration, we cannot use inverse quadratic interpolation because ''a''<sub>7</sub> = ''b''<sub>6</sub>. Linear interpolation yields ''s'' = &minus;2.99994, which is accepted. (''Correct'' : {{tmath|1=s = -2.9999, f(s) = 0.0016}})
+# In the following iterations, the root ''x'' = &minus;3 is approached rapidly: ''b''<sub>9</sub> = &minus;3 + 6·10<sup>&minus;8</sup> and ''b''<sub>10</sub> = &minus;3 &minus; 3·10<sup>&minus;15</sup>. (''Correct'' : Iter 9 : {{math|1=''f''(''s'') = −1.4 × 10<sup>−7</sup>}}, Iter 10 : {{math|1=''f''(''s'') = 6.96 × 10<sup>−12</sup>}})
+
+==Implementations==
+
+* {{Harvtxt|Brent|1973}} published an [[Algol 60]] implementation. 
+* [[Netlib]] contains a [[Fortran]] translation of this implementation with slight modifications. 
+* The [[PARI/GP]] method {{code|solve}} implements the method. 
+* Other implementations of the algorithm (in C++, C, and Fortran) can be found in the [[Numerical Recipes]] books. 
+* The [[Apache Commons]] Math library implements the algorithm in [[Java (programming language)|Java]].
+* The [[SciPy]] optimize module implements the algorithm in [[Python (programming language)]]
+* The Modelica Standard Library implements the algorithm in [[Modelica]].
+* The {{code|uniroot}} function implements the algorithm in [[R (software)]].
+* The {{code|fzero}} function implements the algorithm in [[MATLAB]].
+* The [[Boost (C++ libraries)]] implements two algorithms based on Brent's method in [[C++]] in the Math toolkit:
+*# Function minimization at [https://www.boost.org/doc/libs/release/boost/math/tools/minima.hpp minima.hpp] with an example [https://www.boost.org/doc/libs/release/libs/math/doc/html/math_toolkit/brent_minima.html locating function minima].
+*# Root finding implements the newer TOMS748, a more modern and efficient algorithm than Brent's original, at [https://www.boost.org/doc/libs/release/boost/math/tools/toms748_solve.hpp TOMS748], and [https://www.boost.org/doc/libs/release/libs/math/doc/html/root_finding.html Boost.Math rooting finding] that [https://www.boost.org/doc/libs/release/libs/math/doc/html/math_toolkit/roots_noderiv/bracket_solve.html uses TOMS748 internally] with [https://www.boost.org/doc/libs/release/libs/math/example/root_finding_example.cpp examples].
+* The [https://github.com/JuliaNLSolvers/Optim.jl Optim.jl] package implements the algorithm in [[Julia (programming language)]]
+* The [https://github.com/mentat-collective/emmy Emmy] [[computer algebra system]] (written in [[Clojure (programming language)]]) implements a variant of the algorithm designed for univariate function minimization.
+* [https://www.codeproject.com/Articles/79541/Three-Methods-for-Root-finding-in-C Root-Finding in C#] library hosted in [[Code Project]].
+
+==References==
+{{Reflist}}
+
+*{{Citation |first=R. P. |last=Brent |authorlink=Richard Brent (scientist) |year=1973 |title=Algorithms for Minimization without Derivatives |chapter=Chapter 4: An Algorithm with Guaranteed Convergence for Finding a Zero of a Function|publisher=Prentice-Hall |location=Englewood Cliffs, NJ |isbn=0-13-022335-2}}
+*{{Citation |first=T. J. |last=Dekker |authorlink=Theodorus Dekker|year=1969 |contribution=Finding a zero by means of successive linear interpolation |editor1-first=B. |editor1-last=Dejon |editor2-first=P. |editor2-last=Henrici |title=Constructive Aspects of the Fundamental Theorem of Algebra |publisher=Wiley-Interscience |location=London |isbn=978-0-471-20300-1}}
+
+==Further reading==
+*{{Cite book |last=Atkinson |first=Kendall E. |year=1989 |title=An Introduction to Numerical Analysis |edition=2nd |chapter=Section 2.8. |publisher=John Wiley and Sons |isbn=0-471-50023-2}}
+*{{Cite book |last1=Press |first1=W. H. |last2=Teukolsky |first2=S. A. |last3=Vetterling |first3=W. T. |last4=Flannery |first4=B. P. |year=2007 |title=Numerical Recipes: The Art of Scientific Computing |edition=3rd |publisher=Cambridge University Press |location=New York |isbn=978-0-521-88068-8 |chapter=Section 9.3. Van Wijngaarden–Dekker–Brent Method |chapter-url=http://apps.nrbook.com/empanel/index.html#pg=454 |access-date=2012-02-28 |archive-date=2011-08-11 |archive-url=https://web.archive.org/web/20110811154417/http://apps.nrbook.com/empanel/index.html#pg=454 |url-status=dead }}
+* {{Cite journal |first1=G. E. |last1=Alefeld |first2=F. A. |last2=Potra |first3=Yixun |last3=Shi |title=Algorithm 748: Enclosing Zeros of Continuous Functions |journal=ACM Transactions on Mathematical Software |volume=21 |issue=3 |date=September 1995 |pages=327–344 |doi=10.1145/210089.210111|s2cid=207192624 |doi-access=free }}
+
+==External links==
+* [http://www.netlib.org/go/zeroin.f zeroin.f] at [[Netlib]].
+* [http://people.sc.fsu.edu/~jburkardt/cpp_src/brent/brent.html module brent in C++ (also C, Fortran, Matlab)] {{Webarchive|url=https://web.archive.org/web/20180405205252/http://people.sc.fsu.edu/~jburkardt/cpp_src/brent/brent.html |date=2018-04-05 }} by John Burkardt 
+* [https://www.gnu.org/software/gsl/doc/html/roots.html#c.gsl_root_fsolver_brent GSL] implementation.
+* [https://www.boost.org/doc/libs/1_67_0/libs/math/doc/html/root_finding.html Boost C++] implementation.
+* [https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.brentq.html#scipy.optimize.brentq Python (Scipy)] implementation
+
+{{Root-finding algorithms}}
+
+[[Category:Root-finding algorithms]]

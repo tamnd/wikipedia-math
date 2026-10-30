@@ -1,0 +1,193 @@
+<!-- wikipedia: en
+     page: 342855
+     title: Dynamic time warping
+     revision: 1329173867
+     timestamp: 2025-12-24T05:21:08Z
+     history: https://en.wikipedia.org/w/index.php?curid=342855&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1329173867 -->
+{{Short description|Algorithm for measuring similarity between temporal sequences}}
+[[File:Dynamic time warping.png|thumb|300px|Dynamic time warping between two piecewise linear functions. The dotted line illustrates the time-warp relation. Notice that several points in the lower function are mapped to one point in the upper function, and ''vice versa''.]]
+[[File:Two repetitions of a walking sequence of an individual recorded using a motion-capture system.gif|thumb|300px|Two repetitions of a walking sequence recorded using a motion-capture system. While there are differences in walking speed between repetitions, the spatial paths of limbs remain highly similar.<ref name="olsen_et_al_2018">{{Citation |last1=Olsen | first1=NL |last2=Markussen |first2=B | last3=Raket | first3=LL| year=2018 |title=Simultaneous inference for misaligned multivariate functional data |journal= Journal of the Royal Statistical Society, Series C |volume=67 |issue=5 |pages=1147–76 |doi=10.1111/rssc.12276|arxiv=1606.03295 | s2cid=88515233 }}</ref>]]
+[[File:DTW illustration.png|thumb|DTW between a sinusoid and a noisy and shifted version of it.]]
+In [[time series analysis]], '''dynamic time warping''' ('''DTW''') is an [[algorithm]] for measuring similarity between two temporal sequences, which may vary in speed.  For instance, similarities in walking could be detected using DTW, even if one person was walking faster than the other, or if there were [[acceleration]]s and decelerations during the course of an observation. DTW has been applied to temporal sequences of video, audio, and graphics data — indeed, any data that can be turned into a one-dimensional sequence can be analyzed with DTW. A well-known application has been automatic [[speech recognition]], to cope with different speaking speeds. Other applications include [[speaker recognition]] and online [[signature recognition]]. It can also be used in partial [[Shape analysis (digital geometry)|shape matching]] applications.
+
+In general, DTW is a method that calculates an [[Optimal matching|optimal match]] between two given sequences (e.g. [[time series]]) with certain restriction and rules:
+* Every index from the first sequence must be matched with one or more indices from the other sequence, and vice versa
+* The first index from the first sequence must be matched with the first index from the other sequence (but it does not have to be its only match)
+* The last index from the first sequence must be matched with the last index from the other sequence (but it does not have to be its only match)
+* The mapping of the indices from the first sequence to indices from the other sequence must be monotonically increasing, and vice versa, i.e. if <math>j > i</math> are indices from the first sequence, then there must not be two indices <math>l > k</math> in the other sequence, such that index <math>i</math> is matched with index <math>l</math> and index <math>j</math> is matched with index <math>k</math>, and vice versa
+We can plot each match between the sequences <math>1:M</math> and <math>1:N</math> as a path in a <math>M\times N</math> matrix from <math>(1, 1)</math> to <math>(M, N)</math>, such that each step is one of <math>(0, 1), (1, 0), (1, 1)</math>. In this formulation, we see that the number of possible matches is the [[Delannoy number]].
+
+The [[Optimal matching|optimal match]] is denoted by the match that satisfies all the restrictions and the rules and that has the minimal cost, where the cost is computed as the [[sum of absolute differences]], for each matched pair of indices, between their values.
+
+The sequences are "warped" [[non-linear]]ly in the time dimension to determine a measure of their similarity independent of certain non-linear variations in the time dimension. This [[sequence alignment]] method is often used in time series classification. Although DTW measures a distance-like quantity between two given sequences, it doesn't guarantee the [[triangle inequality]] to hold.
+
+In addition to a [[similarity measure]] between the two sequences (a so called "warping path" is produced), by warping according to this path the two signals may be aligned in time. The signal with an original set of points ''X''(original), ''Y''(original) is transformed to ''X''(warped), ''Y''(warped). This finds applications in genetic sequence and audio synchronisation. In a related technique sequences of varying speed may be averaged using this technique see the [[#Average sequence|average sequence]] section.
+
+This is conceptually very similar to the [[Needleman–Wunsch algorithm]].
+
+== Implementation ==
+
+This example illustrates the implementation of the dynamic time warping algorithm when the two sequences <var>s</var> and <var>t</var> are strings of discrete symbols. For two symbols <var>x</var> and <var>y</var>, <math>d(x, y)</math> is a distance between the symbols, e.g., <math>d(x, y)= | x - y |</math>.
+
+ int DTWDistance(s: array [1..n], t: array [1..m]) {
+     DTW := array [0..n, 0..m]
+     
+     for i := 0 to n
+         for j := 0 to m
+             DTW[i, j] := infinity
+     DTW[0, 0] := 0
+     
+     for i := 1 to n
+         for j := 1 to m
+             cost := d(s[i], t[j])
+             DTW[i, j] := cost + minimum(DTW[i-1, j  ],    // insertion
+                                         DTW[i  , j-1],    // deletion
+                                         DTW[i-1, j-1])    // match
+     
+     return DTW[n, m]
+ }
+
+where <code>DTW[i, j]</code> is the distance between <code>s[1:i]</code> and <code>t[1:j]</code> with the best alignment.
+
+We sometimes want to add a locality constraint. That is, we require that if <code>s[i]</code> is matched with <code>t[j]</code>, then <math>| i - j |</math> is no larger than <var>w</var>, a window parameter.
+
+We can easily modify the above algorithm to add a locality constraint (differences <mark>marked</mark>).
+However, the above given modification works only if <math>| n - m |</math> is no larger than <var>w</var>, i.e. the end point is within the window length from diagonal. In order to make the algorithm work, the window parameter <var>w</var> must be adapted so that <math>| n - m | \le w</math> (see the line marked with (*) in the code).
+
+ int DTWDistance(s: array [1..n], t: array [1..m]<mark>, w: int</mark>) {
+     DTW := array [0..n, 0..m]
+ 
+     <mark>w := max(w, abs(n-m))</mark> // adapt window size (*)
+ 
+     for i := 0 to n
+         for j:= 0 to m
+             DTW[i, j] := infinity
+     DTW[0, 0] := 0
+     <mark>for i := 1 to n</mark>
+         <mark>for j := max(1, i-w) to min(m, i+w)</mark>
+             <mark>DTW[i, j] := 0</mark>
+ 
+     for i := 1 to n
+         for j := <mark>max(1, i-w) to min(m, i+w)</mark>
+             cost := d(s[i], t[j])
+             DTW[i, j] := cost + minimum(DTW[i-1, j  ],    // insertion
+                                         DTW[i  , j-1],    // deletion
+                                         DTW[i-1, j-1])    // match
+     return DTW[n, m]
+ }
+
+==Warping properties==
+The DTW algorithm produces a discrete matching between existing elements of one series to another. In other words, it does not allow time-scaling of segments within the sequence. Other methods allow continuous warping. For example, Correlation Optimized Warping (COW) divides the sequence into uniform segments that are scaled in time using linear interpolation, to produce the best matching warping. The segment scaling causes potential creation of new elements, by time-scaling segments either down or up, and thus produces a more sensitive warping than DTW's discrete matching of raw elements.
+
+==Complexity==
+The [[time complexity]] of the DTW algorithm is <math>O(NM)</math>, where <math>N</math> and <math>M</math> are the lengths of the two input sequences. The 50 years old quadratic time bound was broken in 2016: an algorithm due to Gold and Sharir enables computing DTW in <math>O({N^2}/\log \log N)</math> time and space for two input sequences of length <math>N</math>.<ref>
+{{cite journal |last1=Gold |first1=Omer |last2=Sharir |first2=Micha |title=Dynamic Time Warping and Geometric Edit Distance: Breaking the Quadratic Barrier |journal=ACM Transactions on Algorithms|date=2018 |volume=14 |issue=4 |doi=10.1145/3230734 |s2cid=52070903 }}</ref> 
+This algorithm can also be adapted to sequences of different lengths. Despite this improvement, it was shown that a strongly subquadratic running time of the form <math>O(N^{2-\epsilon})</math> for some <math>\epsilon > 0</math> cannot exist unless the [[Strong exponential time hypothesis]] fails.<ref>{{Cite book|chapter-url=https://doi.org/10.1109/FOCS.2015.15|doi=10.1109/FOCS.2015.15|chapter=Quadratic Conditional Lower Bounds for String Problems and Dynamic Time Warping|title=2015 IEEE 56th Annual Symposium on Foundations of Computer Science|year=2015|last1=Bringmann|first1=Karl|last2=Künnemann|first2=Marvin|pages=79–97|arxiv=1502.01063|isbn=978-1-4673-8191-8|s2cid=1308171}}</ref><ref>{{Cite book|chapter-url=https://doi.org/10.1109/FOCS.2015.14|doi=10.1109/FOCS.2015.14|chapter=Tight Hardness Results for LCS and Other Sequence Similarity Measures|title=2015 IEEE 56th Annual Symposium on Foundations of Computer Science|year=2015|last1=Abboud|first1=Amir|last2=Backurs|first2=Arturs|last3=Williams|first3=Virginia Vassilevska|pages=59–78|isbn=978-1-4673-8191-8|s2cid=16094517}}</ref>
+
+While the dynamic programming algorithm for DTW requires <math>O(NM)</math> space in a naive implementation, the space consumption can be reduced to <math>O(\min(N,M))</math> using [[Hirschberg's algorithm]].
+
+==Fast computation==
+
+Fast techniques for computing DTW include PrunedDTW,<ref>Silva, D. F., Batista, G. E. A. P. A. (2015). [http://sites.labic.icmc.usp.br/dfs/pdf/SDM_PrunedDTW.pdf Speeding Up All-Pairwise Dynamic Time Warping Matrix Calculation].</ref> SparseDTW,<ref>	
+Al-Naymat, G., Chawla, S., Taheri, J. (2012). [https://arxiv.org/abs/1201.2969 SparseDTW: A Novel Approach to Speed up Dynamic Time Warping].</ref> FastDTW,<ref>Stan Salvador, Philip Chan, FastDTW: Toward Accurate Dynamic Time Warping in Linear Time and Space. KDD Workshop on Mining Temporal and Sequential Data, pp. 70–80, 2004.</ref> and the MultiscaleDTW.<ref>Meinard Müller, Henning Mattes, and Frank Kurth (2006). [https://www.audiolabs-erlangen.de/fau/professor/mueller/publications/2006_MuellerMattesKurth_MultiscaleAudioSynchronization_ISMIR.pdf An Efficient Multiscale Approach to Audio Synchronization]. Proceedings of the International Conference on Music Information Retrieval (ISMIR), pp. 192—197.</ref><ref>Thomas Prätzlich, Jonathan Driedger, and Meinard Müller (2016). Memory-Restricted Multiscale Dynamic Time Warping. Proceedings of the IEEE International Conference on Acoustics, Speech, and Signal Processing (ICASSP), pp. 569—573.</ref>
+
+A common task, retrieval of similar time series, can be accelerated by using lower bounds such as LB_Keogh,<ref>{{cite journal | last1 = Keogh | first1 = E. | last2 = Ratanamahatana | first2 = C. A. | year = 2005 | title = Exact indexing of dynamic time warping | journal = Knowledge and Information Systems | volume = 7 | issue = 3| pages = 358–386 | doi=10.1007/s10115-004-0154-9| s2cid = 207056701 }}</ref> LB_Improved,<ref>{{cite journal | last1 = Lemire | first1 = D. | year = 2009 | title = Faster Retrieval with a Two-Pass Dynamic-Time-Warping Lower Bound | arxiv = 0811.3301| journal = Pattern Recognition | volume = 42 | issue = 9| pages = 2169–2180 | doi=10.1016/j.patcog.2008.11.030| bibcode = 2009PatRe..42.2169L | s2cid = 8658213 }}</ref> or LB_Petitjean.<ref name="TightLB">{{cite journal |last1=Webb |first1=Geoffrey I. |last2=Petitjean |first2=Francois |title=Tight lower bounds for Dynamic Time Warping |journal=Pattern Recognition |date=2021 |volume=115 |article-number=107895 |doi=10.1016/j.patcog.2021.107895 |arxiv=2102.07076 |bibcode=2021PatRe.11507895W |s2cid=231925247 }}</ref> However, the Early Abandon and Pruned DTW algorithm reduces the degree of acceleration that lower bounding provides and sometimes renders it ineffective.
+
+In a survey, Wang et al. reported slightly better results with the LB_Improved lower bound than the LB_Keogh bound, and found that other techniques were inefficient.<ref>{{cite journal | last1 = Wang | first1 = Xiaoyue | display-authors = etal   | year = 2010| title = Experimental comparison of representation methods and distance measures for time series data | journal = Data Mining and Knowledge Discovery | volume = 2010 | pages = 1–35 | arxiv = 1012.2789 }}</ref> Subsequent to this survey, the LB_Enhanced bound was developed that is always tighter than LB_Keogh while also being more efficient to compute.<ref name="LBEnhanced">{{cite book |last1=Tan |first1=Chang Wei |last2=Petitjean |first2=Francois |last3=Webb |first3=Geoffrey I. |chapter=Elastic bands across the path: A new framework and method to lower bound DTW |title=Proceedings of the 2019 SIAM International Conference on Data Mining |date=2019 |pages=522–530 |doi=10.1137/1.9781611975673.59 |arxiv=1808.09617 |isbn=978-1-61197-567-3 |s2cid=52120426 }}</ref>  LB_Petitjean is the tightest known lower bound that can be computed in linear time.<ref name="TightLB" />
+
+== Average sequence ==
+Averaging for dynamic time warping is the problem of finding an average sequence for a set of sequences. 
+NLAAF<ref>{{Cite journal | last1 = Gupta | first1 = L. | last2 = Molfese | first2 = D. L. | last3 = Tammana | first3 = R. | last4 = Simos | first4 = P. G. | title = Nonlinear alignment and averaging for estimating the evoked potential | doi = 10.1109/10.486255 | journal = IEEE Transactions on Biomedical Engineering | volume = 43 | issue = 4 | pages = 348–356 | year = 1996 | pmid =  8626184| s2cid = 28688330 }}</ref> is an exact method to average two sequences using DTW.
+For more than two sequences, the problem is related to that of [[multiple alignment]] and requires heuristics.
+DBA<ref name="DBA">{{Cite journal | last1 = Petitjean | first1 = F. O. | last2 = Ketterlin | first2 = A. | last3 = Gançarski | first3 = P. | doi = 10.1016/j.patcog.2010.09.013 | title = A global averaging method for dynamic time warping, with applications to clustering | journal = Pattern Recognition | volume = 44 | issue = 3 | page = 678 | year = 2011 | bibcode = 2011PatRe..44..678P }}</ref> is currently a reference method to average a set of sequences consistently with DTW.
+COMASA<ref>{{Cite journal | last1 = Petitjean | first1 = F. O. | last2 = Gançarski | first2 = P. | doi = 10.1016/j.tcs.2011.09.029 | title = Summarizing a set of time series by averaging: From Steiner sequence to compact multiple alignment | journal = Theoretical Computer Science | volume = 414 | pages = 76–91 | year = 2012 | doi-access = free }}</ref> efficiently randomizes the search for the average sequence, using DBA as a local optimization process.
+
+== Supervised learning ==
+
+A [[k-nearest neighbors algorithm|nearest-neighbour classifier]] can achieve state-of-the-art performance when using dynamic time warping as a distance measure.<ref>{{cite journal | last1 = Ding | first1 = Hui | last2 = Trajcevski | first2 = Goce | last3 = Scheuermann | first3 = Peter | last4 = Wang | first4 = Xiaoyue | last5 = Keogh | first5 = Eamonn | year = 2008 | title = Querying and mining of time series data: experimental comparison of representations and distance measures | journal = Proc. VLDB Endow. | volume = 1 | issue = 2| pages = 1542–1552 | doi = 10.14778/1454159.1454226 | doi-access = free }}</ref>
+
+== Amerced Dynamic Time Warping ==
+
+Amerced Dynamic Time Warping (ADTW) is a variant of DTW designed to better control DTW's permissiveness in the alignments that it allows.<ref name="ADTWPatRec">{{Cite journal|title = Amercing: An intuitive and effective constraint for dynamic time warping|last1 = Herrmann|first1 = Matthieu|last2 = Webb|first2 = Geoffrey I.|journal = Pattern Recognition|volume = 137|year = 2023| article-number=109333 |doi=10.1016/j.patcog.2023.109333| bibcode=2023PatRe.13709333H | s2cid=256182457 |doi-access = free}}</ref> The windows that classical DTW uses to constrain alignments introduce a [[step function]]. Any warping of the path is allowed within the window and none beyond it. In contrast, ADTW employs an additive penalty that is incurred each time that the path is warped. Any amount of warping is allowed, but each warping action incurs a direct penalty. ADTW significantly outperforms DTW with windowing when applied as a nearest neighbor classifier on a set of benchmark time series classification tasks.<ref name="ADTWPatRec"/>
+
+== Alternative approaches ==
+
+In [[functional data analysis]], time series are regarded as discretizations of smooth (differentiable) functions of time. By viewing the observed samples at smooth functions, one can utilize continuous mathematics for analyzing data.<ref>{{Cite journal|title = On the Registration of Time and the Patterning of Speech Movements|last1 = Lucero|first1 = J. C.|last2 = Munhall|first2 = K. G.|last3 = Gracco|first3 = V. G.|last4 = Ramsay|first4 = J. O.|journal = Journal of Speech, Language, and Hearing Research|volume = 40|issue = 5|pages = 1111–1117|year = 1997|doi=10.1044/jslhr.4005.1111|pmid = 9328881}}</ref> Smoothness and monotonicity of time warp functions may be obtained for instance by integrating a time-varying [[radial basis function]], thus being a one-dimensional [[diffeomorphism]].<ref>{{cite journal |last1=Durrleman |first1=S |last2= Pennec |first2=X.|last3=Trouvé|first3=A.|last4=Braga|first4=J.|last5=Gerig|first5=G.|last6=Ayache|first6=N.|name-list-style=amp |date=2013 |title=Toward a Comprehensive Framework for the Spatiotemporal Statistical Analysis of Longitudinal Shape Data|url=https://hal.inria.fr/hal-00813825/document |journal=International Journal of Computer Vision |volume=103|issue=1 |pages=22–59 |doi=10.1007/s11263-012-0592-x|pmid=23956495 |pmc=3744347}}</ref> Optimal nonlinear time warping functions are computed by minimizing a measure of distance of the set of functions to their warped average. Roughness penalty terms for the warping functions may be added, e.g., by constraining the size of their curvature. The resultant warping functions are smooth, which facilitates further processing. This approach has been successfully applied to analyze patterns and variability of speech movements.<ref>{{Cite book|title = Speech Motor Control: New Developments in Basic and Applied Research|last1 = Howell|first1 = P.|publisher = Oxford University Press|year = 2010|isbn = 978-0-19-923579-7|pages = 215–225|last2 = Anderson|first2 = A.|last3 = Lucero|first3 = J. C.|chapter = Speech motor timing and fluency|editor-last = Maassen|editor-first = B.|editor-last2 = van Lieshout|editor-first2 = P.}}</ref><ref>{{Cite journal|title = Speech production variability in fricatives of children and adults: Results of functional data analysis|journal = The Journal of the Acoustical Society of America|date = 2008|issn = 0001-4966|pmc = 2677351|pmid = 19045800|pages = 3158–3170|volume = 124|issue = 5|doi = 10.1121/1.2981639|first1 = Laura L.|last1 = Koenig|first2 = Jorge C.|last2 = Lucero|first3 = Elizabeth|last3 = Perlman|bibcode = 2008ASAJ..124.3158K}}</ref>
+
+Another related approach are [[hidden Markov model]]s (HMM) and it has been shown that the [[Viterbi algorithm]] used to search for the most likely path through the HMM is equivalent to stochastic DTW.<ref>{{Cite journal|last1=Nakagawa|first1=Seiichi|last2=Nakanishi|first2=Hirobumi|date=1988-01-01|title=Speaker-Independent English Consonant and Japanese Word Recognition by a Stochastic Dynamic Time Warping Method|journal=IETE Journal of Research|volume=34|issue=1|pages=87–95|doi=10.1080/03772063.1988.11436710|issn=0377-2063}}</ref><ref>{{Cite web|url=http://eecs.ceas.uc.edu/~fangcg/course/FromDTWtoHMM_ChunshengFang.pdf|title=From Dynamic Time Warping (DTW) to Hidden Markov Model (HMM)|last=Fang|first=Chunsheng}}</ref><ref>{{Cite journal|last=Juang|first=B. H.|date=September 1984|title=On the hidden Markov model and dynamic time warping for speech recognition #x2014; A unified view|journal=AT&T Bell Laboratories Technical Journal|volume=63|issue=7|pages=1213–1243|doi=10.1002/j.1538-7305.1984.tb00034.x|s2cid=8461145|issn=0748-612X}}</ref>
+
+DTW and related warping methods are typically used as pre- or post-processing steps in data analyses. If the observed sequences contain both random variation in both their values, shape of observed sequences and random temporal misalignment, the warping may overfit to noise leading to biased results. A simultaneous model formulation with random variation in both values (vertical) and time-parametrization (horizontal) is an example of a [[nonlinear mixed-effects model]].<ref name="Raket_et_al_2014">{{cite journal |vauthors=Raket LL, Sommer S, Markussen B |year=2014 |title=A nonlinear mixed-effects model for simultaneous smoothing and registration of functional data |journal=Pattern Recognition Letters |volume=38|pages=1–7 |doi=10.1016/j.patrec.2013.10.018|bibcode=2014PaReL..38....1R }}</ref> In human movement analysis, simultaneous nonlinear mixed-effects modeling has been shown to produce superior results compared to DTW.<ref name="Raket_et_al_2016">{{cite journal |vauthors=Raket LL, Grimme B, Schöner G, Igel C, Markussen B |year=2016 |title=Separating timing, movement conditions and individual differences in the analysis of human movement |journal=PLOS Computational Biology |volume=12|issue=9|article-number=e1005092 |doi=10.1371/journal.pcbi.1005092|pmid=27657545 |pmc=5033575 |bibcode=2016PLSCB..12E5092R |doi-access=free |arxiv=1601.02775 }}</ref>
+
+==Open-source software==
+
+* The [https://github.com/MonashTS/tempo tempo] C++ library with Python bindings implements Early Abandoned and Pruned DTW as well as Early Abandoned and Pruned ADTW and DTW lower bounds LB_Keogh, LB_Enhanced and LB_Webb.
+* The [https://github.com/ChangWeiTan/UltraFastWWS UltraFastMPSearch] Java library implements the UltraFastWWSearch algorithm<ref>{{cite book |last1=Tan |first1=Chang Wei |last2=Herrmann |first2=Matthieu |last3=Webb |first3=Geoffrey I. |chapter=Ultra fast warping window optimization for Dynamic Time Warping |title=2021 IEEE International Conference on Data Mining (ICDM) |date=2021 |pages=589–598 |doi=10.1109/ICDM51629.2021.00070 |isbn=978-1-6654-2398-4 |s2cid=246291550 |chapter-url=https://changweitan.com/research/UltraFastWWSearch.pdf}}</ref> for fast warping window tuning.
+* The [https://github.com/lemire/lbimproved lbimproved] C++ library implements Fast Nearest-Neighbor Retrieval algorithms under the [[GNU General Public License]] (GPL). It also provides a C++ implementation of dynamic time warping, as well as various lower bounds.
+* The [https://github.com/rmaestre/FastDTW FastDTW] library is a Java implementation of DTW and a FastDTW implementation that provides optimal or near-optimal alignments with an ''O''(''N'') time and memory complexity, in contrast to the ''O''(''N''<sup>2</sup>) requirement for the standard DTW algorithm. FastDTW uses a multilevel approach that recursively projects a solution from a coarser resolution and refines the projected solution.
+* [https://mvnrepository.com/artifact/com.github.davidmoten/fastdtw FastDTW fork] (Java) published to Maven Central.
+* [https://github.com/cesarsotovalero/time-series-classification time-series-classification] (Java) a package for time series classification using DTW in Weka.
+* The [https://dynamictimewarping.github.io/ DTW suite] provides Python ([https://pypi.org/project/dtw-python/ dtw-python]) and R packages ([https://cran.r-project.org/package=dtw dtw]) with a comprehensive coverage of the DTW algorithm family members, including a variety of recursion rules (also called step patterns), constraints, and substring matching.
+* The [[mlpy]] Python library implements DTW.
+* The [https://pypi.python.org/pypi/pydtw pydtw] Python library implements the Manhattan and Euclidean flavoured DTW measures including the LB_Keogh lower bounds.
+* The [https://gravitino.github.io/cudadtw/ cudadtw] C++/CUDA library implements subsequence alignment of Euclidean-flavoured DTW and ''z''-normalized [[Euclidean distance]] similar to the popular UCR-Suite on CUDA-enabled accelerators.
+* The [https://java-ml.sourceforge.net/ JavaML] [[machine learning]] library implements [https://sourceforge.net/p/java-ml/java-ml-code/ci/9f6726deab4e55b7617478bc51e29c20308bffb9/tree/net/sf/javaml/distance/dtw/FastDTW.java DTW].
+* The [https://github.com/doblak/ndtw ndtw] C# library implements DTW with various options.
+* [https://github.com/kirel/sketch-a-char Sketch-a-Char] uses Greedy DTW (implemented in [[JavaScript]]) as part of LaTeX symbol classifier program.
+* The [https://github.com/hfink/matchbox MatchBox] implements DTW to match mel-frequency cepstral coefficients of audio signals.
+* [https://github.com/fpetitjean/DBA Sequence averaging]: a GPL Java implementation of DBA.<ref name="DBA"/>
+* The [https://github.com/nickgillian/grt/wiki Gesture Recognition Toolkit|GRT] C++ real-time gesture-recognition toolkit implements DTW.
+* The [http://biointelligence.hu/pyhubs/ PyHubs] software package implements DTW and nearest-neighbour classifiers, as well as their extensions (hubness-aware classifiers).
+* The [https://github.com/talcs/simpledtw simpledtw] Python library implements the classic ''O''(''NM'') Dynamic Programming algorithm and bases on [[NumPy|Numpy]]. It supports values of any dimension, as well as using custom norm functions for the distances. It is licensed under the [[MIT License|MIT license]].
+* The [https://tslearn.readthedocs.io/en/latest/# tslearn] Python library implements DTW in the time-series context.
+*The [https://github.com/garrettwrong/cuTWED cuTWED] [[CUDA]] Python library implements a state of the art improved [[Time Warp Edit Distance]] using only linear memory with phenomenal speedups.
+* [https://github.com/baggepinnen/DynamicAxisWarping.jl DynamicAxisWarping.jl] Is a Julia implementation of DTW and related algorithms such as FastDTW, SoftDTW, GeneralDTW and DTW barycenters.
+* The [https://github.com/kaen2891/Multi_DTW/ Multi_DTW] implements DTW to match two 1-D arrays or 2-D speech files (2-D array).
+* The [https://pypi.org/project/dtwParallel/ dtwParallel] (Python) package incorporates the main functionalities available in current DTW libraries and novel functionalities such as parallelization, computation of similarity (kernel-based) values, and consideration of data with different types of features (categorical, real-valued, etc.).<ref>{{cite journal |last1=Escudero-Arnanz |first1=Óscar |last2=Marques |first2=Antonio G |last3=Soguero-Ruiz |first3=Cristina |last4=Mora-Jiménez |first4=Inmaculada |last5=Robles |first5=Gregorio |date=2023 |title=dtwParallel: A Python package to efficiently compute dynamic time warping between time series |url=https://www.sciencedirect.com/science/article/pii/S2352711023000602 |journal=SoftwareX |volume=22 |issue=101364 |doi=10.1016/J.SOFTX.2023.101364 |bibcode=2023SoftX..2201364E |access-date=2024-12-06|hdl=10115/24752 |hdl-access=free }}</ref>
+
+==Applications==
+
+===Spoken-word recognition===
+Due to different speaking rates, a non-linear fluctuation occurs in speech pattern versus time axis, which needs to be eliminated.<ref  name="Sakoe78">{{cite journal|last1=Sakoe|first1=Hiroaki|last2=Chiba|first2=Seibi|title=Dynamic programming algorithm optimization for spoken word recognition|journal=IEEE Transactions on Acoustics, Speech, and Signal Processing|volume=26|issue=1|pages=43–49|doi=10.1109/tassp.1978.1163055|year=1978|s2cid=17900407 }}</ref> DP matching is a pattern-matching algorithm based on [[Dynamic programming|dynamic programming (DP)]], which uses a time-normalization effect, where the fluctuations in the time axis are modeled using a non-linear time-warping function. Considering any two speech patterns, we can get rid of their timing differences by warping the time axis of one so that the maximal coincidence is attained with the other. Moreover, if the warping function is allowed to take any possible value, {{clarify span|very less|date=October 2017}} distinction can be made between words belonging to different categories. So, to enhance the distinction between words belonging to different categories, restrictions were imposed on the warping function slope.
+
+===Correlation power analysis===
+Unstable clocks are used to defeat naive [[power analysis]]. Several techniques are used to counter this defense, one of which is dynamic time warping.
+
+=== Finance and econometrics ===
+Dynamic time warping is used in finance and [[econometrics]] to assess the quality of the prediction versus real-world data.<ref>{{Cite journal |last1=Orlando |first1=Giuseppe |last2=Bufalo |first2=Michele |last3=Stoop |first3=Ruedi |date=2022-02-01 |title=Financial markets' deterministic aspects modeled by a low-dimensional equation |journal=Scientific Reports |language=en |volume=12 |issue=1 |page=1693 |doi=10.1038/s41598-022-05765-z |pmid=35105929 |pmc=8807815 |issn=2045-2322|doi-access=free |bibcode=2022NatSR..12.1693O }}</ref><ref>{{Cite journal |last1=Mastroeni |first1=Loretta |last2=Mazzoccoli |first2=Alessandro |last3=Quaresima |first3=Greta |last4=Vellucci |first4=Pierluigi |date=2021-02-01 |title=Decoupling and recoupling in the crude oil price benchmarks: An investigation of similarity patterns |url=https://www.sciencedirect.com/science/article/pii/S0140988320303765 |journal=Energy Economics |language=en |volume=94 |article-number=105036 |doi=10.1016/j.eneco.2020.105036 |bibcode=2021EneEc..9405036M |s2cid=230536868 |issn=0140-9883|url-access=subscription }}</ref><ref>{{Cite journal |last1=Orlando |first1=Giuseppe |last2=Bufalo |first2=Michele |date=2021-12-10 |title=Modelling bursts and chaos regularization in credit risk with a deterministic nonlinear model |url=https://www.sciencedirect.com/science/article/pii/S1544612321004888 |journal=Finance Research Letters |volume=47 |language=en |article-number=102599 |doi=10.1016/j.frl.2021.102599 |issn=1544-6123|url-access=subscription }}</ref>
+
+==See also==
+* [[Levenshtein distance]]
+* [[Elastic matching]]
+* [[Sequence alignment]]
+* [[Multiple sequence alignment]]
+* [[Wagner–Fischer algorithm]]
+* [[Needleman–Wunsch algorithm]]
+* [[Fréchet distance]]
+* [[Nonlinear mixed-effects model]]
+
+==References==
+{{Reflist}}
+
+==Further reading==
+* Pavel Senin, [https://csdl.ics.hawaii.edu/techreports/2008/08-04/08-04.pdf Dynamic Time Warping Algorithm Review]
+* {{cite journal | last1 = Vintsyuk | first1 = T. K. | year = 1968 | title = Speech discrimination by dynamic programming | journal = Kibernetika | volume = 4 | pages = 81–88 }}
+* {{cite journal | last1 = Sakoe | first1 = H. | last2 = Chiba | year = 1978 | title = Dynamic programming algorithm optimization for spoken word recognition | journal = IEEE Transactions on Acoustics, Speech, and Signal Processing | volume = 26 | issue = 1| pages = 43–49 | doi=10.1109/tassp.1978.1163055| s2cid = 17900407 }}
+* {{cite journal|last1=Myers|first1=C. S.|last2=Rabiner|first2=L. R.|title=A Comparative Study of Several Dynamic Time-Warping Algorithms for Connected-Word Recognition|journal=Bell System Technical Journal|volume=60|issue=7|year=1981|pages=1389–1409|issn=0005-8580|doi=10.1002/j.1538-7305.1981.tb00272.x|s2cid=12857347}}
+* {{cite book | last1=Rabiner | first1=Lawrence | last2=Juang | first2=Biing-Hwang | title=Fundamentals of speech recognition | publisher=PTR Prentice Hall | location=Englewood Cliffs, N.J. | year=1993 | isbn=978-0-13-015157-5 | chapter=Chapter 4: Pattern-Comparison Techniques | url-access=registration | url=https://archive.org/details/fundamentalsofsp00rabi }}
+* {{cite book
+| last = Müller
+| first = Meinard
+| title = Dynamic Time Warping. In Information Retrieval for Music and Motion, chapter 4, pages 69-84
+| url = https://www.researchgate.net/publication/285279006_Dynamic_time_warping
+| publisher = Springer
+| year = 2007
+| doi = 10.1007/978-3-540-74048-3_4
+| isbn = 978-3-540-74047-6}}
+* <!--ref name="ACM TKDD 7:3"-->{{cite journal | title=Addressing Big Data Time Series: Mining Trillions of Time Series Subsequences Under Dynamic Time Warping | author=Rakthanmanon, Thanawin | journal=ACM Transactions on Knowledge Discovery from Data |date=September 2013  | volume=7 | issue=3 | pages=10:1–10:31 | doi=10.1145/2513092.2500489| pmid=31607834 | pmc=6790126 }}
+
+[[Category:Dynamic programming]]
+[[Category:Articles with example pseudocode]]
+[[Category:Machine learning algorithms]]
+[[Category:Multivariate time series]]

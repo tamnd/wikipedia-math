@@ -1,0 +1,104 @@
+<!-- wikipedia: en
+     page: 39799215
+     title: K-SVD
+     revision: 1369278326
+     timestamp: 2026-08-14T00:47:34Z
+     history: https://en.wikipedia.org/w/index.php?curid=39799215&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1369278326 -->
+{{Short description|Dictionary learning algorithm}}
+{{machine learning bar}}
+In [[applied mathematics]], '''''k''-SVD''' is a [[dictionary learning]] algorithm for creating a dictionary for [[sparse representation]]s, via a [[singular value decomposition]] approach. ''k''-SVD is a generalization of the [[k-means clustering|''k''-means clustering]] method, and it works by iteratively alternating between sparse coding the input data based on the current dictionary, and updating the atoms in the dictionary to better fit the data. It is structurally related to the [[expectation–maximization algorithm|expectation–maximization (EM) algorithm]].<ref name="aharon2006">{{Citation
+|author1=Michal Aharon|author1-link=Michal Aharon |author2=Michael Elad |author3=Alfred Bruckstein | title = K-SVD: An Algorithm for Designing Overcomplete Dictionaries for Sparse Representation
+| journal = IEEE Transactions on Signal Processing
+| volume  = 54
+| issue   = 11
+| year    = 2006
+| doi     = 10.1109/TSP.2006.881199
+| pages   = 4311–4322
+|bibcode=2006ITSP...54.4311A |s2cid=7477309 | url = https://elad.cs.technion.ac.il/wp-content/uploads/2018/02/32_KSVD_IEEE_TSP.pdf
+}}</ref><ref name="rubinstein2010">{{Citation
+| author  = Rubinstein, R., Bruckstein, A.M., and Elad, M.
+| title   = Dictionaries for Sparse Representation Modeling
+| journal = Proceedings of the IEEE
+| volume  = 98
+| issue   = 6
+| year    = 2010
+| doi     = 10.1109/JPROC.2010.2040551
+| pages   = 1045–1057
+| url     = 
+| s2cid = 2176046
+}}</ref> ''k''-SVD can be found widely in use in applications such as image processing, [[Audio signal processing|audio processing]], biology, and document analysis.
+
+==''k''-SVD algorithm==
+''k''-SVD is a kind of generalization of ''k''-means, as follows. The [[k-means clustering|''k''-means clustering]]  can be also regarded as a method of [[sparse representation]]. That is, finding the best possible codebook  to represent the data samples <math>\{y_i\}^M_{i=1}</math>  by [[Nearest neighbor search|nearest neighbor]], by solving
+:<math>
+ \quad  \min \limits _{D, X}  \{ \|Y - DX\|^2_F\} \qquad \text{subject to } \forall i, x_i = e_k \text{ for some } k.
+</math>
+
+which is nearly equivalent to
+
+:<math>
+ \quad  \min \limits _{D, X} \{ \|Y - DX\|^2_F\} \qquad \text{subject to }\quad \forall i , \|x_i\|_0 = 1
+</math>
+
+which is k-means that allows "weights".
+
+The letter F denotes the [[Frobenius norm]]. The sparse representation term <math>x_i = e_k</math> enforces ''k''-means algorithm to use only one atom (column) in dictionary <math>D</math>. To relax this constraint, the target of the ''k''-SVD algorithm is to represent the signal as a linear combination of atoms in <math>D</math>.
+
+The ''k''-SVD algorithm follows the construction flow of the ''k''-means algorithm. However, in contrast to ''k''-means,  in order to achieve a linear combination of atoms in <math>D</math>, the sparsity term of the constraint is relaxed so that the number of nonzero entries of each column <math>x_i</math> can be more than 1, but less than a number <math>T_0</math>.
+
+So, the objective function becomes
+
+:<math>
+ \quad  \min \limits _{D, X} \{ \|Y - DX\|^2_F \} \qquad \text{subject to } \quad \forall i \;,  \|x_i\|_0 \le T_0.
+</math>
+
+or in another objective form
+:<math>
+ \quad  \min \limits _{D, X}  \sum_{i} \|x_i\|_0  \qquad \text{subject to } \quad \forall i \;,  \|Y - DX\|^2_F \le \epsilon.
+</math>
+
+In the ''k''-SVD algorithm, the <math>D</math> is first fixed and the best coefficient matrix <math>X</math> is found. As finding the truly optimal <math>X</math> is hard, we use an approximation pursuit method. Any algorithm such as OMP, the orthogonal [[matching pursuit]] can be used for the calculation of the coefficients, as long as it can supply a solution with a fixed and predetermined number of nonzero entries <math>T_0</math>.
+
+After the sparse coding task, the next is to search for a better dictionary <math>D</math>. However, finding the whole dictionary all at a time is impossible, so the process is to update only one column of the dictionary <math>D</math> each time, while fixing <math>X</math>. The update of the <math>k</math>-th column is done by rewriting the penalty term as 
+:<math>
+\|Y - DX\|^2_F =  \left\| Y - \sum_{j = 1}^K d_j x^\text{T}_j\right\|^2_F = \left\| \left(Y - \sum_{j \ne k} d_j x^\text{T}_j \right)  -  d_k x^\text{T}_k \right\|^2_F = \| E_k - d_k x^\text{T}_k\|^2_F
+</math>
+
+where <math>x_k^\text{T}</math> denotes the ''k''-th row of ''X''.
+
+By decomposing the multiplication <math>DX</math> into sum of <math>K</math> rank 1 matrices, we can assume the other <math>K-1</math> terms are assumed fixed, and the <math>k</math>-th remains unknown.  After this step, we can solve the minimization problem by approximating the <math>E_k</math> term with a  <math>rank -1</math> matrix using [[singular value decomposition]], then update <math>d_k</math> with it. However, the new solution for the vector <math>x^\text{T}_k</math> is not guaranteed to be sparse.
+
+To cure this problem, define <math> \omega_k </math> as
+:<math>
+\omega_k = \{i \mid 1 \le i \le N , x^\text{T}_k(i) \ne 0\}, 
+</math>
+
+which points to examples <math>\{ y_i \}_{i=1}^N </math> that use atom <math>d_k</math> (also the entries of <math>x_i</math> that is nonzero). Then, define <math>\Omega_k</math> as a matrix  of size <math>N\times|\omega_k|</math>, with ones on the <math>(i,\omega_k(i))\text{th}</math> entries and zeros otherwise. When multiplying <math>\tilde{x}^\text{T}_k = x^\text{T}_k\Omega_k</math>, this shrinks the row vector <math>x^\text{T}_k</math> by discarding the zero entries. Similarly, the multiplication <math>\tilde{Y}_k = Y\Omega_k</math> is the subset of the examples that are currently using the <math>d_k</math> atom. The same effect can be seen on <math>\tilde{E}_k = E_k\Omega_k</math>.
+
+So the minimization problem as mentioned before becomes 
+:<math>
+ \| E_k\Omega_k - d_k x^\text{T}_k\Omega_k\|^2_F =  \| \tilde{E}_k - d_k \tilde{x}^\text{T}_k\|^2_F
+</math>
+ 
+and can be done by directly using SVD. SVD decomposes <math>\tilde{E}_k</math> into <math> U\Delta V^\text{T}</math>. The solution for <math>d_k</math> is the first column of U, the coefficient  vector <math>\tilde{x}^\text{T}_k</math> as the first column of <math>V \times \Delta (1, 1)</math>. After updating the whole dictionary, the process then turns to iteratively solve X, then iteratively solve D.
+
+==Limitations==
+Choosing an appropriate "dictionary" for a dataset is a non-convex problem, and ''k''-SVD operates by an iterative update which does not guarantee to find the global optimum.<ref name="rubinstein2010"/> However, this is common to other algorithms for this purpose, and ''k''-SVD works fairly well in practice.<ref name="rubinstein2010"/>{{better source|date=May 2014}}
+
+==See also==
+* [[Sparse approximation]]
+* [[Singular value decomposition]]
+* [[Matrix norm]]
+* [[k-means clustering|''k''-means clustering]]
+* [[Low-rank approximation]]
+
+==References==
+<references/>
+
+{{DISPLAYTITLE:''k''-SVD}}
+<!--Categories-->
+[[Category:Norms (mathematics)]]
+[[Category:Linear algebra]]
+[[Category:Cluster analysis algorithms]]

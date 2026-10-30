@@ -1,0 +1,445 @@
+<!-- wikipedia: en
+     page: 11512
+     title: Fast Fourier transform
+     revision: 1375873092
+     timestamp: 2026-09-20T16:21:35Z
+     history: https://en.wikipedia.org/w/index.php?curid=11512&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375873092 -->
+{{Short description|Discrete Fourier transform algorithm}}
+{{redirect|FFT}}
+{{Use American English|date=March 2019}}
+[[File:DIT-FFT-butterfly.svg|thumb|An example FFT algorithm structure, using a decomposition into half-size FFTs]]
+[[File:FFT of Cosine Summation Function.svg|thumb|A discrete Fourier analysis of a sum of cosine waves at 10, 20, 30, 40, and 50&nbsp;Hz]]
+[[File:Simple time domain vs frequency domain.svg|thumb|Time-based representation (above) and frequency-based representation (below) of the same signal, where the lower representation can be obtained from the upper one by Fourier transformation]]
+
+A '''fast Fourier transform''' ('''FFT''') is an [[algorithm]] that computes the [[discrete Fourier transform]] (DFT), or its inverse (IDFT), of a [[sequence]]. A [[Fourier transform]] converts a signal from its original domain (often [[Time domain|time]] or space) to a representation in the [[frequency domain]] and vice versa.
+
+The DFT is obtained by decomposing a sequence of values into components of different frequencies.<ref name="Heideman_Johnson_Burrus_1984" /> This operation is useful in many fields, but computing it directly from the definition is often too slow to be practical. An FFT rapidly computes such transformations by [[Matrix decomposition|factorizing]] the [[DFT matrix]] into a product of [[Sparse matrix|sparse]] (mostly zero) factors.<ref name="Loan_1992" /> As a result, it manages to reduce the [[Computational complexity theory|complexity]] of computing the DFT from <math display="inline">O(n^2)</math>, which arises if one simply applies the definition of DFT, to <math display="inline">O(n \log n)</math>, where {{mvar|n}} is the length of the sequence. The difference in speed can be enormous, especially for long sequences where {{mvar|n}} may be in the thousands or millions.
+
+As the FFT is merely an algebraic refactoring of terms within the DFT, the DFT and the FFT both perform mathematically equivalent and interchangeable operations, assuming that all terms are computed with infinite precision.  However, in the presence of [[round-off error]], many FFT algorithms are much more accurate than evaluating the DFT definition directly or indirectly. There are many different FFT algorithms based on a wide range of published theories, from simple [[complex number|complex-number arithmetic]] to [[group theory]] and [[number theory]]. The best-known FFT algorithms depend upon the [[factorization]] of {{mvar|n}}, but there are FFTs with <math>O(n \log n)</math> complexity for all {{mvar|n}}, including [[prime]] values. Many FFT algorithms depend only on the fact that <math display="inline">e^{-2\pi i/n}</math> is an {{mvar|n}}th [[primitive root of unity]], and thus can be applied to analogous transforms over any [[finite field]], such as [[number-theoretic transform]]s. Since the inverse DFT is the same as the DFT, but with the opposite sign in the exponent and a {{math|1/''n''}} factor, any FFT algorithm can easily be adapted for it.
+
+Fast Fourier transforms are widely used for [[discrete Fourier transform#Applications|applications]] in engineering, music, science, and mathematics. The basic ideas were popularized in 1965, but some algorithms had been derived as early as 1805.<ref name="Heideman_Johnson_Burrus_1984"/> In 1994, [[Gilbert Strang]] described the FFT as "the most important [[numerical algorithm]] of our lifetime",<ref name="Strang_1994"/><ref>{{Cite book |last1=Kent |first1=Raymond D. |url=https://archive.org/details/acousticanalysis0000kent_r5w4/page/61 |title=The Acoustic Analysis of Speech |last2=Read |first2=Charles |date=2002 |publisher=Singular/Thomson Learning |isbn=978-0-7693-0112-9 |edition=2nd |location= |page=61}}</ref> and it was included in Top 10 Algorithms of 20th Century by the [[IEEE]] magazine ''Computing in Science & Engineering''.<ref name="Dongarra_Sullivan_2000"/>
+
+==History==
+The development of fast algorithms for DFT was prefigured in [[Carl Friedrich Gauss]]'s unpublished 1805 work on the orbits of asteroids [[2 Pallas|Pallas]] and [[3 Juno|Juno]]. Gauss wanted to interpolate the orbits from sample observations;<ref name="Gauss_1866"/><ref name="Heideman_Johnson_Burrus_1985"/> his method was very similar to the one that would be published in 1965 by [[James Cooley]] and [[John Tukey]], who are generally credited for the invention of the modern generic FFT algorithm. While Gauss's work predated even [[Joseph Fourier]]'s 1822 results, he did not analyze the method's [[Computational complexity|complexity]], and eventually used other methods to achieve the same end.
+
+Between 1805 and 1965, some versions of FFT were published by other authors. [[Frank Yates]] in 1932 published his version called ''interaction algorithm'', which provided [[Fast Walsh–Hadamard transform|efficient computation of Hadamard and Walsh transforms]].<ref name="Yates_1937"/> Yates' algorithm is still used in the field of statistical design and analysis of experiments. In 1942, [[G. C. Danielson]] and [[Cornelius Lanczos]] published their version to compute DFT for [[x-ray crystallography]], a field where calculation of Fourier transforms presented a formidable bottleneck.<ref name="Danielson_Lanczos_1942"/><ref name="Lanczos_1956"/> While many methods in the past had focused on reducing the constant factor for <math display="inline">O(n^2)</math> computation by taking advantage of symmetries, Danielson and Lanczos realized that one could use the periodicity and apply a doubling trick to "double [{{mvar|n}}] with only slightly more than double the labor", though like Gauss they did not do the analysis to discover that this led to <math display="inline">O(n \log n)</math> scaling.<ref name="Cooley_Lewis_Welch_1967"/> In 1958, [[I. J. Good]] published a paper establishing the [[prime-factor FFT algorithm]] that applies to discrete Fourier transforms of size <math display="inline">n=n_1 n_2</math>, where <math>n_1</math> and <math>n_2</math> are coprime.<ref>{{Cite journal |last=Good |first=I. J. |date=July 1958 |title=The Interaction Algorithm and Practical Fourier Analysis |url=https://academic.oup.com/jrsssb/article/20/2/361/7027226?login=false |journal=Journal of the Royal Statistical Society, Series B (Methodological) |volume=20 |issue=2 |pages=361–372 |doi=10.1111/j.2517-6161.1958.tb00300.x|url-access=subscription }}</ref>
+
+James Cooley and John Tukey independently rediscovered these earlier algorithms<ref name="Heideman_Johnson_Burrus_1985"/> and published a [[Cooley–Tukey FFT algorithm|more general FFT]] in 1965 that is applicable when {{mvar|n}} is composite and not necessarily a power of 2, as well as analyzing the <math display="inline">O(n \log n)</math> scaling.<ref name="Cooley_Tukey_1965"/> Tukey came up with the idea during a meeting of [[President Kennedy]]'s Science Advisory Committee, where a discussion topic involved detecting nuclear tests by the Soviet Union by setting up sensors to surround the country from outside. To analyze the output of these sensors, an FFT algorithm would be needed. In discussion with Tukey, [[Richard Garwin]] recognized the general applicability of the algorithm not just to national security problems, but also to a wide range of problems including one of immediate interest to him, determining the periodicities of the spin orientations in a 3-D crystal of Helium-3.<ref name="Cooley_1987"/> Garwin gave Tukey's idea to Cooley (both worked at [[Thomas J. Watson Research Center|IBM's Watson labs]]) for implementation.<ref name="Garwin_1969"/> Cooley and Tukey published the paper in a relatively short time of six months.<ref name="Rockmore_2000"/> As Tukey did not work at IBM, the patentability of the idea was doubted and the algorithm went into the public domain, which, through the computing revolution of the next decade, made FFT one of the indispensable algorithms in [[digital signal processing]].
+
+==Definition==
+Let <math>x_0, \ldots, x_{n-1}</math> be [[complex number]]s. The [[discrete Fourier transform|DFT]] is defined by the formula
+
+:<math> X_k = \sum_{m=0}^{n-1} x_m e^{-i2\pi k m/n} \qquad k = 0,\ldots,n-1, </math>
+
+where <math>e^{i 2\pi/n}</math> is a [[Primitive root of unity|primitive]] {{mvar|n}}th root of 1.
+
+Evaluating this definition directly requires <math display="inline">O(n^2)</math> operations: there are {{mvar|n}} outputs {{mvar|X{{sub|k}}}}{{hairsp}}, and each output requires a sum of {{mvar|n}} terms. An FFT is any method to compute the same results in <math display="inline">O(n \log n)</math> operations. All known FFT algorithms require <math display="inline">O(n \log n)</math> operations, although there is no known proof that lower complexity is impossible.<ref name="Frigo_Johnson_2007"/>
+
+To illustrate the savings of an FFT, consider the count of complex multiplications and additions for <math display="inline">n=4096</math> data points. Evaluating the DFT's sums directly involves <math display="inline">n^2</math> complex multiplications and <math display="inline">n(n-1)</math> complex additions, of which <math display="inline">O(n)</math> operations can be saved by eliminating trivial operations such as multiplications by 1, leaving about 30 million operations. In contrast, the radix-2 [[#Cooley–Tukey algorithm|Cooley–Tukey algorithm]], for {{mvar|n}} a power of 2, can compute the same result with only <math display="inline">(n/2)\log_2(n)</math> complex multiplications (again, ignoring simplifications of multiplications by 1 and similar) and <math display="inline">n\log_2(n)</math> complex additions, in total about 70,000 operations — more than four-hundred times less than with direct evaluation. In practice, actual performance on modern computers is usually dominated by factors other than the speed of arithmetic operations and the analysis is a complicated subject (for example, see Frigo & [[Steven G. Johnson|Johnson]], 2005),<ref name="Frigo_Johnson_2005"/> but the overall improvement from <math display="inline">O(n^2)</math> to <math display="inline">O(n \log n)</math> remains.
+
+==Algorithms==
+
+===Cooley–Tukey algorithm===
+{{Main|Cooley–Tukey FFT algorithm}}
+
+By far the most commonly used FFT is the Cooley–Tukey algorithm. This is a [[divide-and-conquer algorithm]] that [[recursively]] breaks down a DFT of any [[composite number|composite]] size <math display="inline">n = n_1n_2</math> into <math display="inline">n_1</math> smaller DFTs of size <math display="inline">n_2</math>, along with <math>O(n)</math> multiplications by complex [[roots of unity]] traditionally called [[twiddle factor]]s (after Gentleman and Sande, 1966).<ref name="Gentleman_Sande_1966"/>
+
+This method (and the general idea of an FFT) was popularized by a publication of Cooley and Tukey in 1965,<ref name="Cooley_Tukey_1965"/> but it was later discovered<ref name="Heideman_Johnson_Burrus_1984"/> that those two authors had together independently re-invented an algorithm known to [[Carl Friedrich Gauss]] around 1805<ref name="Gauss_1805"/> (and subsequently rediscovered several times in limited forms).
+
+The best-known use of the Cooley–Tukey algorithm is to divide the transform into two pieces of size {{math|''n''/2}} at each step, and is therefore limited to power-of-two sizes, but any factorization can be used in general (as was known to both Gauss and Cooley/Tukey<ref name="Heideman_Johnson_Burrus_1984"/>). These are called the ''radix-2'' and ''mixed-radix'' cases, respectively (and other variants such as the [[split-radix FFT]] have their own names as well).  Although the basic idea is recursive, most traditional implementations rearrange the algorithm to avoid explicit recursion. Also, because the Cooley–Tukey algorithm breaks the DFT into smaller DFTs, it can be combined arbitrarily with any other algorithm for the DFT, such as those described below.
+
+===Other FFT algorithms===
+{{Main|Prime-factor FFT algorithm|Bruun's FFT algorithm|Rader's FFT algorithm|Chirp Z-transform|hexagonal fast Fourier transform}}
+
+For <math display="inline">n = n_1n_2</math> with [[coprime]] <math display="inline">n_1</math> and <math display="inline">n_2</math>, one can use the [[Prime-factor FFT algorithm|prime-factor]] (Good–Thomas) algorithm (PFA), based on the [[Chinese remainder theorem]], to factorize the DFT similarly to Cooley–Tukey but without the twiddle factors. The Rader–Brenner algorithm (1976)<ref name="Brenner_Rader_1976"/> is a Cooley–Tukey-like factorization but with purely imaginary twiddle factors, reducing multiplications at the cost of increased additions and reduced [[numerical stability]]; it was later superseded by the [[split-radix]] variant of Cooley–Tukey (which achieves the same multiplication count but with fewer additions and without sacrificing accuracy). Algorithms that recursively factorize the DFT into smaller operations other than DFTs include the Bruun and [[Quick Fourier transform algorithm|QFT]] algorithms. (The Rader–Brenner<ref name="Brenner_Rader_1976"/> and QFT algorithms were proposed for power-of-two sizes, but it is possible that they could be adapted to general composite {{mvar|n}}. Bruun's algorithm applies to arbitrary even composite sizes.) [[Bruun's FFT algorithm|Bruun's algorithm]], in particular, is based on interpreting the FFT as a recursive factorization of the [[polynomial]] <math>z^n-1</math>, here into real-coefficient polynomials of the form <math>z^m-1</math> and <math>z^{2m} + az^m + 1</math>.
+
+Another polynomial viewpoint is exploited by the '''Winograd FFT algorithm''',<ref name="Winograd_1978"/><ref name="Winograd_1979"/> which factorizes <math>z^n-1</math> into [[cyclotomic polynomial]]s—these often have coefficients of 1,&nbsp;0,&nbsp;or&nbsp;−1, and therefore require few (if any) multiplications, so Winograd can be used to obtain minimal-multiplication FFTs and is often used to find efficient algorithms for small factors. Indeed, Winograd showed that the DFT can be computed with only <math>O(n)</math> irrational multiplications, leading to a proven achievable lower bound on the number of multiplications for power-of-two sizes; this comes at the cost of many more additions, a tradeoff no longer favorable on modern [[central processing unit|processors]] with [[floating-point unit|hardware multipliers]]. In particular, Winograd also makes use of the PFA as well as an algorithm by Rader for FFTs of ''prime'' sizes.
+
+[[Rader's FFT algorithm|Rader's algorithm]], exploiting the existence of a [[generating set of a group|generator]] for the multiplicative [[group (mathematics)|group]] modulo prime {{mvar|n}}, expresses a DFT of prime size {{mvar|n}} as a cyclic [[convolution]] of (composite) size {{math|''n'' – 1}}, which can then be computed by a pair of ordinary FFTs via the [[convolution theorem]] (although Winograd uses other convolution methods)<ref>{{Cite journal |last=Rader |first=C.M. |date=1968 |title=Discrete Fourier transforms when the number of data samples is prime |url=http://ieeexplore.ieee.org/document/1448407/ |journal=Proceedings of the IEEE |volume=56 |issue=6 |pages=1107–1108 |doi=10.1109/PROC.1968.6477 |issn=0018-9219|url-access=subscription }}</ref>. Another prime-size FFT is due to L. I. Bluestein, and is sometimes called the [[chirp-z algorithm]]; it also re-expresses a DFT as a convolution, but this time of the ''same'' size (which can be zero-padded to a [[power of two]] and evaluated by radix-2 Cooley–Tukey FFTs, for example), via the identity<ref>{{Cite journal |last=Bluestein |first=L. |date=December 1970 |title=A linear filtering approach to the computation of discrete Fourier transform |url=http://ieeexplore.ieee.org/document/1162132/ |journal=IEEE Transactions on Audio and Electroacoustics |language=en |volume=18 |issue=4 |pages=451–455 |doi=10.1109/TAU.1970.1162132 |issn=0018-9278|url-access=subscription }}</ref>
+
+: <math>nk = -\frac{(k-n)^2} 2 + \frac{n^2} 2 + \frac{k^2} 2.</math>
+
+[[Hexagonal fast Fourier transform]] (HFFT) aims at computing an efficient FFT for the hexagonally-sampled data by using a new addressing scheme for hexagonal grids, called Array Set Addressing (ASA)<ref>{{Cite journal |last=Wilson |first=Joseph N. |date=2011-04-01 |title=Array set addressing: enabling technology for the efficient processing of hexagonally sampled imagery |url=http://electronicimaging.spiedigitallibrary.org/article.aspx?doi=10.1117/1.3589306 |journal=Journal of Electronic Imaging |language=en |volume=20 |issue=2 |page=023012 |doi=10.1117/1.3589306 |issn=1017-9909|url-access=subscription }}</ref>.
+
+==FFT algorithms specialized for real or symmetric data==
+In many applications, the input data for the DFT are purely real, in which case the outputs satisfy the symmetry
+
+:<math>X_{n-k} = X_k^*</math>
+
+and efficient FFT algorithms have been designed for this situation (see e.g., Sorensen, 1987).<ref name="Sorensen_Jones_Heideman_Burrus_1987_1"/><ref name="Sorensen_Jones_Heideman_Burrus_1987_2"/> One approach consists of taking an ordinary algorithm (e.g., Cooley–Tukey) and removing the redundant parts of the computation, saving roughly a factor of two in time and memory. Alternatively, it is possible to express an ''even''-length real-input DFT as a complex DFT of half the length (whose real and imaginary parts are the even/odd elements of the original real data), followed by <math>O(n)</math> post-processing operations.
+
+It was once believed that real-input DFTs could be more efficiently computed by means of the [[discrete Hartley transform]] (DHT), but it was subsequently argued that a specialized real-input DFT algorithm (FFT) can typically be found that requires fewer operations than the corresponding DHT algorithm (FHT) for the same number of inputs.<ref name="Sorensen_Jones_Heideman_Burrus_1987_1"/> Bruun's algorithm (above) is another method that was initially proposed to take advantage of real inputs, but it has not proved popular.
+
+There are further FFT specializations for the cases of real data that have [[even and odd functions|even/odd]] symmetry, in which case one can gain another factor of roughly two in time and memory and the DFT becomes the [[discrete cosine transform|discrete cosine]]/[[discrete sine transform|sine transform(s)]] ([[discrete cosine transform|DCT]]/[[discrete sine transform|DST]]).  Instead of directly modifying an FFT algorithm for these cases, DCTs/DSTs can also be computed via FFTs of real data combined with <math>O(n)</math> pre- and post-processing.
+
+==Computational issues==
+
+===Bounds on complexity and operation counts===
+{{unsolved|computer science|What is the lower bound on the complexity of fast Fourier transform algorithms?  Can they be faster than <math>O(N\log N)</math>?}}
+A fundamental question of longstanding theoretical interest is to prove lower bounds on the [[computational complexity theory|complexity]] and exact operation counts of fast Fourier transforms, and many open problems remain. It is not rigorously proved whether DFTs truly require <math display="inline">\Omega(n \log n)</math> (i.e., order ''<math>n \log n</math>'' or greater) operations, even for the simple case of [[power of two]] sizes, although no algorithms with lower complexity are known. In particular, the count of arithmetic operations is usually the focus of such questions, although actual performance on modern-day computers is determined by many other factors such as [[Cache (computing)|cache]] or [[CPU pipeline]] optimization.
+
+Following work by [[Shmuel Winograd]] (1978),<ref name="Winograd_1978"/> a tight <math>\Theta(n)</math> lower bound is known for the number of real multiplications required by an FFT. It can be shown that only <math display="inline">4n - 2\log_2^2(n) - 2\log_2(n) - 4</math> irrational real multiplications are required to compute a DFT of power-of-two length <math>n = 2^m</math>. Moreover, explicit algorithms that achieve this count are known (Heideman & [[Charles Sidney Burrus|Burrus]], 1986;<ref name="Heideman_Burrus_1986"/> Duhamel, 1990<ref name="Duhamel_1990"/>). However, these algorithms require too many additions to be practical, at least on modern computers with hardware multipliers (Duhamel, 1990;<ref name="Duhamel_1990"/> Frigo & [[Steven G. Johnson|Johnson]], 2005).<ref name="Frigo_Johnson_2005"/>
+
+A tight lower bound is not known on the number of required additions, although lower bounds have been proved under some restrictive assumptions on the algorithms. In 1973, Morgenstern<ref name="Morgenstern_1973"/> proved an <math>\Omega(n \log n)</math> lower bound on the addition count for algorithms where the multiplicative constants have bounded magnitudes (which is true for most but not all FFT algorithms).  [[Victor Pan|Pan]] (1986)<ref name="Pan_1986"/> proved an <math>\Omega(n \log n)</math> lower bound assuming a bound on a measure of the FFT algorithm's ''asynchronicity'', but the generality of this assumption is unclear. For the case of power-of-two {{mvar|n}}, [[Christos Papadimitriou|Papadimitriou]] (1979)<ref name="Papadimitriou_1979"/> argued that the number <math display="inline">n \log_2 n</math> of complex-number additions achieved by Cooley–Tukey algorithms is ''optimal'' under certain assumptions on the [[Graph (discrete mathematics)|graph]] of the algorithm (his assumptions imply, among other things, that no additive identities in the roots of unity are exploited). (This argument would imply that at least <math display="inline">2N \log_2 N</math> real additions are required, although this is not a tight bound because extra additions are required as part of complex-number multiplications.) Thus far, no published FFT algorithm has achieved fewer than <math display="inline">n \log_2 n</math> complex-number additions (or their equivalent) for power-of-two {{mvar|n}}.
+
+A third problem is to minimize the ''total'' number of real multiplications and additions, sometimes called the ''arithmetic complexity'' (although in this context it is the exact count and not the asymptotic complexity that is being considered).  Again, no tight lower bound has been proven. Since 1968, however, the lowest published count for power-of-two {{mvar|n}} was long achieved by the [[split-radix FFT algorithm]], which requires <math display="inline">4n\log_2(n) - 6n + 8</math> real multiplications and additions for {{Math|''n'' > 1}}. This was further reduced to <math display="inline">\sim \frac{34}{9} n \log_2 n</math> (Johnson and Frigo, 2007;<ref name="Frigo_Johnson_2007"/> Lundy and Van Buskirk, 2007<ref name="Lundy_Buskirk_2007"/>). A slightly larger count (but still better than split radix for {{math|''n'' ≥ 256}}) was shown to be provably optimal for {{math|''n'' ≤ 512}} under additional restrictions on the possible algorithms (split-radix-like flowgraphs with unit-modulus multiplicative factors), by reduction to a [[satisfiability modulo theories]] problem solvable by [[Proof by exhaustion|brute force]] (Haynal & Haynal, 2011).<ref name="Haynal_2011"/>
+
+Most of the attempts to lower or prove the complexity of FFT algorithms have focused on the ordinary complex-data case, because it is the simplest. However, complex-data FFTs are so closely related to algorithms for related problems, such as real-data FFTs, [[discrete cosine transform]]s, [[discrete Hartley transform]]s, and so on, that any improvement in one of these would immediately lead to improvements in the others (Duhamel & Vetterli, 1990).<ref name="Duhamel_Vetterli_1990"/>
+
+===Approximations===
+All of the FFT algorithms discussed above compute the DFT exactly (i.e., neglecting [[floating-point]] errors). A few FFT algorithms have been proposed, however, that compute the DFT ''approximately'', with an error that can be made arbitrarily small at the expense of increased computations. Such algorithms trade the approximation error for increased speed or other properties. For example, an approximate FFT algorithm by Edelman et al. (1999)<ref name="Edelman_McCorquodale_Toledo_1999"/> achieves lower communication requirements for [[parallel computing]] with the help of a [[fast multipole method]]. A [[wavelet]]-based approximate FFT by Guo and Burrus (1996)<ref name="Guo_Burrus_1996"/> takes sparse inputs/outputs (time/frequency localization) into account more efficiently than is possible with an exact FFT. Another algorithm for approximate computation of a subset of the DFT outputs is due to Shentov et al. (1995).<ref name="Shentov_Mitra_Heute_Hossen_1995"/> The Edelman algorithm works equally well for sparse and non-sparse data, since it is based on the compressibility (rank deficiency) of the Fourier matrix itself rather than the compressibility (sparsity) of the data. Conversely, if the data are sparse—that is, if only {{mvar|k}} out of {{mvar|n}} Fourier coefficients are nonzero—then the complexity can be reduced to <math>O(k \log n \log n/k)</math>, and this has been demonstrated to lead to practical speedups compared to an ordinary FFT for {{math|''n''/''k'' > 32}} in a large-{{mvar|n}} example ({{math|''n'' {{=}} 2{{sup|22}}}}) using a probabilistic approximate algorithm (which estimates the largest {{mvar|k}} coefficients to several decimal places).<ref name="Hassanieh_2012"/>
+
+===Accuracy===
+FFT algorithms have errors when finite-precision floating-point arithmetic is used, but these errors are typically quite small; most FFT algorithms, e.g., Cooley–Tukey, have excellent numerical properties as a consequence of the [[pairwise summation]] structure of the algorithms.  The upper bound on the [[relative error]] for the Cooley–Tukey algorithm is <math display="inline">O(\varepsilon \log n)</math>, compared to <math display="inline">O(\varepsilon n^{3/2})</math> for the naïve DFT formula,<ref name="Gentleman_Sande_1966"/> where {{math|{{varepsilon}}}} is the machine floating-point relative precision. In fact, the [[root mean square]] (rms) errors are much better than these upper bounds, being only <math display="inline">O(\varepsilon \sqrt{\log n})</math> for Cooley–Tukey and <math display="inline">O(\varepsilon \sqrt{n})</math> for the naïve DFT (Schatzman, 1996).<ref name="Schatzman_1996"/> These results, however, are very sensitive to the accuracy of the twiddle factors used in the FFT (i.e. the [[trigonometric function]] values), and it is not unusual for incautious FFT implementations to have much worse accuracy, e.g., if they use inaccurate [[generating trigonometric tables|trigonometric recurrence]] formulas. Some FFTs other than Cooley–Tukey, such as the Rader–Brenner algorithm, are intrinsically less stable.
+
+In [[fixed-point arithmetic]], the finite-precision errors accumulated by FFT algorithms are worse, with rms errors growing as <math display="inline">O(\sqrt{n})</math> for the Cooley–Tukey algorithm (Welch, 1969).<ref name="Welch_1969"/> Achieving this accuracy requires careful attention to scaling to minimize loss of precision, and fixed-point FFT algorithms involve rescaling at each intermediate stage of decompositions like Cooley–Tukey.
+
+To verify the correctness of an FFT implementation, rigorous guarantees can be obtained in <math display="inline">O(n \log n)</math> time by a simple procedure checking the linearity, impulse-response, and time-shift properties of the transform on random inputs (Ergün, 1995).<ref name="Ergün_1995"/>
+
+The values for intermediate frequencies may be obtained by various averaging methods.
+
+==Multidimensional FFTs==
+<!-- This section is linked from [[Discrete Fourier transform]] -->
+
+As defined in the [[Discrete Fourier transform#Multidimensional DFT|multidimensional DFT]] article, the multidimensional DFT
+
+:<math>X_\mathbf{k} = \sum_{\mathbf{n}=0}^{\mathbf{N}-1} e^{-2\pi i \mathbf{k} \cdot (\mathbf{n} / \mathbf{N})} x_\mathbf{n}</math>
+
+transforms an array {{math|''x''{{sub|'''n'''}}}} with a {{mvar|d}}-dimensional [[coordinate vector|vector]] of indices <math display="inline">\mathbf{n} = \left(n_1, \ldots, n_d\right)</math> by a set of {{mvar|d}} nested summations (over <math display="inline">n_j = 0 \ldots N_j - 1</math> for each {{mvar|j}}), where the division <math display="inline">\mathbf{n} / \mathbf{N} = \left(n_1/N_1, \ldots, n_d/N_d\right)</math> is performed element-wise.  Equivalently, it is the composition of a sequence of ''d'' sets of one-dimensional DFTs, performed along one dimension at a time (in any order).
+
+This compositional viewpoint immediately provides the simplest and most common multidimensional DFT algorithm, known as the '''row-column''' algorithm (after the two-dimensional case, below). That is, one simply performs a sequence of {{mvar|d}} one-dimensional FFTs (by any of the above algorithms): first you transform along the {{math|''n''{{sub|1}}}} dimension, then along the {{math|''n''{{sub|2}}}} dimension, and so on (actually, any ordering works). This method is easily shown to have the usual <math display="inline">O(n \log n)</math> complexity, where <math display="inline">n = n_1 \cdot n_2 \cdots n_d</math> is the total number of data points transformed. In particular, there are {{math|''n''/''n''{{sub|1}}}} transforms of size {{math|''n''{{sub|1}}}}, etc., so the complexity of the sequence of FFTs is:
+
+:<math>\begin{align}
+      & \frac{n}{n_1} O(n_1 \log n_1) + \cdots + \frac{n}{n_d} O(n_d \log n_d) \\[6pt]
+  ={} & O\left(n \left[\log n_1 + \cdots + \log n_d\right]\right) = O(n \log n).
+\end{align}</math>
+
+In two dimensions, the ''x''<sub>'''k'''</sub> can be viewed as an <math>n_1 \times n_2</math> [[matrix (mathematics)|matrix]], and this algorithm corresponds to first performing the FFT of all the rows (resp. columns), grouping the resulting transformed rows (resp. columns) together as another <math>n_1 \times n_2</math> matrix, and then performing the FFT on each of the columns (resp. rows) of this second matrix, and similarly grouping the results into the final result matrix.
+
+In more than two dimensions, it is often advantageous for [[Cache (computing)|cache]] locality to group the dimensions recursively.  For example, a three-dimensional FFT might first perform two-dimensional FFTs of each planar slice for each fixed ''n''<sub>1</sub>, and then perform the one-dimensional FFTs along the ''n''<sub>1</sub> direction. More generally, an [[asymptotically optimal]] [[cache-oblivious algorithm]] consists of recursively dividing the dimensions into two groups <math display="inline">(n_1, \ldots, n_{d/2})</math> and <math display="inline">(n_{d/2+1}, \ldots, n_d)</math> that are transformed recursively (rounding if {{mvar|d}} is not even) (see Frigo and Johnson, 2005).<ref name="Frigo_Johnson_2005"/> Still, this remains a straightforward variation of the row-column algorithm that ultimately requires only a one-dimensional FFT algorithm as the base case, and still has <math>O(n \log n)</math> complexity.  Yet another variation is to perform matrix [[transpose|transpositions]] in between transforming subsequent dimensions, so that the transforms operate on contiguous data; this is especially important for [[out-of-core]] and [[distributed memory]] situations where accessing non-contiguous data is extremely time-consuming.
+
+There are other multidimensional FFT algorithms that are distinct from the row-column algorithm, although all of them have <math display="inline">O(n \log n)</math> complexity. Perhaps the simplest non-row-column FFT is the [[vector-radix FFT algorithm]], which is a generalization of the ordinary Cooley–Tukey algorithm where one divides the transform dimensions by a vector <math display="inline">\mathbf{r} = \left(r_1, r_2, \ldots, r_d\right)</math> of radices at each step. (This may also have cache benefits.) The simplest case of vector-radix is where all of the radices are equal (e.g., vector-radix-2 divides ''all'' of the dimensions by two), but this is not necessary.  Vector radix with only a single non-unit radix at a time, i.e. <math display="inline">\mathbf{r} = \left(1, \ldots, 1, r, 1, \ldots, 1\right)</math>, is essentially a row-column algorithm. Other, more complicated, methods include polynomial transform algorithms due to Nussbaumer (1977),<ref name="Nussbaumer_1977"/> which view the transform in terms of convolutions and polynomial products. See Duhamel and Vetterli (1990)<ref name="Duhamel_Vetterli_1990"/> for more information and references.
+
+==Other generalizations==
+An <math display="inline">O(n^{5/2} \log n)</math> generalization to [[spherical harmonics]] on the sphere {{math|''S''{{sup|2}}}} with {{math|''n''{{sup|2}}}} nodes was described by Mohlenkamp,<ref name="Mohlenkamp_1999"/> along with an algorithm conjectured (but not proven) to have <math display="inline">O(n^2 \log^2(n))</math> complexity; Mohlenkamp also provides an implementation in the libftsh library.<ref name="libftsh"/> A spherical-harmonic algorithm with <math display="inline">O(n^2 \log n)</math> complexity is described by Rokhlin and Tygert.<ref name="Rokhlin_Tygert_2006"/>
+
+The [[fast folding algorithm]] is analogous to the FFT, except that it operates on a series of binned waveforms rather than a series of real or complex scalar values. Rotation (which in the FFT is multiplication by a complex phasor) is a circular shift of the component waveform <ref>{{Cite journal |last=Staelin |first=D.H. |date=1969 |title=Fast folding algorithm for detection of periodic pulse trains |url=http://ieeexplore.ieee.org/document/1448981/ |journal=Proceedings of the IEEE |volume=57 |issue=4 |pages=724–725 |doi=10.1109/PROC.1969.7051 |issn=0018-9219|url-access=subscription }}</ref>.
+
+Various groups have also published FFT algorithms for non-equispaced data, as reviewed in Potts ''et al.'' (2001).<ref name="Potts_Steidl_Tasche_2001"/> Such algorithms do not strictly compute the DFT (which is only defined for equispaced data), but rather some approximation thereof (a [[non-uniform discrete Fourier transform]], or NDFT, which itself is often computed only approximately). More generally, there are various other methods of [[spectral estimation]].
+
+==Applications==
+The FFT is used in digital recording, sampling, [[additive synthesis]] and [[pitch correction]] software.<ref>{{cite book |last1=Burgess |first1=Richard James |title=The History of Music Production |date=2014 |publisher= Oxford University Press |isbn=978-0-19-935717-8 |url=https://books.google.com/books?id=qMKiAwAAQBAJ |access-date=1 August 2019}}</ref>
+
+The FFT's importance derives from the fact that it has made working in the frequency domain equally computationally feasible as working in the temporal or spatial domain. Some of the important applications of the FFT include:<ref name="Rockmore_2000"/><ref name="Chu_George_1999"/>
+
+* fast large-integer [[multiplication algorithm]]s and polynomial multiplication,
+* efficient matrix–vector multiplication for [[Toeplitz matrix|Toeplitz]], [[circulant]] and other structured matrices,
+* filtering algorithms (see [[overlap–add method|overlap–add]] and [[overlap–save method|overlap–save]] methods),
+* fast algorithms for [[discrete cosine transform|discrete cosine]] or [[discrete sine transform|sine transforms]] (e.g. [[Discrete cosine transform|fast DCT]] used for [[JPEG]] and [[MPEG]]/[[MP3]] encoding and decoding),
+* fast [[Chebyshev approximation]],
+* solving [[Recurrence relation|difference equation]]s,
+* computation of [[Mass spectrometry|isotopic distributions]].<ref name="Fernandez-de-Cossio_2012"/>
+
+=== Telecommunications ===
+In modern wireless communication standards, the FFT is a critical component for processing signals. Specifically, it is utilized in [[Orthogonal frequency-division multiplexing]] (OFDM) systems, such as [[4G LTE]] and [[5G NR]].<ref name="IEEE_FFT">"The Fast Fourier Transform and Its Applications," IEEE Signal Processing Magazine.</ref> The efficiency of the FFT allows for high-speed data transmission by dividing a wideband signal into multiple closely spaced orthogonal subcarriers.<ref name="Anwar_LTE">Anwar, K., et al. "Double FFT for LTE Standards," IEEE Xplore.</ref> This technology is essential for reducing interference and optimizing power consumption in mobile devices.<ref name="Anwar_LTE" />
+
+== Alternatives ==
+{{Main|Discrete-time Fourier transform|Discrete wavelet transform|Discrete Hilbert transform}}
+The FFT can be a poor choice for analyzing signals with [[non-stationary]] frequency content—where the frequency characteristics change over time. DFTs provide a global frequency estimate, assuming that all frequency components are present throughout the entire signal, which makes it challenging to detect short-lived or transient features within signals.
+
+For cases where frequency information appears briefly in the signal or generally varies over time, alternatives like the [[short-time Fourier transform]], [[discrete wavelet transform]]s, or [[discrete Hilbert transform]] can be more suitable.<ref>{{Cite journal |last1=Kijewski-Correa |first1=T. |last2=Kareem |first2=A. |date=October 2006 |title=Efficacy of Hilbert and Wavelet Transforms for Time-Frequency Analysis |url=https://ascelibrary.org/doi/10.1061/%28ASCE%290733-9399%282006%29132%3A10%281037%29 |journal=Journal of Engineering Mechanics |language=en |volume=132 |issue=10 |pages=1037–1049 |doi=10.1061/(ASCE)0733-9399(2006)132:10(1037) |issn=0733-9399|url-access=subscription }}</ref><ref>{{Cite web |last=Stern |first=Richard M. |date=2020 |title=Notes on short-time Fourier transforms |url=https://course.ece.cmu.edu/~ece491/lectures/L27/STFA_Lecture_notes.pdf |url-status=live |archive-url=https://web.archive.org/web/20250208193538/https://course.ece.cmu.edu/~ece491/lectures/L27/STFA_Lecture_notes.pdf |archive-date=2025-02-08 |access-date=2025-02-08}}</ref> These transforms allow for localized frequency analysis by capturing both frequency and time-based information.
+
+==Research areas==
+; Big FFTs: With the explosion of big data in fields such as astronomy, the need for 512K FFTs has arisen for certain interferometry calculations. The data collected by projects such as [[WMAP]] and [[LIGO]] require FFTs of tens of billions of points. As this size does not fit into main memory, so-called out-of-core FFTs are an active area of research.<ref name="Cormen_Nicol_1998"/>
+; Approximate FFTs: For applications such as MRI, it is necessary to compute DFTs for nonuniformly spaced grid points and/or frequencies. Multipole-based approaches can compute approximate quantities with factor of runtime increase.<ref name="Dutt_Rokhlin_1993"/>
+; [[Fourier transform on finite groups|Group FFTs]]: The FFT may also be explained and interpreted using [[group representation theory]], allowing for further generalization. A function on any compact group, including non-cyclic, has an expansion in terms of a basis of irreducible matrix elements. It remains an active area of research to find an efficient algorithm for performing this change of basis. Applications including efficient [[spherical harmonic]] expansion, analyzing certain [[Markov process]]es, robotics etc.<ref name="Rockmore_2004"/>
+; [[Quantum Fourier transform|Quantum FFTs]]: Shor's fast algorithm for [[integer factorization]] on a quantum computer has a subroutine to compute DFT of a binary vector. This is implemented as a sequence of 1- or 2-bit quantum gates now known as quantum FFT, which is effectively the Cooley–Tukey FFT realized as a particular factorization of the Fourier matrix. Extensions to these ideas are currently being explored.<ref>{{Cite journal |title=Quantum circuit for the fast Fourier transform |journal=Quantum Information Processing |volume=19 |issue=277 |year=2020 |first1=Asaka |last1=Ryo |first2=Sakai |last2=Kazumitsu |first3=Yahagi |last3=Ryoko |page=277 |doi=10.1007/s11128-020-02776-5 |arxiv=1911.03055 |bibcode=2020QuIP...19..277A |s2cid=207847474 |url=https://link.springer.com/article/10.1007/s11128-020-02776-5}}</ref>
+
+==Language reference==
+{{aligned table|class=wikitable|cols=3|row1header=y|col2style=font-family:monospace;
+|Language
+|Command–method
+|Prerequisites
+
+|[[R (programming language)|R]]
+|stats::fft(x)
+|None
+
+|[[Scilab]]
+|fft(x)
+|None
+
+|[[MATLAB]], [[GNU Octave|Octave]]
+|fft(x)
+|None
+
+|[[Python (programming language)|Python]]
+|fft.fft(x)
+|[[numpy]] or [[scipy]]
+
+|[[Mathematica]]
+|Fourier[x]
+|None
+
+|[[C (programming language)|C]] / [[C++]]
+|fftw_execute(plan)
+|[[Fastest Fourier Transform in the West|FFTW]]
+
+|[[Fortran]]
+|fftw_one(plan,in,out)
+|[[Fastest Fourier Transform in the West|FFTW]]
+
+|[[Julia (programming language)|Julia]]
+|fft(A [,dims])
+|[[Fastest Fourier Transform in the West|FFTW]]
+
+|[[Rust (programming language)|Rust]]
+|fft.process(&mut x);
+|[https://docs.rs/rustfft/latest/rustfft/ rustfft]
+
+|[[Haskell]]
+|dft x
+|[https://hackage.haskell.org/package/fft fft]
+}}
+
+==See also==
+FFT-related algorithms:
+
+* [[Bit-reversal permutation]]
+* [[Goertzel algorithm]] – computes individual terms of the discrete Fourier transform
+
+FFT implementations:
+* [[Fastest Fourier Transform in the West|FFTW]] – a free software library developed by Matteo Frigo and Steven G. Johnson at MIT
+* [[FFTReal]] – a highly optimized, clean and concise implementation with support for scalar or a SIMD vector in a C++ class by Dmitry Boldyrev hosted at GITHUB https://github.com/mewza/realfft/
+* [[ALGLIB]] – a dual/GPL-licensed C++ and C# library (also supporting other languages), with real/complex FFT implementation
+* [[FFTPACK]] – another Fortran FFT library (public domain)
+* Architecture-specific:
+** Arm Performance Libraries<ref name="Arm Performance Libraries">{{cite web|date=2020 |title=Arm Performance Libraries |publisher=[[Arm]] |url=https://www.arm.com/products/development-tools/server-and-hpc/allinea-studio/performance-libraries |access-date=2020-12-16}}</ref>
+** Intel [[Integrated Performance Primitives]]
+** Intel [[Math Kernel Library]]
+* Many more implementations are available,<ref>{{Cite web|date=2020-04-05|title=Complete list of C/C++ FFT libraries|url=https://community.vcvrack.com/t/complete-list-of-c-c-fft-libraries/9153|access-date=2021-03-03|website=VCV Community|language=en}}</ref> for CPUs and GPUs, such as PocketFFT for C++
+
+Other links:
+* [[Butterfly diagram]] – a diagram used to describe FFTs
+* [[Fast Algorithms for Multidimensional Signals]]
+* [[Fast Fourier Transform Telescope]]
+* [[Fast Walsh–Hadamard transform]]
+* [[Generalized distributive law]]
+* [[Least-squares spectral analysis]]
+* [[Multidimensional discrete convolution]]
+* [[Multidimensional transform]]
+* [[Odlyzko–Schönhage algorithm]] applies the FFT to finite [[Dirichlet series]]
+* [[Schönhage–Strassen algorithm]] – asymptotically fast multiplication algorithm for large integers
+* [[Spectral music]] (involves application of DFT analysis to musical composition)
+* [[Spectrum analyzer]] – any of several devices that perform spectrum analysis, often via a DFT
+* [[Time series]]
+
+==References==
+{{Reflist|refs=
+<ref name="Loan_1992">{{cite book |author-first=Charles |author-last=Van Loan |title=Computational Frameworks for the Fast Fourier Transform |publisher=[[SIAM]] |date=1992}}</ref>
+<ref name="Heideman_Johnson_Burrus_1984">{{cite journal |author-last1=Heideman |author-first1=Michael T. |author-first2=Don H. |author-last2=Johnson |author-first3=Charles Sidney |author-last3=Burrus |author-link3=Charles Sidney Burrus |doi=10.1109/MASSP.1984.1162257 |title=Gauss and the history of the fast Fourier transform |journal=IEEE ASSP Magazine |volume=1 |issue=4 |pages=14–21 |date=1984 |bibcode=1984IASSP...1...14H |s2cid=10032502 |url=http://www.cis.rit.edu/class/simg716/Gauss_History_FFT.pdf |archive-url=https://web.archive.org/web/20130319053449/http://www.cis.rit.edu/class/simg716/Gauss_History_FFT.pdf |archive-date=2013-03-19 |url-status=live}}</ref>
+<ref name="Heideman_Burrus_1986">{{cite journal |author-first1=Michael T. |author-last1=Heideman |author-first2=Charles Sidney |author-last2=Burrus |author-link2=Charles Sidney Burrus |date=1986 |doi=10.1109/TASSP.1986.1164785 |title=On the number of multiplications necessary to compute a length-2<sup>''n''</sup> DFT |journal=[[IEEE Transactions on Acoustics, Speech, and Signal Processing]] |volume=34 |issue=1 |pages=91–95 |bibcode=1986ITASS..34...91H }}</ref>
+<ref name="Dongarra_Sullivan_2000">{{cite journal |title=Guest Editors' Introduction to the top 10 algorithms |journal=  Computing in Science & Engineering|date=January 2000 |issn=1521-9615 |pages=22–23 |volume=2 |issue=1 |doi=10.1109/MCISE.2000.814652 |author-first1=Jack |author-last1=Dongarra |author-first2=Francis |author-last2=Sullivan|bibcode=2000CSE.....2a..22D }}</ref>
+<ref name="Brenner_Rader_1976">{{cite journal |author-first1=Norman M. |author-last1=Brenner |author-first2=Charles M. |author-last2=Rader |date=1976 |title=A New Principle for Fast Fourier Transformation |journal=[[IEEE Transactions on Acoustics, Speech, and Signal Processing]] |volume=24 |issue=3 |doi=10.1109/TASSP.1976.1162805 |pages=264–266 |bibcode=1976ITASS..24..264R }}</ref>
+<ref name="Strang_1994">{{cite journal |author-last=Strang |author-first=Gilbert |author-link=Gilbert Strang |date=May–June 1994 |title=Wavelets |journal=[[American Scientist]] |volume=82 |issue=3 |pages=250–255 |jstor=29775194|bibcode=1994AmSci..82..250S }}</ref>
+<ref name="Ergün_1995">{{cite book |author-first=Funda |author-last=Ergün|author-link=Funda Ergun |title=Proceedings of the twenty-seventh annual ACM symposium on Theory of computing - STOC '95 |chapter=Testing multivariate linear functions |date=1995 |doi=10.1145/225058.225167 |location=Kyoto, Japan |pages=407–416 |isbn=978-0-89791-718-6|s2cid=15512806 }}</ref>
+<ref name="Frigo_Johnson_2005">{{cite journal |author-last1=Frigo |author-first1=Matteo |author-last2=Johnson |author-first2=Steven G. |date=2005 |title=The Design and Implementation of FFTW3 |url=http://fftw.org/fftw-paper-ieee.pdf |archive-url=https://web.archive.org/web/20050207233032/http://www.fftw.org/fftw-paper-ieee.pdf |archive-date=2005-02-07 |url-status=live |journal=[[Proceedings of the IEEE]] |volume=93 |issue=2 |pages=216–231 |doi=10.1109/jproc.2004.840301 |bibcode=2005IEEEP..93..216F |s2cid=6644892 }}</ref>
+<ref name="Frigo_Johnson_2007">{{cite journal |author-last1=Frigo |author-first1=Matteo |author-last2=Johnson |author-first2=Steven G. |title=A Modified Split-Radix FFT With Fewer Arithmetic Operations |date=January 2007  |orig-date=2006-12-19 |journal=[[IEEE Transactions on Signal Processing]] |volume=55 |issue=1 |pages=111–119 |doi=10.1109/tsp.2006.882087 |bibcode=2007ITSP...55..111J |s2cid=14772428 }}</ref>
+<ref name="Duhamel_1990">{{cite journal |author-first1=Pierre |author-last1=Duhamel |date=1990 |doi=10.1109/29.60070 |title=Algorithms meeting the lower bounds on the multiplicative complexity of length-2<sup>n</sup> DFTs and their connection with practical algorithms |journal=[[IEEE Transactions on Acoustics, Speech, and Signal Processing]] |volume=38 |issue=9 |pages=1504–1511}}</ref>
+<ref name="Duhamel_Vetterli_1990">{{cite journal |author-first1=Pierre |author-last1=Duhamel |author-first2=Martin |author-last2=Vetterli |author-link2=Martin Vetterli |date=1990 |doi=10.1016/0165-1684(90)90158-U |title=Fast Fourier transforms: a tutorial review and a state of the art |journal=Signal Processing |volume=19 |issue=4 |pages=259–299 |bibcode=1990SigPr..19..259D |url=http://infoscience.epfl.ch/record/59946}}</ref>
+<ref name="Edelman_McCorquodale_Toledo_1999">{{cite journal |author-first1=Alan |author-last1=Edelman |author-first2=Peter |author-last2=McCorquodale |author-first3=Sivan |author-last3=Toledo |date=1999 |doi=10.1137/S1064827597316266 |title=The Future Fast Fourier Transform? |journal=[[SIAM Journal on Scientific Computing]] |volume=20 |issue=3 |pages=1094–1114 |url=http://www.cs.tau.ac.il/~stoledo/Bib/Pubs/pp97-fft.pdf |archive-url=https://web.archive.org/web/20170705153832/http://www.cs.tau.ac.il/~stoledo/Bib/Pubs/pp97-fft.pdf |archive-date=2017-07-05 |url-status=live }}</ref>
+<ref name="Guo_Burrus_1996">{{cite book |author-first1=Haitao |author-last1=Guo |author-first2=Charles Sidney |author-last2=Burrus |chapter=Fast approximate Fourier transform via wavelets transform |editor-first1=Michael A. |editor-first2=Akram |editor-first3=Andrew F. |editor-last1=Unser |editor-last2=Aldroubi |editor-last3=Laine |author-link2=Charles Sidney Burrus |date=1996 |doi=10.1117/12.255236 |title=Wavelet Applications in Signal and Image Processing IV |series=[[Proceedings of SPIE]] |volume=2825 |pages=250–259 |bibcode=1996SPIE.2825..250G |s2cid=120514955 }}</ref>
+<ref name="Shentov_Mitra_Heute_Hossen_1995">{{cite journal |author-first1=Ognjan V. |author-last1=Shentov |author-first2=Sanjit K. |author-last2=Mitra |author-first3=Ulrich |author-last3=Heute |author-first4=Abdul N. |author-last4=Hossen |date=1995 |doi=10.1016/0165-1684(94)00103-7 |title=Subband DFT. I. Definition, interpretations and extensions |journal=Signal Processing |volume=41 |issue=3 |pages=261–277}}</ref>
+<ref name="Hassanieh_2012">{{cite journal |author-first1=Haitham |author-last1=Hassanieh |author-first2=Piotr |author-last2=Indyk |author-link2=Piotr Indyk |author-first3=Dina |author-last3=Katabi |author-first4=Eric |author-last4=Price |url=https://www.mit.edu/~ecprice/papers/sparse-fft-soda.pdf |archive-url=https://web.archive.org/web/20120304163958/http://www.mit.edu/~ecprice/papers/sparse-fft-soda.pdf |archive-date=2012-03-04 |url-status=live |title=Simple and Practical Algorithm for Sparse Fourier Transform |journal=ACM-SIAM Symposium on Discrete Algorithms  |date=January 2012}} (NB. See also the [http://groups.csail.mit.edu/netmit/sFFT/ sFFT Web Page].)</ref>
+<ref name="Haynal_2011">{{cite journal |author-first1=Steve |author-last1=Haynal |author-first2=Heidi |author-last2=Haynal |title=Generating and Searching Families of FFT Algorithms |journal=Journal on Satisfiability, Boolean Modeling and Computation |volume=7 |issue=4 |pages=145–187 |date=2011 |url=http://jsat.ewi.tudelft.nl/content/volume7/JSAT7_13_Haynal.pdf |archive-url=https://web.archive.org/web/20120426031804/http://jsat.ewi.tudelft.nl/content/volume7/JSAT7_13_Haynal.pdf |archive-date=2012-04-26|doi=10.3233/SAT190084 |bibcode=2011arXiv1103.5740H |arxiv=1103.5740 |s2cid=173109 }}</ref>
+<ref name="Lundy_Buskirk_2007">{{cite journal |author-first1=Thomas J. |author-last1=Lundy |author-first2=James |author-last2=Van Buskirk |date=2007 |title=A new matrix approach to real FFTs and convolutions of length 2<sup>k</sup> |journal=[[Computing (journal)|Computing]] |volume=80 |issue=1 |pages=23–45 |doi=10.1007/s00607-007-0222-6|s2cid=27296044 }}</ref>
+<ref name="Papadimitriou_1979">{{cite journal |author-first=Christos H. |author-last=Papadimitriou |date=1979 |doi=10.1145/322108.322118 |title=Optimality of the fast Fourier transform |journal=[[Journal of the ACM]] |volume=26 |issue=1 |pages=95–102|s2cid=850634 |doi-access=free }}</ref>
+<ref name="Sorensen_Jones_Heideman_Burrus_1987_1">{{cite journal |author-first1=Henrik V. |author-last1=Sorensen |author-first2=Douglas L. |author-last2=Jones |author-link2=Douglas L. Jones |author-first3=Michael T. |author-last3=Heideman |author-first4=Charles Sidney |author-last4=Burrus |author-link4=Charles Sidney Burrus |date=1987 |doi=10.1109/TASSP.1987.1165220 |title=Real-valued fast Fourier transform algorithms |journal=[[IEEE Transactions on Acoustics, Speech, and Signal Processing]] |volume=35 |issue=6 |pages=849–863 |bibcode=1987ITASS..35..849S }}</ref>
+<ref name="Sorensen_Jones_Heideman_Burrus_1987_2">{{cite journal |doi=10.1109/TASSP.1987.1165284 |author-last1=Sorensen |author-first1=Henrik V. |author-last2=Jones |author-first2=Douglas L. |author-link2=Douglas L. Jones |author-last3=Heideman |author-first3=Michael T. |author-last4=Burrus |author-first4=Charles Sidney |author-link4=Charles Sidney Burrus |date=1987 |page=1353 |issue=9 |volume=35 |title=Corrections to "Real-valued fast Fourier transform algorithms" |journal=[[IEEE Transactions on Acoustics, Speech, and Signal Processing]] |bibcode=1987ITASS..35R1353S }}</ref>
+<ref name="Winograd_1978">{{cite journal |author-first=Shmuel |author-last=Winograd |date=1978 |doi=10.1090/S0025-5718-1978-0468306-4 |title=On computing the discrete Fourier transform |journal=[[Mathematics of Computation]] |volume=32 |issue=141 |pages=175–199 |jstor=2006266 |pmc=430186 |pmid=16592303}}</ref>
+<ref name="Winograd_1979">{{cite journal |author-first=Shmuel |author-last=Winograd |title=On the multiplicative complexity of the discrete Fourier transform |journal=[[Advances in Mathematics]] |volume=32 |issue=2 |date=1979 |pages=83–117 |doi=10.1016/0001-8708(79)90037-9 |doi-access=free }}</ref>
+<ref name="Morgenstern_1973">{{cite journal |author-first1=Jacques |author-last1=Morgenstern |date=1973 |doi=10.1145/321752.321761 |title=Note on a lower bound of the linear complexity of the fast Fourier transform |journal=[[Journal of the ACM]] |volume=20 |issue=2 |pages=305–306|s2cid=2790142 |doi-access=free }}</ref>
+<ref name="Mohlenkamp_1999">{{cite journal |doi=10.1007/BF01261607 |author-first1=Martin J. |author-last1=Mohlenkamp |date=1999 |title=A Fast Transform for Spherical Harmonics |journal=Journal of Fourier Analysis and Applications<!-- J. Fourier Anal. Appl. --> |volume=5 |issue=2–3 |pages=159–184 |bibcode=1999JFAA....5..159M |url=http://www.ohiouniversityfaculty.com/mohlenka/research/MOHLEN1999P.pdf |archive-url=https://web.archive.org/web/20170506033135/http://ohiouniversityfaculty.com/mohlenka/research/MOHLEN1999P.pdf |archive-date=2017-05-06 |url-status=live |access-date=2018-01-11 |s2cid=119482349 }}</ref>
+<ref name="Schatzman_1996">{{cite journal |author-last1=Schatzman |author-first1=James C. |date=1996 |title=Accuracy of the discrete Fourier transform and the fast Fourier transform |url=http://portal.acm.org/citation.cfm?id=240432 |journal=[[SIAM Journal on Scientific Computing]] |volume=17 |issue=5 |pages=1150–1166 |doi=10.1137/s1064827593247023 |bibcode=1996SJSC...17.1150S }}</ref>
+<ref name="Nussbaumer_1977">{{cite journal |author-first1=Henri J. |author-last1=Nussbaumer |date=1977 |doi=10.1049/el:19770280 |title=Digital filtering using polynomial transforms |journal=[[Electronics Letters]] |volume=13 |issue=13 |pages=386–387|bibcode=1977ElL....13..386N }}</ref>
+<ref name="Pan_1986">{{cite journal |author-first=Victor Ya. |author-last=Pan |date=1986-01-02 |doi=10.1016/0020-0190(86)90035-9 |title=The trade-off between the additive complexity and the asynchronicity of linear and bilinear algorithms |journal=[[Information Processing Letters]] |volume=22 |issue=1 |pages=11–14 |url=https://dl.acm.org/citation.cfm?id=8013 |access-date=2017-10-31 |url-access=subscription }}</ref>
+<ref name="Potts_Steidl_Tasche_2001">{{cite book |author-first1=Daniel |author-last1=Potts |author-first2=Gabriele |author-last2=Steidl|author2-link= Gabriele Steidl |author-first3=Manfred |author-last3=Tasche |date=2001 |chapter-url=http://www.tu-chemnitz.de/~potts/paper/ndft.pdf |archive-url=https://web.archive.org/web/20070926222858/http://www.tu-chemnitz.de/~potts/paper/ndft.pdf |archive-date=2007-09-26 |url-status=live |chapter=Fast Fourier transforms for nonequispaced data: A tutorial |editor-first1=J. J. |editor-last1=Benedetto |editor-first2=P. |editor-last2=Ferreira |title=Modern Sampling Theory: Mathematics and Applications |publisher=[[Birkhäuser]]}}</ref>
+<ref name="Rokhlin_Tygert_2006">{{cite journal |author-first1=Vladimir |author-last1=Rokhlin |author-first2=Mark |author-last2=Tygert |date=2006 |title=Fast Algorithms for Spherical Harmonic Expansions |journal=[[SIAM Journal on Scientific Computing]] |volume=27 |issue=6 |doi=10.1137/050623073 |pages=1903–1928 |bibcode=2006SJSC...27.1903R |url=http://tygert.com/sph2.pdf |archive-url=https://web.archive.org/web/20141217212000/http://tygert.com/sph2.pdf |archive-date=2014-12-17 |url-status=live |access-date=2014-09-18 }} [http://www.cs.yale.edu/publications/techreports/tr1309.pdf]</ref>
+<ref name="Welch_1969">{{cite journal |author-first1=Peter D. |author-last1=Welch |date=1969 |doi=10.1109/TAU.1969.1162035 |title=A fixed-point fast Fourier transform error analysis |journal=[[IEEE Transactions on Audio and Electroacoustics]] |volume=17 |issue=2 |pages=151–157 |bibcode=1969ITAuE..17..151W }}</ref>
+<ref name="Gauss_1866">{{cite book |author-first=Carl Friedrich |author-last=Gauss |author-link=Carl Friedrich Gauss |chapter-url=https://babel.hathitrust.org/cgi/pt?id=uc1.c2857678;view=1up;seq=279 |title=Nachlass |chapter=Theoria interpolationis methodo nova tractata |type=Unpublished manuscript |trans-chapter=Theory regarding a new method of interpolation |series=Werke |location=Göttingen, Germany |publisher=Königlichen Gesellschaft der Wissenschaften zu Göttingen |date=1866 |volume=3 |pages=265–303 |language=la, de}}</ref>
+<ref name="Heideman_Johnson_Burrus_1985">{{cite journal |title=Gauss and the history of the fast Fourier transform |journal=Archive for History of Exact Sciences |date=1985-09-01 |issn=0003-9519 |pages=265–277 |volume=34 |issue=3 |doi=10.1007/BF00348431 |author-first1=Michael T. |author-last1=Heideman |author-first2=Don H. |author-last2=Johnson |author-first3=Charles Sidney |author-last3=Burrus |author-link3=Charles Sidney Burrus |s2cid=122847826 }}</ref>
+<ref name="Yates_1937">{{cite journal |title=The design and analysis of factorial experiments |author-last=Yates |author-first=Frank |author-link=Frank Yates |date=1937 |journal=Technical Communication No. 35 of the Commonwealth Bureau of Soils|volume=142 |issue=3585 |pages=90–92 |bibcode=1938Natur.142...90F |doi=10.1038/142090a0 |s2cid=23501205 }}</ref>
+<ref name="Cooley_Lewis_Welch_1967">{{cite journal |title=Historical notes on the fast Fourier transform |journal=[[IEEE Transactions on Audio and Electroacoustics]] |date=June 1967 |issn=0018-9278 |pages=76–79 |volume=15 |issue=2 |doi=10.1109/TAU.1967.1161903 |author-first1=James W. |author-last1=Cooley |author-link1=James Cooley |author-first2=Peter A. W. |author-last2=Lewis |author-first3=Peter D. |author-last3=Welch |bibcode=1967ITAuE..15...76C }}</ref>
+<ref name="Cooley_Tukey_1965">{{cite journal |title=An algorithm for the machine calculation of complex Fourier series |url=https://www.ams.org/mcom/1965-19-090/S0025-5718-1965-0178586-1/ |journal=[[Mathematics of Computation]] |date=1965 |issn=0025-5718 |pages=297–301 |volume=19 |issue=90 |doi=10.1090/S0025-5718-1965-0178586-1 |author-first1=James W. |author-last1=Cooley |author-link1=James Cooley |author-first2=John W. |author-last2=Tukey |author-link2=John Tukey|doi-access=free |url-access=subscription }}</ref>
+<ref name="Danielson_Lanczos_1942">{{cite journal |title=Some improvements in practical Fourier analysis and their application to x-ray scattering from liquids |author-first1=Gordon C. |author-last1=Danielson |author-link1=Gordon C. Danielson |author-first2=Cornelius |author-last2=Lanczos |author-link2=Cornelius Lanczos |date=1942 |journal=Journal of the Franklin Institute |doi=10.1016/S0016-0032(42)90767-1 |volume=233 |issue=4 |pages=365–380}}</ref>
+<ref name="Lanczos_1956">{{cite book |author-first=Cornelius |author-last=Lanczos |author-link=Cornelius Lanczos |title=Applied Analysis |url=https://archive.org/details/appliedanalysis00lanc_0 |url-access=registration |date=1956 |publisher=[[Prentice–Hall]]}}</ref>
+<ref name="Fernandez-de-Cossio_2012">{{cite journal |author-last1=Fernandez-de-Cossio Diaz |author-first1=Jorge |author-last2=Fernandez-de-Cossio |author-first2=Jorge |date=2012-08-08 |title=Computation of Isotopic Peak Center-Mass Distribution by Fourier Transform |journal=Analytical Chemistry<!-- Anal. Chem. --> |volume=84 |issue=16 |pages=7052–7056 |doi=10.1021/ac301296a |pmid=22873736 |issn=0003-2700}}</ref>
+<ref name="Chu_George_1999">{{cite book |title=Inside the FFT Black Box: Serial and Parallel Fast Fourier Transform Algorithms |author-last1=Chu |author-first1=Eleanor |author-last2=George |author-first2=Alan |publisher=[[CRC Press]] |isbn=978-1-42004996-1 |pages=153–168 |orig-date=1999-11-11 |chapter=Chapter 16 |date=1999-11-11}}</ref>
+<ref name="Rockmore_2000">{{cite journal |title=The FFT: an algorithm the whole family can use |journal=Computing in Science & Engineering|date=January 2000 |issn=1521-9615 |pages=60–64 |volume=2 |issue=1 |doi=10.1109/5992.814659 |author-first=Daniel N. |author-last=Rockmore |bibcode=2000CSE.....2a..60R |s2cid=14978667 }}</ref>
+<ref name="Rockmore_2004">{{cite book |title=Computational Noncommutative Algebra and Applications |chapter=Recent Progress and Applications in Group FFTs |publisher=Springer Netherlands |date=2004 |isbn=978-1-4020-1982-1 |pages=227–254 |series=NATO Science Series II: Mathematics, Physics and Chemistry |volume=136 |author-first=Daniel N. |author-last=Rockmore |editor-first=Jim |editor-last=Byrnes |doi=10.1007/1-4020-2307-3_9 |s2cid=1412268 }}</ref>
+<ref name="Gentleman_Sande_1966">{{cite journal |author-last1=Gentleman |author-first1=W. Morven |author-last2=Sande |author-first2=G. |date=1966 |title=Fast Fourier transforms—for fun and profit |journal=[[Proceedings of the AFIPS]] |volume=29 |pages=563–578 |doi=10.1145/1464291.1464352|s2cid=207170956 |doi-access=free }}</ref>
+<ref name="Gauss_1805">{{cite book |author-first=Carl Friedrich |author-last=Gauss |author-link=Carl Friedrich Gauss |date=1866 |orig-date=1805 |url=https://gdz.sub.uni-goettingen.de/id/PPN235999628 |title=Theoria interpolationis methodo nova tractata |series=Werke |volume=3 |pages=265–327 |location=Göttingen, Germany |publisher=Königliche Gesellschaft der Wissenschaften |language=la, de}}</ref>
+<ref name="Cooley_1987">{{cite book |author-first=James W. |author-last=Cooley |author-link=James W. Cooley |contribution-url=https://carma.newcastle.edu.au/jon/Preprints/Talks/CARMA-CE/FFT.pdf |archive-url=https://web.archive.org/web/20160820070623/https://carma.newcastle.edu.au/jon/Preprints/Talks/CARMA-CE/FFT.pdf |archive-date=2016-08-20 |url-status=live |contribution=The Re-Discovery of the Fast Fourier Transform Algorithm |title=Microchimica Acta |location=Vienna, Austria |date=1987 |volume=III |pages=33–45}}</ref>
+<ref name="Garwin_1969">{{cite journal |author-first=Richard |author-last=Garwin |url=https://fas.org/rlg/690600-fft.pdf |archive-url=https://web.archive.org/web/20060517021147/http://www.fas.org/RLG/690600-fft.pdf |archive-date=2006-05-17 |url-status=live |title=The Fast Fourier Transform As an Example of the Difficulty in Gaining Wide Use for a New Technique |journal=[[IEEE Transactions on Audio and Electroacoustics]] |volume=AU-17 |issue=2 |date=June 1969 |pages=68–72}}</ref>
+<ref name="libftsh">{{Cite web |url=http://www.math.ohiou.edu/~mjm/research/libftsh.html |title=libftsh library |access-date=2007-01-09 |archive-url=https://web.archive.org/web/20100623034953/http://www.math.ohiou.edu/~mjm/research/libftsh.html |archive-date=2010-06-23 }}</ref>
+<ref name="Cormen_Nicol_1998">{{cite journal |title=Performing out-of-core FFTs on parallel disk systems |author-first1=Thomas H. |author-last1=Cormen |author-first2=David M. |author-last2=Nicol |date=1998 |journal=Parallel Computing |doi=10.1016/S0167-8191(97)00114-2 |volume=24 |issue=1 |pages=5–20 |s2cid=14996854 |doi-access=free }}</ref>
+<ref name="Dutt_Rokhlin_1993">{{cite journal |title=Fast Fourier Transforms for Nonequispaced Data |journal=[[SIAM Journal on Scientific Computing]] |date=1993-11-01 |issn=1064-8275 |pages=1368–1393 |volume=14 |issue=6 |doi=10.1137/0914081 |author-first1=Alok |author-last1=Dutt |author-first2=Vladimir |author-last2=Rokhlin|bibcode=1993SJSC...14.1368D }}</ref>
+}}
+
+==Further reading==
+* {{Cite book
+ |last=Brigham |first=Elbert Oran
+ |title=The fast Fourier transform
+ |date=1974
+ |publisher=[[Prentice-Hall]]
+ |isbn=978-0-13-307496-3
+ |edition=Nachdr.
+ |location=Englewood Cliffs, N.J
+}}
+* {{Cite book
+ |last1=Briggs |first1=William L.
+ |last2=Henson |first2=Van Emden
+ |title=The DFT: An Owner's Manual for the Discrete Fourier Transform
+ |date=1995
+ |publisher=[[Society for Industrial and Applied Mathematics]]
+ |isbn=978-0-89871-342-8
+ |location=Philadelphia
+}}
+* {{Cite book
+ |last1=Chu |first1=Eleanor
+ |last2=George |first2=Alan
+ |title=Inside the FFT Black Box: Serial and Parallel Fast Fourier Transform Algorithms
+ |date=2000
+ |publisher=[[CRC Press]]
+ |isbn=978-0-8493-0270-1
+ |series=Computational mathematics series
+ |location=Boca Raton, Fla. London
+}}
+* {{Cite book
+ |last1=Cormen |first1=Thomas H. |author-link=Thomas H. Cormen
+ |last2=Leiserson |first2=Charles E. |author-link2=Charles E. Leiserson
+ |last3=Rivest |first3=Ronald L. |author-link3=Ronald L. Rivest
+ |last4=Stein |first4=Clifford |author-link4=Clifford Stein
+ |title=Introduction to Algorithms |title-link=Introduction to Algorithms
+ |date=2001
+ |publisher=[[MIT Press]]
+ |isbn=978-0-262-03293-3
+ |edition=2nd.
+ |location=Cambridge (Mass.)
+ |chapter=Chapter 30: Polynomials and the FFT
+}}
+* {{Cite book
+ |last1=Elliott |first1=Douglas F.
+ |last2=Rao |first2=K. Ramamohan |author-link2=K. R. Rao
+ |url=https://books.google.com/books?id=DXrNCgAAQBAJ
+ |title=Fast transforms: algorithms, analyses, applications
+ |date=1982
+ |publisher=[[Academic Press]]
+ |isbn=978-0-12-237080-9
+ |location=New York
+}}
+* {{Cite book
+ |last1=Guo |first1=H.
+ |last2=Sitton |first2=G.A.
+ |last3=Burrus |first3=C.S. |author-link3=Charles Sidney Burrus
+ |title=Proceedings of ICASSP '94. IEEE International Conference on Acoustics, Speech and Signal Processing
+ |date=1994
+ |publisher=[[IEEE]]
+ |isbn=978-0-7803-1775-8
+ |volume=iii |pages=III/445–III/448
+ |chapter=The quick discrete Fourier transform
+ |doi=10.1109/ICASSP.1994.389994 |s2cid=42639206
+}}
+* {{Cite journal
+ |last1=Johnson |first1=Steven G.
+ |last2=Frigo |first2=Matteo
+ |date=January 2007
+ |title=A Modified Split-Radix FFT With Fewer Arithmetic Operations
+ |url=http://www.fftw.org/newsplit.pdf
+ |url-status=live
+ |journal=IEEE Transactions on Signal Processing
+ |volume=55 |issue=1 |pages=111–119
+ |bibcode=2007ITSP...55..111J |doi=10.1109/TSP.2006.882087 |issn=1053-587X |s2cid=14772428
+ |archive-url=https://web.archive.org/web/20050526050219/http://www.fftw.org/newsplit.pdf
+ |archive-date=2005-05-26
+}}
+* {{Cite book |last=Nussbaumer |first=Henri J.
+ |title=Fast Fourier Transform and Convolution Algorithms
+ |date=1990
+ |publisher=[[Springer Science+Business Media|Springer]]
+ |isbn=978-3-540-11825-1
+ |edition=2., corr. and updated
+ |series=Springer series in information sciences
+ |location=Berlin Heidelberg
+}}
+* {{Cite book
+ |last1=Press |first1=William H. |author-link=William H. Press
+ |last2=Teukolsky |first2=Saul A. |author-link2=Saul Teukolsky
+ |last3=Vetterling |first3=William T.
+ |last4=Flannery |first4=Brian P. |author-link4=Brian P. Flannery
+ |url=https://faculty.kfupm.edu.sa/phys/aanaqvi/Numerical%20Recipes-The%20Art%20of%20Scientific%20Computing%203rd%20Edition%20(Press%20et%20al).pdf
+ |title=Numerical recipes: the art of scientific computing
+ |date=2007
+ |publisher=[[Cambridge University Press]]
+ |isbn=978-0-521-88068-8
+ |edition=3.
+ |series=[[Numerical Recipes]]
+ |location=Cambridge
+ |pages=600–639 |chapter=Chapter 12. Fast Fourier Transform
+}}
+* {{Cite journal
+ |last=Singleton |first=R.
+ |date=June 1969
+ |title=A short bibliography on the fast Fourier transform
+ |journal=[[IEEE Transactions on Audio and Electroacoustics]]
+ |volume=17 |issue=2 |pages=166–169
+ |doi=10.1109/TAU.1969.1162040 |bibcode=1969ITAuE..17..166S
+ |issn=0018-9278
+}} (NB. Contains extensive bibliography.)
+* {{Cite book
+ |last=Prestini |first=Elena
+ |url=https://books.google.com/books?id=fye--TBu4T0C
+ |title=The evolution of applied harmonic analysis: models of the real world
+ |date=2004
+ |publisher=[[Springer Media]]
+ |isbn=978-0-8176-4125-2
+ |series=Applied and numerical harmonic analysis
+ |location=Boston; Berlin
+ |at=Section 3.10: Gauss and the asteroids: history of the FFT
+}}
+* {{Cite book |last=Van Loan |first=Charles F.
+ |title=Computational Frameworks for the Fast Fourier Transform
+ |date=1992
+ |publisher=[[Society for Industrial and Applied Mathematics]]
+ |isbn=978-0-89871-285-8
+ |series=Frontiers in Applied Mathematics
+ |location=Philadelphia
+}}
+* {{Cite book
+ |last=Terras |first=Audrey
+ |title=Fourier Analysis on Finite Groups and Applications
+ |date=1999
+ |publisher=[[Cambridge University Press]]
+ |isbn=978-0-521-45718-7
+ |series=London Mathematical Society Student Texts
+ |location=Cambridge (GB)
+}} (Chap.9 and other chapters)
+
+==External links==
+* [http://www.cs.pitt.edu/~kirk/cs1501/animations/FFT.html Fast Fourier Transform for Polynomial Multiplication]{{snd}} fast Fourier algorithm
+* [http://www.librow.com/articles/article-10 Fast Fourier transform — FFT]{{snd}} FFT programming in C++{{snd}} the Cooley–Tukey algorithm
+* [https://www.jjj.de/fxt/ Online documentation, links, book, and code]
+* Sri Welaratna, "[http://www.dataphysics.com/30_Years_of_FFT_Analyzers_by_Sri_Welaratna.pdf Thirty years of FFT analyzers] {{Webarchive|url=https://web.archive.org/web/20140112235745/http://www.dataphysics.com/30_Years_of_FFT_Analyzers_by_Sri_Welaratna.pdf |date=2014-01-12 }}", ''Sound and Vibration'' (January 1997, 30th anniversary issue){{snd}} a historical review of hardware FFT devices
+* [http://www.alglib.net/fasttransforms/fft.php ALGLIB FFT Code]{{snd}} a dual/GPL-licensed multilanguage (VBA, C++, Pascal, etc.) numerical analysis and data processing library
+* [http://groups.csail.mit.edu/netmit/sFFT/ SFFT: Sparse Fast Fourier Transform]{{snd}} MIT's <!-- [[sparse matrix|sparse]] --> sparse (sub-linear time) FFT algorithm, sFFT, and implementation
+* [https://web.archive.org/web/20130928020959/http://www.borgdesign.ro/fft.zip VB6 FFT]{{snd}} a VB6 optimized library implementation with source code
+* [https://www.karlsims.com/fft.html Interactive FFT Tutorial]{{snd}} a visual interactive intro to Fourier transforms and FFT methods
+* [https://medium.com/@fischerbach/introduction-to-fourier-analysis-of-time-series-42151703524a Introduction to Fourier analysis of time series]{{snd}} tutorial how to use of the Fourier transform in time series analysis
+
+{{Authority control}}
+
+[[Category:Fast Fourier transforms| ]]
+[[Category:Digital signal processing]]
+[[Category:Discrete transforms]]

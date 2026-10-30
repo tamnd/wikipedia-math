@@ -1,0 +1,239 @@
+<!-- wikipedia: en
+     page: 6395589
+     title: Karatsuba algorithm
+     revision: 1374658838
+     timestamp: 2026-09-13T10:18:21Z
+     history: https://en.wikipedia.org/w/index.php?curid=6395589&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374658838 -->
+{{short description|Algorithm for integer multiplication}}
+{{Infobox algorithm
+|class          = [[Multiplication algorithm]]
+|image          = <!-- filename only, no "File:" or "Image:" prefix, and no enclosing [[brackets]] -->
+|caption        =
+|data           =
+|time           = <!-- Worst time big-O notation -->
+|best-time      =
+|average-time   =
+|space          = <!-- Worst-case space complexity; auxiliary space
+                       (excluding input) if not specified -->
+}}
+[[File:Karatsuba_multiplication.svg|thumb|300px|Karatsuba multiplication of az+b and cz+d (boxed), and 1234 and 567 with z=100. Magenta arrows denote multiplication, amber denotes addition, silver denotes subtraction and cyan denotes left shift. (A), (B) and (C) show recursion with z=10 to obtain intermediate values.]]
+The '''Karatsuba algorithm''' is a fast [[multiplication algorithm]] for [[Integer|integers]]. It was discovered by [[Anatoly Karatsuba]] in 1960 and published in 1962.<ref name="kara1962">{{cite journal
+ | last1 = Karatsuba
+ | first1 = A. A.
+ | author1-link = Anatoly Karatsuba
+ | last2 = Ofman
+ | first2 = Y. P.
+ | author2-link = Yuri Ofman
+ | title = Multiplication of Many-Digital Numbers by Automatic Computers
+ |language = ru
+ | journal = Proceedings of the USSR Academy of Sciences
+ | volume = 145
+ | year = 1962
+ | pages = 293–294
+ | url = https://www.mathnet.ru/php/archive.phtml?wshow=paper&jrnid=dan&paperid=26729&option_lang=eng
+ | quote = Translation in the academic journal ''[[Physics-Doklady]]'', '''7''' (1963), pp. 595–596}}</ref><ref name="kara1995">
+  {{cite journal
+ | last = Karatsuba
+ | first = A. A.
+ | author-link = Anatoly Karatsuba
+ | title = The Complexity of Computations
+ | journal = Proceedings of the Steklov Institute of Mathematics
+ | volume = 211
+ | pages =169–183
+ | year = 1995
+ | url = http://www.ccas.ru/personal/karatsuba/divcen.pdf
+ | quote = Translation from Trudy Mat. Inst. Steklova, 211, 186–202 (1995)}}</ref><ref name="knuthV2">{{cite book
+ | last = Knuth
+ | first = Donald E.
+ | author-link = Donald Knuth
+ | title = [[The Art of Computer Programming]]
+ | volume = 2, Seminumerical Algorithms
+ | edition = 1st
+ | year = 1969
+ | publisher = Addison-Wesley
+ | location = Reading, Massachusetts
+ | isbn = 978-0201038026
+ | pages = xi+624
+}}</ref> It is a [[divide-and-conquer algorithm]] that reduces the multiplication of two ''n''-digit numbers to three multiplications of ''n''/2-digit numbers and, by repeating this reduction, to  at most <math> n^{\log_23}\approx n^{1.58}</math> single-digit multiplications. It is therefore [[Asymptotic complexity|asymptotically faster]] than [[long multiplication|the traditional algorithm]], which performs <math>n^2</math> single-digit products.
+
+The Karatsuba algorithm was the first multiplication algorithm asymptotically faster than the quadratic "grade school" algorithm.
+The [[Toom–Cook multiplication|Toom–Cook algorithm]] (1963) is a faster generalization of Karatsuba's method, and the [[Schönhage–Strassen algorithm]] (1971) is even faster, for sufficiently large ''n''.
+
+==History==
+The standard procedure for multiplication of two ''n''-digit numbers requires a number of elementary operations proportional to <math>n^2\,\!</math>, or <math>O(n^2)\,\!</math> in [[big-O notation]]. [[Andrey Kolmogorov]] conjectured that the traditional algorithm was ''[[asymptotically optimal]],'' meaning that any algorithm for that task would require <math>\Omega(n^2)\,\!</math> elementary operations.
+
+In 1960, Kolmogorov organized a seminar on mathematical problems in [[cybernetics]] at the [[Moscow State University]], where he stated the <math>\Omega(n^2)\,\!</math> conjecture and other problems in the [[Computational complexity theory|complexity of computation]]. Within a week, Karatsuba, then a 23-year-old student, found an algorithm that multiplies two ''n''-digit numbers in <math>O(n^{\log_2 3})</math> elementary steps, thus disproving the conjecture. Kolmogorov was very excited about the discovery; he communicated it at the next meeting of the seminar, which was then terminated. Kolmogorov gave some lectures on the Karatsuba result at conferences all over the world (see, for example, "Proceedings of the International Congress of Mathematicians 1962", pp. 351–356, and also "6 Lectures delivered at the International Congress of Mathematicians in Stockholm, 1962") and published the method in 1962, in the [[Proceedings of the USSR Academy of Sciences]]. The article had been written by Kolmogorov and contained two results on multiplication, Karatsuba's algorithm and a separate result by [[Yuri Ofman]]; it listed "A. Karatsuba and Yu. Ofman" as the authors. Karatsuba only became aware of the paper when he received the reprints from the publisher.<ref name="kara1995"/>
+
+==Algorithm==
+
+===Basic step===
+The basic principle of Karatsuba's algorithm is [[Divide-and-conquer algorithm|divide-and-conquer]], using a formula that allows one to compute the product of two large numbers <math>x</math> and <math>y</math> using three multiplications of smaller numbers, each with about half as many digits as <math>x</math> or <math>y</math>, plus some additions and digit shifts. This basic step is, in fact, a generalization of [[Multiplication algorithm#Complex number multiplication|a similar complex multiplication algorithm]], where the [[imaginary unit]] {{mvar|i}} is replaced by a power of the [[radix|base]].
+
+Let <math>x</math> and <math>y</math> be represented as <math>n</math>-digit strings in some base <math>B</math>. For any positive integer <math>m</math> less than <math>n</math>, one can write the two given numbers as
+
+:<math>x = x_1 B^m + x_0,</math>
+:<math>y = y_1 B^m + y_0,</math>
+
+where <math>x_0</math> and <math>y_0</math> are less than <math>B^m</math> and <math>x_1</math> and <math>y_1</math> are less than <math>B^{n-m}</math>. The product is then
+
+<math>
+\begin{align}
+xy &= (x_1 B^m + x_0)(y_1 B^m + y_0) \\
+   &= x_1 y_1 B^{2m} + (x_1 y_0 + x_0 y_1) B^m + x_0 y_0 \\
+   &= z_2 B^{2m} + z_1 B^m + z_0, \\
+\end{align}
+</math>
+
+where
+
+:<math>z_2 = x_1 y_1,</math>
+:<math>z_1 = x_1 y_0 + x_0 y_1,</math>
+:<math>z_0 = x_0 y_0.</math>
+
+These formulae require four multiplications and were known to [[Charles Babbage]].<ref>{{cite book
+ | last = Babbage
+ | first = Charles
+ | author-link = Charles Babbage
+ | title = Passages from the Life of a Philosopher
+ | chapter = Chapter VIII – Of the Analytical Engine, Larger Numbers Treated
+ | publisher = Longman Green
+ | location = London
+ | year = 1864
+ | page = 125
+ | url = https://archive.org/details/bub_gb_Fa1JAAAAMAAJ/page/n142
+}}</ref> Karatsuba observed that <math>xy</math> can be computed in only three multiplications, at the cost of a few extra additions.  With <math>z_0</math> and <math>z_2</math> as before and <math>z_3=(x_1 + x_0) (y_1 + y_0),</math> one observes that
+:<math>
+\begin{alignat}{2}
+z_1 &= x_1 y_0 + x_0 y_1 \\
+    &= x_1 y_0 + x_0 y_1 + x_1 y_1 + x_0 y_0 &&- x_1 y_1 - x_0 y_0 \\
+    &= (x_1 + x_0) (y_1 + y_0) &&- x_1 y_1 - x_0 y_0 \\
+    &= z_3 - z_2 - z_0. \\
+\end{alignat}
+</math>
+
+Thus only three multiplications are required for computing <math>z_0, z_1</math> and <math>z_2,</math> and thus <math>xy.</math>
+
+An alternative form uses <math>z_4 = (x_1 - x_0)(y_1 - y_0)</math> instead:
+:<math>
+\begin{align}
+z_1 &= \phantom{x_1 y_1 + x_0 y_0 - (x_1 y_1 - x_0 y_0 + {}} x_1 y_0 + x_0 y_1 \\
+    &= x_1 y_1 + x_0 y_0 - \phantom{(}x_1 y_1 - x_0 y_0 + x_1 y_0 + x_0 y_1 \\
+    &= x_1 y_1 + x_0 y_0 - (x_1 y_1 + x_0 y_0 - x_1 y_0 - x_0 y_1) \\
+    &= x_1 y_1 + x_0 y_0 - (x_1 - x_0) (y_1 - y_0)\\
+    &= z_2 + z_0 - z_4. \\
+\end{align}
+</math>
+
+===Example===
+To compute the product of 12345 and 6789, where ''B'' = 10, choose ''m'' = 3. We use ''m'' right shifts for decomposing the input operands using the resulting base (''B''<sup>''m''</sup> = ''1000''), as:
+: 12345 = '''12''' · ''1000'' + '''345'''
+:  6789 =  '''6''' · ''1000'' + '''789'''
+
+Only three multiplications, which operate on smaller integers, are used to compute three partial results:
+: ''z''<sub>2</sub> = '''12''' '''×''' '''6''' = 72
+: ''z''<sub>0</sub> = '''345''' '''×''' '''789''' = 272205
+: ''z''<sub>1</sub> = ('''12''' + '''345''') '''×''' ('''6''' + '''789''') − ''z''<sub>2</sub> − ''z''<sub>0</sub> = 357 '''×''' 795 − 72 − 272205 = 283815 − 72 − 272205 = 11538
+
+We get the result by just adding these three partial results, shifted accordingly (and then taking carries into account by decomposing these three inputs in base ''1000'' as for the input operands):
+: result = ''z''<sub>2</sub> · (''B''<sup>''m''</sup>)<sup>''2''</sup> + ''z''<sub>1</sub> · (''B''<sup>''m''</sup>)<sup>''1''</sup> + ''z''<sub>0</sub> · (''B''<sup>''m''</sup>)<sup>''0''</sup>, i.e.
+: result = 72 · ''1000''<sup>2</sup> + 11538 · ''1000'' + 272205 = '''83810205'''.
+
+Note that the intermediate third multiplication operates on an input domain which is less than two times larger than for the two first multiplications, its output domain is less than four times larger, and base-''1000'' carries computed from the first two multiplications must be taken into account when computing these two subtractions.
+
+===Recursive application===
+If ''n'' is four or more, the three multiplications in Karatsuba's basic step involve operands with fewer than ''n'' digits. Therefore, those products can be computed by [[recursion|recursive]] calls of the Karatsuba algorithm. The recursion can be applied until the numbers are so small that they can (or must) be computed directly.
+
+In a computer with a full 32-bit by 32-bit [[Binary multiplier|multiplier]], for example, one could choose ''B'' = 2<sup>31</sup> and store each digit as a separate 32-bit binary word. Then the sums ''x''<sub>1</sub> + ''x''<sub>0</sub> and ''y''<sub>1</sub> + ''y''<sub>0</sub> will not need an extra binary word for storing the carry-over digit (as in [[carry-save adder]]), and the Karatsuba recursion can be applied until the numbers to multiply are only one digit long.
+
+===Time complexity analysis===
+{{uncited section|date=November 2025}}
+Karatsuba's basic step works for any base ''B'' and any ''m'', but the recursive algorithm is most efficient when ''m'' is equal to ''n''/2, rounded up. In particular, if ''n'' is 2<sup>''k''</sup>, for some integer ''k'', and the recursion stops only when ''n'' is 1, then the number of single-digit multiplications is 3<sup>''k''</sup>, which is ''n''<sup>''c''</sup> where ''c'' = log<sub>2</sub>3.
+
+Since one can extend any inputs with zero digits until their length is a power of two, it follows that the number of elementary multiplications, for any ''n'', is at most <math>3^{ \lceil\log_2 n \rceil} \leq 3 n^{\log_2 3}\,\!</math>.
+
+Since the additions, subtractions, and digit shifts (multiplications by powers of ''B'') in Karatsuba's basic step take time proportional to ''n'', their cost becomes negligible as ''n'' increases. More precisely, if ''T''(''n'') denotes the total number of elementary operations that the algorithm performs when multiplying two ''n''-digit numbers, then
+
+:<math>T(n) = 3 T(\lceil n/2\rceil) + cn + d</math>
+
+for some constants ''c'' and ''d''. For this [[recurrence relation]], the [[master theorem (analysis of algorithms)|master theorem for divide-and-conquer recurrences]] gives the [[big O notation|asymptotic]] bound <math>T(n) = \Theta(n^{\log_2 3})\,\!</math>.
+
+It follows that, for sufficiently large ''n'', Karatsuba's algorithm will perform fewer shifts and single-digit additions than longhand multiplication, even though its basic step uses more additions and shifts than the straightforward formula. For small values of ''n'', however, the extra shift and add operations may make it run slower than the longhand method.
+
+==Implementation==
+
+Here is the pseudocode for this algorithm, using numbers represented in base ten. For the binary representation of integers, it suffices to set BASE to a different number, usually a power of 2 in line with the size of the [[machine word]] that the computer can natively multiply.<ref>{{cite book |last= Weiss |first= Mark A. |date= 2005 |title= Data Structures and Algorithm Analysis in C++ |publisher= [[Addison-Wesley]]|location=Boston|edition = 3rd|pages= 480|isbn= 0321375319}}</ref>
+<syntaxhighlight lang="javascript">
+const BASE = 10
+
+/* Count the size of num in BASE. For example, 12345 has a size of 5 in base 10 and a size of 2 in base 1024. */
+function size_in_base(num)
+    string_num = num.toString()
+	return string_num.length()
+
+/* Split a digit into its low "d" digits and its high digits. For example, split_at(12345, 3) will extract the 3 final digits, giving: high=12, low=345. */
+function split_at(num, d)
+	hi =  num / (BASE ^ d) 
+    low = num % (BASE ^ d) /* remainder of division */
+	return hi, low
+
+function karatsuba(num1, num2)
+    if (num1 < BASE or num2 < BASE)
+        return num1 × num2 /* fall back to traditional multiplication */
+    
+    /* Calculates the size of the numbers. */
+    m = max(size_in_base(num1), size_in_base(num2))
+    m2 = floor(m / 2) 
+    /* m2 = ceil (m / 2) will also work */
+    
+    /* Split the digit sequences in the middle. */
+    high1, low1 = split_at(num1, m2)
+    high2, low2 = split_at(num2, m2)
+    
+    /* 3 recursive calls made to numbers approximately half the size. */
+    z0 = karatsuba(low1, low2)
+    z3 = karatsuba(low1 + high1, low2 + high2)
+    z2 = karatsuba(high1, high2)
+    
+    return (z2 × BASE ^ (m2 × 2)) + ((z3 - z2 - z0) × BASE ^ m2) + z0
+</syntaxhighlight>
+
+An issue that occurs with this implementation is that each of the factors <math>(x_1 + x_0)</math> and <math>(y_1 + y_0)</math> of <math>z_3</math> may require more than <code>m2</code> digits to represent, and <math>z_3</math> itself may overflow (produce a result in the range <math>B^m \leq z_3 < 2 B^m</math>).  This need for a multiplier with one extra bit can be avoided using the alternative form mentioned above:
+
+:<math>z_1 = z_2 + z_0 - (x_1 - x_0)(y_1 - y_0).</math>
+
+The computation of <math>z_4 = (x_1 - x_0)(y_1 - y_0)</math> will produce a result in the range of <math>-B^m < z_4 < B^m</math>.  This method also needs one extra bit, to encode the sign of the potentially negative numbers, but it can be handled by computing the absolute value <math>\left|z_4\right| = \left|x_1 - x_0\right|\left|y_1 - y_0\right|</math> with a fixed-width multiplier, computing the sign of <math>z_4</math> separately, and finally summing
+:<math>z_1 = z_2 + z_0 \pm \left|z_4\right|.</math>
+
+==References==
+{{Reflist}}
+
+==External links==
+* {{cite web
+ | last = Beaver
+ | first = Jonathan
+ | title = Karatsuba's Algorithm for Polynomial Multiplication
+ | url = https://www.cs.pitt.edu/~kirk/cs1501/animations/Karatsuba.html
+ | website = University of Pittsburgh – CS1501
+}}
+* {{cite web
+ | last = Bernstein
+ | first = Daniel J.
+ | title = Multidigit multiplication for mathematicians
+ | url = https://cr.yp.to/papers/m3.pdf
+ | website = cr.yp.to
+ | date = 2001-08-11
+ | access-date = 2025-10-06
+ | quote = Covers Karatsuba and many other multiplication algorithms.
+}}
+*{{MathWorld|urlname=KaratsubaMultiplication|title=Karatsuba Multiplication}}
+*{{YouTube|id=LCY4dnm88oI|title=Karatsuba's Multiplication Trick Summarised in 1 Minute}}
+*{{YouTube|id=cCKOl5li6YM|title=How a Russian student invented a faster multiplication method}}
+
+{{Number-theoretic algorithms}}
+
+[[Category:Computer arithmetic algorithms]]
+[[Category:Multiplication]]
+[[Category:Articles with example pseudocode]]
+[[Category:Divide-and-conquer algorithms]]

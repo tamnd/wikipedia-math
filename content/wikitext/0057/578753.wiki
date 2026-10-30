@@ -1,0 +1,115 @@
+<!-- wikipedia: en
+     page: 578753
+     title: Pollard's p − 1 algorithm
+     revision: 1374893778
+     timestamp: 2026-09-14T18:05:11Z
+     history: https://en.wikipedia.org/w/index.php?curid=578753&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374893778 -->
+{{Short description|Special-purpose algorithm for factoring integers}}
+{{DISPLAYTITLE:Pollard's ''p''&nbsp;&minus;&nbsp;1 algorithm}}
+'''Pollard's ''p''&nbsp;&minus;&nbsp;1 algorithm''' is a [[number theory|number theoretic]] [[integer factorization]] [[algorithm]], invented by [[John Pollard (mathematician)|John Pollard]] in 1974. It is a special-purpose algorithm, meaning that it is only suitable for [[integer]]s with specific types of factors; it is the simplest example of an [[algebraic-group factorisation algorithm]].
+
+The factors it finds are ones for which the number preceding the factor, ''p''&nbsp;&minus;&nbsp;1, is [[smooth number#Powersmooth numbers|powersmooth]]; the essential observation is that, by working in the multiplicative group [[Modular arithmetic|modulo]] a composite number ''N'', we are also working in the multiplicative groups modulo all of ''N'''s factors.
+
+The existence of this algorithm leads to the concept of [[safe prime]]s, being primes for which ''p''&nbsp;&minus;&nbsp;1 is two times a [[Sophie Germain prime]] ''q'' and thus minimally smooth.  These primes are sometimes construed as "safe for cryptographic purposes", but they might be ''unsafe'' &mdash; in current recommendations for cryptographic [[strong prime]]s (''e.g.'' [[ANSI X9.31]]), it is [[necessary but not sufficient]] that ''p''&nbsp;&minus;&nbsp;1 has at least one large prime factor.  Most sufficiently large primes are strong; if a prime used for cryptographic purposes turns out to be non-strong, it is much more likely to be through malice than through an accident of [[random number generation]].  This terminology is considered [[obsolete]] by the cryptography industry: the [[Lenstra elliptic-curve factorization|ECM]] factorization method is more efficient than Pollard's algorithm and finds safe prime factors just as quickly as it finds non-safe prime factors of similar size, thus the size of ''p'' is the key security parameter, not the smoothness of ''p''&nbsp;−&nbsp;1.<ref>[https://web.archive.org/web/20070315100305/http://www.rsa.com/rsalabs/node.asp?id=2217 What are strong primes and are they necessary for the RSA system?], RSA Laboratories (2007)</ref>
+
+==Base concepts==
+Let ''n'' be a composite integer with prime factor ''p''.  By [[Fermat's little theorem]], we know that for all integers ''a'' coprime to ''p'' and for all positive integers ''K'':
+
+:<math>a^{K(p-1)} \equiv 1\pmod{p}</math>
+
+If a number ''x'' is congruent to 1 [[Modular arithmetic|modulo]] a factor of ''n'', then the {{nowrap|[[Greatest common divisor|gcd]](''x'' &minus; 1, ''n'')}} will be divisible by that factor.
+
+The idea is to make the exponent a large multiple of ''p''&nbsp;&minus;&nbsp;1 by making it a number with very many prime factors; generally, we take the product of all prime powers less than some limit ''B''.  Start with a random ''x'', and repeatedly replace it by <math>x^w \bmod n</math> as ''w'' runs through those prime powers.  Check at each stage, or once at the end if you prefer, whether {{nowrap|gcd(''x'' &minus; 1, ''n'')}} is not equal to&nbsp;1.
+
+==Algorithm and running time==
+The basic algorithm can be written as follows:
+
+:'''Inputs''': ''n'': a (possibly) composite number
+:'''Output''': a nontrivial factor of ''n'' or <u>failure</u>
+
+:# select a smoothness bound ''B'' (not necessarily prime)
+:# define <math>M = \prod_{\text{primes}~q \le B} q^{ \lfloor \log_q{B} \rfloor }</math> (note: <math>M=\operatorname{lcm}(1,2,...,B)</math> is the largest ''B''-[[smooth number#Powersmooth numbers|powersmooth]] number; explicitly evaluating ''M'' may not be necessary)
+:# randomly pick a positive integer, ''a'', which is coprime to ''n'' (note: we can actually fix ''a'', e.g. if ''n'' is odd, then we can always select ''a'' = 2, random selection here is not imperative)
+:# compute {{nowrap|''g'' {{=}} gcd(''a''<sup>''M''</sup> − 1, ''n'')}} (note: exponentiation can be done modulo&nbsp;''n'')
+:# if {{nowrap|1 < ''g'' < ''n''}} then return ''g''
+:# if {{nowrap|''g'' {{=}} 1}} then select a larger ''B'' and go to step 2 or return <u>failure</u>
+:# if {{nowrap|''g'' {{=}} ''n''}} then select a smaller ''B'' and go to step 2 or return <u>failure</u>
+
+If {{nowrap|''g'' {{=}} 1}} in step 6, this indicates there are no prime factors ''p'' for which ''p''&nbsp;−&nbsp;1 is ''B''-powersmooth. If {{nowrap|''g'' {{=}} ''n''}} in step 7, this usually indicates that all factors were ''B''-powersmooth, but in rare cases it could indicate that ''a'' had a small order modulo&nbsp;''n''. Additionally, when the maximum prime factors of ''p''&nbsp;−&nbsp;1 for each prime factors ''p'' of ''n'' are all the same in some rare cases, this algorithm will fail.
+
+The running time of this algorithm is {{nowrap|O(''B'' × log ''B'' × log<sup>2</sup> ''n'')}}; larger values of ''B'' make it run slower, but are more likely to produce a factor.
+
+=== Example ===
+
+If we want to factor the number ''n'' = 299.
+:# We select ''B'' = 5.
+:# Thus ''M'' = 2<sup>2</sup> × 3<sup>1</sup> × 5<sup>1</sup>.
+:# We select ''a'' = 2.
+:# ''g'' = gcd(''a''<sup>''M''</sup> − 1, ''n'') = 13.
+:# Since 1 < 13 < 299, thus return 13.
+:# 299 / 13 = 23 is prime, thus it is fully factored: 299 = 13 × 23.
+
+==Methods of choosing ''B''==
+
+Since the algorithm is incremental, it is able to keep running with the bound constantly increasing.
+
+Assume that ''p''&nbsp;&minus;&nbsp;1, where ''p'' is the smallest prime factor of ''n'', can be modelled as a random number of size less than&nbsp;{{radic|''n''}}. By [[Dickman function|the Dickman function]], the probability that the largest factor of such a number is less than (''p''&nbsp;&minus;&nbsp;1)<sup>''1/&epsilon;''</sup> is roughly ''&epsilon;''<sup>&minus;''&epsilon;''</sup>; so there is a probability of about 3<sup>&minus;3</sup>&nbsp;=&nbsp;1/27 that a ''B'' value of ''n''<sup>1/6</sup> will yield a factorisation.
+
+An improved method to estimate the probability of success given ''B''<sub>1</sub>, ''B''<sub>2</sub> is found in Kruppa (2010).<ref name=Kruppa>{{cite thesis|url=https://docnum.univ-lorraine.fr/public/SCD_T_2010_0054_KRUPPA.pdf|date=2010|title=Speeding up Integer Multiplication and Factorization|last=Kruppa|first=Alexander|degree=PhD|publisher=Henri Poincaré University}} &ndash; Work describes algorithms that Kruppa had contributed to GMP-ECM and other factoring programs. Some chapters have been published elsewhere.</ref>{{rp|100}}
+
+In practice, the [[Lenstra elliptic-curve factorization|elliptic curve method]] is faster than the Pollard ''p''&nbsp;&minus;&nbsp;1 method once the factors are at all large; running the ''p''&nbsp;&minus;&nbsp;1 method up to ''B''&nbsp;=&nbsp;2<sup>32</sup> will find a quarter of all 64-bit factors and 1/27 of all 96-bit factors.
+
+==Two-stage variant==
+A variant of the basic algorithm is used in practice; instead of requiring that ''p''&nbsp;−&nbsp;1 has all its factors less than ''B'', we require it to have all but one of its factors less than some ''B''<sub>1</sub>, and the remaining factor less than some {{nowrap|''B''<sub>2</sub> ≫ ''B''<sub>1</sub>}}.
+
+=== Pollard's stage 2 and Montgomery's prime-pairing ===
+After completing the first stage, which is the same as the basic algorithm, instead of computing a new
+
+:<math>M' = \prod_{\text{primes }q \le B_2} q^{ \lfloor \log_q B_2 \rfloor }
+</math>
+
+for ''B''<sub>2</sub> and checking {{nowrap|gcd(''a''<sup>''M'''</sup> − 1, ''n'')}}, we compute
+
+:<math>Q = \prod_{\text{primes } q \in (B_1, B_2]} (H^q - 1)</math>
+
+where {{nowrap|''H'' {{=}} ''a''<sup>''M''</sup>}} and check if {{nowrap|gcd(''Q'', ''n'')}} produces a nontrivial factor of&nbsp;''n''. As before, exponentiations can be done modulo&nbsp;''n''.
+
+Let {''q''<sub>1</sub>, ''q''<sub>2</sub>, …} be successive prime numbers in the interval {{nowrap|(''B''<sub>1</sub>, ''B''<sub>2</sub>]}} and ''d''<sub>''n''</sub>&nbsp;=&nbsp;''q''<sub>''n''</sub>&nbsp;−&nbsp;''q''<sub>''n''−1</sub> the difference between consecutive prime numbers. Since typically {{nowrap|''B''<sub>1</sub> > 2}}, {{nowrap|''d''<sub>''n''</sub>}} are even numbers. The distribution of prime numbers is such that the ''d''<sub>''n''</sub> will all be relatively small. It is suggested that {{nowrap|''d''<sub>''n''</sub> ≤ [[Natural logarithm|ln]]<sup>2</sup> ''B''<sub>2</sub>}}. Hence, the values of {{nowrap|''H''<sup>2</sup>}}, {{nowrap|''H''<sup>4</sup>}}, {{nowrap|''H''<sup>6</sup>}},&nbsp;…&nbsp;(mod&nbsp;''n'') can be stored in a table, and {{nowrap|''H''<sup>''q''<sub>''n''</sub></sup>}} be computed from {{nowrap|''H''<sup>''q''<sub>''n''−1</sub></sup>⋅''H''<sup>''d''<sub>''n''</sub></sup>}}, saving the need for exponentiations.
+
+This above method is found in Pollard (1974). For each "outlying" prime ''q'' in the range, it requires two modular multiplications, the main time-cost in this algorithm.<ref name=MontgomeryKruppa08/> An improved method in [[Peter Montgomery (mathematician)|Montgomery ]] (1978) implements "prime-pairing" and halves the number of modular multiplications required.<ref>Montgomery, P. L. Speeding the Pollard and elliptic curve methods of factorization. Mathematics of Computation 48, 177 (1987), 243–264.</ref> Nevertheless, there remains a need to do O(π(''B''<sub>2</sub>)−π(''B''<sub>1</sub>)) operations modulo N, so O(''B''<sub>2</sub>/log ''B''<sub>2</sub>) operations assuming ''B''<sub>2</sub> is much larger than ''B''<sub>1</sub>.
+
+There is also a Brent-Suyama extension that allows numbers beyond the two bounds to be retrieved and factored, improving the probability of finding factors. However, it is much more efficient (in terms of amount of computation required for a given probability of success) to instead use the polynomial stage 2 (below) with a larger ''B''<sub>2</sub>.<ref name=MontgomeryKruppa08/>
+
+=== Crandall's n<sup>K</sup> stage 2 ===
+[[Richard Crandall]] describes a more efficient stage 2 in ''Topics in Advanced Scientific Computation'' (1996). The underlying idea is that for some carefully chosen fixed power ''K'', one accumulates the power <math display=inline>c = \prod_{i,j} (H^{i^K} - H^{j^K})</math> over unequal ''i, j''. If there is a congruence <math display=inline>i^K=j^K \pmod q</math> for the outlying prime ''q'', then GCD(''c'', ''n'') may produce the factor. Therefore it is beneficial to evaluate quickly numbers of the form <math display=inline>x^{n^K}</math> for given ''x'' and ''K'', with ''n'' = 1,2,3...<ref name=Crandall>{{cite book |last1=Crandall |first1=Richard E. |title=Topics in advanced scientific computation|chapter=3.3 Factoring :: 3.3.2 Factoring with limited resources|date=1996 |publisher=Springer Telos |location=New York |isbn=0387944737|pages=134&ndash;8}}</ref>
+
+=== Montgomery and Kruppa's polynomial stage 2 ===
+A more efficient continuation can be done using a polynomial multiplication implemented via [[fast Fourier transform]], taking O({{sqrt|''B''<sub>2</sub>}} log ''B''<sub>2</sub>) operations, which is much more efficient for large ''B''<sub>2</sub>. This new algorithm runs even faster if more memory is allocated for convolution: with convolution size increased by a factor of ''n'', the memory usage as well as run time per convolution is increased by a factor of ''n'', but the amount of advancement of ''B''<sub>2</sub> in each step is increased by a factor of ''n''<sup>2</sup>.<ref name=MontgomeryKruppa08>{{cite journal |last1=Montgomery |first1=Peter L. |last2=Kruppa |first2=Alexander |title=Improved Stage 2 to P ± 1 Factoring Algorithms |journal=Algorithmic Number Theory |date=2008 |volume=5011 |pages=180–195 |doi=10.1007/978-3-540-79456-1_12 |url=https://inria.hal.science/inria-00188192/file/pm1fft-final.pdf}}</ref>
+
+Montgomery and Silverman also published an earlier polynomial evaluation scheme in 1990&ndash;1992.<ref name=Crandall/>
+
+==Implementations==
+
+* The [https://gitlab.inria.fr/zimmerma/ecm GMP-ECM] package includes an efficient implementation of the ''p''&nbsp;−&nbsp;1 method. It implements both prime-pairing and polynomial stage 2.
+* [[Prime95]] and [[MPrime]], the official clients of the [[Great Internet Mersenne Prime Search]], implements ''p''&nbsp;−&nbsp;1 for numbers of the form <math>(kb^n+c)/d</math>, though it mainly focuses on using ''p''&nbsp;−&nbsp;1 to prove Mersenne numbers composite. It implements both prime-pairing and polynomial stage 2.
+
+==See also==
+* [[Williams's p + 1 algorithm|Williams's ''p'' + 1 algorithm]]
+
+==References==
+{{Reflist}}
+*{{Cite journal |last=Pollard |first=J. M. |year=1974 |title=Theorems on factorization and primality testing |journal=Proceedings of the Cambridge Philosophical Society |volume=76 |issue=3 |pages=521–528 |doi=10.1017/S0305004100049252 |bibcode=1974PCPS...76..521P |s2cid=122817056 }}
+*{{Cite journal |last1=Montgomery |first1=P. L. |last2=Silverman |first2=R. D. |year=1990 |title=An FFT extension to the ''P'' − 1 factoring algorithm |journal=Mathematics of Computation |volume=54 |issue=190 |pages=839–854 |doi=10.1090/S0025-5718-1990-1011444-3 |bibcode=1990MaCom..54..839M |doi-access=free }}
+* {{cite book | author =Samuel S. Wagstaff, Jr. | title=The Joy of Factoring | publisher=American Mathematical Society | location=Providence, RI | year=2013 | isbn=978-1-4704-1048-3 |url=https://www.ams.org/bookpages/stml-68 |author-link=Samuel S. Wagstaff, Jr. | pages=138–141 }}
+
+==External links==
+
+*[https://factordb.com/listecm.php?c=2 All prime factors found by Pollard's ''p'' − 1 algorithm in ''factordb'']
+*[http://www.loria.fr/%7Ezimmerma/records/Pminus1.html Record of the prime factors found by Pollard's ''p'' − 1 algorithm]
+
+{{Number theoretic algorithms}}
+
+{{DEFAULTSORT:Pollard's p - 1 algorithm}}
+[[Category:Integer factorization algorithms]]

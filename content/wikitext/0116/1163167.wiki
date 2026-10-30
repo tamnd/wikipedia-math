@@ -1,0 +1,92 @@
+<!-- wikipedia: en
+     page: 1163167
+     title: Powerset construction
+     revision: 1349434409
+     timestamp: 2026-04-17T09:18:58Z
+     history: https://en.wikipedia.org/w/index.php?curid=1163167&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1349434409 -->
+{{Short description|Method for making finite automata deterministic}}
+In the [[theory of computation]] and [[automata theory]], the '''powerset construction''' or '''subset construction''' is a standard method for converting a [[nondeterministic finite automaton]] (NFA) into a [[deterministic finite automaton]] (DFA) that recognizes the same [[formal language]]. It is important in theory because it establishes that NFAs, despite their additional flexibility, are unable to recognize any language that cannot be recognized by some DFA. It is also important in practice for converting easier-to-construct NFAs into more efficiently executable DFAs. However, if the NFA has ''n'' states, the resulting DFA may have up to 2<sup>''n''</sup> states, an exponentially larger number, which sometimes makes the construction impractical for large NFAs.
+
+The construction, sometimes called the '''Rabin–Scott powerset construction''' (or subset construction) to distinguish it from similar constructions for other types of automata, was first published by [[Michael O. Rabin]] and [[Dana Scott]] in 1959.<ref>{{cite journal |last1=Rabin |first1=M. O. |authorlink1=Michael O. Rabin |last2=Scott |first2=D. |authorlink2=Dana Scott |date=1959 |title=Finite automata and their decision problems |journal=[[IBM Journal of Research and Development]] |issn=0018-8646 |doi=10.1147/rd.32.0114 |volume=3 |issue=2 |pages=114–125}}</ref>
+
+==Intuition==
+To simulate the operation of a DFA on a given input string, one needs to keep track of a single state at any time: the state that the automaton will reach after seeing a [[Substring#Prefix|prefix]] of the input.  In contrast, to simulate an NFA, one needs to keep track of a set of states: all of the states that the automaton could reach after seeing the same prefix of the input, according to the nondeterministic choices made by the automaton. If, after a certain prefix of the input, a set {{mvar|S}} of states can be reached, then after the next input symbol {{mvar|x}} the set of reachable states is a deterministic function of {{mvar|S}} and {{mvar|x}}. Therefore, the sets of reachable NFA states play the same role in the NFA simulation as single DFA states play in the DFA simulation, and in fact the sets of NFA states appearing in this simulation may be re-interpreted as being states of a DFA.<ref name="sipser">{{cite book |last=Sipser |first=Michael |authorlink=Michael Sipser |title=Introduction to the Theory of Computation |year=1997 |isbn=0-534-94728-X |contribution=Theorem 1.19 |pages=[https://archive.org/details/introductiontoth00sips/page/55 55–56] |url-access=registration |url=https://archive.org/details/introductiontoth00sips/page/55 }}</ref>
+
+==Construction==
+The powerset construction applies most directly to an NFA that does not allow state transformations without consuming input symbols (aka:  "ε-moves"). Such an automaton may be defined as a [[tuple|5-tuple]] {{math|(''Q'', Σ, ''T'', ''q''<sub>0</sub>, ''F'')}}, in which {{mvar|Q}} is the set of states, {{math|Σ}} is the set of input symbols, {{mvar|T}} is the transition function (mapping a state and an input symbol to a set of states), {{math|''q''<sub>0</sub>}} is the initial state, and {{mvar|F}} is the set of accepting states. The corresponding DFA has states corresponding to subsets of {{mvar|Q}}. The initial state of the DFA is {{math|{{mset|''q''<sub>0</sub>}}}}, the (one-element) set of initial states. The transition function of the DFA maps a state {{mvar|S}} (representing a subset of {{mvar|Q}}) and an input symbol {{mvar|x}} to the set {{math|1=''T''(''S'',''x'') = &cup;{{mset|''T''(''q'',''x'') {{pipe}} ''q'' ∈ ''S''}}}}, the set of all states that can be reached by an {{mvar|x}}-transition from a state in {{mvar|S}}.
+A state {{mvar|S}} of the DFA is an accepting state if and only if at least one member of {{mvar|S}} is an accepting state of the NFA.<ref name="sipser"/><ref name="hu">{{cite book |last1=Hopcroft |first1=John E. |authorlink1=John Hopcroft |last2=Ullman |first2=Jeffrey D. |authorlink2=Jeffrey Ullman |date=1979 |title=[[Introduction to Automata Theory, Languages, and Computation]] |publisher=Addison-Wesley |location=Reading Massachusetts |isbn=0-201-02988-X |contribution=The equivalence of DFA's and NFA's |pages=[https://archive.org/details/introductiontoau00hopc/page/22 22–23] }}</ref>
+
+In the simplest version of the powerset construction, the set of all states of the DFA is the [[power set|powerset]] of {{mvar|Q}}, the set of all possible subsets of {{mvar|Q}}. However, many states of the resulting DFA may be useless as they may be unreachable from the initial state. An alternative version of the construction creates only the states that are actually reachable.<ref name="schneider">{{cite book |last=Schneider |first=Klaus |date=2004 |title=Verification of reactive systems: formal methods and algorithms |publisher=Springer |isbn=978-3-540-00296-3 |pages=210–212 |url=https://books.google.com/books?id=Z92bL1VrD_sC&pg=PA210}}</ref>
+
+===NFA with ε-moves===
+For an NFA with ε-moves (also called an ε-NFA), the construction must be modified to deal with these by computing the ''ε-[[reflexive transitive closure|closure]]'' of states: the set of all states reachable from some given state using only ε-moves. Van Noord recognizes three possible ways of incorporating this closure computation in the powerset construction:<ref name="vannoord">{{cite journal |last=Van Noord |first=Gertjan |title=Treatment of epsilon moves in subset construction |journal=[[Computational Linguistics (journal)|Computational Linguistics]] |volume=26 |issue=1 |year=2000 |pages=61–76 |url=http://www.mitpressjournals.org/doi/pdfplus/10.1162/089120100561638 |doi=10.1162/089120100561638|arxiv=cmp-lg/9804003 |s2cid=5622079 }}</ref>
+
+# Compute the ε-closure of the entire automaton as a preprocessing step, producing an equivalent NFA without ε-moves, then apply the regular powerset construction. This version, also discussed by Hopcroft and Ullman,<ref>{{harvtxt|Hopcroft|Ullman|1979}}, pp.&nbsp;26–27.</ref> is straightforward to implement, but impractical for automata with large numbers of ε-moves, as commonly arise in [[natural language processing]] application.{{r|vannoord}}
+# During the powerset computation, compute the ε-closure <math>\{q' ~|~ q \to^{*}_\varepsilon q' \}</math> of each state {{mvar|q}} that is considered by the algorithm (and cache the result).
+# During the powerset computation, compute the ε-closure <math>\{q' ~|~ \exists q \in Q', q \to^{*}_\varepsilon q' \}</math> of each subset of states {{mvar|Q'}} that is considered by the algorithm, and add its elements to {{mvar|Q'}}.
+
+===Multiple initial states===
+If NFAs are defined to allow for multiple initial states,<ref>{{cite book |title=Complexity Theory and Cryptology: An Introduction to Cryptocomplexity|series=Texts in Theoretical Computer Science|first=Jörg|last=Rothe|publisher=Springer|year=2006|isbn=9783540285205|pages=21–22|url=https://books.google.com/books?id=YnLmsHAtvYEC&pg=PA21}}.</ref> the initial state of the corresponding DFA is the set of all initial states of the NFA, or (if the NFA also has ε-moves) the set of all states reachable from initial states by ε-moves.
+
+==Example==
+The NFA below has four states; state 1 is initial, and states 3 and 4 are accepting. Its alphabet consists of the two symbols 0 and 1, and it has ε-moves. 
+[[File:NFA-powerset-construction-example.svg|frameless|center|upright=1.5]]
+
+The initial state of the DFA constructed from this NFA is the set of all NFA states that are reachable from state 1 by ε-moves; that is, it is the set {1,2,3}.
+A transition from {1,2,3} by input symbol 0 must follow either the arrow from state 1 to state 2, or the arrow from state 3 to state 4. Additionally, neither state 2 nor state 4 have outgoing ε-moves. Therefore, {{mvar|T}}({1,2,3},0)&nbsp;=&nbsp;{2,4}, and by the same reasoning the full DFA constructed from the NFA is as shown below.
+[[File:DFA-powerset-construction-example.svg|frameless|center|upright=1.5]]
+As can be seen in this example, there are five states reachable from the start state of the DFA; the remaining 11 sets in the powerset of the set of NFA states are not reachable.
+
+==Complexity==
+{{main article|State complexity}}
+
+[[File:NFA_and_blown-up_equivalent_DFA_01.svg|thumb|upright=1.8|NFA with 5 states (left) whose DFA (right) requires 16 states.<ref name="schneider"/>]]
+Because the DFA states consist of sets of NFA states, an {{mvar|n}}-state NFA may be converted to a DFA with at most {{math|2<sup>''n''</sup>}} states.<ref name="sipser"/> For every {{mvar|n}}, there exist {{mvar|n}}-state NFAs such that every subset of states is reachable from the initial subset, so that the converted DFA has exactly {{math|2<sup>''n''</sup>}} states, giving Θ({{math|2<sup>''n''</sup>}}) [[worst-case complexity|worst-case time complexity]].<ref>{{cite journal
+| last       = Lupanov
+| first      = Oleg B.
+| date       = 1963
+| title      = A comparison of two types of finite sources
+| journal    = Problemy Kibernetiki
+| volume     = 9
+| pages      = 321–326
+}}</ref><ref name="moore71">{{cite journal
+ | last = Moore | first = Frank R.
+ | doi = 10.1109/T-C.1971.223108
+ | issue = 10
+ | journal = [[IEEE Transactions on Computers]]
+ | pages = 1211–1214
+ | title = On the bounds for state-set size in the proofs of equivalence between deterministic, nondeterministic, and two-way finite automata
+ | volume = C-20
+ | year = 1971| s2cid = 206618275
+ }}.</ref> A simple example requiring nearly this many states is the language of strings over the alphabet {0,1} in which there are at least {{mvar|n}} characters, the {{mvar|n}}th from last of which is 1. It can be represented by an {{math|(''n'' + 1)}}-state NFA, but it requires {{math|2<sup>''n''</sup>}} DFA states, one for each {{mvar|n}}-character suffix of the input; cf. picture for {{math|''n''<nowiki>=</nowiki>4}}.<ref name="schneider"/>
+
+==Applications==
+[[DFA minimization#Brzozowski's algorithm|Brzozowski's algorithm for DFA minimization]] uses the powerset construction, twice. It converts the input DFA into an NFA for the reverse language, by reversing all its arrows and exchanging the roles of initial and accepting states, converts the NFA back into a DFA using the powerset construction, and then repeats its process. Its worst-case complexity is exponential, unlike some other known [[DFA minimization]] algorithms, but in many examples it performs more quickly than its worst-case complexity would suggest.<ref>{{cite conference
+ | last = Brzozowski | first = J. A.
+ | authorlink=Janusz Brzozowski (computer scientist)
+ | contribution = Canonical regular expressions and minimal state graphs for definite events
+ | mr = 0175719
+ | pages = 529–561
+ | publisher = Polytechnic Press of Polytechnic Inst. of Brooklyn, Brooklyn, N.Y.
+ | title = Proc. Sympos. Math. Theory of Automata (New York, 1962)
+ | year = 1963}}</ref>
+
+[[Safra's construction]], which converts a non-deterministic [[Büchi automaton]] with {{mvar|n}} states into a deterministic [[Muller automaton]] or into a deterministic [[ω-automaton|Rabin automaton]] with 2<sup>''O''({{mvar|n}} log {{mvar|n}})</sup> states, uses the powerset construction as part of its machinery.<ref>{{cite conference
+ | last = Safra | first = S. | authorlink = Shmuel Safra
+ | contribution = On the complexity of ω-automata
+ | doi = 10.1109/SFCS.1988.21948
+ | location = Washington, DC, US
+ | pages = 319–327
+ | publisher = IEEE Computer Society
+ | title = Proceedings of the 29th Annual [[Symposium on Foundations of Computer Science]] (FOCS '88)
+ | year = 1988}}.</ref>
+
+== References ==
+{{reflist}}
+
+==Further reading==
+* {{cite book |last=Anderson |first=James Andrew |date=2006 |title=Automata theory with modern applications |publisher=Cambridge University Press |isbn=978-0-521-84887-9 |pages=43–49 |url=https://books.google.com/books?id=ikS8BLdLDxIC&pg=PA43}}<!--This author is James Andrew Anderson, Professor of Mathematics and Chair of Division of Mathematics and Computer Science, University of South Carolina at Spartanburg. He does not at the moment have a Wikipedia article. WorldCat and some other sources list Thomas J. Head as a coauthor of this book. The Cambridge website doesn't list him and he's not on the cover of the book. Not sure if he's really a contributor or author or what.-->
+
+[[Category:Finite-state machines]]

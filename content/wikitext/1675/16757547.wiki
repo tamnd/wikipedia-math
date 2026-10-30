@@ -1,0 +1,456 @@
+<!-- wikipedia: en
+     page: 16757547
+     title: Join (relational algebra)
+     revision: 1374957659
+     timestamp: 2026-09-15T01:27:56Z
+     history: https://en.wikipedia.org/w/index.php?curid=16757547&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374957659 -->
+{{Short description|Binary operation in relational algebra}}
+In [[relational algebra]], a '''join''' is a [[binary operation]], written as <math>R \bowtie S</math> where <math>R</math> and <math>S</math> represent [[relation (database)|relation]]s, that combines their data where they have a common attribute.
+
+== Natural join ==
+{{redirect|Natural join|the SQL implementation|Natural join (SQL)}}
+{{redirect|⋈|the band sometimes represented by this symbol|The Armed}}
+Natural join (⨝) is a [[Binary relation|binary operator]] that is written as (''R'' ⨝ ''S'') where ''R'' and ''S'' are [[relation (database)|relation]]s.{{efn|In [[Unicode]], the join symbol is ⨝ (U+2A1D), and the bowtie symbol, occasionally used instead, is ⋈ (U+22C8).}} The result of the natural join is the set of all combinations of tuples in ''R'' and ''S'' that are equal on their common attribute names. For an example consider the tables ''Employee'' and ''Dept'' and their natural join:{{citation needed|date=April 2022}}
+
+{{col-begin|width=auto; margin:0.5em auto}}
+{{col-break}}
+{| class="wikitable"
+ |+           ''Employee''
+ |-
+ ! Name   !! EmpId !! DeptName
+ |-
+ | Harry  || 3415  || Finance
+ |-
+ | Sally  || 2241  || Sales
+ |-
+ | George || 3401  || Finance
+ |-
+ | Harriet || 2202 || Sales
+ |-
+ | Mary   || 1257 || Human Resources
+|}
+{{col-break|gap=2em}}
+{| class="wikitable"
+ |+           ''Dept''
+ |-
+ ! DeptName   !! Manager
+ |-
+ | Finance  || George
+ |-
+ | Sales  || Harriet
+ |-
+ | Production || Charles
+|}
+{{col-break|gap=2em}}
+{| class="wikitable"
+ |+  ''Employee''&nbsp;⨝&nbsp;''Dept''
+ |-
+ ! Name   !! EmpId !!  DeptName   !! Manager
+ |-
+ | Harry  || 3415   || Finance  || George
+ |-
+ | Sally  || 2241   || Sales  || Harriet
+ |-
+ | George || 3401  || Finance || George
+ |-
+ | Harriet || 2202 || Sales || Harriet
+|}
+{{col-end}}
+
+Note that neither the employee named Mary nor the Production department appear in the result. Mary does not appear in the result because Mary's Department, "Human Resources", is not listed in the Dept relation and the Production department does not appear in the result because there are no tuples in the Employee relation that have "Production" as their DeptName attribute.
+
+This can also be used to define [[composition of relations]]. For example, the composition of ''Employee'' and ''Dept'' is their join as shown above, projected on all but the common attribute ''DeptName''. In [[category theory]], the join is precisely the [[fiber product]].
+
+The natural join is arguably one of the most important operators since it is the relational counterpart of the logical AND operator. Note that if the same variable appears in each of two predicates that are connected by AND, then that variable stands for the same thing and both appearances must always be substituted by the same value (this is a consequence of the [[idempotence]] of the logical AND). In particular, natural join allows the combination of relations that are associated by a [[foreign key]]. For example, in the above example a foreign key probably holds from ''Employee''.''DeptName'' to ''Dept''.''DeptName'' and then the natural join of ''Employee'' and ''Dept'' combines all employees with their departments. This works because the foreign key holds between attributes with the same name. If this is not the case such as in the foreign key from ''Dept''.''Manager'' to ''Employee''.''Name'' then these columns must be renamed before taking the natural join. Such a join is sometimes also referred to as an '''equijoin'''.
+
+More formally the semantics of the natural join are defined as follows:
+
+{{NumBlk|:|<math>R \bowtie S = \left\{ r \cup s \ \vert \ r \in R \ \land \ s \in S \ \land \ \mathit{Fun}(r \cup s) \right\}</math>|{{EquationRef|1}}}}
+
+where ''Fun(t)'' is a [[Predicate (mathematics)|predicate]] that is true for a [[Relation (mathematics)|relation]] ''t'' (in the mathematical sense) [[iff]] ''t'' is a function (that is, ''t'' does not map any attribute to multiple values). It is usually required that ''R'' and ''S'' must have at least one common attribute, but if this constraint is omitted, and ''R'' and ''S'' have no common attributes, then the natural join becomes exactly the Cartesian product.
+
+The natural join can be simulated with Codd's primitives as follows. Assume that ''c''<sub>1</sub>,...,''c''<sub>''m''</sub> are the attribute names common to ''R'' and ''S'', ''r''<sub>1</sub>,...,''r''<sub>''n''</sub> are the
+attribute names unique to ''R'' and ''s''<sub>1</sub>,...,''s''<sub>''k''</sub> are the
+attribute names unique to ''S''. Furthermore, assume that the attribute names ''x''<sub>1</sub>,...,''x''<sub>''m''</sub> are neither in ''R'' nor in ''S''. In a first step the common attribute names in ''S'' can be renamed:
+
+{{NumBlk|:|<math>T = \rho_{x_1/c_1,\ldots,x_m/c_m}(S) = \rho_{x_1/c_1}(\rho_{x_2/c_2}(\ldots\rho_{x_m/c_m}(S)\ldots))</math>|{{EquationRef|2}}}}
+
+Then we take the Cartesian product and select the tuples that are to be joined:
+
+{{NumBlk|:|<math>P = \sigma_{c_1=x_1,\ldots,c_m=x_m}(R \times T) = \sigma_{c_1=x_1}(\sigma_{c_2=x_2}(\ldots\sigma_{c_m=x_m}(R \times T)\ldots))</math>|{{EquationRef|3}}}}
+
+Finally we take a projection to get rid of the renamed attributes:
+
+{{NumBlk|:|<math>U = \Pi_{r_1,\ldots,r_n,c_1,\ldots,c_m,s_1,\ldots,s_k}(P)</math>|{{EquationRef|4}}}}
+
+== ''θ''-join and equijoin ==
+Consider tables ''Car'' and ''Boat'' which list models of cars and boats and their respective prices. Suppose a customer wants to buy a car and a boat, but she does not want to spend more money for the boat than for the car. The ''θ''-join (⋈<sub>''θ''</sub>) on the predicate ''CarPrice'' ≥ ''BoatPrice'' produces the flattened pairs of rows which satisfy the predicate. When using a condition where the attributes are equal, for example Price, then the condition may be specified as ''Price''=''Price''
+or alternatively (''Price'') itself.
+
+{{col-begin|width=auto; margin:0.5em auto}}
+{{col-break}}
+{| class="wikitable"
+ |+           ''Car''
+ |-
+ ! CarModel   !! CarPrice
+ |-
+ | CarA  || 20,000
+ |-
+ | CarB  || 30,000
+ |-
+ | CarC  || 50,000
+|}
+{{col-break|gap=2em}}
+{| class="wikitable"
+ |+           ''Boat''
+ |-
+ ! BoatModel   !! BoatPrice
+ |-
+ | Boat1  || 10,000
+ |-
+ | Boat2  || 40,000
+ |-
+ | Boat3  || 60,000
+|}
+{{col-break|gap=2em}}
+{| class="wikitable"
+ |+  <math>{ Car \bowtie Boat \atop \scriptstyle CarPrice \geq BoatPrice }</math>
+ |-
+ ! CarModel  !! CarPrice !!  BoatModel !! BoatPrice
+ |-
+ | CarA  || 20,000   || Boat1 || 10,000
+ |-
+ | CarB  || 30,000   || Boat1 || 10,000
+ |-
+ | CarC  || 50,000   || Boat1 || 10,000
+ |-
+ | CarC  || 50,000   || Boat2 || 40,000
+|}
+{{col-end}}
+
+In order to combine tuples from two relations where the combination condition is not simply the equality of shared attributes it is convenient to have a more general form of join operator, which is the ''θ''-join (or theta-join). The ''θ''-join is a binary operator that is written as <math>{R\ \bowtie\ S \atop a\ \theta\ b}</math> or <math>{R\ \bowtie\ S \atop a\ \theta\ v}</math> where ''a'' and ''b'' are attribute names, ''θ'' is a binary [[relational operator]] in the set {{math|1 = {&lt;, ≤, =, ≠, &gt;, ≥}}}, ''v'' is a value constant, and ''R'' and ''S'' are relations. The result of this operation consists of all combinations of tuples in ''R'' and ''S'' that satisfy ''θ''. The result of the ''θ''-join is defined only if the headers of ''S'' and ''R'' are disjoint, that is, do not contain a common attribute.
+
+The simulation of this operation in the fundamental operations is therefore as follows:
+: ''R'' ⋈<sub>''θ''</sub> ''S'' = ''σ<sub>θ</sub>''(''R'' × ''S'')
+
+In case the operator ''θ'' is the equality operator (=) then this join is also called an '''equijoin'''.
+
+Note, however, that a computer language that supports the natural join and selection operators does not need ''θ''-join as well, as this can be achieved by selection from the result of a natural join (which degenerates to Cartesian product when there are no shared attributes).
+
+In SQL implementations, joining on a predicate is usually called an ''inner join'', and the ''on'' keyword allows one to specify the predicate used to filter the rows. Forming the flattened Cartesian product then filtering the rows is conceptually correct, but an implementation would use more sophisticated data structures to speed up the join query.
+
+== Semijoin ==
+The left semijoin (⋉ and ⋊) is a joining similar to the natural join and written as <math alt="𝑅 ⋉ 𝑆">R \ltimes S</math> where <math alt="𝑅">R</math> and <math alt="𝑆">S</math> are [[relation (database)|relation]]s.{{efn|In [[Unicode]], the ltimes symbol is ⋉ (U+22C9). The rtimes symbol is ⋊ (U+22CA)}} The result is the set of all tuples in <math alt="𝑅">R</math> for which there is a [[tuple]] in <math alt="𝑆">S</math> that is equal on their common attribute names. The difference from a natural join is that other columns of <math alt="𝑆">S</math> do not appear. For example, consider the tables ''Employee'' and ''Dept'' and their semijoin:{{citation needed|date=April 2022}}
+
+{{col-begin|width=auto; margin:0.5em auto}}
+{{col-break}}
+{| class="wikitable"
+ |+           ''Employee''
+ |-
+ ! Name   !! EmpId !! DeptName
+ |-
+ | Harry  || 3415  || Finance
+ |-
+ | Sally  || 2241  || Sales
+ |-
+ | George || 3401  || Finance
+ |-
+ | Harriet || 2202 || Production
+|}
+{{col-break|gap=2em}}
+{| class="wikitable"
+ |+           ''Dept''
+ |-
+ ! DeptName   !! Manager
+ |-
+ | Sales  || Sally  
+ |-
+ | Production|| Harriet 
+|}
+{{col-break|gap=2em}}
+{| class="wikitable"
+ |+  ''Employee'' ⋉ ''Dept''
+ |-
+ ! Name   !! EmpId !!  DeptName
+ |-
+ | Sally  || 2241   || Sales
+ |-
+ | Harriet || 2202 || Production
+|}
+{{col-end}}
+
+More formally the semantics of the semijoin can be defined as
+follows:
+
+<math alt="𝑅 ⋉ 𝑆 = { 𝑡 : 𝑡 ∈ 𝑅 ∧ ∃ 𝑠 ∈ 𝑆(Fun(𝑡 ∩ 𝑠))}">R \ltimes S = \{ t : t \in R \land \exists s \in S(\operatorname{Fun}(t \cup s)) \}</math>
+
+where <math alt="Fun(𝑟)">\operatorname{Fun}(r)</math> is as in the definition of natural join.
+
+The semijoin can be simulated using the natural join as follows. If <math>a_1, \ldots, a_n</math> are the attribute names of <math alt="𝑅">R</math>, then
+
+<math>R \ltimes S = \Pi_{a_1, \ldots, a_n}(R \bowtie S).</math>
+
+Since we can simulate the natural join with the basic operators it follows that this also holds for the semijoin.
+
+In Codd's 1970 paper, semijoin is called restriction.<ref name="Codd1970">{{cite journal|first=E.F.|last=Codd|author-link=E.F. Codd|title=A Relational Model of Data for Large Shared Data Banks|journal=[[Communications of the ACM]]|volume=13|issue=6|date=1970|pages=377–387| doi = 10.1145/362384.362685|s2cid=207549016 |doi-access=free}}</ref>
+
+== Antijoin ==
+The antijoin (▷), written as ''R'' ▷ ''S'' where ''R'' and ''S'' are [[relation (database)|relation]]s,{{efn|In [[Unicode]], the Antijoin symbol is ▷ (U+25B7).}} is similar to the semijoin, but the result of an antijoin is only those tuples in ''R'' for which there is ''no'' tuple in ''S'' that is equal on their common attribute names.<ref name=unnesting>{{Cite conference |title=Unnesting Arbitrary Queries |conference=BTW |last=Neumann |first=Thomas |url=https://dl.gi.de/handle/20.500.12116/2418 |year=2015 |doi=}}</ref>
+
+For an example consider the tables ''Employee'' and ''Dept'' and their
+antijoin:
+
+{{col-begin|width=auto; margin:0.5em auto}}
+{{col-break}}
+{| class="wikitable"
+ |+           ''Employee''
+ |-
+ ! Name   !! EmpId !! DeptName
+ |-
+ | Harry  || 3415  || Finance
+ |-
+ | Sally  || 2241  || Sales
+ |-
+ | George || 3401  || Finance
+ |-
+ | Harriet || 2202 || Production
+|}
+{{col-break|gap=2em}}
+{| class="wikitable"
+ |+           ''Dept''
+ |-
+ ! DeptName   !! Manager
+ |-
+ | Sales  || Sally
+ |-
+ | Production || Harriet
+|}
+{{col-break|gap=2em}}
+{| class="wikitable"
+ |+  ''Employee''  ▷ ''Dept''
+ |-
+ ! Name   !! EmpId !!  DeptName
+ |-
+ | Harry  || 3415  || Finance
+ |-
+ | George || 3401  || Finance
+|}
+{{col-end}}
+
+The antijoin is formally defined as follows:
+
+:  {{math|1 =''R'' ▷ ''S'' = { ''t'' : ''t'' ∈ ''R'' &and; ¬&exist;''s'' ∈ ''S''(''Fun'' (''t'' &cup; ''s'')) }}}
+
+or
+
+:  {{math|1 = ''R'' ▷ ''S'' = { ''t'' : ''t'' ∈ ''R'', there is no tuple ''s'' of ''S'' that satisfies ''Fun'' (''t'' &cup; ''s'') }}}
+
+where {{math|''Fun'' (''t'' &cup; ''s'')}} is as in the definition of natural join.
+
+The antijoin can also be defined as the [[Complement (set theory)|complement]] of the semijoin, as follows:
+{{NumBlk|:| {{math|1=''R'' ▷ ''S'' = ''R''&nbsp;&minus;&nbsp;''R'' ⋉ ''S''}} |{{EquationRef|5}}}}
+Given this, the antijoin is sometimes called the anti-semijoin, and the antijoin operator is sometimes written as semijoin symbol with a bar above it, instead of ▷.
+
+In the case where the relations have the same attributes (union-compatible), antijoin is the same as minus.
+
+== Division ==
+The division (÷) is a binary operation that is written as ''R'' ÷ ''S''. Division is not implemented directly in SQL. The result consists of the restrictions of tuples in ''R'' to the attribute names unique to ''R'', i.e., in the header of ''R'' but not in the header of ''S'', for which it holds that all their combinations with tuples in ''S'' are present in ''R''.
+
+=== Example ===
+{{col-begin|width=auto; margin:0.5em auto}}
+{{col-break}}
+{| class="wikitable"
+ |+ ''Completed''
+ |-
+ ! Student   !! Task
+ |-
+ | Fred  || Database1
+ |-
+ | Fred  || Database2
+ |-
+ | Fred || Compiler1
+ |-
+ | Eugene  || Database1
+ |-
+ | Eugene  || Compiler1
+ |-
+ | Sarah  || Database1
+ |-
+ | Sarah  || Database2
+|}
+{{col-break|gap=2em}}
+{| class="wikitable"
+ |+ ''DBProject''
+ |-
+ ! Task
+ |-
+ | Database1
+ |-
+ | Database2
+|}
+{{col-break|gap=2em}}
+{| class="wikitable"
+ |+ ''Completed'' ÷ ''DBProject''
+ |-
+ ! Student
+ |-
+ | Fred
+ |-
+ | Sarah
+|}
+{{col-end}}If ''DBProject'' contains all the tasks of the Database project, then the result of the division above contains exactly the students who have completed both of the tasks in the Database project.
+
+More formally the semantics of the division is defined as follows:{{NumBlk|:| {{math|''R'' ÷ ''S'' {{=}} { ''t''[''a''<sub>1</sub>,...,''a''<sub>''n''</sub>] : ''t'' ∈ ''R'' ∧ ∀''s'' ∈ ''S'' ( (''t''[''a''<sub>1</sub>,...,''a''<sub>''n''</sub>] ∪ ''s'') ∈ ''R'') } }} |{{EquationRef|6}}}}where {''a''<sub>1</sub>,...,''a''<sub>''n''</sub>} is the set of attribute names unique to ''R'' and ''t''[''a''<sub>1</sub>,...,''a''<sub>''n''</sub>] is the restriction of ''t'' to this set. It is usually required that the attribute names in the header of ''S'' are a subset of those of ''R'' because otherwise the result of the operation will always be empty.
+
+The simulation of the division with the basic operations is as follows. We assume that ''a''<sub>1</sub>,...,''a''<sub>''n''</sub> are the attribute names unique to ''R'' and ''b''<sub>1</sub>,...,''b''<sub>''m''</sub> are the attribute names of ''S''. In the first step we project ''R'' on its unique attribute names and construct all combinations with tuples in ''S'':
+: ''T'' := π<sub>''a''<sub>1</sub>,...,''a''<sub>''n''</sub></sub>(''R'') × ''S''
+
+In the prior example, T would represent a table such that every Student (because Student is the unique key / attribute of the Completed table) is combined with every given Task. So Eugene, for instance, would have two rows, Eugene → Database1 and Eugene → Database2 in T.
+
+:: EG: First, let's pretend that "Completed" has a third attribute called "grade". It's unwanted baggage here, so we must project it off always. In fact in this step we can drop "Task" from R as well; the multiply puts it back on.
+:: ''T'' := π<sub>Student</sub>(''R'') × ''S''  // This gives us every possible desired combination, including those that don't actually exist in R, and excluding others (eg Fred | compiler1, which is not a desired combination)
+{{col-begin|width=auto; margin:0.5em auto}}
+{{col-break|gap=5em}}
+{| class="wikitable"
+ |+ ''T''
+ |-
+ ! Student   !! Task
+ |-
+ | Fred  || Database1
+ |-
+ | Fred  || Database2
+ |-
+ | Eugene  || Database1
+ |-
+ | Eugene  || Database2
+ |-
+ | Sarah  || Database1
+ |-
+ | Sarah  || Database2
+|}
+{{col-end}} In the next step we subtract ''R'' from ''T'' 
+[[relation (database)|relation]]:
+: ''U'' := ''T'' &minus; ''R''
+In ''U'' we have the possible combinations that "could have" been in ''R'', but weren't. 
+:: EG: Again with projections — ''T'' and ''R'' need to have identical attribute names/headers.
+:: ''U'' := ''T'' &minus; π<sub>Student,Task</sub>(''R'') // This gives us a "what's missing" list.
+{{col-begin|width=auto; margin:0.5em auto}}
+{{col-break|gap=5em}}
+{| class="wikitable"
+ |+ ''T''
+ |-
+ ! Student   !! Task
+ |-
+ | Fred  || Database1
+ |-
+ | Fred  || Database2
+ |-
+ | Eugene  || Database1
+ |-
+ | Eugene  || Database2
+ |-
+ | Sarah  || Database1
+ |-
+ | Sarah  || Database2
+|}
+{{col-break|gap=2em}}
+{| class="wikitable"
+ |+ ''R'' a.k.a. ''Completed''
+ |-
+ ! Student   !! Task
+ |-
+ | Fred  || Database1
+ |-
+ | Fred  || Database2
+ |-
+ | Fred || Compiler1
+ |-
+ | Eugene  || Database1
+ |-
+ | Eugene  || Compiler1
+ |-
+ | Sarah  || Database1
+ |-
+ | Sarah  || Database2
+|}
+{{col-break|gap=2em}}
+{| class="wikitable"
+ |+ ''U''
+ |+ aka
+ |+ ''T'' &minus; ''R''
+ |+ aka
+ |+ ''what's missing''
+ |-
+ ! Student   !! Task
+ |-
+ | Eugene  || Database2
+|}
+{{col-end}} So if we now take the projection on the attribute names unique to ''R''
+then we have the restrictions of the tuples in ''R'' for which not
+all combinations with tuples in ''S'' were present in ''R'':
+: ''V'' := π<sub>''a''<sub>1</sub>,...,''a''<sub>''n''</sub></sub>(''U'')
+:: EG: Project ''U'' down  to just the attribute(s) in question (Student) 
+:: ''V'' := π<sub>Student</sub>(''U'')
+{{col-begin|width=auto; margin:0.5em auto}}
+{{col-break|gap=5em}}
+{| class="wikitable"
+ |+ ''V''
+ |-
+ ! Student
+ |-
+ | Eugene
+|}
+{{col-end}}
+
+So what remains to be done is take the projection of ''R'' on its
+unique attribute names and subtract those in ''V'':
+: ''W'' := π<sub>''a''<sub>1</sub>,...,''a''<sub>''n''</sub></sub>(''R'') &minus; ''V''
+:: EG: ''W'' := π<sub>Student</sub>(''R'') &minus; ''V''.
+{{col-begin|width=auto; margin:0.5em auto}}
+{{col-break|gap=5em}}
+{| class="wikitable"
+ |+ π<sub>Student</sub>(''R'')
+ |-
+ ! Student
+ |-
+ | Fred  
+ |-
+ | Eugene 
+ |-
+ | Sarah 
+|}
+{{col-break|gap=2em}}
+{| class="wikitable"
+ |+ ''V''
+ |-
+ ! Student
+ |-
+ | Eugene
+|}
+{{col-break|gap=2em}}
+{| class="wikitable"
+ |+ ''W''
+ |+ aka
+ |+ {{math|(π<sub>Student</sub>(''R'') &minus; ''V'')}}
+ |+ aka
+ |+ desired result
+ |-
+ ! Student 
+ |-
+ | Fred 
+ |-
+ | Sarah
+|}
+{{col-end}}
+
+== Notes ==
+{{notelist}}
+
+== References ==
+{{reflist}}
+
+
+
+[[Category:Relational algebra]]

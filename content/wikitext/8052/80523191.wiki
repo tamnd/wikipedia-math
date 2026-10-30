@@ -1,0 +1,136 @@
+<!-- wikipedia: en
+     page: 80523191
+     title: Knuth–Eve algorithm
+     revision: 1371042535
+     timestamp: 2026-08-24T06:53:23Z
+     history: https://en.wikipedia.org/w/index.php?curid=80523191&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1371042535 -->
+{{Short description|Algorithm for evaluating polynomials}}
+
+In [[computer science]], the '''Knuth–Eve algorithm''' is an [[algorithm]] for [[polynomial evaluation]]. It [[Polynomial evaluation#Evaluation with preprocessing|preprocesses]] the coefficients of the polynomial to reduce the number of multiplications required at [[Execution (computing)#Runtime|runtime]].
+
+Ideas used in the algorithm were originally proposed by [[Donald Knuth]] in 1962. His procedure opportunistically exploits structure in the polynomial being evaluated.<ref name="knuth1962"/> In 1964, James Eve determined for which polynomials this structure exists, and gave a simple method of "preconditioning" polynomials (explained below) to endow them with that structure.<ref name="eve1964"/>{{refn|group=note|Article published under the name J. Eve, which is associated with the name James Eve by the ACM Digital Library.<ref name=JamesEveACMDL>{{Cite web |title=James Eve (Newcastle University) |url=https://dl.acm.org/do/10.1145/contrib-81100250587/abs/ |access-date=2025-07-30 |website=Author DO Series | publisher=ACM Digital Library |doi=10.1145/contrib-81100250587/abs |doi-broken-date=31 July 2025 |language=en}}</ref>}}
+
+== Algorithm ==
+
+=== Preliminaries ===
+
+Consider an arbitrary polynomial <math>p \in \mathbb{R}[x]</math> of [[Degree of a polynomial|degree]] <math>n</math>. Assume that <math>n \geq 3</math>. Define <math>m</math> such that: if <math>n</math> is odd then <math>n = 2m+1</math>, and if <math>n</math> is even then <math>n = 2m+2</math>.<ref name="eve1964"/>
+
+Unless otherwise stated, all variables in this article represent either [[real number]]s or univariate [[polynomial]]s with real coefficients.<ref name="knuth1962"/><ref name="eve1964"/> All operations in this article are done over <math>\mathbb{R}</math>.<ref name="eve1964"/>
+
+Again, the goal is to create an algorithm that returns <math>p(x)</math> given any <math>x</math>. The algorithm is allowed to depend on the polynomial <math>p</math> itself, since its coefficients are known in advance.<ref name="knuth1962"/>
+
+=== Overview ===
+
+==== Key idea ====
+
+Using [[polynomial long division]], we can write
+
+<math display="block"> p(x) = q(x) \cdot (x^2 - \alpha) + (\beta x + \gamma), </math>
+
+where <math>x^2 - \alpha</math> is the divisor. Picking a value for <math>\alpha</math> fixes both the quotient <math>q</math> and the coefficients in the remainder <math>\beta</math> and <math>\gamma</math>. The key idea is to cleverly choose <math>\alpha</math> such that <math>\beta = 0</math>, so that
+
+<math display="block"> p(x) = q(x) \cdot (x^2 - \alpha) + \gamma. </math>
+
+<ref name="overill1997"/> This way, no operations are needed to compute the remainder polynomial, since it's just a constant. We apply this procedure [[Recursion (computer science)|recursively]] to <math>q</math>, expressing
+
+<math display="block"> p(x) = \left( \left( q(x) \cdot (x^2 - \alpha_m) + \gamma_m \right) \cdots \right) \cdot (x^2 - \alpha_1) + \gamma_1. </math>
+
+After <math>m</math> recursive calls, the quotient <math>q</math> is either a [[Linear function (calculus)|linear]] or a [[Quadratic function|quadratic]] polynomial. In this base case, the polynomial can be evaluated with (say) [[Horner's method]].<ref name="knuth1962"/><ref name="overill1997"/><ref name="muller2016"/>
+
+==== "Preconditioning" ====
+
+For arbitrary <math>p</math>, it may not be possible to force <math>\beta = 0</math> at every step of the recursion.<ref name="knuth1962"/>  Consider the polynomials <math>p^e</math> and <math>p^o</math> with coefficients taken from the even and odd terms of <math>p</math> respectively, so that
+
+<math display="block"> p(x) = p^e(x^2) + x \cdot p^o(x^2). </math>
+
+If every [[Zero of a function#Polynomial roots|root]] of <math>p^o</math> is real, then it is possible to write <math>p</math> in the form given above. Each <math>\alpha_i</math> is a different root of <math>p^o</math>, counting [[Multiplicity (mathematics)#Multiplicity of a root of a polynomial|multiple roots]] as distinct.<ref name="overill1997"/> Furthermore, if at least <math>n-1</math> roots of <math>p</math> lie in one half of the [[complex plane]], then every root of <math>p^o</math> is real.<ref name="eve1964"/>
+
+Ultimately, it may be necessary to "precondition" <math>p</math> by shifting it {{--}} by setting <math>p(x) \gets p(x + t)</math> for some <math>t</math> {{--}} to endow it with the structure that most of its roots lie in one half of the complex plane. At runtime, this shift has to be "undone" by first setting <math>x \gets x - t</math>.<ref name="eve1964"/>
+
+=== Preprocessing step ===
+
+The following algorithm is run once for a given polynomial <math>p</math>.<ref name="knuth1962"/><ref name="overill1997"/> At this point, the values of <math>x</math> that <math>p</math> will be evaluated on are not known.<ref name="knuth1962"/>
+
+{{framebox|blue|margin-left=35px|width=400px}}
+* Let <math>r_1, \cdots, r_n \in \mathbb{C}</math> be the complex roots of <math>p</math>, sorted in descending order by real part
+* Choose any <math>t \geq \text{Re}(r_2)</math>
+* Set <math>p \gets p(x + t)</math>
+<hr/>
+* Let <math>p^e</math> and <math>p^o</math> be the polynomials such that <math>p(x) = p^e(x^2) + x \cdot p^o(x^2)</math>
+* Let <math>\alpha_1, \cdots \alpha_m \in \mathbb{R}</math> be the roots of <math>p^o</math>. All of its roots will be real.
+<hr/>
+* Initialize <math>q \gets p</math>
+* For <math>i \gets 1, \cdots, m</math>:
+** Divide <math>q</math> by <math>x^2 - \alpha_i</math> to get quotient <math>q^\prime \in \mathbb{R}[x]</math> and remainder <math>\gamma_i \in \mathbb{R}</math>. The remainder will be a constant polynomial {{--}} a number.
+** Set <math>q \gets q^\prime</math>
+<hr/>
+* ''Output:'' The derived values <math>t</math>, <math>\alpha_1, \cdots, \alpha_m</math>, and <math>\gamma_1, \cdots, \gamma_m</math>; as well as the base-case polynomial <math>q</math>
+{{frame-footer}}
+
+==== Better choice of t ====
+
+While any <math>t \geq \text{Re}(r_2)</math> can work, it is possible to remove one addition during evaluation if <math>t</math> is also chosen such that  two roots of <math>p(x + t)</math> are symmetric about the origin. In that case, <math>\alpha_1</math> can be chosen such that the shifted polynomial has a factor of <math>x^2 - \alpha_1</math>, so <math>\gamma_1 = 0</math>. It is always possible to find such a <math>t</math>.<ref name="eve1964"/>
+
+One possible algorithm for choosing <math>t</math> is:{{citation needed|date=July 2025}}
+
+{{framebox|blue|margin-left=35px|width=400px}}
+* If <math>r_1 \in \mathbb{R}</math>:
+** If <math>r_2 \in \mathbb{R}</math>: <math display="inline">t = \tfrac{1}{2} (r_1 + r_2)</math>
+** Else: <math>t = \text{Re}(r_2)</math>
+* Else: <math>t = \text{Re}(r_1)</math>
+{{frame-footer}}
+
+=== Evaluation step ===
+
+The following algorithm evaluates <math>p</math> at some, now known, point <math>x</math>.<ref name="knuth1962"/><ref name="eve1964"/><ref name="overill1997"/><ref name="muller2016"/>
+
+<div style="margin-left: 35px;">
+{{framebox|blue}}
+* Set <math>x \gets x - t</math>
+* Let <math>s = x^2</math>. Compute this once so it can be reused.
+<hr/>
+* Compute <math>y \gets q(x)</math> using [[Horner's method]]
+* For <math>i \gets m, \cdots, 2, 1</math>:
+** Let <math>y \gets y \cdot (s - \alpha_i) + \gamma_i</math>
+* ''Output:'' <math>y</math>
+{{frame-footer}}
+</div>
+
+Assuming <math>t</math> is chosen optimally, <math>\gamma_1 = 0</math>. So, the final iteration of the loop can instead run
+
+<math display="block">y \gets y \cdot (s - \alpha_i),</math>
+
+saving an addition.<ref name="eve1964"/>
+
+== Analysis ==
+
+In total, evaluation using the Knuth–Eve algorithm for a polynomial of degree <math>n</math> requires <math>n</math> additions and <math>\lfloor n/2 \rfloor + 2</math> multiplications, assuming <math>t</math> is chosen optimally.<ref name="eve1964"/>
+
+No algorithm to evaluate a given polynomial of degree <math>n</math> can use fewer than <math>n</math> additions or fewer than <math>\lceil n/2 \rceil</math> multiplications during evaluation. This result assumes only addition and multiplication are allowed during both preprocessing and evaluation.<ref name="erickson2003"/>{{Better source needed|date=July 2025}}
+
+The Knuth–Eve algorithm is not [[Condition number|well-conditioned]].<ref name="mesztenyi1967"/>
+
+== Footnotes ==
+
+{{Reflist|group=note}}
+
+== References ==
+
+<references>
+
+<ref name="knuth1962">{{cite journal |last1=Knuth |first1=Donald |title=Evaluation of polynomials by computer |journal=Communications of the ACM |date=December 1962 |volume=5 |issue=12 |pages=595–599 |doi=10.1145/355580.369074 |url=https://dl.acm.org/doi/10.1145/355580.369074 |access-date=25 July 2025}}</ref>
+<ref name="eve1964">{{cite journal |last1=Eve |first1=James |title=The evaluation of polynomials |journal=Numerische Mathematik |date=December 1964 |volume=6 |issue=1 |pages=17–21 |doi=10.1007/BF01386049 |url=https://link.springer.com/article/10.1007/BF01386049 |access-date=25 July 2025|url-access=subscription }}</ref>
+<ref name="overill1997">{{cite journal |last1=Overill |first1=Richard |title=Data parallel evaluation of univariate polynomials by the Knuth-Eve algorithm |journal=Parallel Computing |date=12 June 1997 |volume=23 |issue=13 |pages=2115–2127 |doi=10.1016/S0167-8191(97)00096-3 |url=https://www.sciencedirect.com/science/article/pii/S0167819197000963 |access-date=25 July 2025|url-access=subscription }}</ref>
+<ref name="erickson2003">{{cite web |last1=Erickson |first1=Jeff |title=Evaluating polynomials |date=10 March 2003 |url=https://jeffe.cs.illinois.edu/teaching/497/08-polynomials.pdf |website=CS 497: Concrete Models of Computation |publisher=University of Illinois Urbana-Champaign |access-date=25 July 2025}}</ref>
+<ref name="mesztenyi1967">{{cite journal |last1=Mesztenyi |first1=Charles |title=Stable evaluation of polynomials |journal=Journal of Research of the National Bureau of Standards, Section B |date=January 1967 |volume=71B |issue=1 |pages=11–17 |doi=10.6028/jres.071B.003 |url=https://nistdigitalarchives.contentdm.oclc.org/digital/collection/p16009coll6/id/87671 |access-date=25 July 2025|doi-access=free }}</ref>
+<ref name="muller2016">{{cite book |last1=Muller |first1=Jean-Michel |title=Elementary functions: Algorithms and implementation |date=17 November 2016 |publisher=Birkhäuser Boston |location=Boston, MA |isbn=978-1-4899-7983-4 |doi=10.1007/978-1-4899-7983-4_5 |pages=82–84 |url=https://link.springer.com/chapter/10.1007/978-1-4899-7983-4_5 |access-date=25 July 2025}}</ref>
+
+</references>
+
+{{DEFAULTSORT:Knuth-Eve algorithm}}
+[[Category:Algorithms]]
+[[Category:Polynomials]]
+[[Category:Algorithms and data structures]]

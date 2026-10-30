@@ -1,0 +1,225 @@
+<!-- wikipedia: en
+     page: 2745094
+     title: DPLL algorithm
+     revision: 1341870655
+     timestamp: 2026-03-05T17:17:30Z
+     history: https://en.wikipedia.org/w/index.php?curid=2745094&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1341870655 -->
+{{Short description|Type of search algorithm}}
+{{Infobox algorithm
+|name=DPLL
+|image=Dpll11.png
+|image size=300px
+|class=[[Boolean satisfiability problem]]
+|caption=After 5 fruitless attempts ''(red)'', choosing the variable assignment ''a''=1, ''b''=1 leads, after unit propagation ''(bottom)'', to success ''(green)'': the top left [[conjunctive normal form|CNF]] formula is satisfiable.
+|data=[[Binary tree]]
+|time=<math>O(2^n)</math>
+|best-time=<math>O(1)</math> (constant)|space=<math>O(n)</math> (basic algorithm)
+}}
+In [[logic]] and [[computer science]], the '''Davis–Putnam–Logemann–Loveland''' ('''DPLL''') '''algorithm''' is a [[Completeness (logic)|complete]], [[backtracking]]-based [[search algorithm]] for [[Boolean satisfiability problem|deciding the satisfiability]] of [[propositional logic|propositional logic formulae]] in [[conjunctive normal form]], i.e. for solving the [[Boolean satisfiability problem|CNF-SAT]] problem.
+
+It was introduced in 1961 by [[Martin Davis (mathematician)|Martin Davis]], [[George Logemann]] and [[Donald W. Loveland]] and is a refinement of the earlier [[Davis–Putnam algorithm]], which is a [[Resolution (logic)|resolution]]-based procedure developed by Davis and [[Hilary Putnam]] in 1960. Especially in older publications, the Davis–Logemann–Loveland algorithm is often referred to as the "Davis–Putnam method" or the "DP algorithm". Other common names that maintain the distinction are DLL and DPLL.
+
+== Implementations and applications ==
+The [[Boolean satisfiability problem|SAT problem]] is important both from theoretical and practical points of view. In [[Computational complexity theory|complexity theory]] it was the first problem proved to be [[NP-complete]], and can appear in a broad variety of applications such as ''[[model checking]]'', [[automated planning and scheduling]], and [[diagnosis (artificial intelligence)|diagnosis in artificial intelligence]].
+
+As such, writing efficient [[SAT solver]]s has been a research topic for many years. [[GRASP (SAT solver)|GRASP]] (1996-1999) was an early implementation using DPLL.<ref name=DPLLT/> In the international SAT competitions, implementations based around DPLL such as [[zChaff]]<ref>
+{{Citation|url=http://www.princeton.edu/~chaff/zchaff.html|title=zChaff website}}</ref> and MiniSat<ref>
+{{Cite web|url=http://minisat.se/|title=Minisat website}}
+</ref> were in the first places of the competitions in 2004 and 2005.<ref name=comp>
+{{Citation|url=http://www.satcompetition.org/|title=The international SAT Competitions web page|publisher=sat! live}}</ref>
+
+Another application that often involves DPLL is [[automated theorem proving]] or [[satisfiability modulo theories]] (SMT), which is a SAT problem in which [[propositional variable]]s are replaced with formulas of another [[mathematical theory]].
+
+==The algorithm==
+
+The basic backtracking algorithm runs by choosing a literal, assigning a [[truth value]] to it, simplifying the formula and then recursively checking if the simplified formula is satisfiable; if this is the case, the original formula is satisfiable; otherwise, the same recursive check is done assuming the opposite truth value. This is known as the ''splitting rule'', as it splits the problem into two simpler sub-problems. The simplification step essentially removes all clauses that become true under the assignment from the formula, and all literals that become false from the remaining clauses.
+
+The DPLL algorithm enhances over the backtracking algorithm by the eager use of the following rules at each step:
+
+; [[Unit propagation]] : If a clause is a ''unit clause'', i.e. it contains only a single unassigned literal, this clause can only be satisfied by assigning the necessary value to make this literal true. Thus, no choice is necessary.  Unit propagation consists in removing every clause containing a unit clause's literal and in discarding the complement of a unit clause's literal from every clause containing that complement. In practice, this often leads to deterministic cascades of units, thus avoiding a large part of the naive search space.
+
+; Pure literal elimination : If a [[propositional variable]] occurs with only one [[Polarity (mathematical logic)|polarity]] in the formula, it is called ''pure''. A pure literal can always be assigned in a way that makes all clauses containing it true. Thus, when it is assigned in such a way, these clauses do not constrain the search anymore, and can be deleted.
+
+Unsatisfiability of a given partial assignment is detected if one clause becomes empty, i.e. if all its variables have been assigned in a way that makes the corresponding literals false. Satisfiability of the formula is detected either when all variables are assigned without generating the empty clause, or, in modern implementations, if all clauses are satisfied. Unsatisfiability of the complete formula can only be detected after exhaustive search.
+
+The DPLL algorithm can be summarized in the following pseudocode, where Φ is the [[Conjunctive_normal_form|CNF]] formula:
+
+{{Algorithm-begin|name=DPLL}}
+     Input: A set of clauses Φ.
+     Output: A truth value indicating whether Φ is satisfiable.
+
+ '''function''' ''DPLL''(Φ)
+     // unit propagation:
+     '''while''' there is a unit clause {''l''} in Φ '''do'''
+         Φ ← ''unit-propagate''(''l'', Φ);
+     // pure literal elimination:
+     '''while''' there is a literal ''l'' that occurs pure in Φ '''do'''
+         Φ ← ''pure-literal-assign''(''l'', Φ);
+     // stopping conditions:
+     '''if''' Φ is empty '''then'''
+         '''return''' true;
+     '''if''' Φ contains an empty clause '''then'''
+         '''return''' false;
+     // DPLL procedure:
+     ''l'' ← ''choose-literal''(Φ);
+     '''return''' ''DPLL''(Φ '''∧''' {l}) '''or''' ''DPLL''(Φ '''∧''' {¬l});
+{{Algorithm-end}}
+
+In this pseudocode, <code>unit-propagate(l, Φ)</code> and <code>pure-literal-assign(l, Φ)</code> are functions that return the result of applying unit propagation and the pure literal rule, respectively, to the literal <code>l</code> and the formula <code>Φ</code>. In other words, they replace every occurrence of <code>l</code> with "true" and every occurrence of <code>not l</code> with "false" in the formula <code>Φ</code>, and simplify the resulting formula.  The <code>'''or'''</code> in the <code>'''return'''</code> statement is a [[short-circuiting operator]]. <code>Φ '''∧''' {l}</code> denotes the simplified result of substituting "true" for <code>l</code> in <code>Φ</code>.
+
+The algorithm terminates in one of two cases. Either the CNF formula <code>Φ</code> is empty, i.e., it contains no clause. Then it is satisfied by any assignment, as all its clauses are vacuously true. Otherwise, when the formula contains an empty clause, the clause is vacuously false because a disjunction requires at least one member that is true for the overall set to be true. In this case, the existence of such a clause implies that the formula (evaluated as a ''conjunction'' of all clauses) cannot evaluate to true and must be unsatisfiable.
+
+The pseudocode DPLL function only returns whether the final assignment satisfies the formula or not. In a real implementation, the partial satisfying assignment typically is also returned on success; this can be derived by keeping track of branching literals and of the literal assignments made during unit propagation and pure literal elimination.
+
+The Davis–Logemann–Loveland algorithm depends on the choice of ''branching literal'', which is the literal considered in the backtracking step. As a result, this is not exactly an algorithm, but rather a family of algorithms, one for each possible way of choosing the branching literal. Efficiency is strongly affected by the choice of the branching literal: there exist instances for which the running time is constant or exponential depending on the choice of the branching literals. Such choice functions are also called [[heuristic function]]s or branching heuristics.<ref>{{Cite book | last1 = Marques-Silva | first1 = João P.| chapter = The Impact of Branching Heuristics in Propositional Satisfiability Algorithms | doi = 10.1007/3-540-48159-1_5 | title = Progress in Artificial Intelligence: 9th Portuguese Conference on Artificial Intelligence, EPIA '99 Évora, Portugal, September 21–24, 1999 Proceedings | editor1-first = Pedro | editor1-last = Barahona | editor2-first = José J. | editor2-last = Alferes| series = [[Lecture Notes in Computer Science|LNCS]] | volume = 1695 | pages = 62–63 | year = 1999 | isbn = 978-3-540-66548-9 }}</ref>
+
+=== Formalization ===
+The [[sequent calculus]]-similar notation can be used to formalize many rewriting algorithms, including DPLL. The following are the 5 rules a DPLL solver can apply in order to either find or fail to find a satisfying assignment, i.e. <math>A = (l_1, \neg l_2, l_3, ...)</math>.<ref>{{Cite journal |last=Nieuwenhuis |first=Robert |last2=Oliveras |first2=Albert |last3=Tinelli |first3=Cesare |date=2006-11-01 |title=Solving SAT and SAT Modulo Theories: From an abstract Davis--Putnam--Logemann--Loveland procedure to DPLL(T) |url=https://dl.acm.org/doi/10.1145/1217856.1217859 |journal=J. ACM |volume=53 |issue=6 |pages=937–977 |doi=10.1145/1217856.1217859 |issn=0004-5411|url-access=subscription }}</ref><ref>{{Cite journal |last=Krstić |first=Sava |last2=Goel |first2=Amit |date=2007 |editor-last=Konev |editor-first=Boris |editor2-last=Wolter |editor2-first=Frank |title=Architecting Solvers for SAT Modulo Theories: Nelson-Oppen with DPLL |url=https://link.springer.com/chapter/10.1007/978-3-540-74621-8_1 |journal=Frontiers of Combining Systems |language=en |location=Berlin, Heidelberg |publisher=Springer |pages=1–27 |doi=10.1007/978-3-540-74621-8_1 |isbn=978-3-540-74621-8|url-access=subscription }}</ref>
+
+If a clause in the formula <math>\Phi</math> has exactly one unassigned literal <math>l</math> in <math>A</math>, with all other literals in the clause appearing negatively, extend <math>A</math> with <math>l</math>. ''This rule represents the idea a currently false clause with only one unset variable left forces that variable to be set in such a way as to make the entire clause true, otherwise the formula will not be satisfied.''<math display="block">\frac{
+  \begin{array}{c}
+    \{l_1, \dots, l_n, l\} \in \Phi \;\;\;
+    \neg l_1, \dots, \neg l_n \in A \;\;\;\;\;
+    l, \neg l \notin A
+  \end{array}
+}{
+  A := A \; l
+} \text{ (Propagate)}</math>If a literal <math>l</math> appears in the formula <math>\Phi</math> but its negation <math>\neg l</math> does not, and <math>l</math> and <math>\neg l</math> are not in <math>A</math>, extend <math>A</math> with <math>l</math>. ''This rule represents the idea that if a variable appears only purely positively or purely negatively in a formula, all the instances can be set to true or false to make their corresponding clauses true.''<math display="block">\frac{
+  \begin{array}{c}
+    l \text{ literal of } \Phi \;\;\;
+    \neg l \text{ not literal of } \Phi \;\;\;\;\;
+    l, \neg l \notin A
+  \end{array}
+}{
+  A := A \; l
+} \text{ (Pure)}</math>If a literal <math>l</math> is in the set of literals of <math>\Phi</math> and neither <math>l</math> nor <math>\neg l</math> is in <math>A</math>, then decide on the truth value of <math>l</math> and extend <math>A</math> with the decision literal <math>\bullet l</math>. ''This rule represents the idea that if you aren't forced to do an assignment, you must choose a variable to assign and make note which assignment was a choice so you can go back if the choice didn't result in a satisfying assignment.''<math display="block">\frac{
+  \begin{array}{c}
+    l \in \text{Lits}(\Phi) \;\;\;
+    l, \neg l \notin A
+  \end{array}
+}{
+  A := A \;\bullet\; l
+} \text{ (Decide)}</math>If a clause <math>\{l_1, \dots, l_n\}</math> is in <math>\Phi</math>, and their negations <math>\neg l_1, \dots, \neg l_n</math> are in <math>A</math>, and <math>A</math> can be represented as <math>A = A' \;\bullet\; l \; N</math> where <math>\bullet \notin N</math>, then backtrack by setting <math>A</math> to <math>A' \; \neg l</math>. ''This rule represents the idea that if you reach a contradiction in trying to find a valid assignment, you need to go back to where you previously did a decision between two assignments and pick the other one.''<math display="block">\frac{
+  \begin{array}{c}
+    \{l_1, \dots, l_n\} \in \Phi \;\;\;
+    \neg l_1, \dots, \neg l_n \in A \;\;\;\;\;
+    A = A' \;\bullet\; l \; N \;\;\;\;\;
+    \bullet \notin N
+  \end{array}
+}{
+  A := A' \; \neg l
+} \text{ (Backtrack)}</math>If a clause <math>\{l_1, \dots, l_n\}</math> is in <math>\Phi</math>, and their negations <math>\neg l_1, \dots, \neg l_n</math> are in <math>A</math>, and there is no conflict marker <math>\bullet</math> in <math>A</math>, then the DPLL algorithm fails. ''This rule represents the idea that if you reach a contradiction but there wasn't anything you could have done differently on the way there, the formula is unsatisfiable.''<math display="block">\frac{
+  \begin{array}{c}
+    \{l_1, \dots, l_n\} \in \Phi \;\;\;
+    \neg l_1, \dots, \neg l_n \in A \;\;\;\;\;
+    \bullet \notin A
+  \end{array}
+}{
+  \text{Fail}
+} \text{ (Fail)}</math>
+
+===Visualization===
+
+Davis, Logemann, Loveland (1961) had developed this algorithm.
+Some properties of this original algorithm are:
+* It is based on search.
+* It is the basis for almost all modern SAT solvers.
+* It ''does not'' use learning or non-chronological backtracking (introduced in 1996).
+An example with visualization of a DPLL algorithm having chronological backtracking:
+<gallery perrow="4" widths="200px">
+Image:Dpll1.png|All clauses making a CNF formula
+Image:Dpll2.png|Pick a variable
+Image:Dpll3.png|Make a decision, variable a = False (0), thus green clauses becomes True
+Image:Dpll4.png|After making several decisions, we find an [[implication graph]] that leads to a conflict.
+Image:Dpll5.png|Now backtrack to immediate level and by force assign opposite value to that variable
+Image:Dpll6.png|But a forced decision still leads to another conflict
+Image:Dpll7.png|Backtrack to previous level and make a forced decision
+Image:Dpll8.png|Make a new decision, but it leads to a conflict
+Image:Dpll9.png|Make a forced decision, but again it leads to a conflict
+Image:Dpll10.png|Backtrack to previous level
+Image:Dpll11.png|Continue in this way and the final implication graph
+</gallery>
+
+==Related algorithms==
+Since 1986, (Reduced ordered) [[binary decision diagram]]s have also been used for SAT solving.{{citation needed|date=December 2023}}
+
+In 1989-1990, [[Stålmarck's method]] for formula verification was presented and patented. It has found some use in industrial applications.<ref>{{cite journal |last1=Stålmarck |first1=G. |last2=Säflund |first2=M. |title=Modeling and Verifying Systems and Software in Propositional Logic |journal=IFAC Proceedings Volumes |date=October 1990 |volume=23 |issue=6 |pages=31–36 |doi=10.1016/S1474-6670(17)52173-4}}</ref>
+
+DPLL has been extended for [[automated theorem proving]] for fragments of [[first-order logic]] by way of the [[DPLL(T)]] algorithm.<ref name=DPLLT>
+{{Citation|contribution=Abstract DPLL and Abstract DPLL Modulo Theories
+|first1=Robert
+|last1=Nieuwenhuis
+|first2=Albert
+|last2=Oliveras
+|first3=Cesar
+|last3=Tinelli
+|year=2004
+|pages=36–50
+|title=Proceedings Int. Conf. on [[Logic for Programming, Artificial Intelligence, and Reasoning]], LPAR 2004
+|contribution-url=http://www.lsi.upc.edu/~roberto/papers/lpar04.pdf
+}}</ref>
+
+In the 2010-2019 decade, work on improving the algorithm has found better policies for choosing the branching literals and new data structures to make the algorithm faster, especially the part on ''unit propagation''. However, the main improvement has been a more powerful algorithm, [[Conflict-Driven Clause Learning]] (CDCL), which is similar to DPLL but after reaching a conflict "learns" the root causes (assignments to variables) of the conflict, and uses this information to perform ''non-chronological backtracking'' (aka ''[[backjumping]]'') in order to avoid reaching the same conflict again. Most state-of-the-art SAT solvers are based on the CDCL framework as of 2019.<ref>{{cite book |last1=Möhle |first1=Sibylle |last2=Biere |first2=Armin |title=Theory and Applications of Satisfiability Testing – SAT 2019 |chapter=Backing Backtracking |series=Lecture Notes in Computer Science |date=2019 |volume=11628 |pages=250–266 |doi=10.1007/978-3-030-24258-9_18 |isbn=978-3-030-24257-2 |s2cid=195755607 |url=http://fmv.jku.at/papers/MoehleBiere-SAT19.pdf}}</ref>
+
+== Relation to other notions ==
+Runs of DPLL-based algorithms on unsatisfiable instances correspond to tree [[Resolution (logic)|resolution]] refutation proofs.<ref name="RossiBeek2006">{{cite book|editor1-first=Francesca|editor1-last=Rossi|editor2-first=Peter|editor2-last=Van Beek|editor3-first=Toby|editor3-last=Walsh|title=Handbook of constraint programming|chapter-url=https://books.google.com/books?id=Kjap9ZWcKOoC&pg=PA122|year=2006|publisher=Elsevier|isbn=978-0-444-52726-4|page=122|first=Peter|last=Van Beek|chapter=Backtracking search algorithms}}</ref>
+
+==See also==
+*[[Proof complexity]]
+*[[Herbrandization]]
+
+==References==
+'''General'''
+* {{cite journal
+|last=Davis
+|first=Martin
+| author-link= Martin Davis (mathematician)
+|author2=Putnam, Hilary |author-link2=Hilary Putnam 
+| title=A Computing Procedure for Quantification Theory
+| journal =[[Journal of the ACM]]
+| volume = 7
+| issue = 3
+| pages = 201–215
+| year = 1960
+| doi=10.1145/321033.321034|s2cid=31888376
+| doi-access=free
+}}
+*{{cite journal
+| last=Davis
+| first=Martin |author2=Logemann, George |author3=Loveland, Donald
+| title=A Machine Program for Theorem Proving
+| journal =[[Communications of the ACM]]
+| volume=5
+| issue=7
+| pages = 394–397
+| year=1962
+| url=https://archive.org/details/machineprogramfo00davi
+| doi=10.1145/368273.368557| hdl=2027/mdp.39015095248095
+| s2cid=15866917 | hdl-access=free
+}}
+*{{cite journal
+| first=Ming
+| last=Ouyang
+| title=How Good Are Branching Rules in DPLL?
+| journal=Discrete Applied Mathematics
+| volume=89
+| issue=1–3
+| pages=281–286
+| year=1998
+| doi=10.1016/S0166-218X(98)00045-6| doi-access=
+}}
+* {{cite book|author=John Harrison|title=Handbook of practical logic and automated reasoning|year=2009|publisher=Cambridge University Press|isbn=978-0-521-89957-4|pages=79–90}}
+
+'''Specific'''
+{{reflist}}
+
+== Further reading ==
+* {{cite book|author1=Malay Ganai|author2=Aarti Gupta|author3=Dr. Aarti Gupta|title=SAT-based scalable formal verification solutions|year=2007|publisher=Springer|isbn=978-0-387-69166-4|pages=23–32}}
+* {{cite book|editor1-first=Frank|editor1-last=Van Harmelen|editor2-first=Vladimir|editor2-last=Lifschitz|editor3-first=Bruce|editor3-last=Porter|title=Handbook of knowledge representation|year=2008|publisher=Elsevier|isbn=978-0-444-52211-5|pages=89–134|first1=Carla P.|last1=Gomes|first2=Henry|last2=Kautz|first3= Ashish|last3=Sabharwal|first4=Bart|last4=Selman|chapter=Satisfiability Solvers|doi=10.1016/S1574-6526(07)03002-7|series=Foundations of Artificial Intelligence|volume=3}}
+
+[[Category:Constraint programming]]
+[[Category:Automated theorem proving]]
+[[Category:SAT solvers]]
+[[Category:Articles with example pseudocode]]

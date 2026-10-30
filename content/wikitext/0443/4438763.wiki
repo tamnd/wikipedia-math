@@ -1,0 +1,461 @@
+<!-- wikipedia: en
+     page: 4438763
+     title: Gillespie algorithm
+     revision: 1373866241
+     timestamp: 2026-09-08T11:44:47Z
+     history: https://en.wikipedia.org/w/index.php?curid=4438763&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373866241 -->
+{{Short description|Method for simulating stochastic systems}}
+
+In [[probability theory]] and [[computational science]], the '''Gillespie algorithm''', also known as the '''stochastic simulation algorithm''' ('''SSA'''), is a method for generating statistically exact sample trajectories of certain [[continuous-time Markov chain|continuous-time Markov jump processes]]. It is especially associated with the simulation of coupled [[chemical reaction]] systems. [[Daniel Gillespie]] presented the method in 1976 and developed it further in 1977.<ref name="Gillespie1976">{{cite journal
+ |last=Gillespie
+ |first=Daniel T.
+ |year=1976
+ |title=A General Method for Numerically Simulating the Stochastic Time Evolution of Coupled Chemical Reactions
+ |journal=Journal of Computational Physics
+ |volume=22
+ |issue=4
+ |pages=403–434
+ |doi=10.1016/0021-9991(76)90041-3
+ |bibcode=1976JCoPh..22..403G
+}}</ref><ref name="Gillespie1977">{{cite journal
+ |last=Gillespie
+ |first=Daniel T.
+ |year=1977
+ |title=Exact Stochastic Simulation of Coupled Chemical Reactions
+ |journal=The Journal of Physical Chemistry
+ |volume=81
+ |issue=25
+ |pages=2340–2361
+ |doi=10.1021/j100540a008
+ |s2cid=2606191
+}}</ref>
+
+The method is widely used in [[computational systems biology]], particularly when the numbers of reacting molecules are small enough that stochastic fluctuations are important.<ref name="Gillespie2007">{{cite journal
+ |last=Gillespie
+ |first=Daniel T.
+ |date=2007-05-01
+ |title=Stochastic Simulation of Chemical Kinetics
+ |journal=Annual Review of Physical Chemistry
+ |volume=58
+ |issue=1
+ |pages=35–55
+ |doi=10.1146/annurev.physchem.58.032806.104637
+ |pmid=17037977
+ |bibcode=2007ARPC...58...35G
+}}</ref> Gillespie-type algorithms are also used in [[network epidemiology]] to simulate stochastic epidemic spreading on [[complex network]]s, including continuous-time [[compartmental models in epidemiology|SI, SIS, and SIR]] processes.<ref name="Kuryliak2025">{{cite journal
+ |last1=Kuryliak
+ |first1=Yulian
+ |last2=Emmerich
+ |first2=Michael T. M.
+ |last3=Dosyn
+ |first3=Dmytro
+ |year=2025
+ |title=Simulating epidemic peak dynamics on complex networks using efficient Gillespie algorithms
+ |journal=Infection, Genetics and Evolution
+ |volume=132
+ |article-number=105768
+ |doi=10.1016/j.meegid.2025.105768
+ |pmid=40441473
+}}</ref>
+
+Mathematically, the algorithm is a form of [[dynamic Monte Carlo method]] and is closely related to [[kinetic Monte Carlo]] methods.
+
+== History ==
+
+The mathematical foundations of the Gillespie algorithm lie in the theory of stochastic jump processes. In 1931, [[Andrey Kolmogorov]] developed differential equations describing the time evolution of Markov processes, now known as the [[Kolmogorov equations (Markov jump process)|Kolmogorov equations]].<ref name="Kolmogorov1931">{{cite journal
+ |last=Kolmogorov
+ |first=Andrey N.
+ |year=1931
+ |title=Über die analytischen Methoden in der Wahrscheinlichkeitsrechnung
+ |trans-title=On Analytical Methods in the Theory of Probability
+ |journal=Mathematische Annalen
+ |volume=104
+ |pages=415–458
+ |doi=10.1007/BF01457949
+ |s2cid=119439925
+}}</ref>
+
+[[William Feller]] subsequently studied purely discontinuous Markov processes and established conditions under which the Kolmogorov equations yield proper transition probabilities.<ref name="Feller1940">{{cite journal
+ |last=Feller
+ |first=William
+ |year=1940
+ |title=On the Integro-Differential Equations of Purely Discontinuous Markoff Processes
+ |journal=Transactions of the American Mathematical Society
+ |volume=48
+ |issue=3
+ |pages=488–515
+ |doi=10.2307/1990095
+ |jstor=1990095
+}}</ref> [[Joseph L. Doob]] extended the mathematical theory of Markov processes during the 1940s.<ref name="Doob1942">{{cite journal
+ |last=Doob
+ |first=Joseph L.
+ |year=1942
+ |title=Topics in the Theory of Markoff Chains
+ |journal=Transactions of the American Mathematical Society
+ |volume=52
+ |issue=1
+ |pages=37–64
+ |doi=10.1090/S0002-9947-1942-0006633-7
+ |jstor=1990152
+}}</ref><ref name="Doob1945">{{cite journal
+ |last=Doob
+ |first=Joseph L.
+ |year=1945
+ |title=Markoff Chains—Denumerable Case
+ |journal=Transactions of the American Mathematical Society
+ |volume=58
+ |issue=3
+ |pages=455–473
+ |doi=10.2307/1990339
+ |jstor=1990339
+}}</ref>
+
+Early computer simulations of related stochastic processes predated Gillespie's work. [[David George Kendall]] simulated a simple birth-and-death process using the [[Manchester Mark 1]] computer in 1950,<ref name="Kendall1950">{{cite journal
+ |last=Kendall
+ |first=David G.
+ |year=1950
+ |title=An Artificial Realization of a Simple "Birth-and-Death" Process
+ |journal=Journal of the Royal Statistical Society, Series B
+ |volume=12
+ |issue=1
+ |pages=116–119
+ |doi=10.1111/j.2517-6161.1950.tb00048.x
+ |jstor=2983837
+}}</ref> and [[Maurice S. Bartlett]] applied stochastic-process methods to epidemic modelling.<ref name="Bartlett1953">{{cite journal
+ |last=Bartlett
+ |first=Maurice S.
+ |year=1953
+ |title=Stochastic Processes or the Statistics of Change
+ |journal=Journal of the Royal Statistical Society, Series C
+ |volume=2
+ |issue=1
+ |pages=44–64
+ |doi=10.2307/2985327
+ |jstor=2985327
+}}</ref>
+
+Gillespie's 1976 and 1977 papers derived an exact simulation procedure for systems of coupled chemical reactions using probabilistic arguments based on the physical interpretation of molecular reaction events.<ref name="Gillespie1976"/><ref name="Gillespie1977"/>
+
+== Method ==
+
+=== Mathematical formulation ===
+
+Consider a system whose state at time <math>t</math> is described by a vector <math>\boldsymbol{x}</math>. Each possible event or reaction <math>j</math> has a '''propensity function''' <math>a_j(\boldsymbol{x})</math>. For chemical systems, the propensity represents the instantaneous rate at which a particular reaction can occur when the system is in state <math>\boldsymbol{x}</math>.<ref name="Gillespie2007"/>
+
+Define the total propensity
+
+:<math>a_0(\boldsymbol{x})=\sum_j a_j(\boldsymbol{x}).</math>
+
+Provided that the process is Markovian, the waiting time <math>\tau</math> until the next event is [[exponential distribution|exponentially distributed]] with rate <math>a_0(\boldsymbol{x})</math>. The joint probability density that the next event occurs after a waiting time <math>\tau</math> and is reaction <math>j</math> is
+
+:<math>p(\tau,j\mid\boldsymbol{x},t)=a_j(\boldsymbol{x})\exp[-a_0(\boldsymbol{x})\tau].</math>
+
+Thus, the simulation requires two random choices: the time of the next event and which event occurs.
+
+Using two independent pseudorandom numbers <math>r_1</math> and <math>r_2</math>, uniformly distributed on <math>(0,1)</math>, the waiting time can be generated as
+
+:<math>\tau=\frac{1}{a_0(\boldsymbol{x})}\ln\left(\frac{1}{r_1}\right).</math>
+
+The next reaction <math>j</math> is the smallest integer satisfying
+
+:<math>\sum_{j'=1}^{j} a_{j'}(\boldsymbol{x}) > r_2 a_0(\boldsymbol{x}).</math>
+
+=== Direct method ===
+
+The direct form of the Gillespie algorithm can be written as follows:<ref name="Gillespie1977"/><ref name="Gillespie2007"/>
+
+# Initialize the time <math>t=t_0</math> and state <math>\boldsymbol{x}=\boldsymbol{x}_0</math>.
+# Evaluate each propensity <math>a_j(\boldsymbol{x})</math> and their total <math>a_0(\boldsymbol{x})</math>.
+# Generate the waiting time <math>\tau</math> and select the next reaction <math>j</math>.
+# Advance the time according to <math>t\leftarrow t+\tau</math>.
+# Update the state according to <math>\boldsymbol{x}\leftarrow\boldsymbol{x}+\boldsymbol{\nu}_j</math>, where <math>\boldsymbol{\nu}_j</math> is the state-change vector associated with reaction <math>j</math>.
+# Record the state if required and repeat until the chosen stopping condition is reached.
+
+Each realization produced in this way is a sample trajectory of the corresponding stochastic process.
+
+=== Comparison with deterministic models ===
+
+Traditional deterministic descriptions of [[chemical kinetics]] generally use systems of coupled [[ordinary differential equation]]s for continuous concentrations. Such models are often effective when populations are large and stochastic fluctuations are relatively small.
+
+When some molecular species occur in low copy numbers, however, fluctuations associated with individual reaction events may become significant. The Gillespie algorithm represents molecules and reaction events discretely and therefore provides a way of simulating these intrinsic stochastic fluctuations.<ref name="Gillespie2007"/>
+
+For the standard chemical interpretation of the algorithm, the reaction system is normally assumed to be sufficiently well mixed that spatial correlations can be neglected and that the propensity of each reaction depends only on the current state.
+
+== Computational variants ==
+
+The original direct method may become computationally expensive when a model contains a large number of reaction channels. Consequently, numerous exact and approximate variants have been developed.
+
+The '''next reaction method''' of Gibson and Bruck uses data structures such as dependency graphs and priority queues to reduce the computational effort needed to determine subsequent reaction events.<ref name="GibsonBruck2000">{{cite journal
+ |last1=Gibson
+ |first1=Michael A.
+ |last2=Bruck
+ |first2=Jehoshua
+ |year=2000
+ |title=Efficient Exact Stochastic Simulation of Chemical Systems with Many Species and Many Channels
+ |journal=Journal of Physical Chemistry A
+ |volume=104
+ |issue=9
+ |pages=1876–1889
+ |doi=10.1021/jp993732q
+ |bibcode=2000JPCA..104.1876G
+}}</ref>
+
+Approximate methods such as '''[[tau-leaping]]''' advance the system through multiple reaction events over a finite time interval rather than simulating every individual event, potentially providing substantial computational savings.<ref name="Rathinam2003">{{cite journal
+ |last1=Rathinam
+ |first1=Muruhan
+ |last2=Petzold
+ |first2=Linda R.
+ |last3=Cao
+ |first3=Yang
+ |last4=Gillespie
+ |first4=Daniel T.
+ |year=2003
+ |title=Stiffness in stochastic chemically reacting systems: The implicit tau-leaping method
+ |journal=Journal of Chemical Physics
+ |volume=119
+ |issue=24
+ |pages=12784–12794
+ |doi=10.1063/1.1627296
+ |bibcode=2003JChPh.11912784R
+}}</ref> Hybrid methods can likewise combine stochastic descriptions of low-copy-number species with deterministic approximations for abundant species.
+
+For weakly coupled reaction networks, exact algorithms with computational cost independent of the total number of reaction channels under appropriate conditions have been developed.<ref name="Slepoy2008">{{cite journal
+ |last1=Slepoy
+ |first1=Alexander
+ |last2=Thompson
+ |first2=Aidan P.
+ |last3=Plimpton
+ |first3=Steven J.
+ |year=2008
+ |title=A constant-time kinetic Monte Carlo algorithm for simulation of large biochemical reaction networks
+ |journal=Journal of Chemical Physics
+ |volume=128
+ |issue=20
+ |page=205101
+ |doi=10.1063/1.2919546
+ |pmid=18513044
+ |bibcode=2008JChPh.128t5101S
+}}</ref>
+
+Extensions have also been proposed for systems in which events are delayed or otherwise depart from the assumptions of a simple Markov reaction process.<ref name="Bratsun2005">{{cite journal
+ |last1=Bratsun
+ |first1=Dmitri
+ |last2=Volfson
+ |first2=Dmitri
+ |last3=Hasty
+ |first3=Jeff
+ |last4=Tsimring
+ |first4=Lev S.
+ |year=2005
+ |title=Delay-induced stochastic oscillations in gene regulation
+ |journal=Proceedings of the National Academy of Sciences
+ |volume=102
+ |issue=41
+ |pages=14593–14598
+ |doi=10.1073/pnas.0503858102
+ |pmid=16199522
+ |pmc=1253555
+}}</ref><ref name="Barrio2006">{{cite journal
+ |last1=Barrio
+ |first1=Manuel
+ |last2=Burrage
+ |first2=Kevin
+ |last3=Leier
+ |first3=André
+ |last4=Tian
+ |first4=Tianhai
+ |year=2006
+ |title=Oscillatory Regulation of ''hes1'': Discrete Stochastic Delay Modelling and Simulation
+ |journal=PLOS Computational Biology
+ |volume=2
+ |issue=9
+ |article-number=e117
+ |doi=10.1371/journal.pcbi.0020117
+  |doi-access=free|pmid=16965175
+ |pmc=1560403
+}}</ref><ref name="Cai2007">{{cite journal
+ |last=Cai
+ |first=Xiaodong
+ |year=2007
+ |title=Exact stochastic simulation of coupled chemical reactions with delays
+ |journal=Journal of Chemical Physics
+ |volume=126
+ |issue=12
+ |page=124108
+ |doi=10.1063/1.2710253
+ |pmid=17411109
+ |bibcode=2007JChPh.126l4108C
+}}</ref>
+
+=== Partial-propensity methods ===
+
+Partial-propensity formulations reduce the computational work needed to evaluate and select reaction channels by exploiting the structure of their propensity functions.<ref name="Ramaswamy2009">{{cite journal
+ |last1=Ramaswamy
+ |first1=Rajesh
+ |last2=González-Segredo
+ |first2=Nélido
+ |last3=Sbalzarini
+ |first3=Ivo F.
+ |year=2009
+ |title=A new class of highly efficient exact stochastic simulation algorithms for chemical reaction networks
+ |journal=Journal of Chemical Physics
+ |volume=130
+ |issue=24
+ |page=244104
+ |doi=10.1063/1.3154624
+ |pmid=19566139
+ |arxiv=0906.1992
+}}</ref><ref name="Ramaswamy2010">{{cite journal
+ |last1=Ramaswamy
+ |first1=Rajesh
+ |last2=Sbalzarini
+ |first2=Ivo F.
+ |year=2010
+ |title=A partial-propensity variant of the composition-rejection stochastic simulation algorithm for chemical reaction networks
+ |journal=Journal of Chemical Physics
+ |volume=132
+ |issue=4
+ |page=044102
+ |doi=10.1063/1.3297948
+ |pmid=20113014
+}}</ref>
+
+Related approaches based on reaction factoring and dependency structures have also been proposed for large biochemical systems.<ref name="Indurkhya2010">{{cite journal
+ |last1=Indurkhya
+ |first1=Sagar
+ |last2=Beal
+ |first2=Jacob S.
+ |year=2010
+ |title=Reaction Factoring and Bipartite Update Graphs Accelerate the Gillespie Algorithm for Large-Scale Biochemical Systems
+ |journal=PLOS ONE
+ |volume=5
+ |issue=1
+ |article-number=e8125
+ |doi=10.1371/journal.pone.0008125
+  |doi-access=free|pmid=20066048
+ |pmc=2798956
+}}</ref>
+
+Partial-propensity techniques have additionally been extended to reaction networks containing delays.<ref name="Ramaswamy2011">{{cite journal
+ |last1=Ramaswamy
+ |first1=Rajesh
+ |last2=Sbalzarini
+ |first2=Ivo F.
+ |year=2011
+ |title=A partial-propensity formulation of the stochastic simulation algorithm for chemical reaction networks with delays
+ |journal=Journal of Chemical Physics
+ |volume=134
+ |issue=1
+ |page=014106
+ |doi=10.1063/1.3521496
+ |pmid=21218996
+}}</ref>
+
+== Applications ==
+
+=== Chemical and biochemical reaction networks ===
+
+The Gillespie algorithm was originally developed for coupled chemical reaction systems and remains widely used to investigate stochastic chemical and biochemical dynamics.<ref name="Gillespie1977"/><ref name="Gillespie2007"/> Applications include systems in which fluctuations caused by small numbers of molecules may influence the system's behaviour, such as gene-expression and regulatory networks.
+
+=== Epidemic processes on networks ===
+
+Epidemic models can also be represented as continuous-time stochastic event systems. For a network-based epidemic model, events may include transmission across an edge between susceptible and infected nodes and recovery of an infected node.
+
+Gillespie-based simulation can therefore be used to generate continuous-time realizations of epidemic models on complex contact networks. Kuryliak, Emmerich, and Dosyn applied efficient Gillespie implementations to SI, SIS, and SIR dynamics on heterogeneous networks and studied how network structure and interventions influence epidemic peak size and timing.<ref name="Kuryliak2025"/>
+
+== Example ==
+
+=== Reversible binding of A and B to form AB dimers ===
+
+A simple chemical system illustrates the direct method. Consider molecules of two types, {{math|A}} and {{math|B}}, which reversibly bind to form {{math|AB}} dimers:<ref name="Gillespie2007"/>
+
+:<chem>A + B <=> AB</chem>
+
+There are two possible reactions. An {{math|A}} molecule and a {{math|B}} molecule can combine to produce an {{math|AB}} dimer, or an existing dimer can dissociate.
+
+Let the rate constant for dimer formation be <math>k_\mathrm{D}</math> and the rate constant for dissociation be <math>k_\mathrm{B}</math>. If the system contains <math>n_\mathrm{A}</math> molecules of {{math|A}}, <math>n_\mathrm{B}</math> molecules of {{math|B}}, and <math>n_\mathrm{AB}</math> dimers, the two propensities are
+
+:<math>a_1=k_\mathrm{D}n_\mathrm{A}n_\mathrm{B}</math>
+
+and
+
+:<math>a_2=k_\mathrm{B}n_\mathrm{AB}.</math>
+
+The total reaction propensity is therefore
+
+:<math>a_0=k_\mathrm{D}n_\mathrm{A}n_\mathrm{B}+k_\mathrm{B}n_\mathrm{AB}.</math>
+
+The waiting time until the next reaction is sampled from an exponential distribution with mean <math>1/a_0</math>. Once the waiting time has been generated, the probability that the next event is dimer formation is
+
+:<math>P(\mathrm{A+B\rightarrow AB})=\frac{k_\mathrm{D}n_\mathrm{A}n_\mathrm{B}}{a_0},</math>
+
+while the probability of dissociation is
+
+:<math>P(\mathrm{AB\rightarrow A+B})=\frac{k_\mathrm{B}n_\mathrm{AB}}{a_0}.</math>
+
+If dimer formation occurs, <math>n_\mathrm{A}</math> and <math>n_\mathrm{B}</math> each decrease by one and <math>n_\mathrm{AB}</math> increases by one. If dissociation occurs, the opposite update is made. Repeatedly sampling the waiting time and reaction type generates one stochastic trajectory of the system.
+
+== See also ==
+
+* [[Continuous-time Markov chain]]
+* [[Kinetic Monte Carlo]]
+* [[Master equation]]
+* [[Monte Carlo method]]
+* [[Stochastic process]]
+* [[Tau-leaping]]
+
+== References ==
+
+{{reflist}}
+
+== Further reading ==
+
+* {{cite book
+ |last1=Press
+ |first1=William H.
+ |last2=Teukolsky
+ |first2=Saul A.
+ |last3=Vetterling
+ |first3=William T.
+ |last4=Flannery
+ |first4=Brian P.
+ |year=2007
+ |title=Numerical Recipes: The Art of Scientific Computing
+ |edition=3rd
+ |publisher=Cambridge University Press
+ |location=New York
+ |isbn=978-0-521-88068-8
+ |chapter=Section 17.7: Stochastic Simulation of Chemical Reaction Networks
+}}
+
+* {{cite book
+ |last1=Barnes
+ |first1=David J.
+ |last2=Chu
+ |first2=Dominique
+ |year=2010
+ |title=Introduction to Modeling for Biosciences
+ |publisher=Springer
+}}
+
+* {{cite journal
+ |last1=Yates
+ |first1=Christian A.
+ |last2=Klingbeil
+ |first2=Guido
+ |year=2013
+ |title=Recycling random numbers in the stochastic simulation algorithm
+ |journal=Journal of Chemical Physics
+ |volume=138
+ |issue=9
+ |page=094103
+ |doi=10.1063/1.4792207
+ |pmid=23485273
+}}
+
+[[Category:Chemical kinetics]]
+[[Category:Computational chemistry]]
+[[Category:Monte Carlo methods]]
+[[Category:Stochastic simulation]]

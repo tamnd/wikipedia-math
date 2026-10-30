@@ -1,0 +1,609 @@
+<!-- wikipedia: en
+     page: 453395
+     title: Tagged union
+     revision: 1373491360
+     timestamp: 2026-09-06T07:00:16Z
+     history: https://en.wikipedia.org/w/index.php?curid=453395&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373491360 -->
+{{Short description|Union data structure with enforced cases}}
+In [[computer science]], a '''tagged union''', also called a '''variant''', '''variant record''', '''choice type''', '''discriminated union''', '''[[disjoint union]]''', '''sum type''', or '''[[coproduct]]''', is a [[data structure]] used to hold a value that could take on several different, but fixed, types. Only one of the types can be in use at any one time, and a '''tag''' field explicitly indicates which type is in use. It can be thought of as a type that has several "cases", each of which should be handled correctly when that type is manipulated. This is critical in defining recursive datatypes, in which some component of a value may have the same type as that value, for example in defining a type for representing [[Tree (data structure)|trees]], where it is necessary to distinguish multi-node subtrees and leaves. Like ordinary [[Union type|unions]], tagged unions can save storage by overlapping storage areas for each type, since only one is in use at a time.
+
+==Description==
+Tagged unions are most important in [[functional programming]] languages such as [[ML (programming language)|ML]] and [[Haskell]], where they are called ''datatypes'' (see [[algebraic data type]]) and the [[compiler]] can verify that all cases of a tagged union are always handled, avoiding many types of errors. Compile-time checked sum types are also extensively used in [[Rust (programming language)|Rust]], where they are called ''enum''. They can, however, be constructed in nearly any [[programming language]], and are much safer than untagged unions, often simply called unions, which are similar but do not explicitly track which member of a union is currently in use.
+
+Tagged unions are often accompanied by the concept of a [[Algebraic data type|constructor]], which is similar but not the same as a [[Constructor (object-oriented programming)|constructor]] for a [[Class (programming)|class]]. A constructor is a function or an expression that produces a value of the tagged union type, given a tag and a value of the corresponding type.
+
+Mathematically, tagged unions correspond to ''[[disjoint union|disjoint]]'' or ''discriminated unions'', usually written using +. Given an element of a disjoint union <math>A + B</math>,  it is possible to determine whether it came from <math>A</math> or <math>B</math>. If an element lies in both, there will be two effectively distinct copies of the value in <math>A + B</math>, one from <math>A</math> and one from <math>B</math>.
+
+In [[type theory]], a tagged union is called a ''sum type''. Sum types are the [[dual (mathematics)|dual]] of [[product type]]s. Notations vary, but usually the sum type <math>A + B</math> comes with two introduction forms ([[injection (mathematics)|injection]]s) <math>\texttt{inj}_1: A \mapsto A + B</math> and <math>\texttt{inj}_2: B \mapsto A + B</math>. The elimination form is case analysis, known as [[pattern matching]] in [[ML (programming language)|ML-style]] languages: if <math>e</math> has type <math>A + B</math> and <math>e_1</math> and <math>e_2</math> have type <math>\tau</math> under the assumptions <math>x: A</math> and <math>y: B</math> respectively, then the term <math>\mathsf{case}\ e\ \mathsf{of}\ x \Rightarrow e_1 \mid y \Rightarrow e_2</math> has type <math>\tau</math>. The sum type corresponds to [[Intuitionistic logic|intuitionistic]] [[logical disjunction]] under the [[Curry–Howard correspondence]].
+
+An [[enumerated type]] can be seen as a degenerate case: a tagged union of [[unit type]]s. It corresponds to a set of nullary constructors and may be implemented as a simple tag variable, since it holds no additional data besides the value of the tag.
+
+Many programming techniques and data structures, including [[Rope (data structure)|rope]], [[lazy evaluation]], [[class hierarchy]] (see below), [[arbitrary-precision arithmetic]], [[CDR coding]], the [[indirection bit]], and other kinds of [[tagged pointer]]s, are usually implemented using some sort of tagged union.
+
+A tagged union can be seen as the simplest kind of [[self-describing]] [[comparison of data serialization formats|data format]].
+The tag of the tagged union can be seen as the simplest kind of [[metadata]].
+
+In languages with [[flow-sensitive typing]], tagged unions can be implemented by a combination of [[union type]]s and [[Row polymorphism|record type]]s.<ref>https://arxiv.org/pdf/2111.03354 p. 8</ref>
+
+==Advantages and disadvantages==
+The primary advantage of a tagged union over an untagged union is that all accesses are safe, and the compiler can even check that all cases are handled. Untagged unions depend on program logic to correctly identify the currently active field, which may result in strange behavior and hard-to-find bugs if that logic fails.
+
+The primary advantage of a tagged union over a simple [[record (computer science)|record]] containing a field for each type is that it saves storage by overlapping storage for all the types. Some implementations reserve enough storage for the largest type, while others dynamically adjust the size of a tagged union value as needed. When the value is [[Immutable object|immutable]], it is simple to allocate just as much storage as is needed.
+
+The main disadvantage of tagged unions is that the tag occupies space. Since there are usually a small number of alternatives, the tag can often be squeezed into 2 or 3 bits wherever space can be found, but sometimes even these bits are not available. In this case, a helpful alternative may be '''folded''', '''computed''' or '''encoded tags''', where the tag value is dynamically computed from the contents of the union field. Common examples are the use of ''reserved values'', where, for example, a function returning a positive number may return -1 to indicate failure, and [[sentinel value]]s, most often used in [[tagged pointer]]s.
+
+Sometimes, untagged unions are used to perform bit-level conversions between types, or [[type punning]]. Tagged unions are not intended for this purpose; typically a new value is assigned whenever the tag is changed.
+
+Many languages support, to some extent, a [[Top type|universal data type]], which is a type that includes every value of every other type, and often a way is provided to test the actual type of a value of the universal type. These are sometimes referred to as ''variants''. While universal data types are comparable to tagged unions in their formal definition, typical tagged unions include a relatively small number of cases, and these cases form different ways of expressing a single coherent concept, such as a data structure node or instruction. Also, there is an expectation that every possible case of a tagged union will be dealt with when it is used. The values of a universal data type are not related and there is no feasible way to deal with them all.
+
+Like [[option type]]s and [[exception handling]], tagged unions are sometimes used to handle the occurrence of exceptional results. Often these tags are folded into the type as ''reserved values'', and their occurrence is not consistently checked: this is a fairly common source of programming errors. This use of tagged unions can be formalized as a [[Monad (functional programming)|monad]] with the following functions:
+
+:<math>\texttt{return}\colon A \to \left( A + E \right) = a \mapsto \text{value} \, a</math>
+:<math>\texttt{bind}\colon \left( A + E \right) \to \left(A \to \left(B + E \right) \right) \to \left( B + E \right) = a \mapsto f \mapsto \begin{cases} \text{err} \, e & \text{if} \ a = \text{err} \, e\\ f \, a' & \text{if} \ a = \text{value} \, a' \end{cases}</math>
+
+where <math>\text{value}</math> and <math>\text{err}</math> are the constructors of the union type, <math>A</math> and <math>B</math> are valid [[result type]]s and <math>E</math> is the type of error conditions. Alternately, the same monad may be described by <math>\texttt{return}</math> and two additional functions, <math>\texttt{fmap}</math> and <math>\texttt{join}</math>:
+
+:<math>\texttt{fmap} \colon (A \to B) \to \left( \left( A + E \right) \to \left( B + E \right) \right) = f \mapsto a \mapsto \begin{cases} \text{err} \, e & \text{if} \ a = \text{err} \, e \\ \text{value} \, \text{(} \, f \, a' \, \text{)} & \text{if} \ a = \text{value} \, a' \end{cases}</math>
+:<math>\texttt{join} \colon ((A + E ) + E) \to (A + E) = a \mapsto \begin{cases} \text{err} \, e & \mbox{if} \ a = \text{err} \, e\\ \text{err} \, e & \text{if} \ a = \text{value} \, \text{(err} \, e \, \text{)} \\ \text{value} \, a' & \text{if} \ a = \text{value} \, \text{(value} \, a' \, \text{)} \end{cases}</math>
+
+==Examples==
+A [[binary tree]] of integers in [[ML (programming language)|ML]] can be expressed using a [[data type]] similar to the following:
+
+<syntaxhighlight lang="sml">
+datatype tree = Leaf
+              | Node of (int * tree * tree)
+</syntaxhighlight>
+
+This is a tagged union with two cases: one, the leaf, is used to terminate a path of the tree, and functions much like a null value would in imperative languages. The other branch holds a node, which contains an integer and a left and right subtree. Leaf and Node are the constructors, which are used to create a given tree, such as:
+
+<syntaxhighlight lang="sml">
+Node(5, Node(1, Leaf, Leaf), Node(3, Leaf, Node(4, Leaf, Leaf)))
+</syntaxhighlight>
+
+which corresponds to this tree:
+
+[[File:tagged union tree.svg|The tree produced by the above constructors|thumb|200px|center]]
+
+It then becomes trivial to write a type-safe function that, for example, counts the number of nodes in the tree:
+
+<syntaxhighlight lang="sml">
+fun countNodes(Leaf) = 0
+  | countNodes(Node(int, left, right)) =
+      1 + countNodes(left) + countNodes(right)
+</syntaxhighlight>
+
+==Language support==
+===ALGOL 68===
+In [[ALGOL 68]], tagged unions are called ''united modes'', the tag is implicit, and the <code>'''case'''</code> construct is used to determine which field is tagged:
+
+<code>'''mode''' '''node''' = '''union''' ('''real''', '''int''', '''compl''', '''string''');</code>
+
+Usage example for <code>'''union'''</code> <code>'''case'''</code> of <code>'''node'''</code>:
+
+ '''node''' n := "1234";
+ &nbsp;
+ '''case''' n '''in'''
+   ('''real''' r):   print(("real:", r)),
+   ('''int''' i):    print(("int:", i)),
+   ('''compl''' c):  print(("compl:", c)),
+   ('''string''' s): print(("string:", s))
+   '''out'''         print(("?:", n))
+ '''esac'''
+
+In ALGOL 68, a union can be automatically coerced into a wider union, for example if all its constituents can be handled by the union parameter of '''print''', a union can simply be passed to print as in the '''out''' case above.
+
+===Ada===
+In [[Ada (programming language)|Ada]], these are called "discriminated types".
+<syntaxhighlight lang="ada">
+type Shape_Kind is (Square, Rectangle, Circle);
+type Shape (Kind : Shape_Kind) is record
+   Center_X : Integer;
+   Center_Y : Integer;
+   case Kind is
+      when Square =>
+         Side : Integer;
+      when Rectangle =>
+         Width, Height : Integer;
+      when Circle =>
+         Radius : Integer;
+   end case;
+end record;
+
+-- Any attempt to access a member which existence depends
+-- on a certain value of the discriminant, while the
+-- discriminant is not the expected one, raises an error.
+</syntaxhighlight>
+
+===C++===
+While [[C (programming language)|C]] only provides <syntaxhighlight lang="c" inline>union</syntaxhighlight>, an untagged union type, [[C++]] offers a class <syntaxhighlight lang="cpp" inline>std::variant<Ts...></syntaxhighlight> (since [[C++17]]), but rather than being a core language feature like <syntaxhighlight lang="c" inline>union</syntaxhighlight>, it is a [[C++ Standard Library|standard library]] class.
+
+<syntaxhighlight lang="cpp">
+import std;
+
+using std::string;
+using std::variant;
+
+struct Cat {
+    string name;
+};
+
+struct Dog {
+    string name;
+};
+
+struct Bird {
+    string name;
+};
+
+using Pet = variant<Cat, Dog, Bird>;
+
+Pet p1 = Cat("Whiskers");
+Pet p2 = Dog("Rex");
+</syntaxhighlight>
+
+The "overload pattern" is a common [[software design pattern|design pattern]] that implements algebraic pattern matching using [[variadic template]] inheritance.<ref>{{Cite web|title=2 Lines of Code and 3 C++17 Features - The Overload Pattern|url=https://isocpp.org/blog/2023/11/2-lines-of-code-and-3-cpp17-features-the-overload-pattern-bartlomiej-f1|author=Bartlomiej Filipek|date=10 November 2023|website=isocpp.org|publisher=ISO C++}}</ref>
+
+<syntaxhighlight lang="cpp">
+// Helper type for visitor
+template <typename... Ts>
+struct Overload : public Ts... {
+    using Ts::operator()...;
+}
+
+// Deduction guide
+template <typename... Ts>
+Overload(Ts...) -> Overload<Ts...>;
+</syntaxhighlight>
+
+Then, the <code>std::visit()</code> function may be used to call each respective case, with each case handled by a [[anonymous function|lambda]]:<ref>{{Cite web|title=std::visit|url=https://en.cppreference.com/cpp/utility/variant/visit2|publisher=cppreference.com|website=cppreference.com|author=cppreference.com|date=29 June 2026}}</ref>
+
+<syntaxhighlight lang="cpp">
+using Value = variant<int, double, string>;
+
+Value v = 3.14;
+
+// prints "double: 3.14"
+std::visit(
+    Overload {
+        [](int i) -> void { std::println("int: {}", i); },
+        [](double d) -> void { std::println("double: {}", d); },
+        [](const string& s) -> void { std::println("string: {}", s); }
+    },
+    v
+);
+</syntaxhighlight>
+
+Additionally, <code>std::visit()</code> may be made to return a type:
+<syntaxhighlight lang="cpp">
+Pet p = Bird("Polly");
+
+string name = std::visit(
+    Overload {
+        [](const Cat& c) -> string { return c.name; },
+        [](const Dog& d) -> string { return d.name; },
+        [](const Bird& b) -> string { return b.name; }
+    },
+    p
+);
+
+// Prints "Pet name: Polly"
+std::println("Pet name: {}", name);
+</syntaxhighlight>
+
+Since [[C++26]], <code>visit()</code> may be used as method of <syntaxhighlight lang="cpp" inline>std::variant<Ts...></syntaxhighlight>:
+
+<syntaxhighlight lang="cpp">
+Pet p = Bird("Polly");
+
+Overload visitor(
+    [](const Cat& c) -> string { return c.name; },
+    [](const Dog& d) -> string { return d.name; },
+    [](const Bird& b) -> string { return b.name; }
+);
+
+// Prints "Pet name: Polly"
+std::println("Pet name: {}", p.visit(visitor));
+</syntaxhighlight>
+
+The result type for error handling (like <syntaxhighlight lang="rust" inline>std::result::Result<T, E></syntaxhighlight> in Rust), was introduced to [[C++23]] as <syntaxhighlight lang="cpp" inline>std::expected<T, E></syntaxhighlight>.
+
+===C#===
+[[C Sharp (programming language)|C#]] traditionally did not have tagged unions. The closest way to approximate these was through pattern matching over <syntaxhighlight lang="csharp" inline>record</syntaxhighlight> types. With C# 15, tagged unions were introduced with the keyword <syntaxhighlight lang="csharp" inline>union</syntaxhighlight>.<ref>{{Cite web|title=Explore union types in C# 15|author=Bill Wagner|url=https://devblogs.microsoft.com/dotnet/csharp-15-union-types/|publisher=Microsoft|website=devblogs.microsoft.com|date=2 April 2026}}</ref>
+
+<syntaxhighlight lang="csharp">
+record class Car(string Model);
+record class Bicycle(string Model);
+record class Bus(string Model);
+
+union Vehicle(Car, Bicycle, Bus);
+
+Vehicle car = new Car("Tesla Model 3");
+Console.WriteLine(car.Value); // Car { Model = Tesla Model 3 }
+
+Vehicle bike = new Bicycle("Giant Escape 3");
+Console.WriteLine(bike.Value); // Bicycle { Model = Giant Escape 3 }
+
+Vehicle bus = new Bus("Volvo 9700");
+Console.WriteLine(bus.Value); // Bus { Model = Volvo 9700 }
+
+Vehicle v = /* some vehicle here */;
+string model = v switch
+{
+    Car c => c.Model,
+    Bicycle bk => b.Model,
+    Bus bs => bs.Model,
+};
+</syntaxhighlight>
+
+The <syntaxhighlight lang="csharp" inline>default</syntaxhighlight> value of a union is <syntaxhighlight lang="csharp" inline>null</syntaxhighlight>, but if all types in the union are non-[[Nullable type|nullable]], then a <syntaxhighlight lang="csharp" inline>switch</syntaxhighlight> expression need not check for <syntaxhighlight lang="csharp" inline>null</syntaxhighlight>.
+
+===Cyclone===
+[[Cyclone (programming language)|Cyclone]], a dialect of C with safety enhancements, offers tagged unions.<ref>{{Cite web|url=http://cyclone.thelanguage.org/wiki/Tagged%20Unions|title=Cyclone: Tagged Unions}}</ref> These were declared with a <syntaxhighlight lang="d" inline>@tagged</syntaxhighlight> qualifier.
+
+<syntaxhighlight lang="d">
+@tagged union Foo {
+    int i;
+    double d;
+    char* @fat s;
+};
+
+void printFoo(union Foo x) {
+    // A missed case would be warned by the compiler
+    switch (x) {
+        case { .i = i }:
+            printf("%d", i);
+            break;
+        case { .d = d }:
+            printf("%g", d);
+            break;
+        case { .s = s }:
+            printf("%s", s); 
+            break;
+    }
+}
+</syntaxhighlight>
+
+===D===
+[[D (programming language)|D]] provides the <code>std.variant</code> module, with types like <syntaxhighlight lang="d" inline>Variant</syntaxhighlight> (representing an [[any type]]), and <syntaxhighlight lang="d" inline>std.variant.Algebraic!(T...)</syntaxhighlight> (representing an algebraic data type).<ref>{{Cite web|title=std.variant|url=https://dlang.org/phobos/std_variant.html|publisher=D Language|author=Andrei Alexandrescu|website=dlang.org|date=29 June 2026}}</ref>
+
+<syntaxhighlight lang="d">
+import std.variant;
+
+Algebraic!(int, string) v = 10;
+
+int result = v.visit!(
+    (string s) => cast(int) s.length,
+    (int i) => i,
+    () => -1
+)();
+writeln(result); // 10
+</syntaxhighlight>
+
+===F#===
+[[F Sharp (programming language)|F#]] has discriminated unions:
+
+<syntaxhighlight lang="fsharp">
+type Tree =
+  | Leaf
+  | Node of value: int * left: Tree * right: Tree
+
+let tree = Node(5, Node(1, Leaf, Leaf), Node(3, Leaf, Node(4, Leaf, Leaf)))
+</syntaxhighlight>
+
+Because the defined cases are exhaustive, the compiler can check that all cases are handled in a pattern match:
+<syntaxhighlight lang="fsharp">
+match tree with
+| Node (x, _, _) -> printfn "top level node value: %i" x
+| Leaf           -> printfn "top level node is a leaf"
+</syntaxhighlight>
+
+===Haxe===
+[[Haxe]]'s enums also work as tagged unions:<ref>{{cite web|title=Using Enums - Haxe - The Cross-platform Toolkit|url=https://haxe.org/manual/types-enum-using.html|publisher=Haxe Foundation}}</ref>
+<syntaxhighlight lang="haxe">
+enum Color {
+  Red;
+  Green;
+  Blue;
+  Rgb(r:Int, g:Int, b:Int);
+}
+</syntaxhighlight>
+
+These can be matched using a switch expression:
+<syntaxhighlight lang="haxe">
+switch (color) {
+  case Red: trace("Color was red");
+  case Green: trace("Color was green");
+  case Blue: trace("Color was blue");
+  case Rgb(r, g, b): trace("Color had a red value of " +r);
+}
+</syntaxhighlight>
+
+===Java===
+In [[Java (programming language)|Java]], the closest way to implement a tagged union is through a [[sealed class]], which directly constrains what types may inherit the class. Pattern matching itself may be done over <syntaxhighlight lang="java" inline>switch</syntaxhighlight> expressions.<ref>{{Cite web|title=Switch Expressions|url=https://docs.oracle.com/en/java/javase/17/language/switch-expressions-and-statements.html|publisher=Oracle Corporation|website=docs.oracle.com|author=Oracle Corporation|date=29 June 2026}}</ref>
+<syntaxhighlight lang="java">
+sealed interface Shape permits Circle, Rectangle, Triangle {}
+record Circle(double radius) implements Shape {}
+record Rectangle(double width, double height) implements Shape {}
+record Triangle(double base, double height) implements Shape {}
+
+double area(Shape s) {
+    return switch (s) {
+        case Circle(double r) -> Math.PI * r * r;
+        case Rectangle(double w, double h) -> w * h;
+        case Triangle(double b, double h) -> 0.5 * b * h;
+    };
+}
+</syntaxhighlight>
+
+===Standard ML===
+In [[Standard ML]], a tagged union is an "algebraic data type" or a "sum type".
+<syntaxhighlight lang="sml">
+datatype shape = Circle of real
+    | Rectangle of real * real
+    | Point
+
+fun area s =
+    case s of
+        Circle r => 3.1415926535 * r * r
+      | Rectangle (w, h) => w * h
+      | Point => 0.0
+</syntaxhighlight>
+
+===Nim===
+[[Nim (programming language)|Nim]] has object variants<ref>{{Cite web|url=https://nim-lang.org/docs/manual.html#types-object-variants|title=Nim Manual|website=nim-lang.org|access-date=2020-01-23}}</ref> similar in declaration to those in Pascal and Ada:<syntaxhighlight lang="nim">
+type
+  ShapeKind = enum
+    skSquare, skRectangle, skCircle
+  Shape = object
+    centerX, centerY: int
+    case kind: ShapeKind
+    of skSquare:
+      side: int
+    of skRectangle:
+      length, height: int
+    of skCircle:
+      radius: int
+</syntaxhighlight>
+
+[[Macro (computer science)|Macros]] can be used to emulate pattern matching or to create syntactic sugar for declaring object variants, seen here as implemented by the package [https://github.com/andreaferretti/patty patty]:
+<syntaxhighlight lang="nim">
+import patty
+
+proc `~`[A](a: A): ref A =
+  new(result)
+  result[] = a
+
+variant List[A]:
+  Nil
+  Cons(x: A, xs: ref List[A])
+
+proc listHelper[A](xs: seq[A]): List[A] =
+  if xs.len == 0: Nil[A]()
+  else: Cons(xs[0], ~listHelper(xs[1 .. xs.high]))
+
+proc list[A](xs: varargs[A]): List[A] = listHelper(@xs)
+
+proc sum(xs: List[int]): int = (block:
+  match xs:
+    Nil: 0
+    Cons(y, ys): y + sum(ys[])
+)
+
+echo sum(list(1, 2, 3, 4, 5))
+</syntaxhighlight>
+
+===OCaml===
+In [[OCaml]], tagged union syntax varies slightly from Standard ML, but is still roughly the same.
+
+<syntaxhighlight lang="ocaml">
+type shape =
+    | Circle of float
+    | Rectangle of float * float
+    | Point
+
+let area = function
+    | Circle r -> Float.pi *. r *. r
+    | Rectangle (w, h) -> w *. h
+    | Point -> 0.0
+</syntaxhighlight>
+
+===Pascal===
+In [[Pascal (programming language)|Pascal]], these are called "variant records".
+
+<syntaxhighlight lang="pascal">
+type shapeKind = (square, rectangle, circle);
+     shape = record
+                centerx : integer;
+                centery : integer;
+                case kind : shapeKind of
+                   square : (side : integer);
+                   rectangle : (width, height : integer);
+                   circle : (radius : integer);
+	      end;
+</syntaxhighlight>
+
+===Python===
+[[Python (programming language)|Python]] 3.9 introduces support for typing annotations that can be used to define a tagged union type (PEP-593<ref>{{Cite web|title=PEP 593 -- Flexible function and variable annotations|url=https://www.python.org/dev/peps/pep-0593/|access-date=2021-06-20|website=Python.org|language=en}}</ref>):
+<syntaxhighlight lang="python">
+from typing import Annotated, TypedDict
+
+Currency = Annotated[
+    TypedDict('Currency', {'dollars': float, 'pounds': float}, total=False),
+    TaggedUnion,
+]
+</syntaxhighlight>
+
+===Rust===
+The [[Rust (programming language)|Rust language]] has extensive support for tagged unions, called enums.<ref>{{cite web|title=The Rust Programming Language|url=http://rustbyexample.com/custom_types/structs.html|publisher=Mozilla}}</ref> For example:
+<syntaxhighlight lang="rust">
+enum Tree {
+    Leaf,
+    Node(i64, Box<Tree>, Box<Tree>)
+}
+</syntaxhighlight>
+
+It also allows matching on unions:
+
+<syntaxhighlight lang="rust">
+let tree: Tree = Tree::Node(
+    2,
+    Box::new(Tree::Node(0, Box::new(Tree::Leaf), Box::new(Tree::Leaf))),
+    Box::new(Tree::Node(3, Box::new(Tree::Leaf),
+        Box::new(Tree::Node(4, Box::new(Tree::Leaf), Box::new(Tree::Leaf)))))
+);
+
+fn add_values(tree: Tree) -> i64 {
+    match tree {
+        Tree::Node(v, a, b) => v + add_values(*a) + add_values(*b),
+        Tree::Leaf => 0
+    }
+}
+
+fn main() {
+    assert_eq!(add_values(tree), 9);
+}
+</syntaxhighlight>
+
+Rust's error handling model relies extensively on these tagged unions, especially the <syntaxhighlight lang="rust" inline>std::option::Option<T></syntaxhighlight> type, which is either <code>None</code> or <code>Some(T)</code>, and the <syntaxhighlight lang="rust" inline>std::result::Result<T, E></syntaxhighlight> type, which is either <code>Ok(T)</code> or <code>Err(E)</code>.<ref>{{cite web|title=Rust By Example|url=https://doc.rust-lang.org/stable/book/error-handling.html#the-option-type|publisher=Mozilla}}</ref>
+
+===Scala===
+[[Scala (programming language)|Scala]] has case classes:
+<syntaxhighlight lang="scala">
+sealed abstract class Tree
+case object Leaf extends Tree
+case class Node(value: Int, left: Tree, right: Tree) extends Tree
+
+val tree = Node(5, Node(1, Leaf, Leaf), Node(3, Leaf, Node(4, Leaf, Leaf)))
+</syntaxhighlight>
+
+Because the class hierarchy is sealed, the compiler can check that all cases are handled in a pattern match:
+<syntaxhighlight lang="scala">
+tree match {
+  case Node(x, _, _) => println("top level node value: " + x)
+  case Leaf          => println("top level node is a leaf")
+}
+</syntaxhighlight>
+
+Scala's case classes also permit reuse through subtyping:
+
+<syntaxhighlight lang="scala">
+sealed abstract class Shape(centerX: Int, centerY: Int)
+case class Square(side: Int, centerX: Int, centerY: Int) extends Shape(centerX, centerY)
+case class Rectangle(length: Int, height: Int, centerX: Int, centerY: Int) extends Shape(centerX, centerY)
+case class Circle(radius: Int, centerX: Int, centerY: Int) extends Shape(centerX, centerY)
+</syntaxhighlight>
+
+Enums are added in Scala 3,<ref>{{cite web|title=Scala 3 Language Reference: Enumerations|url=https://docs.scala-lang.org/scala3/reference/enums/enums.html|publisher=The Scala Team}}</ref> allowing us to rewrite the earlier Scala examples more concisely:
+<syntaxhighlight lang="scala">
+enum Tree[+T]:
+  case Leaf
+  case Node(x: Int, left: Tree[T], right: Tree[T])
+
+enum Shape(centerX: Int, centerY: Int):
+  case Square(side: Int, centerX: Int, centerY: Int) extends Shape(centerY, centerX)
+  case Rectangle(length: Int, height: Int, centerX: Int, centerY: Int) extends Shape(centerX, centerY)
+  case Circle(radius: Int, centerX: Int, centerY: Int) extends Shape(centerX, centerY)
+</syntaxhighlight>
+
+===Swift===
+[[Swift (programming language)|Swift]] also has substantial support for tagged unions via enumerations.<ref>{{Cite web|title=Enumerations — The Swift Programming Language (Swift 5.4)|url=https://docs.swift.org/swift-book/LanguageGuide/Enumerations.html|access-date=2021-04-28|website=docs.swift.org}}</ref> For example:<syntaxhighlight lang="swift">
+enum Tree {
+    case leaf
+    indirect case node(Int, Tree, Tree)
+}
+
+let tree = Tree.node(
+    2,
+    .node(0, .leaf, .leaf),
+    .node(3, .leaf, .node(4, .leaf, .leaf))
+)
+
+func add_values(_ tree: Tree) -> Int {
+    switch tree {
+    case let .node(v, a, b):
+        return v + add_values(a) + add_values(b)
+
+    case .leaf:
+        return 0
+    }
+}
+
+assert(add_values(tree) == 9)
+
+</syntaxhighlight>
+
+===TypeScript===
+With [[TypeScript]] it is also possible to create tagged unions. For example:
+<syntaxhighlight lang="typescript">
+interface Leaf {
+    kind: "leaf";
+}
+
+interface Node {
+    kind: "node";
+    value: number;
+    left: Tree;
+    right: Tree;
+}
+
+type Tree = Leaf | Node;
+
+const root: Tree = {
+    kind: "node",
+    value: 5,
+    left: {
+        kind: "node",
+        value: 1,
+        left: { kind: "leaf" },
+        right: { kind: "leaf" }
+    },
+    right: {
+        kind: "node",
+        value: 3,
+        left: { kind: "leaf" },
+        right: {
+            kind: "node",
+            value: 4,
+            left: { kind: "leaf" },
+            right: { kind: "leaf" }
+        }
+    }
+};
+
+function visit(tree: Tree): void {
+    switch (tree.kind) {
+        case "leaf":
+            break;
+        case "node":
+            console.log(tree.value);
+            visit(tree.left);
+            visit(tree.right);
+            break;
+    } 
+}
+</syntaxhighlight>
+
+== Class hierarchies as tagged unions ==
+In a typical [[class hierarchy]] in [[object-oriented programming]], each subclass can encapsulate data unique to that class. The metadata used to perform [[virtual method]] lookup (for example, the object's [[virtual method table|vtable]] pointer in most C++ implementations) identifies the subclass and so effectively acts as a tag identifying the data stored by the instance (see [[RTTI]]).
+An object's [[Constructor (object-oriented programming)|constructor]] sets this tag, and it remains constant throughout the object's lifetime.
+
+Nevertheless, a class hierarchy involves true [[subtype polymorphism]]. It can be extended by creating further subclasses of the same base type, which could not be handled correctly under a tag/dispatch model. Hence, it is usually not possible to do case analysis or dispatch on a subobject's 'tag' as one would for tagged unions. Some languages such as [[Scala (programming language)|Scala]] allow base classes to be "sealed", and unify tagged unions with sealed base classes.
+
+== See also ==
+* [[Discriminator]], the type tag for discriminated unions in [[CORBA]]
+* [[Variant type (COM)]]
+
+==References==
+{{Reflist}}
+
+{{Data types}}
+
+[[Category:Data types]]
+[[Category:Type theory]]
+[[Category:Articles with example Pascal code]]
+[[Category:Articles with example ALGOL 68 code]]
+[[Category:Articles with example C code]]
+[[Category:Articles with example C++ code]]
+[[Category:Articles with example Ada code]]

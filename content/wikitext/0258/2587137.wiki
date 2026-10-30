@@ -1,0 +1,188 @@
+<!-- wikipedia: en
+     page: 2587137
+     title: Station-to-Station protocol
+     revision: 1374936414
+     timestamp: 2026-09-14T23:07:15Z
+     history: https://en.wikipedia.org/w/index.php?curid=2587137&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374936414 -->
+{{Short description|Cryptographic key agreement scheme}}
+
+'''Station-to-Station''' ('''STS''') '''protocol''' is a cryptographic [[key agreement]] scheme. The protocol is based on classic [[Diffie–Hellman]], and provides [[Authenticated Key Exchange|mutual key and entity authentication]]. Unlike the classic [[Diffie–Hellman]], which is vulnerable to [[man-in-the-middle attacks]],<ref name="Stallings2010"/> this protocol assumes that both parties have signature keys which are used to sign messages, thereby providing security against man-in-the-middle attacks.
+
+In addition to protecting the established key from an attacker, the STS protocol uses no timestamps and provides [[perfect forward secrecy]].  It also entails two-way explicit key confirmation, making it an ''authenticated key agreement with key confirmation'' (AKC) protocol.
+
+STS was originally presented in 1987 in the context of ISDN security,<ref name="OHiggins1987"/> driven in part by a need to eliminate the potential for spies to sell used keys to adversaries.<ref name="Diffie1988"/>  It was finalized in 1989 and generally presented by [[Whitfield Diffie]], [[Paul van Oorschot|Paul C. van Oorschot]] and Michael J. Wiener in 1992.<ref name="Diffie1992"/>
+
+==Description==
+
+Deployment of STS can take different forms depending on communication requirements and the level of prior communication between parties.  The data described in [[#STS Setup|STS Setup]] may be shared prior to the beginning of a session to lessen the impact of the session's establishment.
+
+In the following explanations, exponentiation (Diffie–Hellman) operations provide the basis for key agreement, though this is not a requirement.  The protocol may be modified, for example, to use [[elliptic curve]]s instead.
+
+===STS Setup===
+
+The following data must be generated before initiating the protocol.
+
+:; An asymmetric signature keypair for each party : Required for authentication.  The public portion of this keypair may be shared prior to session establishment.
+:; Key establishment parameters : The specification of a cyclic group ''p'' and a generator ''g'' for that group.  These parameters may be public.  For additional security, each party may supply its own parameters.<ref name="Menezes1997"/>
+
+Sharing these data prior to the beginning of the session lessens the complexity of the protocol.
+
+===Basic STS===
+
+Supposing all setup data has been shared, the STS protocol proceeds as follows.  If a step cannot be completed, the protocol immediately stops.  All exponentials are in the group specified by ''p''.
+
+#Alice generates a random number ''x'' and computes and sends the exponential ''g''<sup>''x''</sup> to Bob.
+#Bob generates a random number ''y'' and computes the exponential ''g''<sup>''y''</sup>.
+#Bob computes the shared secret key ''K'' = (''g''<sup>''x''</sup>)<sup>''y''</sup>.
+#Bob concatenates the exponentials (''g''<sup>''y''</sup>, ''g''<sup>''x''</sup>) (order is important), signs them using his asymmetric (private) key ''B'', and then encrypts the signature with ''K''.  He sends the ciphertext along with his own exponential ''g''<sup>''y''</sup> to Alice.
+#Alice computes the shared secret key ''K'' = (''g''<sup>''y''</sup>)<sup>''x''</sup>.
+#Alice decrypts and verifies Bob's signature using his asymmetric public key.
+#Alice concatenates the exponentials (''g''<sup>''x''</sup>, ''g''<sup>''y''</sup>) (order is important), signs them using her asymmetric (private) key ''A'', and then encrypts the signature with ''K''.  She sends the ciphertext to Bob.
+#Bob decrypts and verifies Alice's signature using her asymmetric public key.
+
+Alice and Bob are now mutually authenticated and have a shared secret.  This secret, ''K'', can then be used to encrypt further communication.  The basic form of the protocol is formalized in the following three steps:
+
+ (1) Alice → Bob : ''g''<sup>''x''</sup>
+ (2) Alice ← Bob : ''g''<sup>''y''</sup>, E<sub>''K''</sub>(S<sub>''B''</sub>(''g''<sup>''y''</sup>, ''g''<sup>''x''</sup>))
+ (3) Alice → Bob : E<sub>''K''</sub>(S<sub>''A''</sub>(''g''<sup>''x''</sup>, ''g''<sup>''y''</sup>))
+
+===Full STS===
+
+Setup data can also be incorporated into the protocol itself.  [[Public key certificate]]s may be sent in steps 2 and 3 if the keys are not known in advance.
+
+ (1) Alice → Bob : ''g''<sup>''x''</sup>
+ (2) Alice ← Bob : ''g''<sup>''y''</sup>, Cert<sub>''B''</sub>, E<sub>''K''</sub>(S<sub>''B''</sub>(''g''<sup>''y''</sup>, ''g''<sup>''x''</sup>))
+ (3) Alice → Bob : Cert<sub>''A''</sub>, E<sub>''K''</sub>(S<sub>''A''</sub>(''g''<sup>''x''</sup>, ''g''<sup>''y''</sup>))
+
+If system-wide key establishment parameters are not used, the initiator and responder may create and send their own parameters.  In this case, parameters should be sent with the exponential.
+
+ (1) Alice → Bob : ''g'', ''p'', ''g''<sup>''x''</sup>
+
+They must also be verified by Bob to prevent an active attacker from inserting weak parameters (and thus a weak key ''K'').  Rather than special checks to prevent this, it may be preferable to include the group parameters in Alice's certificate.<ref name="Diffie1992"/>
+
+==Variations==
+
+The variations mentioned here are from the original STS paper.  A number of other, more significant variations have been proposed since.<ref name="Bellare1998"/><ref name="RFC2412"/><ref name="ISO117703"/>
+
+===Authentication-only STS===
+
+A simplified form of STS is available that provides mutual authentication but does not produce a shared secret.  It uses random number challenges instead of the above Diffie–Hellman technique.
+
+#Alice generates a random number ''x'' sends it to Bob.
+#Bob generates a random number ''y''.
+#Bob concatenates the random numbers (''y'', ''x'') (order is important) and signs them using his asymmetric key ''B''.  He sends the signature along with his own random number to Alice.
+#Alice verifies Bob's signature.
+#Alice concatenates the random numbers (''x'', ''y'') (order is important) and signs them using her asymmetric key ''A''.  She sends the signature to Bob.
+#Bob verifies Alice's signature.
+
+Formally:
+
+ (1) Alice → Bob : ''x''
+ (2) Alice ← Bob : ''y'', S<sub>''B''</sub>(''y'', ''x'')
+ (3) Alice → Bob : S<sub>''A''</sub>(''x'', ''y'')
+
+This protocol can be extended to include certificates as in [[#Full STS|Full STS]].
+
+===STS-MAC===
+
+In cases where encryption is a not viable choice in session establishment, ''K'' can instead be used to create a [[message authentication code|MAC]].
+
+ (1) Alice → Bob : ''g''<sup>''x''</sup>
+ (2) Alice ← Bob : ''g''<sup>''y''</sup>, S<sub>''B''</sub>(''g''<sup>''y''</sup>, ''g''<sup>''x''</sup>), MAC<sub>''K''</sub>(S<sub>''B''</sub>(''g''<sup>''y''</sup>, ''g''<sup>''x''</sup>))
+ (3) Alice → Bob : S<sub>''A''</sub>(''g''<sup>''x''</sup>, ''g''<sup>''y''</sup>), MAC<sub>''K''</sub>(S<sub>''A''</sub>(''g''<sup>''x''</sup>, ''g''<sup>''y''</sup>))
+
+This variation may be preferable to original STS ("STS-ENC") in any case because
+
+:''.. the use of encryption to provide key confirmation in STS-ENC is questionable &mdash; traditionally the sole goal of encryption is to provide confidentiality and if an encryption scheme is used to demonstrate possession of a key then it is shown by decryption, not by encryption.''<ref name="BlakeWilson1999"/>
+
+The paper goes on to counsel, however, that using ''K'' for both a MAC and as the session key violates the principle that keys should not be used for more than one purpose, and presents various workarounds.
+
+==Cryptanalysis==
+
+STS-MAC is vulnerable to some [[unknown key-share attack]]s, whereby an active attacker can inject his own identity into the session establishment procedure in place of either initiator or responder.  Various solutions now exist to work around these vulnerabilities.<ref name="BlakeWilson1999"/>
+
+==References==
+<references>
+
+<ref name="Bellare1998">{{ Citation
+   | last1 = Bellare | first1 = M.
+   | last2 = Canetti | first2 = R.
+   | last3 = Krawczyk | first3 = H.
+   | contribution = A modular approach to the design and analysis of authentication and key exchange protocols
+   | title = Proceedings of the 30th Annual Symposium on the Theory of Computing
+   | year = 1998 }}</ref>
+
+<ref name="BlakeWilson1999">{{ Citation
+   | last1 = Blake-Wilson | first1 = S.
+   | last2 = Menezes | first2 = A.
+   | contribution = Unknown Key-Share Attacks on the Station-to-Station (STS) Protocol
+   | title = Public Key Cryptography
+   | series = Lecture Notes in Computer Science
+   | volume = 1560 | pages = 154–170
+   | year = 1999 | publisher = Springer }}</ref>
+
+<ref name="Diffie1988">{{ Citation
+   | last1 = Diffie | first1 = W.
+   | title = The first ten years of public-key cryptography
+   | journal = Proceedings of the IEEE | volume = 76
+   | pages = 560–577 | year = 1988 | doi = 10.1109/5.4442
+   | issue = 5 }}</ref>
+
+<ref name="Diffie1992">{{ Citation
+   | last1 = Diffie | first1 = W.
+   | last2 = van Oorschot | first2 =  P. C.
+   | last3 = Wiener | first3 =  M. J.
+   | title = Authentication and Authenticated Key Exchanges
+   | journal = Designs, Codes and Cryptography | volume = 2
+   | pages = 107–125 | year = 1992 | doi = 10.1007/BF00124891
+   | issue = 2 | s2cid = 7356608 }}</ref>
+
+<ref name="ISO117703">{{cite ISO standard
+   | date = November 1999
+   | title = ISO/IEC 11770 – Information security – Key management – Part 3: Mechanisms using asymmetric techniques }}</ref>
+
+<ref name="Menezes1997">{{ cite book
+   | last1 = Menezes
+   | first1 = Alfred J.
+   | last2 = van Oorschot
+   | first2 = Paul C.
+   | last3 = Vanstone
+   | first3 = Scott A.
+   | title = Handbook of Applied Cryptography
+   | publisher = CRC Press
+   | year = 1997
+   | isbn = 978-0-8493-8523-0 }}</ref>
+
+<ref name="OHiggins1987">{{ Citation
+   | last1 = O'Higgins | first1 = B.
+   | last2 = Diffie | first2 = W.
+   | last3 = Strawczynski | first3 = L.
+   | last4 = do Hoog | first4 = R.
+   | contribution = Encryption and ISDN – A Natural Fit
+   | title = 1987 International Switching Symposium (ISS87)
+   | year = 1987 }}</ref>
+
+<ref name="RFC2412">{{cite IETF
+   | rfc = 2412
+   | title = The OAKLEY Key Determination Protocol
+   | last = Orman | first = H.
+   | date = November 1998 | publisher = IETF }}</ref>
+
+<ref name="Stallings2010">{{ cite book
+   | last = Stallings
+   | first = William
+   | title = Cryptography and Network Security: Principles and Practice
+   | section = 10.1 Diffie–Hellman Key Exchange
+   | edition = 5th
+   | publisher = Prentice Hall
+   | year = 2010
+   | isbn = 978-0-13-609704-4 }}</ref>
+
+</references>
+
+
+{{Cryptography navbox | public-key}}
+
+[[Category:Key-agreement protocols]]

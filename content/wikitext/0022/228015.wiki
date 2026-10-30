@@ -1,0 +1,177 @@
+<!-- wikipedia: en
+     page: 228015
+     title: Viterbi algorithm
+     revision: 1375500441
+     timestamp: 2026-09-18T04:12:07Z
+     history: https://en.wikipedia.org/w/index.php?curid=228015&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375500441 -->
+{{short description|Finds likely sequence of hidden states}}The '''Viterbi algorithm''' is a [[dynamic programming]] [[algorithm]] that finds the most likely sequence of hidden events that would explain a sequence of observed events. The result of the algorithm is often called the '''Viterbi path'''. It is most commonly used with [[hidden Markov model]]s (HMMs). For example, if a doctor observes a patient's symptoms over several days (the observed events), the Viterbi algorithm could determine the most probable sequence of underlying health conditions (the hidden events) that caused those symptoms.
+
+The algorithm has found universal application in decoding the [[convolutional code]]s used in both [[Code-division multiple access|CDMA]] and [[GSM]] digital cellular, [[Dial-up Internet access|dial-up]] modems, satellite, deep-space communications, and [[802.11]] wireless LANs. It is also commonly used in [[speech recognition]], [[speech synthesis]], [[Speaker diarisation|diarization]],<ref>Xavier Anguera et al., [http://www1.icsi.berkeley.edu/~vinyals/Files/taslp2011a.pdf "Speaker Diarization: A Review of Recent Research"] {{Webarchive|url=https://web.archive.org/web/20160512200056/http://www1.icsi.berkeley.edu/~vinyals/Files/taslp2011a.pdf |date=2016-05-12 }}, retrieved 19. August 2010, IEEE TASLP</ref> [[keyword spotting]], [[computational linguistics]], and [[bioinformatics]]. For instance, in [[speech-to-text]] (speech recognition), the acoustic signal is the observed sequence, and a string of text is the "hidden cause" of that signal. The Viterbi algorithm finds the most likely string of text given the [[Acoustics|acoustic]] signal.
+== History ==
+The Viterbi algorithm is named after [[Andrew Viterbi]], who proposed it in 1967 as a decoding algorithm for [[Convolution code|convolutional codes]] over noisy digital communication links.<ref>[https://arxiv.org/abs/cs/0504020v2 29 Apr 2005, G. David Forney Jr: The Viterbi Algorithm: A Personal History]</ref> It has, however, a history of [[multiple invention]], with at least seven independent discoveries, including those by Viterbi, [[Needleman–Wunsch algorithm|Needleman and Wunsch]], and [[Wagner–Fischer algorithm|Wagner and Fischer]].<ref name="slp">{{cite book |author1=Daniel Jurafsky |author2=James H. Martin |title=Speech and Language Processing |publisher=Pearson Education International |page=246}}</ref><!-- Jurafsky and Martin specifically refer to the papers that presented the Needleman–Wunsch and Wagner–Fischer algorithms, hence the wikilinks to those--> It was introduced to [[natural language processing]] as a method of [[part-of-speech tagging]] as early as 1987.
+
+''Viterbi path'' and ''Viterbi algorithm'' have become standard terms for the application of dynamic programming algorithms to maximization problems involving probabilities.<ref name="slp" />
+For example, in statistical parsing a dynamic programming algorithm can be used to discover the single most likely context-free derivation (parse) of a string, which is commonly called the "Viterbi parse".<ref>{{Cite conference | doi = 10.3115/1220355.1220379| title = Efficient parsing of highly ambiguous context-free grammars with bit vectors| conference = Proc. 20th Int'l Conf. on Computational Linguistics (COLING)| pages = <!--162-->| year = 2004| last1 = Schmid | first1 = Helmut| url = http://www.aclweb.org/anthology/C/C04/C04-1024.pdf| doi-access = free}}</ref><ref>{{Cite conference| doi = 10.3115/1073445.1073461| title = A* parsing: fast exact Viterbi parse selection| conference = Proc. 2003 Conf. of the North American Chapter of the Association for Computational Linguistics on Human Language Technology (NAACL)| pages = 40–47| year = 2003| last1 = Klein | first1 = Dan| last2 = Manning | first2 = Christopher D.| url = http://ilpubs.stanford.edu:8090/532/1/2002-16.pdf| doi-access = free}}</ref><ref>{{Cite journal | doi = 10.1093/nar/gkl200| title = AUGUSTUS: Ab initio prediction of alternative transcripts| journal = Nucleic Acids Research| volume = 34| issue = Web Server issue| pages = W435–W439| year = 2006| last1 = Stanke | first1 = M.| last2 = Keller | first2 = O.| last3 = Gunduz | first3 = I.| last4 = Hayes | first4 = A.| last5 = Waack | first5 = S.| last6 = Morgenstern | first6 = B. | pmid=16845043 | pmc=1538822}}</ref> Another application is in [[Optical motion tracking|target tracking]], where the track is computed that assigns a maximum likelihood to a sequence of observations.<ref>{{cite conference |author=Quach, T.; Farooq, M. |chapter=Maximum Likelihood Track Formation with the Viterbi Algorithm |title=Proceedings of 33rd IEEE Conference on Decision and Control |date=1994 |volume=1 |pages=271–276|doi=10.1109/CDC.1994.410918}}</ref>
+
+== Algorithm ==
+Given a hidden Markov model with a set of hidden states <math>S</math>, a set of possible emissions (observations) M, and a sequence of <math>T</math> observations <math>o_0, o_1, \dots, o_{T-1}</math>, the Viterbi algorithm finds the most likely sequence of hidden states that could have produced those observations. At each time step <math>t</math>, the algorithm solves the subproblem where only the observations up to <math>o_t</math> are considered.
+
+Two matrices of size <math>T \times \left|{S}\right|</math> are constructed:
+* <math>P_{t,s}</math> contains the maximum probability of ending up at state <math>s</math> at observation <math>t</math>, out of all possible sequences of states leading up to it.
+* <math>Q_{t,s}</math> tracks the previous state that was used before <math>s</math> in this maximum probability state sequence.
+
+Let <math>\pi_s</math> and <math>a_{r,s}</math> be the initial and transition probabilities respectively, and let <math>b_{s,o}</math> be the probability of observing <math>o</math> at state <math>s</math>. Then the values of <math>P</math> are given by the recurrence relation<ref>Xing E, slide 11.</ref>
+<math display="block">
+P_{t,s} =
+\begin{cases}
+\pi_s \cdot b_{s,o_t} & \text{if } t=0, \\
+\max_{r \in S} \left(P_{t-1,r} \cdot a_{r,s} \cdot b_{s,o_t} \right) & \text{if } t>0.
+\end{cases}
+</math>
+The formula for <math>Q_{t,s}</math> is identical for <math>t>0</math>, except that <math>\max</math> is replaced with [[Arg max|<math>\arg\max</math>]], and <math>Q_{0,s} = 0</math>.
+The Viterbi path can be found by selecting the maximum of <math>P</math> at the final timestep, and following <math>Q</math> in reverse.
+
+== Pseudocode ==
+
+ '''function''' Viterbi(states, init, trans, emit, obs) '''is'''
+     '''input''' states: S hidden states
+     '''input''' init: initial probabilities of each state
+     '''input''' trans: S × S transition matrix
+     '''input''' emit: S × M emission matrix
+     '''input''' obs: sequence of T observations
+ 
+     prob ← T × S matrix of zeroes
+     prev ← empty T × S matrix
+     '''for''' '''each''' state s '''in''' states '''do'''
+         prob[0][s] = init[s] * emit[s][obs[0]]
+ 
+     '''for''' t = 1 '''to''' T - 1 '''inclusive do''' ''// t = 0 has been dealt with already''
+         '''for''' '''each''' state s '''in''' states '''do'''
+             '''for''' '''each''' state r '''in''' states '''do'''
+                 new_prob ← prob[t - 1][r] * trans[r][s] * emit[s][obs[t]]
+                 '''if''' new_prob > prob[t][s] '''then'''
+                     prob[t][s] ← new_prob
+                     prev[t][s] ← r
+ 
+     path ← empty array of length T
+     path[T - 1] ← the state s with maximum prob[T - 1][s]
+     '''for''' t = T - 2 '''to''' 0 '''inclusive do'''
+         path[t] ← prev[t + 1][path[t + 1]]
+ 
+     '''return''' path
+ '''end'''
+
+The [[time complexity]] of the algorithm is <math>O(T\times\left|{S}\right|^2)</math>. If it is known which state transitions have non-zero probability, an improved bound can be found by iterating over only those <math>r</math> which link to <math>s</math> in the inner loop. Then using [[amortized analysis]] one can show that the complexity is <math>O(T\times(\left|{S}\right| + \left|{E}\right|))</math>, where <math>E</math> is the number of edges in the graph, i.e. the number of non-zero entries in the transition matrix.
+
+== Example ==
+A doctor wishes to determine whether patients are healthy or have a fever. The only information the doctor can obtain is by asking patients how they feel. The patients may report that they either feel normal, dizzy, or cold.
+
+It is believed that the health condition of the patients operates as a discrete [[Markov chain]]. There are two states, "healthy" and "fever", but the doctor cannot observe them directly; they are ''hidden'' from the doctor. On each day, the chance that a patient tells the doctor "I feel normal", "I feel cold", or "I feel dizzy", depends only on the patient's health condition on that day.
+
+The ''observations'' (normal, cold, dizzy) along with the ''hidden'' states (healthy, fever) form a hidden Markov model (HMM). From past experience, the probabilities of this model have been estimated as:
+<pre>
+init = {"Healthy": 0.6, "Fever": 0.4}
+trans = {
+    "Healthy": {"Healthy": 0.7, "Fever": 0.3},
+    "Fever": {"Healthy": 0.4, "Fever": 0.6},
+}
+emit = {
+    "Healthy": {"normal": 0.5, "cold": 0.4, "dizzy": 0.1},
+    "Fever": {"normal": 0.1, "cold": 0.3, "dizzy": 0.6},
+}
+</pre>
+In this code, <code>init</code> represents the doctor's belief about how likely the patient is to be healthy initially. Note that the particular probability distribution used here is not the equilibrium one, which would be <code>{'Healthy': 0.57, 'Fever': 0.43}</code> according to the transition probabilities. The transition probabilities <code>trans</code> represent the change of health condition in the underlying Markov chain. In this example, a patient who is healthy today has only a 30% chance of having a fever tomorrow. The emission probabilities <code>emit</code> represent how likely each possible observation (normal, cold, or dizzy) is, given the underlying condition (healthy or fever). A patient who is healthy has a 50% chance of feeling normal; one who has a fever has a 60% chance of feeling dizzy.
+
+[[File:An example of HMM.png|thumb|center|300px|Graphical representation of the given HMM]]
+
+A particular patient visits three days in a row, and reports feeling normal on the first day, cold on the second day, and dizzy on the third day.
+
+Firstly, the probabilities of being healthy or having a fever on the first day are calculated. The probability that a patient will be healthy on the first day and report feeling normal is <math>0.6 \times 0.5 = 0.3</math>. Similarly, the probability that a patient will have a fever on the first day and report feeling normal is <math>0.4 \times 0.1 = 0.04</math>.
+
+The probabilities for each of the following days can be calculated from the previous day directly. For example, the highest chance of being healthy on the second day and reporting to be cold, following reporting being normal on the first day, is the maximum of <math>0.3 \times 0.7 \times 0.4 = 0.084</math> and <math>0.04 \times 0.4 \times 0.4 = 0.0064</math>. This suggests it is more likely that the patient was healthy for both of those days, rather than having a fever and recovering.
+
+The rest of the probabilities are summarised in the following table:
+
+{| class="wikitable"
+|-
+! Day !! 1 !! 2 !! 3
+|-
+! Observation
+| Normal || Cold || Dizzy
+|-
+! Healthy
+| '''0.3'''|| '''0.084'''|| 0.00588
+|-
+! Fever
+| 0.04 || 0.027 || '''0.01512'''
+|}
+
+From the table, it can be seen that the patient most likely had a fever on the third day. Furthermore, there exists a sequence of states ending on "fever", of which the probability of producing the given observations is 0.01512. This sequence is precisely (healthy, healthy, fever), which can be found be tracing back which states were used when calculating the maxima (which happens to be the best guess from each day but will not always be). In other words, given the observed activities, the patient was most likely to have been healthy on the first day and on the second day (despite feeling cold that day), and only to have contracted a fever on the third day.
+
+The operation of Viterbi's algorithm can be visualized by means of a [[Trellis diagram#Trellis diagram|trellis diagram]]. The Viterbi path is essentially the shortest path through this trellis.
+
+== Extensions ==
+A generalization of the Viterbi algorithm, termed the ''max-sum algorithm'' (or ''max-product algorithm'') can be used to find the most likely assignment of all or some subset of [[latent variable]]s in a large number of [[graphical model]]s, e.g. [[Bayesian network]]s, [[Markov random field]]s and [[conditional random field]]s.  The latent variables need, in general, to be connected in a way somewhat similar to a [[hidden Markov model]] (HMM), with a limited number of connections between variables and some type of linear structure among the variables. The general algorithm involves ''message passing'' and is substantially similar to the [[belief propagation]] algorithm (which is the generalization of the [[forward-backward algorithm]]).
+
+With an algorithm called [[iterative Viterbi decoding]], one can find the subsequence of an observation that matches best (on average) to a given hidden Markov model. This algorithm is proposed by Qi Wang et al. to deal with [[turbo code]].<ref>{{cite journal |author1=Qi Wang |author2=Lei Wei |author3=Rodney A. Kennedy |year=2002 |title=Iterative Viterbi Decoding, Trellis Shaping, and Multilevel Structure for High-Rate Parity-Concatenated TCM |journal=IEEE Transactions on Communications |volume=50 |pages=48–55 |doi=10.1109/26.975743}}</ref> Iterative Viterbi decoding works by iteratively invoking a modified Viterbi algorithm, reestimating the score for a filler until convergence.
+
+An alternative algorithm, the Lazy Viterbi algorithm, has been proposed.<ref>{{cite conference |date=December 2002 |title=A fast maximum-likelihood decoder for convolutional codes |url=http://people.csail.mit.edu/jonfeld/pubs/lazyviterbi.pdf |conference=Vehicular Technology Conference |pages=371–375 |doi=10.1109/VETECF.2002.1040367 |conference-url=http://www.ieeevtc.org/}}</ref> For many applications of practical interest, under reasonable noise conditions, the lazy decoder (using Lazy Viterbi algorithm) is much faster than the original [[Viterbi decoder]] (using Viterbi algorithm). While the original Viterbi algorithm calculates every node in the [[Trellis (graph)|trellis]] of possible outcomes, the Lazy Viterbi algorithm maintains a prioritized list of nodes to evaluate in order, and the number of calculations required is typically fewer (and never more) than the ordinary Viterbi algorithm for the same result. However, it is not so easy{{clarify|date=November 2017}} to parallelize in hardware.
+
+== Soft output Viterbi algorithm ==
+{{Unreferenced section|date=September 2023}}
+
+The '''soft output Viterbi algorithm''' ('''SOVA''') is a variant of the classical Viterbi algorithm.
+
+SOVA differs from the classical Viterbi algorithm in that it uses a modified path metric which takes into account the [[a priori probability|''a priori probabilities'']] of the input symbols, and produces a ''soft'' output indicating the ''reliability'' of the decision.
+
+The first step in the SOVA is the selection of the survivor path, passing through one unique node at each time instant, ''t''. Since each node has 2 branches converging at it (with one branch being chosen to form the ''Survivor Path'', and the other being discarded), the difference in the branch metrics (or ''cost'') between the chosen and discarded branches indicate the ''amount of error'' in the choice.
+
+This ''cost'' is accumulated over the entire sliding window (usually equals ''at least'' five constraint lengths), to indicate the ''soft output'' measure of reliability of the ''hard bit decision'' of the Viterbi algorithm.
+
+== See also ==
+* [[Expectation–maximization algorithm]]
+* [[Baum–Welch algorithm]]
+* [[Forward–backward algorithm]]
+* [[Forward algorithm]]
+* [[Error-correcting code]]
+* [[Viterbi decoder]]
+* [[Part-of-speech tagging]]
+* [[A* search algorithm]]
+
+== References ==
+{{Reflist}}
+
+== General references ==
+* {{cite journal |doi=10.1109/TIT.1967.1054010 |author=Viterbi AJ |title=Error bounds for convolutional codes and an asymptotically optimum decoding algorithm |journal=IEEE Transactions on Information Theory |volume=13 |issue=2 |pages=260–269 |date=April 1967 }} (note: the Viterbi decoding algorithm is described in section IV.) Subscription required.
+* {{cite book |vauthors=Feldman J, Abou-Faycal I, Frigo M |chapter=A fast maximum-likelihood decoder for convolutional codes |title=Proceedings IEEE 56th Vehicular Technology Conference |volume=1 |pages=371–375 |year=2002 |doi=10.1109/VETECF.2002.1040367|isbn=978-0-7803-7467-6 |s2cid=9783963 }}
+* {{cite journal |doi=10.1109/PROC.1973.9030 |author=Forney GD |title=The Viterbi algorithm |journal=Proceedings of the IEEE |volume=61 |issue=3 |pages=268–278 |date=March 1973 }} Subscription required.
+* {{Cite book | last1=Press | first1=WH | last2=Teukolsky | first2=SA | last3=Vetterling | first3=WT | last4=Flannery | first4=BP | year=2007 | title=Numerical Recipes: The Art of Scientific Computing | edition=3rd | publisher=Cambridge University Press | location=New York | isbn=978-0-521-88068-8 | chapter=Section 16.2. Viterbi Decoding | chapter-url=http://apps.nrbook.com/empanel/index.html#pg=850 | access-date=2011-08-17 | archive-date=2011-08-11 | archive-url=https://web.archive.org/web/20110811154417/http://apps.nrbook.com/empanel/index.html#pg=850 }}
+* {{cite journal |author=Rabiner LR |title=A tutorial on hidden Markov models and selected applications in speech recognition |journal=Proceedings of the IEEE |volume=77 |issue=2 |pages=257–286 |date=February 1989 |doi=10.1109/5.18626|s2cid=13618539 }} (Describes the forward algorithm and Viterbi algorithm for HMMs).
+* Shinghal, R. and [[Godfried Toussaint|Godfried T. Toussaint]], "Experiments in text recognition with the modified Viterbi algorithm," ''IEEE Transactions on Pattern Analysis and Machine Intelligence'', Vol. PAMI-l, April 1979, pp.&nbsp;184–193.
+* Shinghal, R. and [[Godfried Toussaint|Godfried T. Toussaint]], "The sensitivity of the modified Viterbi algorithm to the source statistics," ''IEEE Transactions on Pattern Analysis and Machine Intelligence'', vol. PAMI-2, March 1980, pp.&nbsp;181–185.
+
+== External links ==
+* [[b:Algorithm Implementation/Viterbi algorithm|Implementations in Java, F#, Clojure, C# on Wikibooks]]
+* [http://pl91.ddns.net/viterbi/tutorial.html Tutorial] on convolutional coding with viterbi decoding, by Chip Fleming
+* [http://www.kanungo.com/software/hmmtut.pdf A tutorial for a Hidden Markov Model toolkit (implemented in C) that contains a description of the Viterbi algorithm]
+* [http://www.scholarpedia.org/article/Viterbi_algorithm Viterbi algorithm] by Dr. [[Andrew Viterbi|Andrew J. Viterbi]] (scholarpedia.org).
+
+=== Implementations ===
+* [https://reference.wolfram.com/language/ref/FindHiddenMarkovStates.html Mathematica] has an implementation as part of its support for stochastic processes
+* [http://libsusa.org/ Susa] signal processing framework provides the C++ implementation for [[Forward error correction]] codes and channel equalization [https://github.com/libsusa/susa/blob/master/inc/susa/channel.h here].
+* [https://github.com/xukmin/viterbi C++]
+* [http://www.cs.srtonybrook.edu/~pfodor/viterbi/Viterbi.java Java] {{Webarchive|url=https://web.archive.org/web/20140504055101/http://www.cs.stonybrook.edu/~pfodor/viterbi/Viterbi.java |date=2014-05-04 }}
+* [https://adrianulbona.github.io/hmm/ Java 8]
+* [https://juliahub.com/ui/Packages/HMMBase/8HxY5/ Julia (HMMBase.jl)]
+* [https://metacpan.org/module/Algorithm::Viterbi Perl]
+* [http://www.cs.stonybrook.edu/~pfodor/viterbi/viterbi.P Prolog] {{Webarchive|url=https://web.archive.org/web/20120502010115/http://www.cs.stonybrook.edu/~pfodor/viterbi/viterbi.P |date=2012-05-02 }}
+* [https://hackage.haskell.org/package/hmm-0.2.1.1/docs/src/Data-HMM.html#viterbi Haskell]
+* [https://github.com/nyxtom/viterbi Go]
+* [http://tuvalu.santafe.edu/~simon/styled-8/ SFIHMM]{{Dead link|date=August 2025 |bot=InternetArchiveBot |fix-attempted=yes }} includes code for Viterbi decoding.
+
+[[Category:Error detection and correction]]
+[[Category:Dynamic programming]]
+[[Category:Markov models]]
+[[Category:Articles with example Python (programming language) code]]

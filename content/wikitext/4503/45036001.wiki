@@ -1,0 +1,68 @@
+<!-- wikipedia: en
+     page: 45036001
+     title: Held–Karp algorithm
+     revision: 1313090396
+     timestamp: 2025-09-24T06:12:38Z
+     history: https://en.wikipedia.org/w/index.php?curid=45036001&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1313090396 -->
+{{Short description|Solution of the traveling salesman problem}}
+The '''Held–Karp algorithm''', also called the '''Bellman–Held–Karp algorithm''', is a [[dynamic programming]] algorithm proposed in 1962 independently by [[Richard E. Bellman|Bellman]]<ref>‘Dynamic programming treatment of the travelling salesman problem’, Richard Bellman, ''Journal of Assoc. Computing Mach.'' 9. 1962.</ref> and by Held and [[Richard M. Karp|Karp]]<ref>'A dynamic programming approach to sequencing problems’, Michael Held and Richard M. Karp, ''Journal for the Society for Industrial and Applied Mathematics'' 1:10. 1962</ref> to solve the [[traveling salesman problem]] (TSP), in which the input is a [[distance matrix]] between a set of cities, and the goal is to find a minimum-length tour that visits each city exactly once before returning to the starting point. It finds the exact solution to this problem, and to several related problems including the [[Hamiltonian path problem|Hamiltonian cycle problem]], in [[exponential time]].
+
+==Algorithm description and motivation==
+
+Number the cities <math>1, 2, \ldots, n</math>, with <math>1</math> designated arbitrarily as a "starting" city (since the solution to TSP is a Hamiltonian cycle, the choice of starting city doesn't matter). The Held–Karp algorithm begins by calculating, for each set of cities <math>S \subseteq \{2, \ldots, n\}</math> and every city <math>e \neq 1</math> not contained in <math>S</math>, the shortest one-way path from <math>1</math> to <math>e</math> that passes through every city in <math>S</math> in some order (but not through any other cities). Denote this distance <math>g(S, e)</math>, and write <math>d(u, v)</math> for the length of the direct edge from <math>u</math> to <math>v</math>. We'll compute values of <math>g(S, e)</math> starting with the smallest sets <math>S</math> and finishing with the largest.
+
+When <math>S</math> has two or fewer elements, then calculating <math>g(S, e)</math> requires looking at one or two possible shortest paths. For example, <math>g(\emptyset, e)</math> is simply <math>d(1, e)</math>, and <math>g(\{2\}, 3)</math> is just the length of <math>1 \rightarrow 2 \rightarrow 3</math>. Likewise, <math>g(\{2, 3\}, 4)</math> is the length of either <math>1 \rightarrow 2 \rightarrow 3 \rightarrow 4</math> or <math>1 \rightarrow 3 \rightarrow 2 \rightarrow 4</math>, whichever is shorter.
+
+Once <math>S</math> contains three or more cities, the number of paths through <math>S</math> rises quickly, but only a few such paths need to be examined to find the shortest. For instance, if <math>1 \rightarrow 2 \rightarrow 3 \rightarrow 4</math> is shorter than <math>1 \rightarrow 3 \rightarrow 2 \rightarrow 4</math>, then <math>1 \rightarrow 2 \rightarrow 3 \rightarrow 4 \rightarrow 5</math> must be shorter than <math>1 \rightarrow 3 \rightarrow 2 \rightarrow 4 \rightarrow 5</math>, and the length of <math>1 \rightarrow 3 \rightarrow 2 \rightarrow 4 \rightarrow 5</math> is not a possible value of <math>g(\{2, 3, 4\}, 5)</math>. Similarly, if the shortest path from <math>1</math> through <math>\{2, 3, 4\}</math> to <math>5</math> is <math>1 \rightarrow 4 \rightarrow 3 \rightarrow 2 \rightarrow 5</math>, and the shortest path from <math>1</math> through <math>\{2, 3, 4, 5\}</math> to <math>6</math> ends with the edge <math>5 \rightarrow 6</math>, then the whole path from <math>1</math> to <math>6</math> must be <math>1 \rightarrow 4 \rightarrow 3 \rightarrow 2 \rightarrow 5 \rightarrow 6</math>, and not any of the other five paths created by visiting <math>\{2, 3, 4\}</math> in a different order.
+
+More generally, suppose <math>S = \{s_1, \ldots, s_k\}</math> is a set of <math>k</math> cities. For every integer <math>1 \leq i \leq k</math>, write <math>S_i = S \setminus \{s_i\} = \{s_1, \ldots, s_{i-1}, s_{i+1}, \ldots, s_k\}</math> for the set created by removing <math>s_i</math> from <math>S</math>. Then if the shortest path from <math>1</math> through <math>S</math> to <math>e</math> has <math>s_i</math> as its second-to-last city, then removing the final edge from this path must give the shortest path from <math>1</math> to <math>s_i</math> through <math>S_i</math>. This means there are only <math>k</math> possible shortest paths from <math>1</math> to <math>e</math> through <math>S</math>, one for each possible second-to-last city <math>s_i</math> with length <math>g(S_i, s_i) + d(s_i, e)</math>, and <math>g(S, e) = \min_{1 \leq i \leq k} g(S_i, s_i) + d(s_i, e)</math>.
+
+This stage of the algorithm finishes when <math>g(\{2, \ldots, i-1, i+1, \ldots, n\}, i)</math> is known for every integer <math>2 \leq i \leq n</math>, giving the shortest distance from city <math>1</math> to city <math>i</math> that passes through every other city. The much shorter second stage adds these distances to the edge lengths <math>d(i, 1)</math> to give <math>n-1</math> possible shortest cycles, and then finds the shortest.
+
+The shortest path itself (and not just its length), finally, may be reconstructed by storing alongside <math>g(S, e)</math> the label of the second-to-last city on the path from <math>1</math> to <math>e</math> through <math>S</math>, raising space requirements by only a constant factor.
+
+==Algorithmic complexity==
+
+The Held–Karp algorithm has exponential time complexity <math>\Theta(2^n n^2)</math>, significantly better than the superexponential performance <math>\Theta(n!)</math> of a brute-force algorithm. Held–Karp, however, requires <math>\Theta(n 2^n)</math> space to hold all computed values of the function <math>g(S, e)</math>, while brute force needs only <math>\Theta(n^2)</math> space to store the graph itself.
+
+===Time===
+
+Computing one value of <math>g(S, e)</math> for a <math>k</math>-element subset <math>S</math> of <math>\{2, \ldots, n\}</math> requires finding the shortest of <math>k</math> possible paths, each found by adding a known value of <math>g</math> and an edge length from the original graph; that is, it requires time proportional to <math>k</math>. There are <math display="inline">\binom{n-1}{k}</math> <math>k</math>-element subsets of <math>\{2, \ldots, n\}</math>; and each subset gives <math>n-k-1</math> possible values of <math>e</math>. Computing all values of <math>g(S, e)</math> where <math>|S| = k</math> thus requires time <math display="inline">k (n-k-1) \binom{n-1}{k} = (n-1) (n-2) \binom{n-3}{k-1}</math>, for a total time across all subset sizes <math display="inline">(n-1)(n-2) \sum_{k=1}^{n-2} \binom{n-3}{k-1} = (n-1) (n-2) 2^{n-3} = \Theta(n^2 2^n)</math>. The second stage of the algorithm, finding a complete cycle from <math>n-1</math> candidates, takes <math>\Theta(n)</math> time and does not affect asymptotic performance.
+
+For [[undirected graph]]s, the algorithm can be stopped early after the <math display="inline">k = \lfloor\frac{n-1}{2}\rfloor</math> step, and finding the minimum <math display="inline">g(S, e) + g(S^c\setminus\{1,e\}, e)</math> for every <math display="inline">\{(S,e): |S|= \lfloor\frac{n-1}{2}\rfloor, e \in S^c\setminus\{1\}\}</math>, where <math display="inline">S^c</math> is the [[complement set]] of <math display="inline">S</math>. This is analogous to a [[bidirectional search]] starting at <math display="inline">1</math> and meeting at midpoint <math display="inline">e</math>. However, this is a constant factor improvement and does not affect asymptotic performance.
+
+===Space===
+
+Storing all values of <math>g(S, e)</math> for subsets of size <math>k</math> requires keeping <math display="inline">(n-k-1) \binom{n-1}{k} = (n-1) \binom{n-2}{k}</math> values. A complete table of values of <math>g(S, e)</math> thus requires space <math display="inline">\sum_{k=0}^{n-2} (n-1) \binom{n-2}{k} = (n-1) 2^n = \Theta(n 2^n)</math>. This assumes that <math display="inline">n</math> is sufficiently small enough such that <math display="inline">S</math> can be stored as a [[bitmask]] of constant multiple of [[machine word]]s, rather than an explicit k-tuple.
+
+If only the length of the shortest cycle is needed, not the cycle itself, then [[space complexity]] can be improved somewhat by noting that calculating <math>g(S, e)</math> for a <math>S</math> of size <math>k</math> requires only values of <math>g</math> for subsets of size <math>k-1</math>. Keeping only the <math display="inline">(n-1) \left[ \binom{n-2}{k-1} + \binom{n-2}{k} \right]</math> values of <math>g(S, e)</math> where <math>S</math> has size either <math>k-1</math> or <math>k</math> reduces the algorithm's maximum space requirements, attained when <math display="inline">k = \left\lfloor \frac{n}{2} \right\rfloor</math>, to <math>\Theta(\sqrt{n} 2^n)</math>.
+
+==Pseudocode==
+
+Source:<ref>{{cite web |url=http://www.lsi.upc.edu/~mjserna/docencia/algofib/P07/dynprog.pdf |title=Dynamic programming |date=January 2020 |archive-url=https://web.archive.org/web/20150208031521/http://www.cs.upc.edu/~mjserna/docencia/algofib/P07/dynprog.pdf |archive-date=2015-02-08}}</ref>
+
+ '''function''' algorithm TSP (G, n) '''is'''
+     '''for''' k := 2 to n '''do'''
+         g({k}, k) := d(1, k)
+     '''end for'''
+ 
+     '''for''' s := 2 '''to''' n−1 '''do'''
+         '''for all''' S ⊆ {2, ..., n}, |S| = s '''do'''
+             '''for all''' k ∈ S '''do'''
+                 g(S, k) := min<sub>m≠k,m∈S</sub> [g(S\{k}, m) + d(m, k)]
+             '''end for'''
+         '''end for'''
+     '''end for'''
+ 
+     opt := min<sub>k≠1</sub> [g({2, 3, ..., n}, k) + d(k, 1)]
+     '''return''' (opt)
+ '''end function'''
+
+==References==
+{{Reflist}}
+
+{{DEFAULTSORT:Held-Karp algorithm}}
+[[Category:Dynamic programming]]
+[[Category:Travelling salesman problem]]

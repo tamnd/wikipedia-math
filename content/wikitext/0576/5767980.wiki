@@ -1,0 +1,115 @@
+<!-- wikipedia: en
+     page: 5767980
+     title: Cross-entropy method
+     revision: 1324912759
+     timestamp: 2025-11-30T05:25:20Z
+     history: https://en.wikipedia.org/w/index.php?curid=5767980&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1324912759 -->
+{{Short description|Monte Carlo method for importance sampling and optimization}}{{More citations needed|date=November 2025}}
+The '''cross-entropy''' ('''CE''') '''method''' is a [[Monte Carlo method|Monte Carlo]] method for [[importance sampling]] and [[Optimization (mathematics)|optimization]]. It is applicable to both [[Combinatorial optimization|combinatorial]] and [[Continuous optimization|continuous]] problems, with either a static or noisy objective.
+
+The method approximates the optimal importance sampling estimator by repeating two phases:<ref>Rubinstein, R.Y. and  Kroese, D.P. (2004), The Cross-Entropy Method: A Unified Approach to Combinatorial Optimization, Monte-Carlo Simulation, and Machine Learning, Springer-Verlag, New York {{ISBN|978-0-387-21240-1}}.</ref>
+
+#Draw a sample from a [[probability distribution]].
+#Minimize the ''[[cross-entropy]]'' between this distribution and a target distribution to produce a better sample in the next iteration.
+
+[[Reuven Rubinstein]] developed the method in the context of ''rare-event simulation'', where tiny probabilities must be estimated, for example in network reliability analysis, queueing models, or performance analysis of telecommunication systems. The method has also been applied to the [[traveling salesman problem|traveling salesman]], [[quadratic assignment problem|quadratic assignment]], [[Sequence alignment|DNA sequence alignment]], [[Maxcut|max-cut]] and buffer allocation problems.{{Citation needed|date=November 2025|reason=This claims a specific person developed the method without citing the source.}}
+
+==Estimation via importance sampling==
+Consider the general problem of estimating the quantity
+
+<math>\ell = \mathbb{E}_{\mathbf{u}}[H(\mathbf{X})] = \int H(\mathbf{x})\, f(\mathbf{x}; \mathbf{u})\, \textrm{d}\mathbf{x}</math>,
+
+where <math>H</math> is some ''performance function'' and <math>f(\mathbf{x};\mathbf{u})</math> is a member of some [[parametric family]] of distributions. Using [[importance sampling]] this quantity can be estimated as
+
+<math>\hat{\ell} = \frac{1}{N} \sum_{i=1}^N H(\mathbf{X}_i) \frac{f(\mathbf{X}_i; \mathbf{u})}{g(\mathbf{X}_i)}</math>,
+
+where <math>\mathbf{X}_1,\dots,\mathbf{X}_N</math> is a random sample from <math>g\,</math>. For positive <math>H</math>, the theoretically ''optimal'' importance sampling [[probability density function|density]] (PDF) is given by
+
+<math> g^*(\mathbf{x}) = H(\mathbf{x}) f(\mathbf{x};\mathbf{u})/\ell</math>.
+
+This, however, depends on the unknown <math>\ell</math>. The CE method aims to approximate the optimal PDF by adaptively selecting members of the parametric family that are closest (in the [[Kullback–Leibler divergence|Kullback–Leibler]] sense) to the optimal PDF <math>g^*</math>.
+
+==Generic CE algorithm==
+# Choose initial parameter vector <math>\mathbf{v}^{(0)}</math>; set t = 1.
+# Generate a random sample <math>\mathbf{X}_1,\dots,\mathbf{X}_N</math> from <math>f(\cdot;\mathbf{v}^{(t-1)})</math>
+# Solve for <math>\mathbf{v}^{(t)}</math>, where<br><math>\mathbf{v}^{(t)} = \mathop{\textrm{argmax}}_{\mathbf{v}} \frac{1}{N} \sum_{i=1}^N H(\mathbf{X}_i)\frac{f(\mathbf{X}_i;\mathbf{u})}{f(\mathbf{X}_i;\mathbf{v}^{(t-1)})} \log f(\mathbf{X}_i;\mathbf{v})</math>
+# If convergence is reached then '''stop'''; otherwise, increase t by 1 and reiterate from step 2.
+
+In several cases, the solution to step 3 can be found ''analytically''.  Situations in which this occurs are
+* When <math>f\,</math> belongs to the [[Exponential family|natural exponential family]]
+* When <math>f\,</math> is [[discrete space|discrete]] with finite [[Support (mathematics)|support]]
+* When <math>H(\mathbf{X}) = \mathrm{I}_{\{\mathbf{x}\in A\}}</math> and <math>f(\mathbf{X}_i;\mathbf{u}) = f(\mathbf{X}_i;\mathbf{v}^{(t-1)})</math>, then <math>\mathbf{v}^{(t)}</math> corresponds to the [[Maximum likelihood|maximum likelihood estimator]] based on those <math>\mathbf{X}_k \in A</math>.
+
+== Continuous optimization&mdash;example==
+The same CE algorithm can be used for optimization, rather than estimation. 
+Suppose the problem is to maximize some function <math>S</math>, for example, 
+<math>S(x) = \textrm{e}^{-(x-2)^2} + 0.8\,\textrm{e}^{-(x+2)^2}</math>. 
+To apply CE, one considers first the ''associated stochastic problem'' of estimating
+<math>\mathbb{P}_{\boldsymbol{\theta}}(S(X)\geq\gamma)</math>
+for a given ''level'' <math>\gamma\,</math>, and parametric family <math>\left\{f(\cdot;\boldsymbol{\theta})\right\}</math>, for example the 1-dimensional 
+[[Gaussian distribution]],
+parameterized by its mean <math>\mu_t\,</math> and variance <math>\sigma_t^2</math> (so <math>\boldsymbol{\theta} = (\mu,\sigma^2)</math> here).
+Hence, for a given <math>\gamma\,</math>, the goal is to find <math>\boldsymbol{\theta}</math> so that
+<math>D_{\mathrm{KL}}(\textrm{I}_{\{S(x)\geq\gamma\}}\|f_{\boldsymbol{\theta}})</math>
+is minimized. This is done by solving the sample version (stochastic counterpart) of the KL divergence minimization problem, as in step 3 above.
+It turns out that parameters that minimize the stochastic counterpart for this choice of target distribution and
+parametric family are the sample mean and sample variance corresponding to the ''elite samples'', which are those samples that have objective function value <math>\geq\gamma</math>.
+The worst of the elite samples is then used as the level parameter for the next iteration.
+This yields the following randomized algorithm that happens to coincide with the so-called Estimation of Multivariate Normal Algorithm (EMNA), an [[estimation of distribution algorithm]].
+
+===Pseudocode===
+ ''// Initialize parameters''
+ &mu; := −6
+ &sigma;2 := 100
+ t := 0
+ maxits := 100
+ N := 100
+ Ne := 10
+ ''// While maxits not exceeded and not converged''
+ '''while''' t < maxits '''and''' &sigma;2 > &epsilon; '''do'''
+     ''// Obtain N samples from current sampling distribution''
+     X := SampleGaussian(&mu;, &sigma;2, N)
+     ''// Evaluate objective function at sampled points''
+     S := exp(−(X − 2) ^ 2) + 0.8 exp(−(X + 2) ^ 2)
+     ''// Sort X by objective function values in descending order''
+     X := sort(X, S)
+     ''// Update parameters of sampling distribution via elite samples''                  
+     &mu; := mean(X(1:Ne))
+     &sigma;2 := var(X(1:Ne))
+     t := t + 1
+ ''// Return mean of final sampling distribution as solution''
+ '''return''' &mu;
+
+==Related methods==
+* [[Simulated annealing]]
+* [[Genetic algorithms]]
+* [[Harmony search]]
+* [[Estimation of distribution algorithm]]
+* [[Tabu search]]
+* [[Natural Evolution Strategy]]
+* [[Ant colony optimization algorithms]]
+
+==See also==
+* [[Cross entropy]]
+* [[Kullback–Leibler divergence]]
+* [[Randomized algorithm]]
+* [[Importance sampling]]
+
+== Journal papers ==
+* De Boer, P.-T., Kroese, D.P., Mannor, S. and Rubinstein, R.Y. (2005). A Tutorial on the Cross-Entropy Method. ''Annals of Operations Research'', '''134''' (1), 19–67.[http://www.maths.uq.edu.au/~kroese/ps/aortut.pdf]
+*Rubinstein, R.Y. (1997). Optimization of Computer Simulation Models with Rare Events, ''European Journal of Operational Research'', '''99''', 89–112.
+
+==Software implementations==
+* [https://ceopt.org '''CEopt''' Matlab package]
+* [https://cran.r-project.org/web/packages/CEoptim/index.html '''CEoptim''' R package]
+* [https://www.nuget.org/packages/Novacta.Analytics '''Novacta.Analytics''' .NET library]
+
+==References==
+{{reflist}}
+
+[[Category:Heuristics]]
+[[Category:Optimization algorithms and methods]]
+[[Category:Monte Carlo methods]]
+[[Category:Machine learning]]

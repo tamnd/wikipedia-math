@@ -1,0 +1,112 @@
+<!-- wikipedia: en
+     page: 6183392
+     title: Distributed minimum spanning tree
+     revision: 1343866958
+     timestamp: 2026-03-16T21:48:20Z
+     history: https://en.wikipedia.org/w/index.php?curid=6183392&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1343866958 -->
+[[Image:Minimum spanning tree.svg|thumb|400px|right|''Example of a MST:'' The minimum spanning tree of a [[planar graph]]. Each edge is labeled with its weight, which here is roughly proportional to its length.]]
+The '''distributed minimum spanning tree (MST)''' problem involves the construction of a [[minimum spanning tree]] by a [[distributed algorithm]], in a network where nodes communicate by message passing. It is radically different from the classical sequential problem, although the most basic approach resembles [[Borůvka's algorithm]]. One important application of this problem is to find a tree that can be used for [[Broadcasting (computing)|broadcasting]]. In particular, if the cost for a message to pass through an edge in a graph is significant, an MST can minimize the total cost for a source process to communicate with all the other processes in the network.
+
+The problem was first suggested and solved in <math>O(V \log V)</math> time in 1983 by Gallager ''et al.'',<ref name="GHS" /> where <math>V</math> is the number of vertices in the [[graph theory|graph]]. Later, the solution was improved to <math>O(V)</math><ref>[[Baruch Awerbuch]]. “Optimal Distributed Algorithms for Minimum Weight Spanning Tree, Counting, Leader Election, and Related Problems,” ''Proceedings of the 19th ACM [[Symposium on Theory of Computing]] (STOC)'', New York City, New York, May 1987.
+</ref> and finally<ref>Juan Garay, [[Shay Kutten|Shay Kutten]]  and [[David Peleg (scientist)|David Peleg]], “A Sub-Linear Time Distributed Algorithm for Minimum-Weight Spanning Trees (Extended Abstract),” ''Proceedings of the IEEE [[Symposium on Foundations of Computer Science]]'' (FOCS), 1993.</ref><ref>[[Shay Kutten|Shay Kutten]]  and [[David Peleg (scientist)|David Peleg]], “Fast Distributed Construction of Smallk-Dominating Sets and Applications,” ''Journal of Algorithms'', Volume 28, Issue 1, July 1998, Pages 40-66.</ref>
+<math>O(\sqrt V \log^* V + D)</math> where ''D'' is the network, or graph diameter. A lower bound on the [[time complexity]] of the solution has been eventually shown to be<ref>[[David Peleg (scientist)|David Peleg]] and Vitaly Rubinovich “A near tight lower bound on the time complexity of Distributed Minimum Spanning Tree Construction,“ ''[[SIAM Journal on Computing]]'', 2000, and ''IEEE Symposium on Foundations of Computer Science (FOCS)'', 1999.</ref>
+<math>\Omega\left({\frac{\sqrt V}{\log V}+D}\right).</math>
+
+== Overview ==
+The input graph <math>G(V,E)</math> is considered to be a network, where vertices <math>V</math> are independent computing nodes and edges <math>E</math> are communication links. Links are weighted as in the classical problem.
+
+At the beginning of the algorithm, nodes know only the weights of the links which are connected to them. (It is possible to consider models in which they know more, for example their neighbors' links.)
+
+As the output of the algorithm, every node knows which of its links belong to the minimum spanning tree and which do not.
+
+== MST in message-passing model ==
+The [[Message passing|message-passing]] model is one of the most commonly used models in [[distributed computing]]. In this model, each process is modeled as a node of a graph. Each [[communication channel]] between two processes is an edge of the graph.
+
+Two commonly used algorithms for the classical minimum spanning tree problem are [[Prim's algorithm]] and [[Kruskal's algorithm]]. However, it is difficult to apply these two algorithms in the distributed message-passing model. The main challenges are:
+* Both Prim's algorithm and Kruskal's algorithm require processing one node or vertex at a time, making it difficult to make them run in parallel. For example, Kruskal's algorithm processes edges in turn, deciding whether to include the edge in the MST based on whether it would form a cycle with all previously chosen edges.
+* Both Prim's algorithm and Kruskal's algorithm require processes to know the state of the whole graph, which is very difficult to discover in the message-passing model.
+
+Due to these difficulties, new techniques were needed for distributed MST algorithms in the message-passing model. Some bear similarities to [[Borůvka's algorithm]] for the classical MST problem.
+
+== GHS algorithm ==
+The GHS algorithm<ref name="GHS" /> of [[Robert G. Gallager|Gallager]], Humblet and Spira is one of the best-known algorithms in distributed computing theory. This algorithm constructs an MST in the asynchronous message-passing model.
+
+=== Assumptions ===
+The GHS algorithm requires several assumptions.
+* The input graph is connected and undirected.
+* Each edge in the input graph has distinct finite weights. This assumption is not needed if there is a consistent method to break ties between edge weights.
+* Each node initially knows the weight of each edge incident to that node.
+* Initially, each node is in an inactive state. Each node either spontaneously awakens or is awakened by receipt of any message from another node.
+* Messages can be transmitted independently in both directions on an edge and arrive after an unpredictable but finite delay, without error.
+* Each edge delivers messages in [[FIFO (computing and electronics)|FIFO]] order.
+
+=== Properties of MSTs ===
+Define a fragment of an MST <math>T</math> to be a sub-tree of <math>T</math>. That is, a fragment is a connected set of nodes and edges of <math>T</math>. MSTs have two important properties in relation to fragments:<ref name="GHS" />
+# Given a fragment of an MST <math>T</math>, let <math>e</math> be a minimum-weight outgoing edge of the fragment. Then joining <math>e</math> and its adjacent non-fragment node to the fragment yields another fragment of an MST.
+# If all the edges of a connected graph have different weights, then the MST of the graph is unique.
+
+These two properties form the basis for proving correctness of the GHS algorithm. In general, the GHS algorithm is a bottom-up algorithm in the sense that it starts by letting each individual node be a fragment, and then joining fragments until a single fragment is left. The above properties imply that the remaining fragment must be an MST.
+
+=== Description of the algorithm ===
+The GHS algorithm assigns a ''level'' to each fragment, which is a non-decreasing [[integer]] with initial value 0. Furthermore, each fragment with a non-zero level has an ''ID'', which is the ID of the core edge in the fragment, which is selected when the fragment is constructed. During the execution of the algorithm, each node can classify each of its incident edges into three categories:<ref name="GHS" /><ref name="Lynch" />
+* '''Branch''' edges are those that have been determined to be part of the MST.
+* '''Rejected''' edges are those that have been determined not to be part of the MST.
+* '''Basic''' edges are all edges that are neither branch edges nor rejected edges.
+
+In level-0 fragments, each awakened node will do the following:
+# Choose its minimum-weight incident edge and mark that edge as a branch edge.
+# Send a message via the branch edge to notify the node on the other side.
+# Wait for a message from the other end of the edge.
+The edge that is chosen by the two nodes it connects becomes the core edge, and is assigned level 1.
+
+In non-zero-level fragments, a separate algorithm is executed in each level. This algorithm can be separated into three stages: broadcast, convergecast, and change core.
+
+==== Broadcast ====
+The two nodes adjacent to the core broadcast messages to the rest of the nodes in the fragment. The messages are sent via the branch edge but not via the core. Each broadcast message contains the ID and level of the fragment. At the end of this stage, each node has received the new fragment ID and level.
+
+==== Convergecast ====
+In this stage, all nodes in the fragment cooperate to find the minimum weight outgoing edge of the fragment. Outgoing edges are edges connecting to other fragments. The messages sent in this stage are in the opposite direction of the broadcast stage. Initialized by all the leaves (the nodes that have only one branch edge), a message is sent through the branch edge. The message contains the minimum weight of the incident outgoing edge it found (or infinity if no such edge was found). The way to find the minimum outgoing edge will be discussed later. For each non-leaf node, given the number of its branch edges as <math>n</math>, after receiving <math>n - 1</math> convergecast messages, it will pick the minimum weight from the messages and compare it to the weights of its incident outgoing edges. The smallest weight will be sent toward the branch it received the broadcast from.
+
+==== Change core ====
+After the completion of the previous stage, the two nodes connected by the core can inform each other of the best edges they received. Then they can identify the minimum outgoing edge from the entire fragment. A message will be sent from the core to the minimum outgoing edge via a path of branch edges. Finally, a message will be sent out via the chosen outgoing edge to request to combine the two fragments that the edge connects. Depending on the levels of those two fragments, one of two combined operations are performed to form a new fragment; details discussed below.
+
+==== Finding the minimum-weight incident outgoing edge ====
+As discussed above, every node needs to find its minimum weight outgoing incident edge after the receipt of a broadcast message from the core. If node <math>n</math> receives a broadcast, it will pick its minimum weight basic edge and send a message to the node <math>n'</math> on the other side with its fragment's ID and level. Then, node <math>n'</math> will decide whether the edge is an outgoing edge and send back a message to notify node <math>n</math> of the result. The decision is made according to the following:
+# <math>\mathit{Fragment}_\mathit{ID}(n) = \mathit{Fragment}_\mathit{ID}(n')</math>. That is, nodes <math>n</math> and <math>n'</math> belong to same fragment, so the edge is not outgoing.
+# <math>\mathit{Fragment}_\mathit{ID}(n) \neq \mathit{Fragment}_\mathit{ID}(n')</math> and <math>\mathit{Level}(n) \leq \mathit{Level}(n')</math>. That is, nodes <math>n</math> and <math>n'</math> belong to the different fragments, so the edge is outgoing.
+# <math>\mathit{Fragment}_\mathit{ID}(n) \neq \mathit{Fragment}_\mathit{ID}(n')</math> and <math>\mathit{Level}(n) > \mathit{Level}(n')</math>. We cannot make any conclusion. The reason is that the two nodes may belong to the same fragment already, but node <math>n'</math> has not discovered this fact yet due to the delay of a broadcast message. In this case, the algorithm lets node <math>n'</math> postpone the response until its level becomes higher than or equal to the level it received from node <math>n</math>.
+
+==== Combining two fragments ====
+Let <math>F</math> and <math>F'</math> be the two fragments that need to be combined. There are two ways to do this:<ref name="GHS" /><ref name="Lynch" />
+* '''Merge''': This operation occurs if both <math>F</math> and <math>F'</math> share a common minimum weight outgoing edge, and <math>\mathit{Level}(F) = \mathit{Level}(F')</math>. The level of the combined fragment will be <math>\mathit{Level}(F) + 1</math>.
+* '''Absorb''': This operation occurs if <math>\mathit{Level}(F) < \mathit{Level}(F')</math>. The combined fragment will have the same level as <math>F'</math>.
+
+Furthermore, when an "Absorb" operation occurs, <math>F</math> must be in the stage of changing the core, while <math>F'</math> can be in an arbitrary stage. Therefore, "Absorb" operations may be done differently depending on the state of <math>F'</math>. Let <math>e</math> be the edge that <math>F</math> and <math>F'</math> want to combine with, and let <math>n</math> and <math>n'</math> be the two nodes connected by <math>e</math> in <math>F</math> and <math>F'</math>, respectively. There are two cases to consider:
+{{numbered list
+| Node <math>n'</math> has received broadcast message but it has not sent a convergecast message back to the core. In this case, fragment <math>F</math> can simply join the broadcast process of <math>F'</math>. Specifically, we image <math>F</math> and <math>F'</math> have already combined to form a new fragment <math>F''</math>, so we want to find the minimum weight outgoing edge of <math>F''</math>. In order to do that, node <math>n'</math> can initiate a broadcast to <math>F</math> to update the fragment ID of each node in <math>F</math> and collect minimum weight outgoing edge in <math>F</math>.
+| Node <math>n'</math> has already sent a convergecast message back to the core. Before node <math>n'</math> sent a convergecast message, it must have picked a minimum weight outgoing edge. As we discussed above, <math>n'</math> does that by choosing its minimum weight basic edge, sending a test message to the other side of the chosen edge, and waiting for the response. Suppose <math>e'</math> is the chosen edge, we can conclude the following:
+# <math>e' \neq e</math>
+# <math>\mathit{weight}(e') < \mathit{weight}(e)</math>
+The second statement follows if the first one holds. For the first statement, suppose <math>n'</math> chose the edge <math>e</math> and sent a test message to <math>n</math> via edge <math>e</math>. Then, node <math>n</math> will delay the response (according to case 3 of "Finding the minimum weight incident outgoing edge"). Then, it is impossible that <math>n'</math> has already sent its convergecast message. By the aforementioned conclusions 1 and 2, we can conclude it is safe to absorb <math>F</math> into <math>F'</math> since <math>e'</math> is still the minimum outgoing edge to report after <math>F</math> is absorbed.
+}}
+
+==== Maximum number of levels ====
+As mentioned above, fragments are combined by either "Merge" or "Absorb" operation. The "Absorb" operation does not change the maximum level among all fragments. The "Merge" operation may increase the maximum level by 1. In the worst case, all fragments are combined with "Merge" operations, so the number of fragments decreases by half in each level. Therefore, the maximum number of levels is <math>O(\log V)</math>, where <math>V</math> is the number of nodes.
+
+=== Progress property ===
+The GHS algorithm has a nice property that the lowest level fragments will not be blocked, although some operations in the non-lowest level fragments may be blocked. This property implies the algorithm will eventually terminate with a minimum spanning tree.
+
+== Approximation algorithms ==
+An <math>O(\log n)</math>-approximation algorithm was developed by Maleq Khan and Gopal Pandurangan.<ref name="Khan" /> This algorithm runs in <math>O(D+L\log n)</math> time, where <math>L</math> is the local shortest path diameter<ref name="Khan" /> of the graph.
+
+== References ==
+<references>
+<ref name="GHS">[[Robert G. Gallager]], Pierre A. Humblet, and P. M. Spira, "A distributed algorithm for minimum-weight spanning trees," ''ACM Transactions on Programming Languages and Systems'', vol. 5, no. 1, pp. 66–77, January 1983.</ref>
+<ref name="Khan">Maleq Khan and Gopal Pandurangan. "A Fast Distributed Approximation Algorithm for Minimum Spanning Trees,"" ''Distributed Computing'', vol. 20, no. 6, pp. 391–402, Apr. 2008.</ref>
+<ref name="Lynch">Nancy A. Lynch. Distributed Algorithms. Morgan Kaufmann, 1996.</ref>
+</references>
+
+[[Category:Spanning tree]]
+[[Category:Distributed algorithms]]

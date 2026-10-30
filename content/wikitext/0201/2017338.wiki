@@ -1,0 +1,397 @@
+<!-- wikipedia: en
+     page: 2017338
+     title: Recursive least squares filter
+     revision: 1325957194
+     timestamp: 2025-12-06T05:18:31Z
+     history: https://en.wikipedia.org/w/index.php?curid=2017338&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1325957194 -->
+{{Short description|Adaptive filter algorithm for digital signal processing}}
+'''Recursive least squares''' ('''RLS''') is an [[adaptive filter]] algorithm that recursively finds the coefficients that minimize a [[Weighted least squares|weighted linear least squares]] [[Loss function|cost function]] relating to the input signals. This approach is in contrast to other algorithms such as the [[least mean squares]] (LMS) that aim to reduce the [[mean square error]]. In the derivation of the RLS, the input signals are considered [[deterministic system (mathematics)|deterministic]], while for the LMS and similar algorithms they are considered [[stochastic]]. Compared to most of its competitors, the RLS exhibits extremely fast convergence. However, this benefit comes at the cost of high computational complexity.
+
+==Motivation==
+RLS was discovered by [[Carl Friedrich Gauss|Gauss]] but lay unused or ignored until 1950 when Plackett rediscovered the original work of Gauss from 1821.  In general, the RLS can be used to solve any problem that can be solved by [[adaptive filter]]s. For example, suppose that a signal <math>d(n)</math> is transmitted over an echoey, [[noisy channel]] that causes it to be received as
+
+:<math>x(n)=\sum_{k=0}^q b_n(k) d(n-k)+v(n)</math>
+
+where <math>v(n)</math> represents [[additive noise]].  The intent of the RLS filter is to recover the desired signal <math>d(n)</math> by use of a <math>p+1</math>-tap [[Finite impulse response|FIR]] filter, <math>\mathbf{w}</math>:
+
+:<math>d(n) \approx \sum_{k=0}^{p} w(k)x(n-k)=\mathbf{w}^\mathit{T} \mathbf{x}_n</math>
+
+where <math>\mathbf{x}_n = [x(n)\quad x(n-1)\quad\ldots\quad x(n-p)]^T</math> is the [[column vector]] containing the <math>p+1</math> most recent samples of <math>x(n)</math>.  The estimate of the recovered desired signal is
+
+:<math>\hat{d}(n) = \sum_{k=0}^{p} w_n(k)x(n-k)=\mathbf{w}_n^\mathit{T} \mathbf{x}_n</math>
+
+The goal is to estimate the parameters of the filter <math>\mathbf{w}</math>, and at each time <math>n</math> we refer to the current estimate as <math>\mathbf{w}_n</math> and the adapted least-squares estimate by <math>\mathbf{w}_{n+1}</math>.  <math>\mathbf{w}_n</math> is also a column vector, as shown below, and the [[transpose]], <math>\mathbf{w}_n^\mathit{T}</math>, is a [[row vector]].  The [[matrix product]] <math>\mathbf{w}_n^\mathit{T} \mathbf{x}_n</math> (which is the [[dot product]] of <math>\mathbf{w}_n</math> and <math>\mathbf{x}_n</math>) is <math>\hat{d}(n)</math>, a scalar.  The estimate is ''"good"'' if  <math>\hat{d}(n)-d(n)</math> is small in magnitude in some [[least squares]] sense.  
+
+As time evolves, it is desired to avoid completely redoing the least squares algorithm to find the new estimate for <math>\mathbf{w}_{n+1}</math>, in terms of <math>\mathbf{w}_n</math>.
+
+The benefit of the RLS algorithm is that there is no need to invert matrices, thereby saving computational cost.  Another advantage is that it provides intuition behind such results as the [[Kalman filter]].
+
+==Discussion==
+The idea behind RLS filters is to minimize a [[Loss function|cost function]] <math>C</math> by appropriately selecting the filter coefficients <math>\mathbf{w}_n</math>, updating the filter as new data arrives. The error signal <math>e(n)</math> and desired signal <math>d(n)</math> are defined in the [[negative feedback]] diagram below:
+
+[[File:AdaptiveFilter C.png|500px]]
+
+The error implicitly depends on the filter coefficients through the estimate <math>\hat{d}(n)</math>:
+
+:<math>e(n)=d(n)-\hat{d}(n)</math>
+
+The weighted least squares error function <math>C</math>—the cost function we desire to minimize—being a function of <math>e(n)</math> is therefore also dependent on the filter coefficients:
+:<math>C(\mathbf{w}_n)=\sum_{i=0}^n\lambda^{n-i}e^2(i)</math>
+where <math>0<\lambda\le 1</math> is the "forgetting factor" which gives exponentially less weight to older error samples.
+
+The cost function is minimized by taking the partial derivatives for all entries <math>k</math> of the coefficient vector <math>\mathbf{w}_{n}</math> and setting the results to zero
+:<math>\frac{\partial C(\mathbf{w}_n)}{\partial w_n(k)}=\sum_{i=0}^n 2\lambda^{n-i}e(i)\cdot \frac{\partial e(i)}{\partial w_n(k)}=-\sum_{i=0}^n 2\lambda^{n-i}e(i)\,x(i-k)=0 \qquad k=0,1,\ldots,p</math>
+Next, replace <math>e(n)</math> with the definition of the error signal
+:<math>\sum_{i=0}^n\lambda^{n-i}\left[d(i)-\sum_{\ell=0}^p w_n(\ell)x(i-\ell)\right]x(i-k)= 0\qquad k=0,1,\ldots,p</math>
+Rearranging the equation yields
+:<math>\sum_{\ell=0}^p w_n(\ell)\left[\sum_{i=0}^n \lambda^{n-i}\,x(i-\ell)x(i-k)\right]= \sum_{i=0}^n \lambda^{n-i}d(i)x(i-k) \qquad k=0,1,\ldots,p</math>
+This form can be expressed in terms of matrices
+:<math>\mathbf{R}_{x}(n)\,\mathbf{w}_{n}=\mathbf{r}_{dx}(n)</math>
+where <math>\mathbf{R}_{x}(n)</math> is the weighted [[Sample mean and sample covariance|sample covariance]] matrix for <math>x(n)</math>, and <math>\mathbf{r}_{dx}(n)</math> is the equivalent estimate for the [[cross-covariance]] between <math>d(n)</math> and <math>x(n)</math>. Based on this expression we find the coefficients which minimize the cost function as
+:<math>\mathbf{w}_{n}=\mathbf{R}_{x}^{-1}(n)\,\mathbf{r}_{dx}(n)</math>
+This is the main result of the discussion.
+
+===Choosing λ===
+The smaller <math>\lambda</math> is, the smaller is the contribution of previous samples to the [[covariance matrix]]. This makes the filter ''more'' sensitive to recent samples, which means more fluctuations in the filter co-efficients. The <math>\lambda=1</math> case is referred to as the ''growing window RLS algorithm''. In practice, <math>\lambda</math> is usually chosen between 0.98 and 1.<ref>Emannual C. Ifeacor, Barrie W. Jervis. Digital signal processing: a practical approach, second edition. Indianapolis: Pearson Education Limited, 2002, p. 718</ref> By using type-II [[maximum likelihood estimation]] the optimal <math>\lambda</math> can be estimated from a set of data.<ref>Steven Van Vaerenbergh, Ignacio Santamaría, Miguel Lázaro-Gredilla [http://gtas.unican.es/files/pub/stkrls_mlsp2012.pdf "Estimation of the forgetting factor in kernel recursive least squares"], 2012 IEEE International Workshop on Machine Learning for Signal Processing, 2012, accessed June 23, 2016.</ref>
+<!-- someone might like to include a diagram to show said fluctuations -->
+
+==Recursive algorithm==
+The discussion resulted in a single equation to determine a coefficient vector which minimizes the cost function. In this section we want to derive a recursive solution of the form
+:<math>\mathbf{w}_{n}=\mathbf{w}_{n-1}+\Delta\mathbf{w}_{n-1}</math>
+where <math>\Delta\mathbf{w}_{n-1}</math> is a correction factor at time <math>{n-1}</math>. We start the derivation of the recursive algorithm by expressing the cross covariance <math>\mathbf{r}_{dx}(n)</math> in terms of <math>\mathbf{r}_{dx}(n-1)</math>
+:{|
+|-
+|<math>\mathbf{r}_{dx}(n)</math>
+|<math>=\sum_{i=0}^{n}\lambda^{n-i}d(i)\mathbf{x}(i)</math>
+|-
+|
+|<math>=\sum_{i=0}^{n-1}\lambda^{n-i}d(i)\mathbf{x}(i)+\lambda^{0}d(n)\mathbf{x}(n)</math>
+|-
+|
+|<math>=\lambda\mathbf{r}_{dx}(n-1)+d(n)\mathbf{x}(n)</math>
+|}
+where <math>\mathbf{x}(i)</math> is the <math>{p+1}</math> dimensional data vector
+:<math>\mathbf{x}(i)=[x(i), x(i-1), \dots , x(i-p) ]^{T}</math>
+Similarly we express <math>\mathbf{R}_{x}(n)</math> in terms of <math>\mathbf{R}_{x}(n-1)</math> by
+:{|
+|-
+|<math>\mathbf{R}_{x}(n)</math>
+|<math>=\sum_{i=0}^{n}\lambda^{n-i}\mathbf{x}(i)\mathbf{x}^{T}(i)</math>
+|-
+|
+|<math>=\lambda\mathbf{R}_{x}(n-1)+\mathbf{x}(n)\mathbf{x}^{T}(n)</math>
+|}
+In order to generate the coefficient vector we are interested in the inverse of the deterministic auto-covariance matrix. For that task the [[Woodbury matrix identity]] comes in handy. With
+:{|
+|-
+|<math>A</math>
+|<math>=\lambda\mathbf{R}_{x}(n-1)</math> is <math>(p+1)</math>-by-<math>(p+1)</math>
+|-
+|<math>U</math>
+|<math>=\mathbf{x}(n)</math> is <math>(p+1)</math>-by-1 (column vector)
+|-
+|<math>V</math>
+|<math>=\mathbf{x}^{T}(n)</math> is 1-by-<math>(p+1)</math> (row vector)
+|-
+|<math>C</math>
+|<math>=\mathbf{I}_1</math> is the 1-by-1 [[identity matrix]]
+|}
+The Woodbury matrix identity follows
+:{|
+|-
+|<math>\mathbf{R}_{x}^{-1}(n)</math>
+|<math>=</math>
+|<math>\left[\lambda\mathbf{R}_{x}(n-1)+\mathbf{x}(n)\mathbf{x}^{T}(n)\right]^{-1}</math>
+|-
+|
+|<math>=</math>
+|<math>\dfrac{1}{\lambda}\left\lbrace\mathbf{R}_{x}^{-1}(n-1)-\dfrac{\mathbf{R}_{x}^{-1}(n-1)\mathbf{x}(n)\mathbf{x}^{T}(n)\mathbf{R}_{x}^{-1}(n-1)}{\lambda+\mathbf{x}^{T}(n)\mathbf{R}_{x}^{-1}(n-1)\mathbf{x}(n)}\right\rbrace</math>
+|-
+|
+|
+|<math></math>
+
+|}
+To come in line with the standard literature, we define
+:{|
+|-
+|<math>\mathbf{P}(n)</math>
+|<math>=\mathbf{R}_{x}^{-1}(n)</math>
+|-
+|
+|<math>=\lambda^{-1}\mathbf{P}(n-1)-\mathbf{g}(n)\mathbf{x}^{T}(n)\lambda^{-1}\mathbf{P}(n-1)</math>
+|}
+where the ''gain vector'' <math>g(n)</math> is
+:{|
+|-
+|<math>\mathbf{g}(n)</math>
+|<math>=\lambda^{-1}\mathbf{P}(n-1)\mathbf{x}(n)\left\{1+\mathbf{x}^{T}(n)\lambda^{-1}\mathbf{P}(n-1)\mathbf{x}(n)\right\}^{-1}</math>
+|-
+|
+|<math>=\mathbf{P}(n-1)\mathbf{x}(n)\left\{\lambda+\mathbf{x}^{T}(n)\mathbf{P}(n-1)\mathbf{x}(n)\right\}^{-1}</math>
+|}
+Before we move on, it is necessary to bring <math>\mathbf{g}(n)</math> into another form
+:{|
+|-
+|<math>\mathbf{g}(n)\left\{1+\mathbf{x}^{T}(n)\lambda^{-1}\mathbf{P}(n-1)\mathbf{x}(n)\right\}</math>
+|<math>=\lambda^{-1}\mathbf{P}(n-1)\mathbf{x}(n)</math>
+|-
+|<math>\mathbf{g}(n)+\mathbf{g}(n)\mathbf{x}^{T}(n)\lambda^{-1}\mathbf{P}(n-1)\mathbf{x}(n)</math>
+|<math>=\lambda^{-1}\mathbf{P}(n-1)\mathbf{x}(n)</math>
+|}
+Subtracting the second term on the left side yields
+:{|
+|-
+|<math>\mathbf{g}(n)</math>
+|<math>=\lambda^{-1}\mathbf{P}(n-1)\mathbf{x}(n)-\mathbf{g}(n)\mathbf{x}^{T}(n)\lambda^{-1}\mathbf{P}(n-1)\mathbf{x}(n)</math>
+|-
+|
+|<math>=\lambda^{-1}\left[\mathbf{P}(n-1)-\mathbf{g}(n)\mathbf{x}^{T}(n)\mathbf{P}(n-1)\right]\mathbf{x}(n)</math>
+|}
+With the [[recursive definition]] of <math>\mathbf{P}(n)</math> the desired form follows
+:<math>\mathbf{g}(n)=\mathbf{P}(n)\mathbf{x}(n)</math>
+Now we are ready to complete the recursion. As discussed
+:{|
+|-
+|<math>\mathbf{w}_{n}</math>
+|<math>=\mathbf{P}(n)\,\mathbf{r}_{dx}(n)</math>
+|-
+|
+|<math>=\lambda\mathbf{P}(n)\,\mathbf{r}_{dx}(n-1)+d(n)\mathbf{P}(n)\,\mathbf{x}(n)</math>
+|}
+The second step follows from the recursive definition of <math>\mathbf{r}_{dx}(n )</math>. Next we incorporate the recursive definition of <math>\mathbf{P}(n)</math> together with the alternate form of <math>\mathbf{g}(n)</math> and get
+:{|
+|-
+|<math>\mathbf{w}_{n}</math>
+|<math>=\lambda\left[\lambda^{-1}\mathbf{P}(n-1)-\mathbf{g}(n)\mathbf{x}^{T}(n)\lambda^{-1}\mathbf{P}(n-1)\right]\mathbf{r}_{dx}(n-1)+d(n)\mathbf{g}(n)</math>
+|-
+|
+|<math>=\mathbf{P}(n-1)\mathbf{r}_{dx}(n-1)-\mathbf{g}(n)\mathbf{x}^{T}(n)\mathbf{P}(n-1)\mathbf{r}_{dx}(n-1)+d(n)\mathbf{g}(n)</math>
+|-
+|
+|<math>=\mathbf{P}(n-1)\mathbf{r}_{dx}(n-1)+\mathbf{g}(n)\left[d(n)-\mathbf{x}^{T}(n)\mathbf{P}(n-1)\mathbf{r}_{dx}(n-1)\right]</math>
+|}
+With <math>\mathbf{w}_{n-1}=\mathbf{P}(n-1)\mathbf{r}_{dx}(n-1)</math> we arrive at the update equation
+:{|
+|-
+|<math>\mathbf{w}_{n}</math>
+|<math>=\mathbf{w}_{n-1}+\mathbf{g}(n)\left[d(n)-\mathbf{x}^{T}(n)\mathbf{w}_{n-1}\right]</math>
+|-
+|
+|<math>=\mathbf{w}_{n-1}+\mathbf{g}(n)\alpha(n)</math>
+|}
+where <math>\alpha(n)=d(n)-\mathbf{x}^{T}(n)\mathbf{w}_{n-1}</math>
+is the ''[[A priori and a posteriori|a priori]]'' error. Compare this with the ''[[a posteriori]]'' error; the error calculated ''after'' the filter is updated:
+
+:<math>e(n)=d(n)-\mathbf{x}^{T}(n)\mathbf{w}_n</math>
+
+That means we found the correction factor
+:<math>\Delta\mathbf{w}_{n-1}=\mathbf{g}(n)\alpha(n)</math>
+
+This intuitively satisfying result indicates that the correction factor is directly proportional to both the error and the gain vector, which controls how much sensitivity is desired, through the weighting factor, <math>\lambda</math>.
+
+==RLS algorithm summary==
+The RLS algorithm for a ''p''-th order RLS filter can be summarized as
+{|
+|-
+| Parameters: || <math>p=</math> filter order
+|-
+|  || <math>\lambda=</math> forgetting factor
+|-
+|  || <math>\delta=</math> value to initialize <math>\mathbf{P}(0)</math>
+|-
+|Initialization: || <math>\mathbf{w}(0)=0</math>,
+|-
+| ||<math>x(k)=0, k=-p,\dots,-1</math>,
+|-
+| ||<math>d(k)=0, k=-p,\dots,-1</math>
+|-
+| ||<math>\mathbf{P}(0)=\delta I</math> where <math>I</math> is the [[identity matrix]] of rank <math>p+1</math>
+|-
+|Computation: || For <math>n=1,2,\dots </math>
+|-
+|||
+<math> \mathbf{x}(n) = 
+\left[
+\begin{matrix}
+x(n)\\
+x(n-1)\\
+\vdots\\
+x(n-p)
+\end{matrix}
+\right]
+</math>
+|-
+|||<math> \alpha(n) = d(n)-\mathbf{x}^T(n)\mathbf{w}(n-1)</math>
+|-
+|||<math>\mathbf{g}(n)=\mathbf{P}(n-1)\mathbf{x}(n)\left\{\lambda+\mathbf{x}^{T}(n)\mathbf{P}(n-1)\mathbf{x}(n)\right\}^{-1}</math>
+|-
+|||<math>\mathbf{P}(n)=\lambda^{-1}\mathbf{P}(n-1)-\mathbf{g}(n)\mathbf{x}^{T}(n)\lambda^{-1}\mathbf{P}(n-1)</math>
+|-
+|||<math> \mathbf{w}(n) = \mathbf{w}(n-1)+\,\alpha(n)\mathbf{g}(n)</math>.
+|}
+
+The recursion for <math>P</math> follows an [[algebraic Riccati equation]] and thus draws parallels to the [[Kalman filter]].<ref>Welch, Greg and Bishop, Gary [https://www.cs.unc.edu/~welch/media/pdf/kalman_intro.pdf "An Introduction to the Kalman Filter"], Department of Computer Science, University of North Carolina at Chapel Hill, September 17, 1997, accessed July 19, 2011.</ref>
+
+==Lattice recursive least squares filter (LRLS)==
+The '''lattice recursive least squares''' [[adaptive filter]] is related to the standard RLS except that it requires fewer arithmetic operations (order ''N'').<ref>Diniz, Paulo S.R., "Adaptive Filtering: Algorithms  and Practical Implementation", Springer Nature Switzerland AG 2020, Chapter 7: Adaptive Lattice-Based RLS Algorithms. https://doi.org/10.1007/978-3-030-29057-3_7</ref> It offers additional advantages over conventional LMS algorithms such as faster convergence rates, modular structure, and insensitivity to variations in eigenvalue spread of the input correlation matrix. The LRLS algorithm described is based on ''a posteriori'' errors and includes the normalized form. The derivation is similar to the standard RLS algorithm and is based on the definition of <math>d(k)\,\!</math>. In the forward prediction case, we have <math>d(k) = x(k)\,\!</math> with the input signal <math>x(k-1)\,\!</math> as the most up to date sample. The backward prediction case is <math>d(k) = x(k-i-1)\,\!</math>, where i is the index of the sample in the past we want to predict, and the input signal <math>x(k)\,\!</math> is the most recent sample.<ref>Albu, Kadlec, Softley, Matousek, Hermanek, Coleman, Fagan [http://wwwdsp.ucd.ie/dspfiles/main_files/pdf_files/hsla_fpl2001.pdf "Implementation of (Normalised) RLS Lattice on Virtex"] {{Webarchive|url=https://web.archive.org/web/20160304040205/http://wwwdsp.ucd.ie/dspfiles/main_files/pdf_files/hsla_fpl2001.pdf |date=2016-03-04 }}, Digital Signal Processing, 2001, accessed December 24, 2011.</ref>
+
+===Parameter summary===
+:<math>\kappa_f(k,i)\,\!</math> is the forward reflection coefficient
+
+:<math>\kappa_b(k,i)\,\!</math> is the backward reflection coefficient
+
+:<math>e_f(k,i)\,\!</math> represents the instantaneous ''a posteriori'' forward prediction error
+
+:<math>e_b(k,i)\,\!</math> represents the instantaneous ''a posteriori'' backward prediction error
+
+:<math>\xi^d_{b_{\min}}(k,i)\,\!</math> is the minimum least-squares backward prediction error
+
+:<math>\xi^d_{f_{\min}}(k,i)\,\!</math> is the minimum least-squares forward prediction error
+
+:<math>\gamma(k,i)\,\!</math> is a conversion factor between ''a priori'' and ''a posteriori'' errors
+
+:<math>v_i(k)\,\!</math> are the feedforward multiplier coefficients.
+
+:<math>\varepsilon\,\!</math> is a small positive constant that can be 0.01
+
+===LRLS algorithm summary===
+The algorithm for a LRLS filter can be summarized as
+{|
+|-
+| Initialization:
+|-
+||| For <math display=inline>i = 0,1,\ldots,N</math>
+|-
+||| {{pad|2em}}<math>\delta(-1,i) = \delta_D(-1,i) = 0\,\!</math> (if <math display=inline>x(k) = 0</math> for <math display=inline>k < 0</math>)
+|-
+||| {{pad|2em}}<math>\xi^d_{b_{\min}}(-1,i) = \xi^d_{f_{\min}}(-1,i) = \varepsilon</math>
+|-
+||| {{pad|2em}}<math>\gamma(-1,i) = 1\,\!</math>
+|-
+||| {{pad|2em}}<math>e_b(-1,i) = 0\,\!</math>
+|-
+||| End
+|-
+| Computation:
+|-
+||| For <math display=inline>k \ge 0</math>
+|-
+||| {{pad|2em}}<math>\gamma(k,0) = 1\,\!</math>
+|-
+||| {{pad|2em}}<math>e_b(k,0) = e_f(k,0) = x(k)\,\!</math>
+|-
+||| {{pad|2em}}<math>\xi^d_{b_{\min}}(k,0) = \xi^d_{f_{\min}}(k,0) = x^2(k) + \lambda\xi^d_{f_{\min}}(k-1,0)\,\!</math>
+|-
+||| {{pad|2em}}<math>e(k,0) = d(k)\,\!</math>
+|-
+||| {{pad|2em}}For <math display=inline>i = 0,1,\ldots,N</math>
+|-
+||| {{pad|4em}}<math>\delta(k,i) = \lambda\delta(k-1,i) + \frac{e_b(k-1,i)e_f(k,i)}{\gamma(k-1,i)}</math>
+|-
+||| {{pad|4em}}<math>\gamma(k,i+1) = \gamma(k,i) - \frac{e_b^2(k,i)}{\xi^d_{b_{\min}}(k,i)}</math>
+|-
+||| {{pad|4em}}<math>\kappa_b(k,i) = \frac{\delta(k,i)}{\xi^d_{f_{\min}}(k,i)}</math>
+|-
+||| {{pad|4em}}<math>\kappa_f(k,i) = \frac{\delta(k,i)}{\xi^d_{b_{\min}}(k-1,i)}</math>
+|-
+||| {{pad|4em}}<math>e_b(k,i+1) = e_b(k-1,i) - \kappa_b(k,i)e_f(k,i)\,\!</math>
+|-
+||| {{pad|4em}}<math>e_f(k,i+1) = e_f(k,i) - \kappa_f(k,i)e_b(k-1,i)\,\!</math>
+|-
+||| {{pad|4em}}<math>\xi^d_{b_{\min}}(k,i+1) = \xi^d_{b_{\min}}(k-1,i) - \delta(k,i)\kappa_b(k,i)</math>
+|-
+||| {{pad|4em}}<math>\xi^d_{f_{\min}}(k,i+1) = \xi^d_{f_{\min}}(k,i) - \delta(k,i)\kappa_f(k,i)</math>
+|-
+||| {{pad|2em}}Feedforward filtering
+|-
+||| {{pad|4em}}<math>\delta_D(k,i) = \lambda\delta_D(k-1,i) + \frac{e(k,i)e_b(k,i)}{\gamma(k,i)}</math>
+|-
+||| {{pad|4em}}<math>v_i(k) = \frac{\delta_D(k,i)}{\xi^d_{b_{\min}}(k,i)}</math>
+|-
+||| {{pad|4em}}<math>e(k,i+1) = e(k,i) - v_i(k)e_b(k,i)\,\!</math>
+|-
+||| {{pad|2em}}End
+|-
+||| End
+|-
+|||
+|}
+
+==Normalized lattice recursive least squares filter (NLRLS)==
+The normalized form of the LRLS has fewer recursions and variables. It can be calculated by applying a normalization to the internal variables of the algorithm which will keep their magnitude bounded by one. This is generally not used in real-time applications because of the number of division and square-root operations which comes with a high computational load.
+
+===NLRLS algorithm summary===
+The algorithm for a NLRLS filter can be summarized as
+{|
+|-
+| Initialization:
+|-
+||| For <math display=inline>i = 0,1,\ldots,N.</math>
+|-
+||| {{pad|2em}}<math>\overline{\delta}(-1,i) = 0\,\!</math> (if <math display=inline>x(k) = d(k) = 0</math> for <math display=inline>k < 0</math>)
+|-
+||| {{pad|2em}}<math>\overline{\delta}_D(-1,i) = 0\,\!</math>
+|-
+||| {{pad|2em}}<math>\overline{e}_b(-1,i) = 0\,\!</math>
+|-
+||| End
+|-
+||| {{pad|2em}}<math>\sigma_x^2(-1) = \lambda\sigma_d^2(-1) = \varepsilon\,\!</math>
+|-
+| Computation:
+|-
+||| For <math display=inline>k \ge 0</math>
+|-
+||| {{pad|2em}}<math>\sigma_x^2(k) = \lambda\sigma_x^2(k-1) + x^2(k)\,\!</math> (Input signal energy)
+|-
+||| {{pad|2em}}<math>\sigma_d^2(k) = \lambda\sigma_d^2(k-1) + d^2(k)\,\!</math> (Reference signal energy)
+|-
+||| {{pad|2em}}<math>\overline{e}_b(k,0) = \overline{e}_f(k,0) = \frac{x(k)}{\sigma_x(k)}\,\!</math>
+|-
+||| {{pad|2em}}<math>\overline{e}(k,0) = \frac{d(k)}{\sigma_d(k)}\,\!</math>
+|-
+||| {{pad|2em}}For <math display=inline>i = 0,1,\ldots,N</math>
+|-
+||| {{pad|4em}}<math>\overline{\delta}(k,i) = \delta(k-1,i)\sqrt{(1 - \overline{e}_b^2(k-1,i))(1 - \overline{e}_f^2(k,i))} + \overline{e}_b(k-1,i)\overline{e}_f(k,i)</math>
+|-
+||| {{pad|4em}}<math>\overline{e}_b(k,i+1) = \frac{\overline{e}_b(k-1,i) - \overline{\delta}(k,i)\overline{e}_f(k,i)}{\sqrt{(1 - \overline{\delta}^2(k,i))(1 - \overline{e}_f^2(k,i))}}</math>
+|-
+||| {{pad|4em}}<math>\overline{e}_f(k,i+1) = \frac{\overline{e}_f(k,i) - \overline{\delta}(k,i)\overline{e}_b(k-1,i)}{\sqrt{(1 - \overline{\delta}^2(k,i))(1 - \overline{e}_b^2(k-1,i))}}</math>
+|-
+||| {{pad|2em}}Feedforward filter
+|-
+||| {{pad|4em}}<math>\overline{\delta}_D(k,i) = \overline{\delta}_D(k-1,i)\sqrt{(1 - \overline{e}_b^2(k,i))(1 - \overline{e}^2(k,i))} + \overline{e}(k,i)\overline{e}_b(k,i)</math>
+|-
+||| {{pad|4em}}<math>\overline{e}(k,i+1) = \frac{1}{\sqrt{(1 - \overline{e}_b^2(k,i))(1 - \overline{\delta}_D^2(k,i))}}[\overline{e}(k,i) - \overline{\delta}_D(k,i)\overline{e}_b(k,i)]</math>
+|-
+||| {{pad|2em}}End
+|-
+||| End
+|-
+|||
+|}
+
+==See also==
+*[[Adaptive filter]]
+*[[Kernel adaptive filter]]
+*[[Least mean squares filter]]
+*[[Zero-forcing equalizer]]
+
+==References==
+* {{Cite book|author=Hayes, Monson H.|title=Statistical Digital Signal Processing and Modeling|chapter=9.4: Recursive Least Squares|page=541|publisher=Wiley|year=1996|isbn=0-471-59431-8}}
+* Simon Haykin, ''Adaptive Filter Theory'', Prentice Hall, 2002, {{ISBN|0-13-048434-2}}
+* M.H.A Davis, R.B. Vinter, ''Stochastic Modelling and Control'', Springer, 1985, {{ISBN|0-412-16200-8}}
+* Weifeng Liu, Jose Principe and Simon Haykin, ''Kernel Adaptive Filtering: A Comprehensive Introduction'', John Wiley, 2010, {{ISBN|0-470-44753-2}}
+* R.L.Plackett, ''Some Theorems in Least Squares'', Biometrika, 1950, 37, 149–157, {{ISSN|0006-3444}}
+* C.F.Gauss, ''Theoria combinationis observationum erroribus minimis obnoxiae'', 1821, Werke, 4. Gottinge
+
+==Notes==
+{{Reflist}}
+
+{{DEFAULTSORT:Recursive Least Squares Filter}}
+[[Category:Digital signal processing]]
+[[Category:Filter theory]]
+[[Category:Statistical signal processing]]

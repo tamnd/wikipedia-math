@@ -1,0 +1,315 @@
+<!-- wikipedia: en
+     page: 230401
+     title: Floyd–Warshall algorithm
+     revision: 1368880655
+     timestamp: 2026-08-11T16:22:34Z
+     history: https://en.wikipedia.org/w/index.php?curid=230401&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1368880655 -->
+{{short description|Algorithm in graph theory}}
+{{CS1 config|mode=cs1}}
+{{Redirect|Floyd's algorithm|cycle detection|Floyd's cycle-finding algorithm|computer graphics|Floyd–Steinberg dithering}}
+{{Infobox Algorithm
+|class=[[All-pairs shortest path problem]] (for weighted graphs)
+|image=
+|caption =
+|data=[[Graph (data structure)|Graph]]
+|time=<math>\Theta (|V|^3)</math>
+|average-time=<math>\Theta (|V|^3)</math>
+|best-time=<math>\Theta (|V|^3)</math>
+|space=<math>\Theta(|V|^2)</math>
+}}
+
+In [[computer science]], the '''Floyd–Warshall algorithm''' (also known as '''Floyd's algorithm''', the '''Roy–Warshall algorithm''', the '''Roy–Floyd algorithm''', or the '''WFI algorithm''') is an [[algorithm]] for finding [[shortest path problem|shortest paths]] in a directed [[weighted graph]] with positive or negative edge weights (but with no negative cycles).<ref name=":0">{{Introduction to Algorithms|1}} See in particular Section 26.2, "The Floyd–Warshall algorithm", pp.&nbsp;558–565 and Section 26.4, "A general framework for solving path problems in directed graphs", pp.&nbsp;570–576.</ref><ref>{{cite book | author=Kenneth H. Rosen | title=Discrete Mathematics and Its Applications, 5th Edition | publisher = Addison Wesley | year=2003 | isbn=978-0-07-119881-3 }}</ref> A single execution of the algorithm will find the lengths (summed weights) of shortest paths between all pairs of vertices. Although it does not return details of the paths themselves, it is possible to reconstruct the paths with simple modifications to the algorithm. Versions of the algorithm can also be used for finding the [[transitive closure]] of a relation, or (in connection with the [[Schulze method|Schulze voting system]]) [[widest path problem|widest paths]] between all pairs of vertices in a weighted graph.
+
+==History and naming==
+The Floyd–Warshall algorithm is an example of [[dynamic programming]], and was published in its currently recognized form by [[Robert W. Floyd|Robert Floyd]] in 1962.<ref>{{cite journal | first = Robert W. | last = Floyd | author-link = Robert W. Floyd | title = Algorithm 97: Shortest Path | journal = [[Communications of the ACM]] | volume = 5 | issue = 6 | page = 345 | date=  June 1962 | doi = 10.1145/367766.368168 | s2cid = 2003382 | doi-access = free }}</ref>  However, it is essentially the same as algorithms previously published by [[Bernard Roy]] in 1959<ref>{{cite journal | first = Bernard | last = Roy |author-link=Bernard Roy| title = Transitivité et connexité. | journal = [[C. R. Acad. Sci. Paris]] | volume = 249 | pages = 216–218 | year=  1959 |url=https://gallica.bnf.fr/ark:/12148/bpt6k3201c/f222.image |language=fr }}
+</ref> and also by [[Stephen Warshall]] in 1962<ref>{{cite journal | first = Stephen | last = Warshall | title = A theorem on Boolean matrices | journal = [[Journal of the ACM]] | volume = 9 | issue = 1 | pages = 11–12 | date=  January 1962 | doi = 10.1145/321105.321107 | s2cid = 33763989 | doi-access = free }}</ref> for finding the transitive closure of a graph,<ref>{{mathworld|id=Floyd-WarshallAlgorithm | title = Floyd-Warshall Algorithm}}</ref> and is closely related to [[Kleene's algorithm]] (published in 1956) for converting a [[deterministic finite automaton]] into a [[regular expression]], with the difference being the use of a min-plus [[semiring]].<ref>{{cite book | author-link = Stephen Cole Kleene | first = S. C. | last = Kleene | chapter = Representation of events in nerve nets and finite automata | title = Automata Studies | editor = [[Claude Elwood Shannon|C. E. Shannon]] and [[John McCarthy (computer scientist)|J. McCarthy]] | pages = 3–42 | publisher = Princeton University Press | year=  1956 }}</ref> The modern formulation of the algorithm as three nested for-loops was first described by Peter Ingerman, also in 1962.<ref>{{cite journal | first = Peter Z. | last = Ingerman | title = Algorithm 141: Path Matrix | journal = [[Communications of the ACM]] | volume = 5 | number = 11 | page = 556 | date = November 1962 | doi = 10.1145/368996.369016 | s2cid = 29010500 | doi-access = free }}</ref>
+
+==Algorithm==
+The Floyd–Warshall algorithm compares many possible paths through the graph between each pair of vertices. It is guaranteed to find all shortest paths and is able to do this with <math>\Theta(|V|^3)</math> comparisons in a graph,<ref name=":0" /><ref name=":1" /> even though there may be <math>\Theta (|V|^2)</math> edges in the graph.  It does so by incrementally improving an estimate on the shortest path between two vertices, until the estimate is optimal.
+
+Consider a graph <math>G</math> with vertices <math>V</math> numbered 1 through&nbsp;<math>N</math>. Further consider a function <math>\mathrm{shortestPath}(i,j,k)</math> that returns the length of the shortest possible path (if one exists) from <math>i</math> to <math>j</math> using vertices only from the set <math>\{1,2,\ldots,k\}</math> as intermediate points along the way.  Now, given this function, our goal is to find the length of the shortest path from each <math>i</math> to each <math>j</math> using ''any'' vertex in <math>\{1,2,\ldots,N\}</math>. By definition, this is the value <math>\mathrm{shortestPath}(i,j,N)</math>, which we will find [[Recursion|recursively]].
+
+Observe that <math>\mathrm{shortestPath}(i,j,k)</math> must be less than or equal to <math>\mathrm{shortestPath}(i,j,k-1)</math>: we have ''more'' flexibility if we are allowed to use the vertex <math>k</math>. If <math>\mathrm{shortestPath}(i,j,k)</math> is in fact less than <math>\mathrm{shortestPath}(i,j,k-1)</math>, then there must be a path from <math>i</math> to <math>j</math> using the vertices <math>\{1,2,\ldots,k\}</math> that is shorter than any such path that does not use the vertex <math>k</math>. Since there are no negative cycles this path can be decomposed as:
+
+:(1) a path from <math>i</math> to <math>k</math> that uses the vertices <math>\{1,2,\ldots,k-1\}</math>, followed by
+
+:(2) a path from <math>k</math> to <math>j</math> that uses the vertices <math>\{1,2,\ldots,k-1\}</math>.
+
+And of course, these must be a ''shortest'' such path (or several of them), otherwise we could further decrease the length. In other words, we have arrived at the recursive formula:
+: <math>\mathrm{shortestPath}(i,j,k) =</math>
+:: <math>\mathrm{min}\Big(\mathrm{shortestPath}(i,j,k-1),</math>
+::: <math>\mathrm{shortestPath}(i,k,k-1)+\mathrm{shortestPath}(k,j,k-1)\Big)</math>.
+The base case is given by
+: <math>\mathrm{shortestPath}(i,j,0) = w(i,j),</math>
+where <math>w(i,j)</math> denotes the weight of the edge from <math>i</math> to <math>j</math> if one exists and ∞ (infinity) otherwise.
+
+These formulas are the heart of the Floyd–Warshall algorithm. The algorithm works by first computing <math>\mathrm{shortestPath}(i,j,k)</math> for all <math>(i,j)</math> pairs for <math>k=0</math>, then <math>k=1</math>, then <math>k=2</math>, and so on.  This process continues until <math>k=N</math>, and we have found the shortest path for all <math>(i,j)</math> pairs using any intermediate vertices. Pseudocode for this basic version follows.
+
+===Pseudocode===
+
+ '''let''' dist be a |V| × |V| array of minimum distances initialized to ∞ (infinity)
+ '''for each''' edge (''u'', ''v'') '''do'''
+     dist[''u''][''v''] = w(''u'', ''v'')  ''// The weight of the edge (''u'', ''v'')''
+ '''for each''' vertex ''v'' '''do'''
+     dist[''v''][''v''] = 0
+ '''for''' ''k'' '''from''' 1 '''to''' |V|
+     '''for''' ''i'' '''from''' 1 '''to''' |V|
+         '''for''' ''j'' '''from''' 1 '''to''' |V|
+             '''if''' dist[''i''][''j''] > dist[''i''][''k''] + dist[''k''][''j'']
+                 dist[''i''][''j''] = dist[''i''][''k''] + dist[''k''][''j'']
+             '''end if'''
+Note: A common mistake in implementing the Floyd–Warshall algorithm is to misorder the triply nested loops (The correct order is <code>KIJ</code>). The incorrect <code>IJK</code> and <code>IKJ</code> algorithms do not give correct solutions for some instance. However, we can prove that if these are repeated three times, we obtain the correct solutions.<ref>{{Cite arXiv|last=Hide |first=Ikumi |date=2019 |title=Incorrect implementations of the Floyd--Warshall algorithm give correct solutions after three repeats |class=cs.DS |eprint=1904.01210}}</ref>
+
+==Example==
+The algorithm above is executed on the graph on the left below:
+
+[[File:Floyd-Warshall example.svg|600px]]
+
+Prior to the first recursion of the outer loop, labeled {{math|1=''k'' = 0}} above, the only known paths correspond to the single edges in the graph. At {{math|1=''k'' = 1}}, paths that go through the vertex 1 are found: in particular, the path [2,1,3] is found, replacing the path [2,3] which has fewer edges but is longer (in terms of weight). At {{math|1=''k'' = 2}}, paths going through the vertices {1,2} are found. The red and blue boxes show how the path [4,2,1,3] is assembled from the two known paths [4,2] and [2,1,3] encountered in previous iterations, with 2 in the intersection. The path [4,2,3] is not considered, because [2,1,3] is the shortest path encountered so far from 2 to 3. At {{math|1=''k'' = 3}}, paths going through the vertices {1,2,3} are found. Finally, at {{math|1=''k'' = 4}}, all shortest paths are found.
+
+The distance matrix at each iteration of {{mvar|k}}, with the updated distances in '''bold''', will be:
+{| class=wikitable style="float:left; margin:10px; text-align:center;"
+|+
+| colspan="2" rowspan="2" |{{math|1=''k'' = 0}}
+| colspan="4" |{{mvar|j}}
+|-
+! 1 !! 2 !! 3 !! 4
+|-
+| rowspan="4" |{{mvar|i}}
+! 1
+| 0 || &infin; || −2 || &infin;
+|-
+! 2
+| 4 || 0 || 3 || &infin;
+|-
+! 3
+| &infin; || &infin; || 0 || 2
+|-
+! 4
+| &infin; || −1 || &infin; || 0
+|}
+
+{| class=wikitable style="float:left; margin:10px; text-align:center;"
+|+
+| colspan="2" rowspan="2" |{{math|1=''k'' = 1}}
+| colspan="4" |{{mvar|j}}
+|-
+! 1 !! 2 !! 3 !! 4
+|-
+| rowspan="4" |{{mvar|i}}
+! 1
+| 0 || &infin; || −2 || &infin;
+|-
+! 2
+| 4 || 0 || '''2''' || &infin;
+|-
+! 3
+| &infin; || &infin; || 0 || 2
+|-
+! 4
+| &infin; || −1 || &infin; || 0
+|}
+
+{| class=wikitable style="float:left; margin:10px; text-align:center;"
+|+
+| colspan="2" rowspan="2" |{{math|1=''k'' = 2}}
+| colspan="4" |{{mvar|j}}
+|-
+! 1 !! 2 !! 3 !! 4
+|-
+| rowspan="4" |{{mvar|i}}
+! 1
+| 0 || &infin; || −2 || &infin;
+|-
+! 2
+| 4 || 0 || 2 || &infin;
+|-
+! 3
+| &infin; || &infin; || 0 || 2
+|-
+! 4
+| '''3''' || −1 || '''1''' || 0
+|}
+
+{| class=wikitable style="float:left; margin:10px; text-align:center;"
+|+
+| colspan="2" rowspan="2" |{{math|1=''k'' = 3}}
+| colspan="4" |{{mvar|j}}
+|-
+! 1 !! 2 !! 3 !! 4
+|-
+| rowspan="4" |{{mvar|i}}
+! 1
+| 0 || &infin; || −2 || '''0'''
+|-
+! 2
+| 4 || 0 || 2 ||'''4'''
+|-
+! 3
+| &infin; || &infin; || 0 || 2
+|-
+! 4
+| 3 || −1 || 1 || 0
+|}
+
+{| class=wikitable style="float:left; margin:10px; text-align:center;"
+|+
+| colspan="2" rowspan="2" |{{math|1=''k'' = 4}}
+| colspan="4" |{{mvar|j}}
+|-
+! 1 !! 2 !! 3 !! 4
+|-
+| rowspan="4" |{{mvar|i}}
+! 1
+| 0 || '''−1''' || −2 || 0
+|-
+! 2
+| 4 || 0 || 2 || 4
+|-
+! 3
+| '''5''' || '''1''' || 0 || 2
+|-
+! 4
+| 3 || −1 || 1 || 0
+|}
+{{clear}}
+
+==Behavior with negative cycles==
+
+A negative cycle is a cycle whose edges sum to a negative value.  There is no shortest path between any pair of vertices <math>i</math>, <math>j</math> which form part of a negative cycle,  because path-lengths from <math>i</math> to <math>j</math> can be arbitrarily small (negative).  For numerically meaningful output, the Floyd–Warshall algorithm assumes that there are no negative cycles.  Nevertheless, if there are negative cycles, the Floyd–Warshall algorithm can be used to detect them.  The intuition is as follows:
+
+* The Floyd–Warshall algorithm iteratively revises path lengths between all pairs of vertices <math>(i,j)</math>, including where <math>i=j</math>;
+* Initially, the length of the path <math>(i,i)</math> is zero;
+* A path <math>[i,k,\ldots,i]</math> can only improve upon this if it has length less than zero, i.e. denotes a negative cycle;
+* Thus, after the algorithm, <math>(i,i)</math> will be negative if there exists a negative-length path from <math>i</math> back to <math>i</math>.
+
+Hence, to detect negative [[Cycle (graph theory)|cycles]] using the Floyd–Warshall algorithm, one can inspect the diagonal of the path matrix, and the presence of a negative number indicates that the graph contains at least one negative cycle.<ref name=":1">{{cite web |last=Hochbaum |first=Dorit |author-link=Dorit S. Hochbaum |date=2014 |title=Section 8.9: Floyd-Warshall algorithm for all pairs shortest paths |url=http://www.ieor.berkeley.edu/~hochbaum/files/ieor266-2014.pdf |work=Lecture Notes for IEOR 266: Graph Algorithms and Network Flows |publisher=Department of Industrial Engineering and Operations Research, [[University of California, Berkeley]] |pages=41–42}}</ref> However, when a negative cycle is present, during the execution of the algorithm exponentially large numbers on the order of <math>\Omega(6^n \cdot w_{max})</math> can appear, where <math>w_{max}</math> is the largest absolute value edge weight in the graph. To avoid integer underflow problems, one should check for a negative cycle within the innermost for loop of the algorithm.<ref>
+{{cite journal
+ | title =   The Floyd–Warshall algorithm on graphs with negative cycles
+ | author =  Stefan Hougardy
+ | journal = Information Processing Letters
+ | volume = 110 
+ | number = 8–9
+ | date = April 2010
+ | pages = 279–281
+ | doi=10.1016/j.ipl.2010.02.001
+}}</ref>
+
+==Path reconstruction==
+
+The Floyd–Warshall algorithm typically only provides the lengths of the paths between all pairs of vertices. With simple modifications, it is possible to create a method to reconstruct the actual path between any two endpoint vertices. While one may be inclined to store the actual path from each vertex to each other vertex, this is not necessary, and in fact, is very costly in terms of memory. Instead, we can use the [[shortest-path tree]], which can be calculated for each node in <math>\Theta(|E|)</math> time using <math>\Theta(|V|)</math> memory, and allows us to efficiently reconstruct a directed path between any two connected vertices.
+
+=== Pseudocode ===
+
+The array {{code|prev[u][v]}} holds the penultimate vertex on the path from {{code|u}} to {{code|v}} (except in the case of {{code|prev[v][v]}}, where it always contains {{code|v}} even if there is no self-loop on {{code|v}}):<ref>{{Cite web|url=https://books.goalkicker.com/AlgorithmsBook/|title = Free Algorithms Book}}</ref>
+
+ '''let''' dist be a <math>|V| \times |V|</math> array of minimum distances initialized to <math>\infty</math> (infinity)
+ '''let''' prev be a <math>|V| \times |V|</math> array of vertex indices initialized to '''null'''
+ 
+ '''procedure''' ''FloydWarshallWithPathReconstruction''() '''is'''
+     '''for each''' edge (u, v) '''do'''
+         dist[u][v] = w(u, v)  ''// The weight of the edge (u, v)''
+         prev[u][v] = u
+     '''for each''' vertex v '''do'''
+         dist[v][v] = 0
+         prev[v][v] = v
+     '''for''' k '''from''' 1 '''to''' |V| '''do''' ''// standard Floyd-Warshall implementation''
+         '''for''' i '''from''' 1 '''to''' |V|
+             '''for''' j '''from''' 1 '''to''' |V|
+                 '''if''' dist[i][j] > dist[i][k] + dist[k][j] '''then'''
+                     dist[i][j] = dist[i][k] + dist[k][j]
+                     prev[i][j] = prev[k][j]
+
+ '''procedure''' ''Path''(u, v) '''is'''
+     '''if''' prev[u][v] = null '''then'''
+         '''return''' []
+     path = [v]
+     '''while''' ''u'' ≠ ''v'' '''do'''
+         v = prev[u][v]
+         path.prepend(v)
+     '''return''' path
+
+==Time complexity==
+Let <math>n</math> be <math>|V|</math>, the number of vertices. To find all <math>n^2</math> of 
+<math>\mathrm{shortestPath}(i,j,k)</math> (for all <math>i</math> and <math>j</math>) from those of
+<math>\mathrm{shortestPath}(i,j,k-1)</math> requires [[big theta|<math>\Theta(n^2)</math>]] operations. Since we begin with
+<math>\mathrm{shortestPath}(i,j,0) = \mathrm{edgeCost}(i,j)</math> and compute the sequence of <math>n</math> matrices <math>\mathrm{shortestPath}(i,j,1)</math>, <math>\mathrm{shortestPath}(i,j,2)</math>, <math>\ldots</math>, <math>\mathrm{shortestPath}(i,j,n)</math>, each having a cost of <math>\Theta(n^2)</math>,
+the total [[time complexity]] of the algorithm is <math>n \cdot \Theta(n^2) = \Theta(n^3)</math>.<ref name=":1" /><ref>{{cite book
+| last1 = Baras 
+| first1 = John 
+| last2 = Theodorakopoulos 
+| first2 = George 
+| date = 2022 
+| title = Path Problems in Networks 
+| publisher = Springer International Publishing
+| isbn = 978-3-031-79983-9
+}}</ref>
+
+==Applications and generalizations==
+The Floyd–Warshall algorithm can be used to solve the following problems:
+* [[Transitive closure]] of directed graphs (Warshall's algorithm). In Warshall's original formulation of the algorithm, the graph is unweighted and represented by a Boolean [[adjacency matrix]]. Then the addition operation is replaced by [[logical conjunction]] (AND) and the minimum operation by [[logical disjunction]] (OR).
+* Finding a [[regular expression]] denoting the [[regular language]] accepted by a [[finite automaton]] ([[Kleene's algorithm]], a closely related generalization of the Floyd–Warshall algorithm)<ref>{{citation|title=Handbook of Graph Theory|series=Discrete Mathematics and Its Applications|first1=Jonathan L.|last1=Gross|first2=Jay|last2=Yellen|publisher=CRC Press|year=2003|page=65|url=https://books.google.com/books?id=mKkIGIea_BkC&pg=PA65|isbn=978-0-203-49020-4}}.</ref>
+* [[invertible matrix|Inversion]] of [[real number|real]] [[matrix (mathematics)|matrices]] ([[Gauss–Jordan elimination|Gauss–Jordan algorithm]])<ref>{{cite web | archive-url = https://web.archive.org/web/20091022202353/http://geocities.com/rpenalozan/ps/graphalg2005.ps | archive-date = 2009-10-22| url = http://geocities.com/rpenalozan/ps/graphalg2005.ps | title = Algebraic Structures for Transitive Closure | first = Rafael | last = Peñaloza | publisher = Dresden University of Technology, Department of Computer Science, Institute for Theoretical Computer Science|work = Seminar "Graph Algorithms"}}</ref>
+* Optimal routing. In this application one is interested in finding the path with the maximum flow between two vertices. This means that, rather than taking minima as in the pseudocode above, one instead takes maxima. The edge weights represent fixed constraints on flow. Path weights represent bottlenecks; so the addition operation above is replaced by the minimum operation.
+* Fast computation of [[Pathfinder network]]s.
+* [[Widest path problem|Widest paths/Maximum bandwidth paths]]
+* Computing canonical form of difference bound matrices (DBMs)
+* Computing the similarity between graphs
+* Transitive closure in AND/OR/threshold graphs.<ref>{{cite report | title=Scheduling Tasks with AND/OR precedence contraints (PhD Thesis, Appendix B)| first=Donald| last=Gillies|year=1993|url=http://www.ece.ubc.ca/~gillies/download/Donald_W_Gillies_PhD_1993_Scheduling_With_AND_OR_Precedence.pdf}}</ref>
+
+==Implementations==
+Implementations are available for many [[programming language]]s.
+* For [[C++]], in the [http://www.boost.org/libs/graph/doc/ boost::graph] library
+* For [[C Sharp (programming language)|C#]], at [https://github.com/KeRNeLith/QuikGraph QuikGraph]
+* For [[C Sharp (programming language)|C#]], at [https://www.nuget.org/packages/QuickGraphPCL/3.6.61114.2 QuickGraphPCL] (A fork of QuickGraph with better compatibility with projects using Portable Class Libraries.)
+* For [[Java (programming language)|Java]], in the [http://commons.apache.org/sandbox/commons-graph/ Apache Commons Graph] library
+* For [[JavaScript]], in the [[Cytoscape]] library
+* For [[Julia (programming language)|Julia]], in the [https://docs.juliahub.com/Graphs/VJ6vx/1.7.0/algorithms/shortestpaths/#Graphs.floyd_warshall_shortest_paths-Union{Tuple{AbstractGraph{U}},%20Tuple{T},%20Tuple{U},%20Tuple{AbstractGraph{U},%20AbstractMatrix{T}}}%20where%20{U%3C:Integer,%20T%3C:Real} Graphs.jl] package
+* For [[MATLAB]], in the [http://www.mathworks.com/matlabcentral/fileexchange/10922 Matlab_bgl] {{Webarchive|url=https://web.archive.org/web/20130817093138/http://www.mathworks.com/matlabcentral/fileexchange/10922 |date=2013-08-17 }} package
+* For [[Perl]], in the [https://metacpan.org/module/Graph Graph] module
+* For [[Python (programming language)|Python]], in the [[SciPy]] library (module [http://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csgraph.floyd_warshall.html#scipy.sparse.csgraph.floyd_warshall scipy.sparse.csgraph]) or [[NetworkX]] library
+* For [[R programming language|R]], in packages [https://cran.r-project.org/web/packages/e1071/index.html e1071] and [https://cran.r-project.org/web/packages/Rfast/index.html Rfast]
+* For [[C (programming language)|C]], a [[pthreads]], [https://moorejs.github.io/APSP-in-parallel/ parallelized], implementation including a [[SQLite]] interface to the data at [https://github.com/gdavidbutler/pthreadChannel/blob/master/example/floydWarshall.h floydWarshall.h]
+
+==Comparison with other shortest path algorithms==
+For graphs with non-negative edge weights, [[Dijkstra's algorithm]] can be used to find all shortest paths from a ''single'' vertex with running time <math>\Theta(|E| + |V| \log |V|)</math>. Thus, running Dijkstra starting at ''each'' vertex takes time <math>\Theta(|E||V| + |V|^2 \log |V|)</math>. Since <math>|E| = O(|V|^2)</math>, this yields a worst-case running time of repeated Dijkstra of <math>O(|V|^3)</math>. While this matches the asymptotic worst-case running time of the Floyd-Warshall algorithm, the constants involved matter quite a lot. When a [[dense graph|graph is dense]] (i.e., <math>|E| \approx |V|^2</math>), the Floyd-Warshall algorithm tends to perform better in practice. When the graph is sparse (i.e., <math>|E|</math> is significantly smaller than <math>|V|^2</math>), Dijkstra tends to dominate.
+
+For sparse graphs with negative edges but no negative cycles, [[Johnson's algorithm]] can be used, with the same asymptotic running time as the repeated Dijkstra approach.
+
+There are also known algorithms using [[fast matrix multiplication]] to speed up all-pairs shortest path computation in dense graphs, but these typically make extra assumptions on the edge weights (such as requiring them to be small integers).<ref>{{citation
+ | last = Zwick | first = Uri | author-link = Uri Zwick
+ | date = May 2002
+ | doi = 10.1145/567112.567114
+ | issue = 3
+ | journal = [[Journal of the ACM]]
+ | pages = 289–317
+ | title = All pairs shortest paths using bridging sets and rectangular matrix multiplication
+ | volume = 49| arxiv = cs/0008011| s2cid = 1065901 }}.</ref><ref>{{citation
+ | last = Chan | first = Timothy M. | author-link = Timothy M. Chan
+ | date = January 2010
+ | doi = 10.1137/08071990x
+ | issue = 5
+ | journal = [[SIAM Journal on Computing]]
+ | pages = 2075–2089
+ | title = More algorithms for all-pairs shortest paths in weighted graphs
+ | volume = 39}}.</ref> In addition, because of the high constant factors in their running time, they would only provide a speedup over the Floyd–Warshall algorithm for very large graphs.
+
+==References==
+{{Reflist}}
+
+==External links==
+{{commons category|Floyd-Warshall algorithm}}
+* [http://www.pms.informatik.uni-muenchen.de/lehre/compgeometry/Gosper/shortest_path/shortest_path.html#visualization Interactive animation of the Floyd–Warshall algorithm]
+* [https://algorithms.discrete.ma.tum.de/graph-algorithms/spp-floyd-warshall/index_en.html Interactive animation of the Floyd–Warshall algorithm (Technical University of Munich)]
+
+{{Graph traversal algorithms}}
+{{optimization algorithms|combinatorial|state=autocollapse}}
+{{DEFAULTSORT:Floyd-Warshall algorithm}}
+[[Category:Graph algorithms]]
+[[Category:Routing algorithms]]
+[[Category:Polynomial-time problems]]
+[[Category:Articles with example pseudocode]]
+[[Category:Dynamic programming]]
+[[Category:Graph distance]]

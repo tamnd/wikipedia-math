@@ -1,0 +1,91 @@
+<!-- wikipedia: en
+     page: 41323011
+     title: Regularization by spectral filtering
+     revision: 1366496872
+     timestamp: 2026-07-28T10:03:11Z
+     history: https://en.wikipedia.org/w/index.php?curid=41323011&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1366496872 -->
+'''Spectral regularization''' is any of a class of [[Regularization (mathematics)|regularization]] techniques used in [[machine learning]] to control the impact of noise and prevent [[overfitting]]. Spectral regularization can be used in a broad range of applications, from deblurring images to classifying emails into a spam folder and a non-spam folder. For instance, in the email classification example, spectral regularization can be used to reduce the impact of noise and prevent overfitting when a machine learning system is being trained on a labeled set of emails to learn how to tell a spam and a non-spam email apart.
+
+Spectral regularization algorithms rely on methods that were originally defined and studied in the theory of [[Ill-posed problem|ill-posed]] [[inverse problem]]s (for instance, see<ref>[[Heinz Engl|H. W. Engl]], M. Hanke, and A. Neubauer. ''Regularization of inverse problems''. Kluwer, 1996.</ref>) focusing on the inversion of a linear operator or a matrix that possibly has a bad [[condition number]] or an unbounded inverse. In this context, regularization amounts to substituting the original operator by a [[bounded operator]] called the "regularization operator" that has a condition number controlled by a regularization parameter,<ref name="rosasco">L. Lo Gerfo, L. Rosasco, F. Odone, E. De Vito, and A. Verri. Spectral Algorithms for Supervised Learning, ''Neural Computation'', 20(7), 2008.</ref> a classical example being [[Tikhonov regularization]]. To ensure stability, this regularization parameter is tuned based on the level of noise.<ref name="rosasco" /> The main idea behind spectral regularization is that each regularization operator can be described using spectral calculus as an appropriate filter on the eigenvalues of the operator that defines the problem, and the role of the filter is to "suppress the oscillatory behavior corresponding to small eigenvalues".<ref name="rosasco" /> Therefore, each algorithm in the class of spectral regularization algorithms is defined by a suitable filter function (which needs to be derived for that particular algorithm). Three of the most commonly used regularization algorithms for which spectral filtering is well-studied are Tikhonov regularization, [[Landweber iteration]], and [[Singular value decomposition#Reduced SVDs|truncated singular value decomposition]] (TSVD). As for choosing the regularization parameter, examples of candidate methods to compute this parameter include the discrepancy principle, generalized [[Cross-validation (statistics)|cross validation]], and the L-curve criterion.<ref>P. C. Hansen, J. G. Nagy, and D. P. O'Leary. ''Deblurring Images: Matrices, Spectra, and Filtering'', Fundamentals of Algorithms 3, SIAM, Philadelphia, 2006.</ref>
+
+The notion of spectral filtering studied in the context of machine learning is connected to the literature on [[function approximation]] in [[signal processing]].
+
+== Notation ==
+The training set is defined as <math>S = \{(x_1, y_1), \dots , (x_n, y_n)\}</math>, where <math>X</math> is the <math>n \times d</math> input matrix and <math>Y = (y_1,\dots,y_n)</math> is the output vector. Where applicable, the kernel function is denoted by <math>k</math>, and the <math>n \times n</math> kernel matrix is denoted by <math>K</math> which has entries <math>K_{ij} = k(x_i,x_j)</math> and <math>\mathcal{H}</math> denotes the [[RKHS|Reproducing Kernel Hilbert Space]] (RKHS) with kernel <math>k</math>. The regularization parameter is denoted by <math>\lambda</math>.
+
+For <math>g \in G</math> and <math>f \in F</math>, with <math>G</math> and <math>F</math> being Hilbert spaces, given a linear, continuous operator <math>L</math>, assume that <math>g = Lf</math> holds. In this setting, the direct problem would be to solve for <math>g</math> given <math>f</math> and the inverse problem would be to solve for <math>f</math> given <math>g</math>. If the solution exists, is unique and stable, the inverse problem (i.e. the problem of solving for <math>f</math>) is well-posed; otherwise, it is ill-posed.
+
+== Relation to the theory of ill-posed inverse problems ==
+The connection between the regularized least squares (RLS) estimation problem (Tikhonov regularization setting) and the theory of ill-posed inverse problems is an example of how spectral regularization algorithms are related to the theory of ill-posed inverse problems.
+
+The RLS estimator solves
+<math display="block"> \min_{f\in\mathcal{H}} \frac{1}{n}\sum_{i=1}^{n} (y_i-f(x_i))^2 + \lambda \left\|f\right\|^2_\mathcal{H}</math>
+and the RKHS allows for expressing this RLS estimator as <math>f_S^\lambda (X)=\sum_{i=1}^n c_i k(x,x_i)</math> where <math>(K + n\lambda I)c = Y</math> with <math>c=(c_1,\dots,c_n)</math>.<ref name="BB">L. Rosasco. Lecture 6 of the Lecture Notes for 9.520: Statistical Learning Theory and Applications. Massachusetts Institute of Technology, Fall 2013. Available at https://www.mit.edu/~9.520/fall13/slides/class06/class06_RLSSVM.pdf</ref> The penalization term is used for controlling smoothness and preventing overfitting. Since the solution of empirical risk minimization <math> \min_{f\in\mathcal{H}} \frac{1}{n}\sum_{i=1}^{n}(y_i-f(x_i))^2</math> can be written as <math>f_S^{\lambda}(X)=\sum_{i=1}^n c_i k(x,x_i)</math> such that <math>Kc=Y</math>, adding the penalty function amounts to the following change in the system that needs to be solved:<ref name="AA">L. Rosasco. Lecture 7 of the Lecture Notes for 9.520: Statistical Learning Theory and Applications. Massachusetts Institute of Technology, Fall 2013. Available at https://www.mit.edu/~9.520/fall13/slides/class07/class07_spectral.pdf</ref>
+<math display="block">\left\{ \min_{f\in\mathcal{H}} \frac{1}{n} \sum_{i=1}^n \left(y_i-f(x_i)\right)^2\rightarrow \min_{f\in\mathcal{H}} \frac{1}{n} \sum_{i=1}^n \left(y_i-f(x_i)\right)^2 + \lambda \left\|f\right\|^2_\mathcal{H}\right\}
+\equiv
+\biggl\{Kc = Y\rightarrow \left(K+n\lambda I\right)c = Y\biggr\}.</math>
+
+In this learning setting, the kernel matrix can be decomposed as <math>K = Q\Sigma Q^T</math>, with
+<math display="block">\Sigma = \operatorname{diag}(\sigma_1,\dots,\sigma_n),~\sigma_1 \geq \sigma_2 \geq \cdots \geq \sigma_n \geq 0</math>
+and <math>q_1, \dots, q_n</math> are the corresponding [[Eigenvalues and eigenvectors|eigenvectors]]. Therefore, in the initial learning setting, the following holds:
+<math display="block">c=K^{-1}Y = Q\Sigma^{-1}Q^TY = \sum_{i=1}^n \frac{1}{\sigma_i} \langle q_i,Y \rangle q_i.</math>
+
+Thus, for small eigenvalues, even small perturbations in the data can lead to considerable changes in the solution. Hence, the problem is ill-conditioned, and solving this RLS problem amounts to stabilizing a possibly ill-conditioned matrix inversion problem, which is studied in the theory of ill-posed inverse problems; in both problems, a main concern is to deal with the issue of [[numerical stability]].
+
+== Implementation of algorithms ==
+Each algorithm in the class of spectral regularization algorithms is defined by a suitable filter function, denoted here by <math>G_{\lambda}(\cdot)</math>. If the Kernel matrix is denoted by <math>K</math>, then <math>\lambda</math> should control the magnitude of the smaller eigenvalues of <math>G_{\lambda}(K)</math>. In a filtering setup, the goal is to find estimators <math>f_S^{\lambda}(X) := \sum_{i=1}^n c_i k(x,x_i)</math> where <math>c=G_{\lambda}(K)Y</math>. To do so, a scalar filter function <math>G_\lambda(\sigma)</math> is defined using the eigen-decomposition of the kernel matrix:
+<math display="block">G_\lambda(K)=QG_{\lambda}(\Sigma)Q^T,</math>
+which yields
+<math display="block">G_{\lambda}(K)Y~=~\sum_{i=1}^{n}G_{\lambda}(\sigma_i) \langle q_i,Y\rangle q_i.</math>
+
+Typically, an appropriate filter function should have the following properties:<ref name="AA" />
+# As <math>\lambda</math> goes to zero, <math>G_\lambda (\sigma)~\rightarrow ~1/\sigma</math>.
+# The magnitude of the (smaller) eigenvalues of <math>G_{\lambda}</math> is controlled by <math>\lambda</math>.
+
+While the above items give a rough characterization of the general properties of filter functions for all spectral regularization algorithms, the derivation of the filter function (and hence its exact form) varies depending on the specific regularization method that spectral filtering is applied to.
+
+=== Filter function for Tikhonov regularization ===
+In the Tikhonov regularization setting, the filter function for RLS is described below. As shown in,<ref name="BB" /> in this setting, <math>c = \left(K + n\lambda I\right)^{-1} Y</math>. Thus,
+<math display="block">c = (K+n\lambda I)^{-1}Y = Q(\Sigma+n\lambda I)^{-1}Q^T Y=\sum_{i=1}^n \frac{1}{\sigma_i+n\lambda}\langle q_i, Y\rangle q_i.</math>
+
+The undesired components are filtered out using regularization:
+* If <math>\sigma \gg \lambda n</math>, then <math> \frac{1}{\sigma_i+n\lambda} \sim  \frac{1}{\sigma_i}</math>.
+* If <math>\sigma \ll \lambda n</math>, then <math> \frac{1}{\sigma_i+n\lambda} \sim \frac{1}{\lambda n}</math>.
+The filter function for Tikhonov regularization is therefore defined as:<ref name="AA" />
+<math display="block">G_\lambda (\sigma) = \frac{1}{\sigma+n\lambda }.</math>
+
+=== Filter function for Landweber iteration ===
+The idea behind the Landweber iteration is [[gradient descent]]:<ref name="AA" />
+ c<sup>0</sup> := 0
+ '''for''' ''i'' = 1, ..., ''t'' − 1
+     ''c''<sup>''i''</sup> := ''c''<sup>''i''−1</sup> + ''η''(''Y'' − ''Kc''<sup>''i''−1</sup>)
+ '''end'''
+In this setting, if <math>n</math> is larger than <math>K</math>'s largest eigenvalue, the above iteration converges by choosing <math>\eta = 2/n</math> as the step-size.<ref name="AA" /> The above iteration is equivalent to minimizing <math>\frac{1}{n} \left\|Y - Kc\right\|_2^2</math> (i.e. the empirical risk) via gradient descent; using induction, it can be proved that at the <math>t</math>-th iteration, the solution is given by  <ref name="AA" />
+<math display="block">c = \eta\sum_{i=0}^{t-1} \left(I-\eta K\right)^i Y.</math>
+
+Thus, the appropriate filter function is defined by:
+<math display="block">G_\lambda(\sigma) = \eta\sum_{i=0}^{t-1} \left(I - \eta\sigma\right)^i. </math>
+
+It can be shown that this filter function corresponds to a truncated power expansion of <math>K^{-1}</math>;<ref name="AA" /> to see this, note that the relation <math>\sum_{i\geq0} x^i = 1/(1 - x)</math>, would still hold if <math>x</math> is replaced by a matrix; thus, if <math>K</math> (the kernel matrix), or rather <math>I - \eta K</math>, is considered, the following holds:
+<math display="block">K^{-1} = \eta\sum_{i=0}^\infty \left(I - \eta K\right)^i \sim \eta\sum_{i=0}^{t-1} \left(I - \eta K\right)^i.</math>
+
+In this setting, the number of iterations gives the regularization parameter; roughly speaking, <math>t \sim 1/\lambda</math>.<ref name="AA" /> If <math>t</math> is large, overfitting may be a concern. If <math>t</math> is small, oversmoothing may be a concern. Thus, choosing an appropriate time for [[early stopping]] of the iterations provides a regularization effect.
+
+=== Filter function for TSVD ===
+In the TSVD setting, given the eigen-decomposition <math>K = Q\Sigma Q^T</math> and using a prescribed threshold <math>\lambda n</math>, a regularized inverse can be formed for the kernel matrix by discarding all the eigenvalues that are smaller than this threshold.<ref name="AA" />
+Thus, the filter function for TSVD can be defined as
+<math display="block">G_\lambda(\sigma) = \begin{cases}
+1/\sigma , & \text{if } \sigma \geq \lambda n \\[1ex]
+0, & \text{otherwise}
+\end{cases}</math>
+
+It can be shown that TSVD is equivalent to the (unsupervised) projection of the data using [[kernel principal component analysis]], and that it is also equivalent to minimizing the empirical risk on the projected data without regularization.<ref name="AA" /> The number of components kept for the projection is the only [[free parameter]] here.
+
+== References ==
+{{reflist}}
+
+[[Category:Mathematical analysis]]
+[[Category:Inverse problems]]
+[[Category:Computer engineering]]

@@ -1,0 +1,110 @@
+<!-- wikipedia: en
+     page: 2244916
+     title: Affine arithmetic
+     revision: 1366114314
+     timestamp: 2026-07-26T10:12:26Z
+     history: https://en.wikipedia.org/w/index.php?curid=2244916&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1366114314 -->
+{{Short description|Concept in mathematics}}
+'''Affine arithmetic''' ('''AA''') is a model for [[validated numerics|self-validated]] [[numerical analysis]].  In AA, the quantities of interest are represented as [[affine combination]]s ('''affine forms''') of certain primitive variables, which stand for sources of uncertainty in the data or approximations made during the computation.
+
+Affine arithmetic is meant to be an improvement on [[interval arithmetic]] (IA), and is similar to [[generalized interval arithmetic]], first-order [[Taylor arithmetic]], the [[center-slope model]], and [[ellipsoid calculus]] &mdash; in the sense that it is an automatic method to derive first-order guaranteed approximations to general formulas.
+
+Affine arithmetic is potentially useful in every numeric problem where one needs guaranteed enclosures to smooth functions, such as solving [[equation system|system]]s of non-linear equations, analyzing [[dynamical system]]s, [[integral|integrating]] functions, [[differential equation]]s, etc.  Applications include [[ray tracing (graphics)|ray tracing]], [[2D computer graphics|plotting]] [[curve]]s, intersecting [[implicit surface|implicit]] and [[parametric surface]]s, [[error analysis (mathematics)]], [[process control]], worst-case analysis of [[electric circuit]]s, and more.
+
+==Definition==
+In affine arithmetic, each input or computed quantity ''x'' is represented by a formula
+<math>x = x_0 + x_1 \epsilon_1 + x_2 \epsilon_2 + {}</math><math>\cdots</math><math>{} + x_n \epsilon_n</math>
+where <math>x_0, x_1, x_2,</math><math>\dots,</math><math> x_n </math> are known floating-point numbers, and <math>\epsilon_1, \epsilon_2,\dots,\epsilon_n</math> are symbolic variables whose values are only known to lie in the range [-1,+1].
+
+Thus, for example, a quantity ''X'' which is known to lie in the range [3,7] can be represented by the affine form <math>x = 5 + 2 \epsilon_k</math>, for some ''k''.  Conversely, the form <math>x = 10 + 2 \epsilon_3 - 5 \epsilon_8</math> implies that the corresponding quantity ''X'' lies in the range [3,17].
+
+The sharing of a symbol <math>\epsilon_j</math> among two affine forms <math>x</math>,  <math>y</math> implies that the corresponding quantities ''X'', ''Y'' are partially dependent, in the sense that their joint range is smaller than the [[Cartesian product]] of their separate ranges.  For example, if 
+<math>x = 10 + 2 \epsilon_3 - 6 \epsilon_8</math> and 
+<math>y = 20 + 3 \epsilon_4 + 4 \epsilon_8</math>, 
+then the individual ranges of ''X'' and ''Y'' are [2,18] and [13,27], but the joint range of the pair (''X'',''Y'') is the [[hexagon]] with corners (2,27), (6,27), (18,19), (18,13), (14,13), (2,21) &mdash; which is a proper subset of the [[rectangle]] [2,18]×[13,27].
+
+==Affine arithmetic operations==
+Affine forms can be combined with the standard arithmetic operations or [[Elementary function|elementary functions]], to obtain guaranteed approximations to formulas.
+
+===Affine operations===
+For example, given affine forms <math>x,y</math>  for ''X'' and ''Y'', one can obtain an affine form <math>z</math> for ''Z'' = ''X'' + ''Y'' simply by adding the forms &mdash; that is, setting <math>z_j</math> <math>\gets</math> <math>x_j + y_j</math> for every ''j''.  Similarly, one can compute an affine form <math>z</math> for ''Z'' = <math>\alpha</math>''X'', where <math>\alpha</math> is a known constant, by setting <math>z_j</math> <math>\gets</math> <math>\alpha x_j</math> for every ''j''.  This generalizes to arbitrary affine operations like ''Z'' = <math>\alpha</math>''X'' + <math>\beta</math>''Y'' + <math>\gamma</math>.
+
+===Non-affine operations===
+A non-affine operation <math>Z</math> <math>\gets</math> <math>F(X,Y,</math><math>\dots</math><math>)</math>, like multiplication <math>Z</math> <math>\gets</math> <math>X Y</math> or <math>Z</math> <math>\gets</math> <math>\sin(X)</math>, cannot be performed exactly, since the result would not be an affine form of the <math>\epsilon_i</math>.  In that case, one should take a suitable affine function ''G'' that approximates ''F'' to first order, in the ranges implied by <math>x</math> and <math>y</math>; and compute <math>z</math> <math>\gets</math> <math>G(x,y,</math><math>\dots</math><math>) + z_k\epsilon_k</math>, where <math>z_k</math> is an upper bound for the absolute error <math>|F-G|</math> in that range, and  <math>\epsilon_k</math> is a new symbolic variable not occurring in any previous form.
+
+The form <math>z</math> then gives a guaranteed enclosure for the quantity ''Z''; moreover, the affine forms <math>x,y,</math><math>\dots</math><math>,z</math> jointly provide a guaranteed enclosure for the point (''X'',''Y'',...,''Z''), which is often much smaller than the Cartesian product of the ranges of the individual forms.
+
+===Chaining operations===
+Systematic use of this method allows arbitrary computations on given quantities to be replaced by equivalent computations on their affine forms, while preserving first-order correlations between the input and output and guaranteeing the complete enclosure of the joint range. One simply replaces each arithmetic operation or elementary function call in the formula by a call to the corresponding AA library routine.
+
+For smooth functions, the approximation errors made at each step are proportional to the square ''h''<sup>2</sup> of the width ''h'' of the input intervals. For this reason, affine arithmetic will often yield much tighter bounds than standard interval arithmetic (whose errors are proportional to ''h'').
+
+===Roundoff errors===
+In order to provide guaranteed enclosure, affine arithmetic operations must account for the roundoff errors in the computation of the resulting coefficients <math>z_j</math>. This cannot be done by rounding each <math>z_j</math> in a specific direction, because any such rounding would falsify the dependencies between affine forms that share the symbol <math>\epsilon_j</math>.  Instead, one must compute an upper bound <math>\delta_j</math> to the roundoff error of each <math>z_j</math>, and add all those <math>\delta_j</math> to the coefficient <math>z_k</math> of the new symbol <math>\epsilon_k</math> (rounding up). Thus, because of roundoff errors, even  affine operations like ''Z'' = <math>\alpha</math>''X'' and ''Z'' = ''X'' + ''Y'' will add the extra term <math>z_k\epsilon_k</math>.
+
+The handling of roundoff errors increases the code complexity and execution time  of AA operations.  In applications where those errors are known to be unimportant (because they are dominated by uncertainties in the input data and/or by the linearization errors), one may use a simplified AA library that does not implement roundoff error control.
+
+==Affine projection model==
+Affine arithmetic can be viewed in matrix form as follows.  Let <math>X_1,X_2,</math><math>\dots,</math><math>X_m</math> be all input and computed quantities in use at some point during a computation.   The affine forms for those quantities can be represented by a single coefficient matrix ''A'' and a vector ''b'', where element <math>A_{i,j}</math> is the coefficient of symbol <math>\epsilon_j</math> in the affine form of ''<math>X_i</math>''; and <math>b_i</math> is the independent term of that form.  Then the joint range of the quantities &mdash; that is, the range of the point <math>(X_1,X_2,</math><math>\dots,</math><math>X_m)</math> &mdash; is the image of the hypercube <math>U^n = [-1,+1]^n</math> by the affine map from <math>U^n</math> to <math>R^m</math> defined by <math>\epsilon</math> <math>\to</math> <math>A \epsilon + b</math>.
+
+The range of this affine map is a [[zonotope]] bounding the joint range of the quantities <math>X_1,X_2,</math><math>\dots,</math><math>X_m</math>.  Thus one could say that AA is a "zonotope arithmetic". Each step of AA usually entails adding one more row and one more column to the matrix ''A''.
+
+==Affine form simplification==
+Since each AA operation generally creates a new symbol <math>\epsilon_k</math>, the number of terms in an affine form may be proportional to the number of operations used to compute it.  Thus, it is often necessary to apply "symbol condensation" steps, where two or more symbols <math>\epsilon_k</math> are replaced by a smaller set of new symbols. Geometrically, this means replacing a complicated zonotope ''P'' by a simpler zonotope ''Q'' that encloses it.  This operation can be done without destroying the first-order [[approximation property]] of the final zonotope.
+
+== Implementation ==
+
+===Matrix implementation===
+Affine arithmetic can be implemented by a global array ''A'' and a global vector ''b'', as described above. This approach is reasonably adequate when the set of quantities to be computed is small and known in advance. In this approach, the programmer must maintain externally the correspondence between the row indices and the quantities of interest.  Global variables hold the number ''m'' of affine forms (rows) computed so far, and the number ''n'' of symbols (columns) used so far; these are automatically updated at each AA operation.
+
+===Vector implementation===
+Alternatively, each affine form can be implemented as a separate vector of coefficients.  This approach is more convenient for programming, especially when there are calls to library procedures that may use AA internally.  Each affine form can be given a mnemonic name; it can be allocated when needed, be passed to procedures, and reclaimed when no longer needed. The AA code then looks much closer to the original formula.  A [[global variable]] holds the number ''n'' of symbols used so far.
+
+===Sparse vector implementation===
+On fairly long computations, the set of "live" quantities (that will be used in future computations) is much smaller than the set of all computed quantities; and ditto for the set of "live" symbols <math>\epsilon_j</math>.  In this situation, the matrix and vector implementations are too wasteful of time and space.
+
+In such situations, one should use a [[sparse array|sparse]] implementation. Namely, each affine form is stored as a list of pairs (j,<math>x_j</math>), containing only the terms with non-zero coefficient <math>x_j</math>.  For efficiency, the terms should be sorted in order of ''j''.  This representation makes the AA operations somewhat more complicated; however, the cost of each operation becomes proportional to the number of nonzero terms appearing in the operands, instead of the number of total symbols used so far.
+
+This is the representation used by LibAffa.
+
+== References ==
+{{columns-list|colwidth=20em|
+*L. H. de Figueiredo and J. Stolfi (2004) "Affine arithmetic: concepts and applications." ''Numerical Algorithms'' '''37''' (1&ndash;4), 147&ndash;158.
+* J. L. D. Comba and J. Stolfi (1993), "Affine arithmetic and its applications to computer graphics". ''Proc. SIBGRAPI'93 &mdash; VI Simpósio Brasileiro de Computação Gráfica e Processamento de Imagens (Recife, BR)'',  9&ndash;18.<!--com-sto-93-aa-->
+* L. H. de Figueiredo and J. Stolfi (1996), "Adaptive enumeration of implicit surfaces with affine arithmetic". ''Computer Graphics Forum'', '''15'''  ''5'',  287&ndash;296.<!--fig-sto-96-imp-->
+* W. Heidrich (1997), "A compilation of affine arithmetic versions of common math library functions". Technical Report 1997-3, Universität Erlangen-Nürnberg.<!--hei-97-aa-libs-tr-->
+* M. Kashiwagi (1998), "An all solution algorithm using affine arithmetic". ''NOLTA'98 &mdash; 1998 International Symposium on Nonlinear Theory and its Applications (Crans-Montana, Switzerland)'',  14&ndash;17.<!--kas-98-affa-->
+* L. Egiziano, N. Femia, and G.  Spagnuolo (1998), "New approaches to the true worst-case evaluation in circuit tolerance and sensitivity analysis &mdash; Part II: Calculation of the outer solution using affine arithmetic". ''Proc. COMPEL'98 &mdash; 6th Workshop on Computer in Power Electronics (Villa Erba, Italy)'',  19&ndash;22.<!--egi-fem-spa-98-aacir-->
+* W. Heidrich, Ph. Slusallek, and H.-P. Seidel (1998), "Sampling procedural shaders using affine arithmetic". ''ACM Transactions on Graphics'', '''17'''  ''3'',  158&ndash;176.<!--hei-slu-sei-98-aash-->
+* F. Messine and A. Mahfoudi (1998), "Use of affine arithmetic in interval optimization algorithms to solve multidimensional scaling problems". ''Proc. SCAN'98 &mdash; IMACS/GAMM International Symposium on Scientific Computing, Computer Arithmetic and Validated Numerics (Budapest, Hungary)'',  22&ndash;25.<!--mes-mah-98-mopt-->
+* A. de Cusatis Jr., L. H. Figueiredo, and M. Gattass (1999), "Interval methods for ray casting surfaces with affine arithmetic". ''Proc. SIBGRAPI'99 &mdash; 12th Brazilian Symposium on Computer Graphics and Image Processing'',  65&ndash;71. <!--cus-fig-gat-99-rtaa-->
+* K. Bühler and W. Barth (2000), "A new intersection algorithm for parametric surfaces based on linear interval estimations". ''Proc. SCAN 2000 / Interval 2000 &mdash; 9th GAMM-IMACS International Symposium on Scientific Computing, Computer Arithmetic, and Validated Numerics'', ???&ndash;???. <!--bue-bar-00-inter-->
+* I. Voiculescu, J. Berchtold, A. Bowyer, R. R. Martin, and Q. Zhang (2000), "Interval and affine arithmetic for surface location of power- and Bernstein-form polynomials". ''Proc. Mathematics of Surfaces IX'',  410&ndash;423. Springer, {{isbn|1-85233-358-8}}.<!--voi-ber-bow-mar-zha-00-aaloc-->
+* Q. Zhang and R. R. Martin (2000), "Polynomial evaluation using affine arithmetic for curve drawing". ''Proc. of Eurographics UK 2000 Conference'',  49&ndash;56. {{isbn|0-9521097-9-4}}.<!--zha-mar-00-aa-polycurv-->
+* D. Michelucci (2000), "Reliable computations for dynamic systems". ''Proc. SCAN 2000 / Interval 2000 &mdash; 9th GAMM-IMACS International Symposium on Scientific Computing, Computer Arithmetic, and Validated Numerics'',  ???&ndash;???.<!--mic-00-dyna-->
+* N. Femia and G. Spagnuolo (2000), "True worst-case circuit tolerance analysis using genetic algorithm and affine arithmetic &mdash; Part I". ''IEEE Transactions on Circuits and Systems'', '''47'''  ''9'',  1285&ndash;1296.<!--fem-spa-00-aa-eletr-->
+* R. Martin, H. Shou, I. Voiculescu, and G. Wang (2001), "A comparison of Bernstein hull and affine arithmetic methods for algebraic curve drawing". ''Proc. Uncertainty in Geometric Computations'',  143&ndash;154. Kluwer Academic Publishers, {{isbn|0-7923-7309-X}}.<!--mar-sho-voi-wan-01-aacomp-->
+* A. Bowyer, R. Martin, H. Shou, and I. Voiculescu (2001), "Affine intervals in a CSG geometric modeller". ''Proc. Uncertainty in Geometric Computations'',  1&ndash;14. Kluwer Academic Publishers, {{isbn|0-7923-7309-X}}.<!--bow-mar-sho-voi-01-aamodel-->
+* T. Kikuchi and M. Kashiwagi (2001), "Elimination of non-existence regions of the solution of nonlinear equations using affine arithmetic". ''Proc. NOLTA'01 &mdash; 2001 International Symposium on Nonlinear Theory and its Applications''.<!--kik-kas-01-aa-ode-->
+* T. Miyata and M. Kashiwagi (2001), "On range evaluation of polynomials of affine arithmetic". ''Proc. NOLTA'01 - 2001 International Symposium on Nonlinear Theory and its Applications''.<!--miy-kas-01-aa-poly-->
+* Y. Kanazawa and S. Oishi (2002), "A numerical method of proving the existence of solutions for nonlinear ODEs using affine arithmetic". ''Proc. SCAN'02 &mdash; 10th GAMM-IMACS International Symposium on Scientific Computing, Computer Arithmetic, and Validated Numerics''.  <!--kan-ois-02-aa-ode-->
+* H. Shou, R. R.Martin, I. Voiculescu, A. Bowyer, and G. Wang (2002), "Affine arithmetic in matrix form for polynomial evaluation and algebraic curve drawing". ''Progress in Natural Science'', '''12'''  ''1'',  77&ndash;81.<!--sho-mar-voi-02-aamatr-->
+* A. Lemke, L. Hedrich, and E. Barke (2002), "Analog circuit sizing based on formal methods using affine arithmetic". ''Proc. ICCAD-2002 &mdash; International Conference on Computer Aided Design'',  486&ndash;489.<!--lem-hed-bar-02-aa-circ-->
+* F. Messine (2002), "Extensions of affine arithmetic: Application to unconstrained global optimization". ''Journal of Universal Computer Science'', '''8'''  ''11'',  992&ndash;1015.<!--mes-02-aa-jucs-->
+* K. Bühler (2002), "Implicit linear interval estimations". ''Proc. 18th Spring Conference on Computer Graphics (Budmerice, Slovakia)'',  123&ndash;132. ACM Press, {{isbn|1-58113-608-0}}.<!--bue-02-aa-estim-->
+* L. H. de Figueiredo, J. Stolfi, and L. Velho (2003), "Approximating parametric curves with strip trees using affine arithmetic". ''Computer Graphics Forum'', '''22'''  ''2'',  171&ndash;179.<!--fig-sto-vel-03-parcur-cgf-->
+* C. F. Fang, T. Chen, and R. Rutenbar (2003), "Floating-point error analysis based on affine arithmetic". ''Proc. 2003 International Conf. on Acoustic, Speech and Signal Processing''.<!--fan-che-rut-03-fperr-->
+* A. Paiva, L. H. de Figueiredo, and J. Stolfi (2006), "Robust visualization of strange attractors using affine arithmetic". ''Computers & Graphics'', '''30'''  ''6'',  1020&ndash; 1026.
+}}
+
+== External links ==
+*[http://www.ic.unicamp.br/~stolfi/EXPORT/projects/affine-arith/Welcome.html] Stolfi's page on AA.
+*[http://savannah.nongnu.org/projects/libaffa] LibAffa, an LGPL implementation of affine arithmetic.
+**{{GitHub|ogay/libaffa}}
+*[https://sourceforge.net/projects/asol/] ASOL, a branch-and-prune method to find all solutions to systems of nonlinear equations using affine arithmetic
+*[http://www.scg.inf.uni-due.de/fileadmin/Projekte/YalAA/index.html] {{Webarchive|url=https://web.archive.org/web/20210127071349/http://www.scg.inf.uni-due.de/fileadmin/Projekte/YalAA/index.html |date=2021-01-27 }} YalAA, an object-oriented C++ based template library for affine arithmetic (AA).
+*{{GitHub|mskashi/kv}} ([[C++]] library which can use affine arithmetic)
+[[Category:Numerical analysis]]
+[[Category:Affine geometry]]

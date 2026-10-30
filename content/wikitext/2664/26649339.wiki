@@ -1,0 +1,230 @@
+<!-- wikipedia: en
+     page: 26649339
+     title: Gradient boosting
+     revision: 1373672597
+     timestamp: 2026-09-07T06:14:31Z
+     history: https://en.wikipedia.org/w/index.php?curid=26649339&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373672597 -->
+{{short description|Machine learning technique}}
+{{Machine learning bar}}
+'''Gradient boosting''' is a [[machine learning]] technique based on [[Boosting (machine learning)|boosting]] in a functional space, where the target is ''pseudo-residuals'' instead of [[Residuals (statistics)|residuals]] as in traditional boosting. It gives a prediction model in the form of an [[Ensemble learning|ensemble]] of weak prediction models, i.e., models that make very few assumptions about the data, which are typically simple [[Decision tree learning|decision tree]]s.<ref name="hastie" /><ref name="Friedman1999b" /> When a decision tree is the weak learner, the resulting algorithm is called gradient-boosted trees; it usually outperforms [[random forest]].<ref name="hastie" /> As with other [[Boosting (machine learning)|boosting]] methods, a gradient-boosted trees model is built in stages, but it generalizes the other methods by allowing optimization of an arbitrary [[Differentiable function|differentiable]] [[loss function]].
+
+== History ==
+The idea of gradient boosting originated in the observation by [[Leo Breiman]] that boosting can be interpreted as an optimization algorithm on a suitable cost function.<ref name="Breiman1997">{{cite journal |last=Breiman |first=L. |url=https://statistics.berkeley.edu/sites/default/files/tech-reports/486.pdf |title=Arcing The Edge |date=June 1997 |journal=Technical Report 486 |publisher=Statistics Department, University of California, Berkeley }}</ref> Explicit regression gradient boosting algorithms were subsequently developed, by [[Jerome H. Friedman]],<ref name="Friedman1999a">{{cite web |last=Friedman |first=J. H. |url=https://statweb.stanford.edu/~jhf/ftp/trebst.pdf |title=Greedy Function Approximation: A Gradient Boosting Machine |date=February 1999 |access-date=2018-08-27 |archive-date=2019-11-01 |archive-url=https://web.archive.org/web/20191101082737/http://statweb.stanford.edu/~jhf/ftp/trebst.pdf |url-status=dead }}</ref><ref name="Friedman1999b">{{cite web |last=Friedman |first=J. H. |url=https://statweb.stanford.edu/~jhf/ftp/stobst.pdf |title=Stochastic Gradient Boosting |date=March 1999 |access-date=2013-11-13 |archive-date=2014-08-01 |archive-url=https://web.archive.org/web/20140801033113/http://statweb.stanford.edu/~jhf/ftp/stobst.pdf |url-status=dead }}</ref> (in 1999 and later in 2001) simultaneously with the more general functional gradient boosting perspective of Llew Mason, Jonathan Baxter, Peter Bartlett and Marcus Frean.<ref name="MasonBaxterBartlettFrean1999a">
+{{cite conference
+ | last1 = Mason | first1 = L. | last2 = Baxter | first2 = J. | last3 = Bartlett | first3 = P. L. | last4 = Frean | first4 = Marcus
+ | year = 1999
+ | title = Boosting Algorithms as Gradient Descent 
+ | book-title = Advances in Neural Information Processing Systems 12
+ | editor = [[Sara Solla|S.A. Solla]] and T.K. Leen and K. Müller
+ | publisher = MIT Press
+ | pages = 512–518
+ | url = http://papers.nips.cc/paper/1766-boosting-algorithms-as-gradient-descent.pdf
+}}</ref><ref name="MasonBaxterBartlettFrean1999b">
+{{cite web
+ | last1 = Mason | first1 = L. | last2 = Baxter | first2 = J. | last3 = Bartlett | first3 = P. L. | last4 = Frean | first4 = Marcus
+ |date=May 1999
+ | title = Boosting Algorithms as Gradient Descent in Function Space
+ | url = https://www.maths.dur.ac.uk/~dma6kp/pdf/face_recognition/Boosting/Mason99AnyboostLong.pdf
+ | archive-url = https://web.archive.org/web/20181222170928/https://www.maths.dur.ac.uk/~dma6kp/pdf/face_recognition/Boosting/Mason99AnyboostLong.pdf
+ | archive-date = 2018-12-22
+ | url-status=dead
+}}</ref>
+The latter two papers introduced the view of boosting algorithms as iterative ''functional gradient descent'' algorithms. That is, algorithms that optimize a cost function over function space by iteratively choosing a function (weak hypothesis) that points in the negative gradient direction. This functional gradient view of boosting has led to the development of boosting algorithms in many areas of machine learning and statistics beyond regression and classification.
+
+== Informal introduction ==
+(This section follows the exposition by Cheng Li.<ref>{{cite web |url=http://www.chengli.io/tutorials/gradient_boosting.pdf |title=A Gentle Introduction to Gradient Boosting |author=Cheng Li}}</ref>)
+
+Like other boosting methods, gradient boosting combines weak "learners" into a single strong learner iteratively. It is easiest to explain in the [[Least squares|least-squares]] [[regression analysis|regression]] setting, where the goal is to teach a model <math>F</math> to predict values of the form <math>\hat{y} = F(x)</math> by minimizing the [[mean squared error]] <math>\tfrac{1}{n}\sum_i(\hat{y}_i - y_i)^2</math>, where <math> i </math> indexes over some training set of size <math> n </math> of actual values of the output variable <math>y</math>:
+
+* <math>\hat{y}_i = </math> the predicted value <math>F(x_i)</math>
+* <math>y_i =</math> the observed value 
+* <math>n = </math> the size of the sample, i.e. the number of observations in <math>y</math>
+
+If the algorithm has <math>M</math> stages, at each stage <math>m</math> (<math>1 \le m \le M</math>), suppose some imperfect model <math>F_m</math> (for low <math>m</math>, this model may simply predict <math>\hat y_i</math> to be  <math>\bar y</math>, the mean of <math>y</math>). In order to improve <math>F_m</math>, our algorithm should add some new estimator, <math>h_m(x)</math>. Thus,
+
+:<math>
+F_{m+1}(x_i) = F_m(x_i) + h_m(x_i) = y_i
+</math>
+
+or, equivalently,
+
+:<math>
+h_m(x_i) = y_i - F_m(x_i).
+</math>
+
+Therefore, gradient boosting will fit <math>h_m</math> to the ''[[Errors and residuals|residual]]'' <math>y_i - F_m(x_i)</math>. As in other boosting variants, each <math>F_{m+1}</math> attempts to correct the errors of its predecessor <math>F_m</math>. A generalization of this idea to [[loss function]]s other than squared error, and to [[Learning to rank|classification and ranking problems]], follows from the observation that residuals <math>h_m(x_i)</math> for a given model are proportional to the negative gradients of the [[Mean squared error|mean squared error (MSE)]] loss function (with respect to <math>F(x_i)</math>):
+
+:<math>
+L_{\rm MSE} = \frac{1}{n} \sum_{i=1}^n \left(y_i - F(x_i)\right)^2
+</math>
+
+:<math>
+- \frac{\partial L_{\rm MSE}}{\partial F(x_i)} = \frac{2}{n}(y_i - F(x_i)) = \frac{2}{n}h_m(x_i).
+</math>
+
+So, gradient boosting could be generalized to a [[gradient descent]] algorithm by plugging in a different loss and its gradient.
+
+== Algorithm ==
+Many [[supervised learning]] problems involve an output variable {{mvar|y}} and a vector of input variables {{mvar|x}}, related to each other with some probabilistic distribution. The goal is to find some function <math>\hat{F}(x)</math> that best approximates the output variable from the values of input variables. This is formalized by introducing some [[loss function]] <math>L(y, F(x))</math> and minimizing it in expectation:
+
+: <math>\hat{F} = \operatorname{argmin}\limits_F \mathbb{E}_{x,y}[L(y, F(x))]. </math>
+
+The gradient boosting method assumes a real-valued {{mvar|y}}. It seeks an approximation <math>\hat{F}(x)</math> in the form of a weighted sum of {{mvar|M}} functions <math>h_m (x)</math> from some class <math>\mathcal{H}</math>, called base (or [[Weak learner|weak]]) learners:
+
+: <math>\hat{F}(x) = \sum_{m=1}^M \gamma_m h_m(x) + \mbox{const}, </math>
+
+where <math>\gamma_m</math> is the weight at stage <math>m</math>. We are usually given a training set <math>\{ (x_1,y_1), \dots , (x_n,y_n) \} </math> of known values of {{mvar|x}} and corresponding values of {{mvar|y}}. In accordance with the [[empirical risk minimization]] principle, the method tries to find an approximation <math>\hat{F}(x)</math> that minimizes the average value of the loss function on the training set, i.e., minimizes the empirical risk. It does so by starting with a model, consisting of a constant function <math>F_0(x)</math>, and incrementally expands it in a [[Greedy algorithm|greedy]] fashion:
+
+:<math>F_0(x) = \underset{h_0 \in \mathcal{H}}{\arg\min} \sum_{i=1}^n {L(y_i, h_0(x_i))},</math>
+:<math>F_m(x) = F_{m-1}(x) + \left(\underset{h_m \in \mathcal{H}}{\operatorname{arg\,min}} \left[\sum_{i=1}^n L(y_i, F_{m-1}(x_i) + h_m(x_i))\right]\right)(x),</math>
+
+for <math>m \geq 1</math>, where <math> h_m \in \mathcal{H} </math> is a base learner function.
+
+Unfortunately, choosing the best function <math>h_m</math> at each step for an arbitrary loss function {{mvar|L}} is a computationally infeasible optimization problem in general. Therefore, we restrict our approach to a simplified version of the problem. The idea is to apply a [[steepest descent]] step to this minimization problem (functional gradient descent). The basic idea is to find a local minimum of the loss function by iterating on <math>F_{m-1}(x)</math>. In fact, the local maximum-descent direction of the loss function is the negative gradient.<ref>{{Cite web |last=Lambers|first=Jim|date=2011–2012|title=The Method of Steepest Descent|url=https://www.math.usm.edu/lambers/mat419/lecture10.pdf }}</ref> Hence, moving a small amount <math> \gamma </math> such that the linear approximation remains valid:
+
+: <math>F_m(x) = F_{m-1}(x) - \gamma \sum_{i=1}^n \nabla_{F_{m-1}} L(y_i, F_{m-1}(x_i))</math>
+
+where <math>\gamma > 0</math>. For small <math>\gamma</math>, this implies that <math>L(y_i, F_{m}(x_i)) \le L(y_i, F_{m-1}(x_i))</math>.
+
+{{Collapse top|title=Proof of functional form of derivative}}To prove the following, consider the objective
+: <math> O = \sum_{i=1}^n L(y_i, F_{m-1}(x_i) + h_m(x_i)) </math>
+
+Doing a Taylor expansion around the fixed point <math> F_{m-1}(x_i) </math> up to first order
+: <math> O = \sum_{i=1}^n L(y_i, F_{m-1}(x_i) + h_m(x_i)) \approx  \sum_{i=1}^n L(y_i, F_{m-1}(x_i)) + h_m(x_i)\nabla_{F_{m-1}} L(y_i, F_{m-1}(x_i))+\cdots</math>
+
+Now differentiating w.r.t. <math>h_m(x_i)</math>, only the derivative of the second term remains
+<math>\nabla_{F_{m-1}}L(y_i, F_{m-1}(x_i))</math>. This is the direction of steepest ascent and hence we must move in the opposite (i.e., negative) direction in order to move in the direction of steepest descent.
+
+{{Collapse bottom|}}
+
+Furthermore, we can optimize <math>\gamma</math> by finding the <math>\gamma</math> value for which the loss function has a minimum:
+
+: <math>\gamma_m = \underset{\gamma}{\operatorname{argmin}} \sum_{i=1}^n L(y_i, F_m(x_i)) = \underset{\gamma}{\arg\min} {\sum_{i=1}^n L\left(y_i, F_{m-1}(x_i) -
+    \gamma \nabla_{F_{m-1}} L(y_i, F_{m-1}(x_i)) \right)}.</math>
+
+If we considered the continuous case, i.e., where <math>\mathcal{H}</math> is the set of arbitrary differentiable functions on <math>\R</math>, we would update the model in accordance with the following equations<!-- and abuse function notation blah blah blah (TODO: phrase this nicely...) How is the following valid? There seems to be an error. L(y_i,F_{m-1}(x_i)) is not even a function of vector h. The gradient would be zero. Gradient wrt F makes sense as in the pseudocode. Also, this derivation seems to valid only for L being squared-loss--><!-- L here is viewed as a function of F(xi) rather than h(xi), and PDE of F(xi) is taken to calculate the extreme point of L -->
+:<math>F_m(x) = F_{m-1}(x) - \gamma_m \sum_{i=1}^n {\nabla_{F_{m-1}} L(y_i, F_{m-1}(x_i))}</math>
+where <math>\gamma_m</math> is the step length, defined as
+<math display="block">\gamma_m = \underset{\gamma}{\arg\min} \sum_{i=1}^n L\left(y_i, F_{m-1}(x_i) - \gamma \nabla_{F_{m-1}} L(y_i, F_{m-1}(x_i)) \right).</math>
+In the discrete case however, i.e. when the set <math>\mathcal{H}</math> is finite{{Clarify|reason=If admissible base learners have at least one real parameter taking any value within some interval (e.g. a stump), then their set is infinite.|date=March 2023}}, we choose the candidate function {{mvar|h}} closest to the gradient of {{mvar|L}} for which the coefficient {{mvar|&gamma;}} may then be calculated with the aid of [[line search]] on the above equations. Note that this approach is a heuristic and therefore doesn't yield an exact solution to the given problem, but rather an approximation.
+In pseudocode, the generic gradient boosting method is:<ref name="Friedman1999a" /><ref name="hastie" />
+
+{{framebox|blue|margin-left=0px|width=600px}}
+Input: training set <math>\{(x_i, y_i)\}_{i=1}^n,</math> a differentiable loss function <math>L(y, F(x)),</math> number of iterations {{mvar|M}}.
+
+Algorithm:
+
+# Initialize model with a constant value:
+#: <math>F_0(x) = \underset{\gamma}{\arg\min} \sum_{i=1}^n L(y_i, \gamma).</math>
+# For {{mvar|m}} = 1 to {{mvar|M}}:
+## Compute so-called ''pseudo-residuals'':
+##: <math>r_{im} = -\left[\frac{\partial L(y_i, F(x_i))}{\partial F(x_i)}\right]_{F(x)=F_{m-1}(x)} \quad \text{for } i=1,\ldots,n.</math>
+## Fit a base learner (or weak learner, e.g. tree) closed under scaling <math>h_m(x)</math> to pseudo-residuals, i.e. train it using the training set <math>\{(x_i, r_{im})\}_{i=1}^n</math>.
+## Compute multiplier <math>\gamma_m</math> by solving the following one-dimensional optimization problem:
+##: <math>\gamma_m = \underset{\gamma}{\operatorname{argmin}} \sum_{i=1}^n L\left(y_i, F_{m-1}(x_i) + \gamma h_m(x_i)\right).</math>
+## Update the model:
+##: <math>F_m(x) = F_{m-1}(x) + \gamma_m h_m(x).</math>
+# Output <math>F_M(x).</math>
+{{frame-footer}}
+
+== Gradient tree boosting ==
+Gradient boosting is typically used with [[Decision tree learning|decision trees]] (especially [[Classification and regression tree|CARTs]]) of a fixed size as base learners. For this special case, Friedman proposes a modification to gradient boosting method which improves the quality of fit of each base learner.
+
+Generic gradient boosting at the ''m''-th step would fit a decision tree <math>h_m(x)</math> to pseudo-residuals. Let <math>J_{m}</math> be the number of its leaves. The tree partitions the input space into <math>J_{m}</math> disjoint regions <math>R_{1m}, \ldots, R_{J_{m}m}</math> and predicts a constant value in each region. Using the [[indicator notation]], the output of <math>h_m(x)</math> for input ''x'' can be written as the sum:
+: <math>h_m(x) = \sum_{j=1}^{J_{m}} b_{jm} \mathbf {1}_{R_{jm}}(x),</math>
+where <math>b_{jm}</math> is the value predicted in the region <math>R_{jm}</math>.<ref>Note: in case of usual CART trees, the trees are fitted using least-squares loss, and so the coefficient <math>b_{jm}</math> for the region <math>R_{jm}</math> is equal to just the value of output variable, averaged over all training instances in <math>R_{jm}</math>.</ref>
+
+Then the coefficients <math>b_{jm}</math> are multiplied by some value <math>\gamma_m</math>, chosen using line search so as to minimize the loss function, and the model is updated as follows:
+
+: <math>
+    F_m(x) = F_{m-1}(x) + \gamma_m h_m(x), \quad
+    \gamma_m = \underset{\gamma}{\operatorname{arg\,min}} \sum_{i=1}^n L(y_i, F_{m-1}(x_i) + \gamma h_m(x_i)).
+  </math>
+
+Friedman proposes to modify this algorithm so that it chooses a separate optimal value <math>\gamma_{jm}</math> for each of the tree's regions, instead of a single <math>\gamma_m</math> for the whole tree. He calls the modified algorithm "TreeBoost". The coefficients <math>b_{jm}</math> from the tree-fitting procedure can be then simply discarded and the model update rule becomes:
+
+: <math>
+    F_m(x) = F_{m-1}(x) + \sum_{j=1}^{J_{m}} \gamma_{jm} \mathbf {1}_{R_{jm}}(x), \quad
+    \gamma_{jm} = \underset{\gamma}{\operatorname{arg\,min}} \sum_{x_i \in R_{jm}} L(y_i, F_{m-1}(x_i) + \gamma).
+  </math>
+
+When the loss <math>L(\cdot, \cdot)</math> is mean-squared error (MSE) the coefficients <math>\gamma_{jm}</math> coincide with the coefficients of the tree-fitting procedure <math>b_{jm}</math>.
+
+=== Tree size ===
+The number <math>J</math> of terminal nodes in the trees is a parameter which controls the maximum allowed level of [[Interaction (statistics)|interaction]] between variables in the model. With <math>J = 2</math> ([[decision stump]]s), no interaction between variables is allowed. With <math>J = 3</math> the model may include effects of the interaction between up to two variables, and so on. <math>J</math> can be adjusted for a data set at hand.
+
+Hastie et al.<ref name="hastie">{{cite book|last1=Hastie|first1=T.|last2=Tibshirani|first2=R.|last3=Friedman|first3=J. H.|year=2009|title=The Elements of Statistical Learning|edition=2nd|isbn=978-0-387-84857-0|chapter-url=http://www-stat.stanford.edu/~tibs/ElemStatLearn/|publisher=Springer|location=New York|chapter=10. Boosting and Additive Trees|pages=337&ndash;384|url-status=dead|archive-url=https://web.archive.org/web/20091110212529/http://www-stat.stanford.edu/~tibs/ElemStatLearn/|archive-date=2009-11-10}}</ref> comment that typically <math>4 \leq J \leq 8</math> work well for boosting and results are fairly insensitive to the choice of <math>J</math> in this range, <math>J = 2</math> is insufficient for many applications, and <math>J > 10</math> is unlikely to be required.
+
+== Regularization ==
+Fitting the training set too closely can lead to degradation of the model's generalization ability, that is, its performance on unseen examples. Several so-called [[Regularization (mathematics)|regularization]] techniques reduce this [[overfitting]] effect by constraining the fitting procedure.
+
+One natural regularization parameter is the number of gradient boosting iterations ''M'' (i.e. the number of base models). Increasing ''M'' reduces the error on training set, but increases risk of overfitting. An optimal value of ''M'' is often selected by monitoring prediction error on a separate validation data set.
+
+Another regularization parameter for tree boosting is tree depth. The higher this value the more likely the model will overfit the training data.
+
+=== Shrinkage ===
+An important part of gradient boosting is regularization by shrinkage which uses a modified update rule:
+
+: <math>F_m(x) = F_{m-1}(x) + \nu \cdot \gamma_m h_m(x), \quad 0 < \nu \leq 1,</math>
+
+where [[Hyperparameter (machine learning)|parameter]] <math>\nu</math> is called the "learning rate".
+
+Empirically, it has been found that using small [[learning rate]]s (such as <math>\nu < 0.1</math>) yields dramatic improvements in models' generalization ability over gradient boosting without shrinking (<math>\nu = 1</math>).<ref name="hastie" /> However, it comes at the price of increasing [[computational time]] both during training and [[Information retrieval|querying]]: lower learning rate requires more iterations.
+
+=== Stochastic gradient boosting ===
+Soon after the introduction of gradient boosting, Friedman proposed a minor modification to the algorithm, motivated by [[Leo Breiman|Breiman]]'s [[bootstrap aggregation]] ("bagging") method.<ref name="Friedman1999b" /> Specifically, he proposed that at each iteration of the algorithm, a base learner should be fit on a subsample of the training set drawn at random without replacement.<ref>Note that this is different from bagging, which samples with replacement because it uses samples of the same size as the training set.</ref>  Friedman observed a substantial improvement in gradient boosting's accuracy with this modification.
+
+Subsample size is some constant fraction <math>f</math> of the size of the training set. When <math>f = 1</math>, the algorithm is deterministic and identical to the one described above. Smaller values of <math>f</math> introduce randomness into the algorithm and help prevent [[overfitting]], acting as a kind of [[Regularization (mathematics)|regularization]]. The algorithm also becomes faster, because regression trees have to be fit to smaller datasets at each iteration. Friedman<ref name="Friedman1999b" /> obtained that <math>0.5 \leq f \leq 0.8 </math> leads to good results for small and moderate sized training sets. Therefore, <math>f</math> is typically set to 0.5, meaning that one half of the training set is used to build each base learner.<ref>{{cite journal |last1=Arrabi |first1=Nooshin  |last2=Torabi |first2=Mohhamadreza |last3=Fassihi |first3=Afshin |last4=Ghasemi |first4=Fahimeh |title=Identification of potential vascular endothelial growth factor receptor inhibitors via tree-based learning modeling and molecular docking simulation |journal=Chemometrics |language=en |volume=1 |issue=1 |pages=1 |doi= 10.1002/cem.3545 }}</ref>
+
+Also, like in bagging, subsampling allows one to define an [[out-of-bag error]] of the prediction performance improvement by evaluating predictions on those observations which were not used in the building of the next base learner. Out-of-bag estimates help avoid the need for an independent validation dataset, but often underestimate actual performance improvement and the optimal number of iterations.<ref name="gbm-vignette">Ridgeway, Greg (2007). [https://cran.r-project.org/web/packages/gbm/gbm.pdf Generalized Boosted Models: A guide to the gbm package.]</ref><ref>[https://www.analyticsvidhya.com/blog/2015/09/complete-guide-boosting-methods/ Learn Gradient Boosting Algorithm for better predictions (with codes in R)]</ref>
+
+=== Number of observations in leaves ===
+Gradient tree boosting implementations often also use regularization by limiting the minimum number of observations in trees' terminal nodes. It is used in the tree building process by ignoring any splits that lead to nodes containing fewer than this number of training set instances.
+
+Imposing this limit helps to reduce variance in predictions at leaves.
+
+=== Complexity penalty ===
+Another useful regularization technique for gradient boosted model is to penalize its complexity.<ref>Tianqi Chen. [https://web.njit.edu/~usman/courses/cs675_fall16/BoostedTree.pdf Introduction to Boosted Trees]</ref> For gradient boosted trees, model complexity can be defined as the proportional{{Clarify|reason=What is the proportion?|date=October 2024}} number of leaves in the trees. The joint optimization of loss and model complexity corresponds to a post-pruning algorithm to remove branches that fail to reduce the loss by a threshold. 
+
+Other kinds of regularization such as an <math>\ell_2</math> penalty on the leaf values can also be used to avoid [[overfitting]].<ref>{{cite journal |last1=Arrabi |first1=Nooshin  |last2=Torabi |first2=Mohhamadreza |last3=Fassihi |first3=Afshin |last4=Ghasemi |first4=Fahimeh |title=Identification of potential vascular endothelial growth factor receptor inhibitors via tree-based learning modeling and molecular docking simulation |journal=Chemometrics |language=en |volume=1 |issue=1 |pages=1 |doi= 10.1002/cem.3545 }}</ref>
+
+== Usage ==
+Gradient boosting can be used in the field of [[learning to rank]]. The commercial web search engines [[Yahoo]]<ref>Cossock, David and Zhang, Tong (2008). [http://www.stat.rutgers.edu/~tzhang/papers/it08-ranking.pdf Statistical Analysis of Bayes Optimal Subset Ranking] {{webarchive|url=https://web.archive.org/web/20100807162855/http://www.stat.rutgers.edu/~tzhang/papers/it08-ranking.pdf |date=2010-08-07 }}, page 14.</ref> and [[Yandex]]<ref name="snezhinsk">[http://webmaster.ya.ru/replies.xml?item_no=5707&ncrnd=5118 Yandex corporate blog entry about new ranking model "Snezhinsk"] {{Webarchive|url=https://web.archive.org/web/20120301165959/http://webmaster.ya.ru/replies.xml?item_no=5707&ncrnd=5118 |date=2012-03-01 }} (in Russian)</ref> use variants of gradient boosting in their machine-learned ranking engines. Gradient boosting is also utilized in High Energy Physics in data analysis. At the Large Hadron Collider (LHC), variants of gradient boosting Deep Neural Networks (DNN) were successful in reproducing the results of non-machine learning methods of analysis on datasets used to discover the [[Higgs boson]].<ref>{{cite arXiv |eprint=2001.06033|last1=Lalchand|first1=Vidhi|title=Extracting more from boosted decision trees: A high energy physics case study|year=2020|class=stat.ML}}</ref> Gradient boosting decision tree was also applied in earth and geological studies – for example quality evaluation of sandstone reservoir.<ref>{{cite journal |last1=Ma |first1=Longfei |last2=Xiao |first2=Hanmin |last3=Tao |first3=Jingwei |last4=Zheng |first4=Taiyi |last5=Zhang |first5=Haiqin |title=An intelligent approach for reservoir quality evaluation in tight sandstone reservoir using gradient boosting decision tree algorithm |journal=Open Geosciences |date=1 January 2022 |volume=14 |issue=1 |pages=629–645 |doi=10.1515/geo-2022-0354 |bibcode=2022OGeo...14..354M |language=en |issn=2391-5447|doi-access=free }}</ref>
+
+== Names ==
+The method goes by a variety of names. Friedman introduced his regression technique as a "Gradient Boosting Machine" (GBM).<ref name="Friedman1999a" /> Mason, Baxter et al. described the generalized abstract class of algorithms as "functional gradient boosting".<ref name="MasonBaxterBartlettFrean1999a"/><ref name="MasonBaxterBartlettFrean1999b" /> Friedman et al. describe an advancement of  gradient boosted models as Multiple Additive Regression Trees (MART);<ref>{{cite journal |last1=Friedman |first1=Jerome |title=Multiple Additive Regression Trees with Application in Epidemiology |journal=Statistics in Medicine |volume=22 |issue=9 |pages=1365–1381 |doi=10.1002/sim.1501 |pmid=12704603 |year=2003 |s2cid=41965832 }}</ref> Elith et al. describe that approach as "Boosted Regression Trees" (BRT).<ref>{{cite journal |last1=Elith |first1=Jane |title=A working guide to boosted regression trees |journal=Journal of Animal Ecology |volume=77 |issue=4 |pages=802–813 |ref=Elith2008|doi=10.1111/j.1365-2656.2008.01390.x |pmid=18397250 |year=2008 |doi-access=free |bibcode=2008JAnEc..77..802E }}</ref>
+
+A popular open-source implementation for [[R (programming language)|R]] calls it a "Generalized Boosting Model",<ref name="gbm-vignette" /> however packages expanding this work use BRT.<ref>{{cite web |last1=Elith |first1=Jane |title=Boosted Regression Trees for ecological modeling |url=https://cran.r-project.org/web/packages/dismo/vignettes/brt.pdf |website=CRAN |access-date=31 August 2018 |archive-date=25 July 2020 |archive-url=https://web.archive.org/web/20200725061155/https://cran.r-project.org/web/packages/dismo/vignettes/brt.pdf |url-status=dead }}</ref> Yet another name is TreeNet, after an early commercial implementation from Salford System's Dan Steinberg, one of researchers who pioneered the use of tree-based methods.<ref>{{Cite web|url=https://www.kdnuggets.com/2013/06/exclusive-interview-dan-steinberg-salford-systems-data-mining-solutions-provider.html|title = Exclusive: Interview with Dan Steinberg, President of Salford Systems, Data Mining Pioneer| work=KDnuggets }}</ref>
+
+== Feature importance ranking ==
+Gradient boosting can be used for feature importance ranking, which is usually based on aggregating importance function of the base learners.<ref name=":1">{{Cite journal |last1=Piryonesi |first1=S. Madeh |last2=El-Diraby |first2=Tamer E. |date=2020-03-01 |title=Data Analytics in Asset Management: Cost-Effective Prediction of the Pavement Condition Index |url=https://ascelibrary.org/doi/abs/10.1061/%28ASCE%29IS.1943-555X.0000512 |journal=Journal of Infrastructure Systems |language=EN |volume=26 |issue=1 |pages=04019036 |doi=10.1061/(ASCE)IS.1943-555X.0000512 |issn=1943-555X |s2cid=213782055|url-access=subscription }}</ref> For example, if a gradient boosted trees algorithm is developed using entropy-based [[Decision tree learning|decision trees]], the ensemble algorithm ranks the importance of features based on entropy as well with the caveat that it is averaged out over all base learners.<ref name=":1" /><ref name="hastie" />  
+
+== Disadvantages ==
+While boosting can increase the accuracy of a base learner, such as a decision tree or linear regression, it sacrifices intelligibility and [[interpretability]].<ref name=":1" /><ref>{{Cite journal|last1=Wu|first1=Xindong|last2=Kumar|first2=Vipin|last3=Ross Quinlan|first3=J.|last4=Ghosh|first4=Joydeep|last5=Yang|first5=Qiang|last6=Motoda|first6=Hiroshi|last7=McLachlan|first7=Geoffrey J.|last8=Ng|first8=Angus|last9=Liu|first9=Bing|last10=Yu|first10=Philip S.|last11=Zhou|first11=Zhi-Hua|date=2008-01-01|title=Top 10 algorithms in data mining|journal=Knowledge and Information Systems|language=en|volume=14|issue=1|pages=1–37|doi=10.1007/s10115-007-0114-2|issn=0219-3116|s2cid=2367747|hdl=10983/15329|hdl-access=free}}</ref> For example, following the path that a decision tree takes to make its decision is trivial and self-explained, but following the paths of hundreds or thousands of trees is much harder. To achieve both performance and interpretability, some model compression techniques allow transforming an XGBoost into a single "born-again" decision tree that approximates the same decision function.<ref>{{cite journal |last1=Sagi |first1=Omer |last2=Rokach |first2=Lior |title=Approximating XGBoost with an interpretable decision tree. |journal=Information Sciences |date=2021 |volume=572 |issue=2021 |pages=522–542 |doi=10.1016/j.ins.2021.05.055}}</ref> Furthermore, its implementation may be more difficult due to the higher computational demand.
+
+== See also ==
+* [[AdaBoost]]
+* [[Random forest]]
+* [[Catboost]]
+* [[LightGBM]]
+* [[XGBoost]]
+* [[Decision tree learning]]
+
+== References ==
+{{Reflist}}
+
+== Further reading ==
+* {{cite book |first1=Bradley |last1=Boehmke |first2=Brandon |last2=Greenwell |chapter=Gradient Boosting |pages=221–245 |title=Hands-On Machine Learning with R |publisher=Chapman & Hall |year=2019 |isbn=978-1-138-49568-5 }}
+
+== External links==
+* [http://explained.ai/gradient-boosting/index.html How to explain gradient boosting]
+* [https://blog.datarobot.com/gradient-boosted-regression-trees Gradient Boosted Regression Trees]
+* [https://github.com/microsoft/LightGBM LightGBM]
+
+{{Artificial intelligence algorithms}}
+
+[[Category:Classification algorithms]]
+[[Category:Decision trees]]
+[[Category:Ensemble learning]]

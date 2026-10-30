@@ -1,0 +1,73 @@
+<!-- wikipedia: en
+     page: 56621706
+     title: Alternating conditional expectations
+     revision: 1336665985
+     timestamp: 2026-02-05T01:52:22Z
+     history: https://en.wikipedia.org/w/index.php?curid=56621706&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1336665985 -->
+{{Short description|Statistical algorithm}}
+
+In [[statistics]], '''Alternating Conditional Expectations (ACE)''' is a [[nonparametric statistics|nonparametric]] [[algorithm]] used in [[regression analysis]] to find the optimal transformations for both the outcome ([[response variable|response]]) variable and the input (predictor) variables.<ref>Breiman, L. and Friedman, J. H. [Estimating optimal transformations for multiple regression and correlation]. J. Am. Stat. Assoc., 80(391):580–598, September 1985b. {{PD-notice}}</ref> 
+
+For example, in a model that tries to predict house prices based on size and location, ACE helps by figuring out if, for instance, transforming the size (maybe taking the [[square root]] or [[logarithm]]) or the location (perhaps grouping locations into categories) would make the relationship easier to model and lead to better predictions. The algorithm iteratively adjusts these transformations until it finds the ones that maximize the [[predictive power]] of the regression model.
+
+==Introduction==
+In [[statistics]], a nonlinear transformation of variables is commonly used in practice in regression problems. ACE is one of the methods to find those transformations that produce the best fitting [[additive model]]. Knowledge of such transformations aids in the interpretation and understanding of the relationship between the response and predictors.
+
+ACE transforms the response variable <math>Y</math> and its predictor variables, <math>X_i</math> to minimize the [[Fraction of variance unexplained|fraction of variance not explained]]. The transformation is nonlinear and is iteratively obtained from data.
+
+== Mathematical description ==
+Let <math>Y,X_1,\dots,X_p</math> be [[Random variable|random variables]]. We use <math>X_1,\dots,X_p</math> to predict <math>Y</math>. Suppose <math>\theta(Y),\varphi_1(X_1),\dots,\varphi_p(X_p)</math> are zero-mean functions and with these [[Transformation (function)|transformation functions]], the fraction of variance of <math>\theta(Y)</math> not explained is
+: <math> e^2(\theta,\varphi_1,\dots,\varphi_p)=\frac{\mathbb{E}\left[\theta(Y)-\sum_{i=1}^p \varphi_i(X_i)\right]^2}{\mathbb{E}[\theta^2(Y)]}</math>
+Generally, the optimal transformations that minimize the unexplained part are difficult to compute directly. As an alternative, ACE is an [[iterative method]] to calculate the optimal transformations. The procedure of ACE has the following steps:
+# Hold <math>\varphi_1(X_1),\dots,\varphi_p(X_p)</math> fixed, minimizing <math>e^2</math><!--
+ -->gives <math>\theta_1(Y)=\mathbb{E}\left[\sum_{i=1}^p \varphi_i(X_i)\Bigg|Y\right]</math>
+# Normalize <math>\theta_1(Y)</math> to unit variance.
+# For each <math>k</math>, fix other <math>\varphi_i(X_i)</math> and <math>\theta(Y)</math>, minimizing <math>e^2</math> and the solution is<!--
+ -->:: <math>\tilde{\varphi}_k = \mathbb{E}\left[\theta(Y)-\sum_{i\neq k} \varphi_i(X_i) \Bigg| X_k\right]</math>
+# Iterate the above three steps until <math>e^2</math> is within error tolerance.
+
+==Bivariate case==
+The optimal transformation <math>\theta^*(Y), \varphi^*(X)</math> for <math>p=1</math> satisfies
+: <math> \rho^*(X, Y) = \rho^*(\theta^*, \varphi^*) = \max_{\theta, \varphi} \rho(\theta(Y), \varphi(X))</math>
+where <math>\rho</math> is [[Pearson correlation coefficient]]. <math> \rho^*(X, Y)</math> is known as the maximal correlation between  <math>X</math> and <math>Y</math>. It can be used as a general measure of dependence.
+
+In the bivariate case, the ACE algorithm can also be regarded as a method for estimating the maximal correlation between two variables.
+
+== Software implementation ==
+The algorithm and software were developed as part of [[Project_Orion_(nuclear_propulsion)|Project Orion]].<ref>Breiman, L., Friedman, J., 1982. Estimating Optimal Transformations for Multiple Regression and Correlation. Technical Report 9. University of California, Berkeley, Dept of Statistics.</ref> The [[R language]] has a package <kbd>acepack</kbd><ref name="CRAN">{{cite web |url=https://cran.r-project.org/package=acepack |title= 	DOI:10.32614/CRAN.package.acepack}}</ref> which implements the ACE algorithm. The following example demonstrates its usage:
+<syntaxhighlight lang="r">
+library(acepack)
+TWOPI <- 8 * atan(1)
+x <- runif(200, 0, TWOPI)
+y <- exp(sin(x) + rnorm(200)/2)
+a <- ace(x, y)
+par(mfrow=c(3,1))
+plot(a$y, a$ty)  # view the response transformation
+plot(a$x, a$tx)  # view the carrier transformation
+plot(a$tx, a$ty) # examine the linearity of the fitted model
+</syntaxhighlight>
+
+== Discussion ==
+The ACE algorithm provides a fully automated method for estimating optimal transformations in [[Regression analysis|multiple regression]]. It also provides a method for estimating the maximal correlation between random variables. Since the process of iteration usually terminates in a limited number of runs, the [[time complexity]] of the algorithm is <math>O(np)</math> where <math>n</math> is the number of samples. The algorithm is reasonably computer efficient.
+
+A strong advantage of the ACE procedure is the ability to incorporate variables of quite different types in terms of the set of values they can assume. The transformation functions <math>\theta(y), \varphi_i(x_i)</math> assume values on the [[Number line|real line]]. Their arguments can, however, assume values on any set. For example, ordered real and unordered [[Categorical variable|categorical variables]] can be incorporated in the same regression equation. Variables of mixed type are admissible.
+
+As a tool for data analysis, the ACE procedure provides graphical output to indicate a need for transformations as well as to guide in their choice. If a particular plot suggests a familiar functional form for a transformation, then the data can be pre-transformed using this functional form and the ACE algorithm can be rerun.
+
+Wang suggests that the [[Power transform|Box-Cox transform]], a parametric approach, is a special case of ACE.<ref>Wang, D., Murphy, M. 2005. Identifying Nonlinear Relationships in Regression using the ACE Algorithm. Journal of Applied Statistics. 32(3) 243-258.</ref>
+
+== Limitations ==
+
+As with any regression procedure, a high degree of association between predictor variables can sometimes cause the individual transformation estimates to be highly variable, even though the complete model is reasonably stable. When this is suspected, running the algorithm on randomly selected subsets of the data, or on [[Bootstrapping (statistics)|bootstrap samples]] can assist in assessing the variability.
+
+ACE has shown some sensitivity to the order of the predictor variables and extreme outliers.<ref>De Veaux, R. 1990. Finding Transformations for Regression Using the ACE Algorithm. Sociological Methods and Research 18(2-3) 327-359.</ref> Long tailed distributions can lead to the above mentioned instability. 
+
+In real world applications one can never be sure that all relevant variables are observed and ACE will always recommend a transform. Thus the recommended transforms can be symptoms of this problem rather than what ACE is trying to solve.<ref>Pregibon, D., Vardi, Y. 1985. Estimating Optimal Transformations for Multiple Regression and Correlation: Comment. Journal of the American Statistical Association. 80(391) 598-601</ref>
+
+== References ==
+{{reflist}}
+* [[File:PD-icon.svg|15px|link=|alt=]] ''This draft contains quotations from [https://web.archive.org/web/20200327175936/http://apps.dtic.mil/dtic/tr/fulltext/u2/a123908.pdf Estimating Optimal Transformations For Multiple Regression And Correlation By Leo Breiman And Jerome Freidman. Technical Report No. 9 July 1982], which is in the public domain.''
+
+[[Category:Nonparametric regression]]

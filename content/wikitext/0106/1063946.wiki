@@ -1,0 +1,68 @@
+<!-- wikipedia: en
+     page: 1063946
+     title: Occurs check
+     revision: 1375688853
+     timestamp: 2026-09-19T10:44:21Z
+     history: https://en.wikipedia.org/w/index.php?curid=1063946&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375688853 -->
+{{Short description|Algorithm component in computer science}}
+In [[computer science]], the '''occurs check''' is a part of [[algorithm]]s for syntactic [[unification (computer science)|unification]].  It causes unification of a [[First-order logic#Terms|variable]] ''V'' and a structure ''S'' to fail if ''S'' contains ''V''.
+
+==Application in theorem proving==
+
+In [[theorem proving]], unification without the occurs check can lead to [[soundness|unsound]] [[inference]]. For example, the [[Prolog]] goal
+<math>X = f(X)</math>
+will succeed, binding ''X'' to a cyclic structure which has no counterpart in the [[Herbrand universe]].
+As another example,<ref>{{cite book| author=David A. Duffy| title=Principles of Automated Theorem Proving| year=1991| publisher=Wiley}}; here: p.143</ref>
+without occurs-check, a [[Resolution (logic)|resolution proof]] can be found for the non-theorem<ref>Informally, and taking <math>p(x,y)</math> to mean e.g. "''x loves y''", the formula reads "''If everybody loves somebody, then a single person must exist that is loved by everyone.''"</ref>
+<math>(\forall x \exists y. p(x,y)) \rightarrow (\exists y \forall x. p(x,y))</math>: the negation of that formula has the [[conjunctive normal form]] <math>p(X,f(X)) \land \lnot p(g(Y),Y)</math>, with <math>f</math> and <math>g</math> denoting the [[Skolem function]] for the first and second existential quantifier, respectively. Without occurs check, the literals <math>p(X,f(X))</math> and <math>p(g(Y),Y)</math> are unifiable, producing the refuting empty clause.
+
+[[File:Example for syntactic unification without occurs check leading to infinite tree svg.svg|thumb|upright=0.75|Cycle by omitted occurs check]]
+
+==Rational tree unification==
+
+Prolog implementations usually omit the occurs check for reasons of efficiency, which can lead to circular data structures and looping. 
+By not performing the occurs check, the worst case complexity of unifying a term
+<math>t_1</math> with term <math>t_2</math>
+is reduced in many cases from
+<math>O(\text{size}(t_1)+\text{size}(t_2))</math>
+to
+<math>O(\text{min}(\text{size}(t_1),\text{size}(t_2)))</math>;
+in the frequent case of variable-term unification, runtime shrinks to 
+<math>O(1)</math>.
+{{refn|group=nb|Some Prolog manuals state that the complexity of unification without occurs check is 
+<math>O(\text{min}(\text{size}(t_1),\text{size}(t_2)))</math> (in all cases).<ref>{{cite tech report|author1=F. Pereira |author2=D. Warren |author3=D. Bowen |author4=L. Byrd |author5=L. Pereira | title=C-Prolog's User's Manual Version 1.2| year=1983| institution=SRI International|URL=http://www.cs.duke.edu/csl/docs/cprolog.html| access-date=21 June 2013}}</ref>
+This is incorrect, as it would imply comparing arbitrary ground terms in constant time (by unifying <math>eq(t_1,t_2)</math> with <math>eq(X,X)</math>).}}
+
+Implementations, based on Colmerauer's Prolog II,
+<ref>{{cite book| author=A. Colmerauer| author-link=Alain Colmerauer| title=Prolog and Infinite Trees| year=1982| publisher=Academic Press|editor1=K.L. Clark |editor2=S.-A. Tarnlund }}</ref>
+<ref>{{cite journal|author1=M.H. van Emden |author2=J.W. Lloyd | title=A Logical Reconstruction of Prolog II| journal=Journal of Logic Programming| year=1984| volume=2| pages=143–149}}</ref>
+<ref>{{cite journal|author1=Joxan Jaffar |author2=Peter J. Stuckey | title=Semantics of Infinite Tree Logic Programming| journal=Theoretical Computer Science| year=1986| volume=46| pages=141–158| doi=10.1016/0304-3975(86)90027-7| doi-access=free}}</ref>
+<ref>{{cite journal| author=B. Courcelle| author-link=Bruno Courcelle| title=Fundamental Properties of Infinite Trees| journal=Theoretical Computer Science| year=1983| volume=25| issue=2| pages=95–169| doi=10.1016/0304-3975(83)90059-2| doi-access=free}}</ref>
+use rational tree unification to avoid looping. However it is difficult to keep the complexity time linear in the presence of cyclic terms. Examples where Colmerauers algorithm becomes quadratic <ref>{{cite conference|author1=Albertro Martelli | author2=Gianfranco Rossi | title=Efficient Unification with Infinite Terms in Logic Programming| conference=The International Conference on Fifth Generation Computer Systems| year=1984| url=https://www.ueda.info.waseda.ac.jp/AITEC_ICOT_ARCHIVES/ICOT/Museum/FGCS/FGCS84en-proc/84eFLP2-2.pdf}}</ref> can be readily constructed.
+
+Jaffar’s 1984 work proposed a refinement based on union–find techniques,<ref>{{citation|author=Joxan Jaffar  | title=Efficient Unification over Infinite Terms | journal=New Generation Computing| year=1984}}</ref> effectively reducing the [[worst-case complexity]] to near-linear time. Modern systems — including SWI-Prolog, [[SICStus Prolog]], Scryer Prolog, and Ciao Prolog — appear to implement variants of this approach.
+
+See image for an example run of the unification algorithm given in [[Unification (computer science)#A unification algorithm]], trying to solve the goal <math>cons(x,y) \stackrel{?}{=} cons(1,cons(x,cons(2,y)))</math>, however without the ''occurs check rule'' (named "check" there); applying rule "eliminate" instead leads to a cyclic graph (i.e. an infinite term) in the last step.
+
+==Sound unification==
+
+ISO Prolog implementations have the built-in predicate ''unify_with_occurs_check/2'' for sound unification but are free to use unsound or even looping algorithms when unification is invoked otherwise, provided the algorithm works correctly for all cases that are "not subject to occurs-check" (NSTO).<ref>7.3.4 Normal unification in Prolog of ISO/IEC 13211-1:1995.</ref> The built-in ''acyclic_term/1'' serves to check the finiteness of terms.
+
+Implementations offering sound unification for all unifications are [https://staff.itee.uq.edu.au/pjr/HomePages/QuPrologHome.html Qu-Prolog], [https://github.com/eyereasoner/eyeprolog EyeProlog], and [[Strawberry Prolog]] and optionally, via a runtime flag: [[XSB]], [[SWI-Prolog]], [http://ctp.di.fct.unl.pt/~amd/cxprolog/ CxProlog], [https://web.liminal.cafe/~byakuren/flowlog/ Flowlog], [https://github.com/gusbro/Shumway Shumway Prolog], [http://tau-prolog.org/ Tau Prolog], [https://github.com/trealla-prolog/trealla Trealla Prolog] and [https://github.com/mthom/scryer-prolog/ Scryer Prolog]. A variety
+<ref>{{cite journal|author1=Ritu Chadha |author2=David A. Plaisted | title=Correctness of unification without occur check in prolog| journal=The Journal of Logic Programming| year=1994| volume=18| issue=2| pages=99–122| doi=10.1016/0743-1066(94)90048-5| doi-access=free}}</ref><ref>{{cite conference|author1=Thomas Prokosch |author2=François Bry| title=Unification on the Run| conference=The 34th International Workshop on Unification| year=2020| pages=13:1–13:5| url=http://www3.risc.jku.at/publications/download/risc_6129/proceedings-UNIF2020.pdf}}</ref> of optimizations can render sound unification feasible for common cases.
+
+==See also==
+{{cite journal| author=W.P. Weijland| title=Semantics for Logic Programs without Occur Check| journal=Theoretical Computer Science| year=1990| volume=71| pages=155–174| doi=10.1016/0304-3975(90)90194-m| doi-access=free}}
+
+==Notes==
+{{reflist|group=nb}}
+
+==References==
+{{reflist}}
+
+[[Category:Automated theorem proving]]
+[[Category:Logic programming]]
+[[Category:Programming constructs]]
+[[Category:Unification (computer science)]]

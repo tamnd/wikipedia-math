@@ -1,0 +1,57 @@
+<!-- wikipedia: en
+     page: 6507326
+     title: SYN cookies
+     revision: 1325858186
+     timestamp: 2025-12-05T16:32:36Z
+     history: https://en.wikipedia.org/w/index.php?curid=6507326&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1325858186 -->
+{{Short description|Technique used to resist SYN flood attacks}}
+'''SYN cookie''' is a technique used to resist [[SYN flood]] attacks. The technique's primary inventor [[Daniel J. Bernstein]] defines SYN cookies as "particular choices of initial [[Transmission Control Protocol|TCP]] sequence numbers by TCP servers." In particular, the use of SYN cookies allows a server to avoid dropping connections when the SYN queue fills up. Instead of storing additional connections, a SYN queue entry is encoded into the sequence number sent in the [[SYN+ACK]] response. If the server then receives a subsequent ACK response from the client with the incremented sequence number, the server is able to reconstruct the SYN queue entry using information encoded in the TCP sequence number and proceed as usual with the connection.
+
+==Implementation==
+{{Unreferenced section|date=October 2021}}
+To initiate a TCP connection, the client sends a TCP SYN packet to the server. The server responds with a TCP SYN+ACK packet, which includes a sequence number used by TCP to reassemble the data stream. According to the TCP specification, the initial sequence number sent by an endpoint can be any value chosen by that endpoint. Since this sequence number is chosen by the sender, returned by the recipient, and has no predefined internal structure, it can be overloaded to carry additional data. The following outlines one possible implementation, though there is no public standard, so the order, length, and semantics of the fields may vary between SYN cookie implementations.
+
+SYN cookies are initial sequence numbers that are carefully constructed according to the following rules:
+
+* let '''t''' be a slowly incrementing timestamp (typically {{mono|[[time()]]}} [[logical shift|logically right-shifted]] 6 positions, which gives a resolution of 64 seconds)
+* let '''m''' be the [[maximum segment size]] (MSS) value that the server would have stored in the SYN queue entry
+* let '''s''' be the result of a [[cryptographic hash function]] computed over the server IP address and port number, the client IP address and port number, and the value '''t'''. The returned value '''s''' must be a 24-bit value.
+
+The initial TCP sequence number, i.e. the ''SYN cookie'', is computed as follows:
+* Top 5 bits: '''t''' [[Modulo operation|mod]] 32
+* Middle 3 bits: an encoded value representing '''m'''
+* Bottom 24 bits: '''s''' <ref name="syncookies-archive">[https://cr.yp.to/syncookies.html], cr.yp.to </ref>
+{{Unreferenced section|date=October 2021}}
+''(Note: since '''m''' must be encoded using 3 bits, the server is restricted to sending up to 8 unique values for '''m''' when SYN cookies are in use.)''
+
+When a client sends back a TCP ACK packet to the server in response to the server's SYN+ACK packet, the client must (according to the TCP spec) use ''n+1'' in the packet's ''Acknowledgement number'', where ''n'' is the initial sequence number sent by the server. The server then subtracts 1 from the acknowledgement number to reveal the SYN cookie sent to the client.
+
+The server then performs the following operations.
+* Checks the value '''t''' against the current time to see if the connection has expired.
+* Recomputes '''s''' to determine whether this is, indeed, a valid SYN cookie.
+* Decodes the value '''m''' from the 3-bit encoding in the SYN cookie, which it then can use to reconstruct the SYN queue entry.
+From this point forward, the connection proceeds as normal.
+
+==Security considerations==
+Simple [[firewall (computing)|firewalls]] that are configured to allow all ''outgoing'' connections but to restrict which ports an ''incoming'' connection can reach (for example, allow incoming connections to a Web server on port 80 but restrict all other ports), work by blocking only incoming SYN requests to unwanted ports. If SYN cookies are in operation, care should be taken to ensure an attacker is not able to bypass such a firewall by forging ACKs instead, trying random sequence numbers until one is accepted. SYN cookies should be switched on and off on a ''per-port'' basis, so that SYN cookies being enabled on a public port does not cause them to be recognised on a non-public port. The original [[Linux kernel]] implementation misunderstood this part of Bernstein's description and used a single [[global variable]] to switch on SYN cookies for all ports;<ref>{{cite web |url=http://nms.csail.mit.edu/software/CM/linux-2.2.9/net/ipv4/syncookies.c |title=Syncookies implementation for the Linux kernel (version 2.2.9) |last=Kleen |first=Andi |date=May 31, 1999 |quote=static unsigned long tcp_lastsynq_overflow}}</ref> this was pointed out by a research student<ref>{{cite web |url=http://oss.sgi.com/archives/netdev/2001-10/msg00423.html |title=Linux networking: Security bug in SYN cookies |last=Brown |first=Silas S. |date=Oct 15, 2001 |archive-url=https://web.archive.org/web/20171014010815/http://oss.sgi.com/archives/netdev/2001-10/msg00423.html |archive-date=2017-10-14 |quote=The solution (as pointed out by D. J. Bernstein in a private communication in response to the above) is to make the variable tcp_lastsynq_overflow local to each listening port, instead of being a global.}}</ref> and subsequently fixed in {{CVE|2001-0851}}.<ref>{{cite web |url=http://www.iss.net/security_center/reference/vuln/linux-syncookie-bypass-filter.htm |title=Linux kernel using syn cookies could allow an attacker to bypass filtering |date=2001 |accessdate=2013-03-17 |url-status=dead |archiveurl=https://archive.today/20130413192449/http://www.iss.net/security_center/reference/vuln/linux-syncookie-bypass-filter.htm |archivedate=2013-04-13 }}</ref>
+
+==History==
+The technique was created by [[Daniel J. Bernstein]] and Eric Schenk in September 1996. The first implementation (for [[SunOS]]) was released by Jeff Weisberg a month later, and Eric Schenk released his [[Linux]] implementation in February 1997.  [[FreeBSD]] implements syncookies since FreeBSD 4.5 (January 2002).<ref>{{Cite web|url=http://man.freebsd.org/syncookies|title=Syncookies}}</ref>
+
+== See also ==
+* [[SYN flood]]
+* [[IP Spoofing]]
+* [[TCP Cookie Transactions]]
+
+== References ==
+<references/>
+
+==External links==
+* [http://cr.yp.to/syncookies.html D. J. Bernstein's own explanation of SYN cookies]
+* {{IETF RFC|4987}} Appendix A
+* [http://nms.csail.mit.edu/software/CM/linux-2.2.9/net/ipv4/syncookies.c Outdated syncookies implementation for Linux kernel]
+
+[[Category:Computer network security]]
+[[Category:Transmission Control Protocol]]

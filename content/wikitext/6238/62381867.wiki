@@ -1,0 +1,64 @@
+<!-- wikipedia: en
+     page: 62381867
+     title: ALTS
+     revision: 1370443232
+     timestamp: 2026-08-21T03:52:03Z
+     history: https://en.wikipedia.org/w/index.php?curid=62381867&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1370443232 -->
+{{short description|Authentication and encryption system}}
+{{For|the medical training program|Advanced trauma life support}}
+{{Third-party|date=April 2024}}
+'''Application Layer Transport Security''' ('''ALTS''') is a [[Google]]-developed [[Authentication protocol|authentication]] and transport [[encryption]] system used for securing [[remote procedure call]] (RPC) within Google machines.<ref>{{Cite web |title=ALTS authentication |url=https://grpc.io/docs/languages/go/alts/ |access-date=2024-04-30 |website=gRPC |language=en}}</ref> Google started its development in 2007, as a tailored modification of [[Transport Layer Security|TLS]].<ref name="wp">{{cite web|url=https://cloud.google.com/security/encryption-in-transit/application-layer-transport-security/|title=Application Layer Transport Security|accessdate=18 November 2023|website=Google Cloud}}</ref>
+
+==Background==
+ALTS, similar to TLS, was designed specifically for Google’s data centers and relies on two protocols, Handshake and Record.<ref>{{Cite web |first=Kelly |last=Sheridan|date=2023-12-13 |title=Google Sheds Light on Data Encryption Practices |url=https://www.darkreading.com/cloud/google-sheds-light-on-data-encryption-practices |access-date=2023-12-11 |website=Dark Reading |language=en}}</ref> Google began developing ALTS in 2007 in order to create a security system solution for the company’s infrastructure.<ref>{{Cite web |title=Google Details How It Protects Data Within Its Infrastructure {{!}} SecurityWeek.Com |url=https://www.securityweek.com/google-details-how-it-protects-data-within-its-infrastructure |access-date=2023-12-11 |website=www.securityweek.com|date=14 December 2023 }}</ref>
+
+The ALTS whitepaper<ref name="wp" /> was published in December 2017. At that time the dominant [[Application layer]] protocols were SSL and TLS 1.1 (TLS 1.2 was only published as an [[Request for Comments|RFC]] in 2008<ref>{{cite journal|url=https://tools.ietf.org/html/rfc5246|title=The Transport Layer Security (TLS) Protocol Version 1.2|accessdate=18 November 2023|website=tools.ietf.org|date=August 2023|last1=Rescorla|first1=Eric|last2=Dierks|first2=Tim}}</ref>), those supported many legacy algorithms and had poor security standards. As [[Google]] was in full control over the machines that needed secure transport of RPCs, deployment of systems was relatively easy, and so Google developers could afford designing their own system from scratch.
+
+Another requirement that deemed a new system necessary is different [[computational trust|trust]] models:
+in [[Transport Layer Security|TLS]], the server side is committed to its own [[domain name]] (and corresponding naming scheme), while Google needed the same identity (i.e. RPC) to be used with multiple naming schemes, in order to simplify microservice replication, [[Load balancing (computing)|load balancing]] and rescheduling between hosts.
+
+==Details==
+===Handshake protocol===
+The ALTS [[Handshake (computing)|handshake]] protocol is based on authenticated [[Diffie–Hellman key exchange]] scheme, and supports both [[perfect forward secrecy]] (access to current keys does not compromise future security) and session resumption (noticeable speedups in the protocol after the first session between the parties).
+
+Unlike TLS, in ALTS both parties — server and client — have a [[Public key certificate|certificate]] proving their respective identities. The certificate chains to a trusted signing service verification key, with the leaf being an [[Elliptic-curve Diffie–Hellman]] key, that is eventually used for key exchange. The [[elliptic curve]] used in the key exchange is [[Curve25519]].<ref>{{cite web|url=https://cloud.google.com/security/encryption-in-transit/#service_integrity_encryption|title=Service-to-service authentication, integrity, and encryption § ALTS Protocol|accessdate=18 November 2023|website=Google Cloud}}</ref>
+
+The handshake protocol consists of four messages, sent in plaintext:
+* ''ClientInit'', initiated by the client, and contains the client's certificate, list of available [[cipher suite]]s, and a session resumption attempt;
+* ''ServerInit'', sent by the server as a response, and contains its own certificate, chosen cipher suite, and optionally an encrypted resumption ticket;
+* ''ServerFinished'', sent by the server (concatenated to the previous message in ALTS default implementation), and contains a handshake authenticator, i.e. [[HMAC]] over a known bitstring using the calculated session key;
+* ''ClientFinished'', sent by the client, and contains a handshake authenticator, similarly to the one in ''ServerFinished''.
+
+Once both parties computed the session key (''record protocol'' in the whitepaper), they can start encrypting traffic with the symmetric encryption algorithm 128-bit [[Advanced Encryption Standard|AES]], using mostly  [[Galois/Counter Mode|GCM]] as its [[Unblock cipher mode of operation|mode of operation]]. On older machines, a Google developed VCM<ref>{{cite web |last1=Knapp |first1=Ed |title=AES-VCM, an AES-GCM Construction Using an Integer-based Universal Hash Function |url=https://ai.google/research/pubs/pub46369 |date=2023|accessdate=18 November 2023|website=ai.google}}</ref> was used.<ref name="enctransit">{{cite web|url=https://cloud.google.com/security/encryption-in-transit/|title=Encryption in Transit in Google Cloud|accessdate=18 November 2023|website=Google Cloud}}</ref>
+
+The handshake protocol was verified using the [[ProVerif]] formal verification tool.<ref>{{cite web|url=https://prosecco.gforge.inria.fr/personal/bblanche/proverif/|title=ProVerif: Cryptographic protocol verifier in the formal model|accessdate=18 November 2023|website=prosecco.gforge.inria.fr}}</ref>
+
+===Session resumption===
+In order to avoid repeating computationally expensive operations, ALTS supports session resumption.
+The resumption tickets are created by either the server or the client, and may be used in the handshake protocol, if both parties hold the same resumption ticket, indexed by a ''resumption identifier''.
+The ''resumption secret'' is used to derive the next session key, authenticator and encapsulated (independent) resumption ticket/identifier.
+
+===Perfect forward secrecy===
+[[Perfect forward secrecy]] (PFS) is not enabled by default in ALTS; however, it is supported. Instead of using an inherent PFS algorithm, ALTS achieves PFS by frequently rotating the certificates, which have a short lifespan ( 20, or 48 minutes; see <ref name="enctransit" />). Moreover, if PFS is enabled, it is also enabled for session resumption, by deriving the encryption keys from the resumption ticket using a [[pseudorandom function]].
+
+==See also==
+* [[Transport Layer Security]]
+* [[QUIC]]
+* [[Google Cloud Platform]]
+
+== External links ==
+
+* [https://cloud.google.com/docs/security/encryption-in-transit/application-layer-transport-security ''ALTS'' White Paper]
+
+==References==
+{{Reflist}}
+
+{{Google LLC}}
+
+[[Category:Google]]
+[[Category:Remote procedure call]]
+[[Category:Cryptographic protocols]]
+[[Category:Application layer protocols]]
+[[Category:Transport Layer Security]]

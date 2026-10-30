@@ -1,0 +1,123 @@
+<!-- wikipedia: en
+     page: 53230626
+     title: Mask generation function
+     revision: 1346908491
+     timestamp: 2026-04-03T16:04:28Z
+     history: https://en.wikipedia.org/w/index.php?curid=53230626&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1346908491 -->
+{{Short description|Cryptographic tool}}
+{{Use American English|date = April 2019}}
+A '''mask generation function''' ('''MGF''') is a [[cryptographic primitive]] similar to a [[cryptographic hash function]] except that while a hash function's output has a fixed size, a MGF supports output of a variable length. In this respect, a MGF can be viewed as a [[extendable-output function]] (XOF): it can accept input of any length and process it to produce output of any length. Mask generation functions are completely deterministic: for any given input and any desired output length the output is always the same.
+
+== Definition ==
+
+<blockquote>
+A mask generation function takes an octet string of variable length and a desired output length as input, and outputs an octet string of the desired length. There may be restrictions on the length of the input and output octet strings, but such bounds are generally very large. Mask generation functions are deterministic; the octet string output is completely determined by the input octet string. The output of a mask generation function should be pseudorandom, that is, if the seed to the function is unknown, it should be infeasible to distinguish the output from a truly random string.<ref name="rsa">{{cite web |url=https://www.ietf.org/rfc/rfc2437.txt |title=RFC 2437 PKCS #1 |author=RSA Laboratories}}</ref>
+</blockquote>
+
+== Applications ==
+
+Mask generation functions, as generalizations of hash functions, are useful wherever hash functions are. However, use of a MGF is desirable in cases where a fixed-size hash would be inadequate.  Examples include generating [[Padding (cryptography)|padding]], producing [[one-time pad]]s or [[keystream|keystreams]] in [[Symmetric-key_algorithm|symmetric-key encryption]], and yielding outputs for [[pseudorandom number generator]]s.
+
+=== Padding schemes ===
+
+Mask generation functions were first proposed as part of the specification for padding in the [[Optimal_asymmetric_encryption_padding|RSA-OAEP]] algorithm. The OAEP algorithm required a cryptographic hash function that could generate an output equal in size to a "data block" whose length was proportional to arbitrarily sized input message.<ref name="rsa"/><ref name="sp-800-56b">{{cite web |author1=Elaine Barker |author2=Lily Chen |author3=Allen Roginsky |author4=Apostol Vassilev |author5=Richard Davis |author6=Scott Simon |title=Recommendation for Pair-Wise Key Establishment Using Integer Factorization Cryptography |url=https://csrc.nist.gov/pubs/sp/800/56/b/r2/final |website=csrc.nist.gov |publisher=National Institute of Standards and Technology, Computer Security Resource Center |access-date=6 March 2026 |page=67 |doi=10.6028/NIST.SP.800-56Br2 |date=March 2019}}</ref>
+
+=== Random number generators ===
+
+NIST Special Publication 800-90A<ref>{{cite journal |url=http://csrc.nist.gov/publications/nistpubs/800-90A/SP800-90A.pdf |title=Recommendation for Random Number Generation Using Deterministic Random Bit Generators |author=National Institute of Standards and Technology|year=2012 |doi=10.6028/NIST.SP.800-90A }}</ref> defines a class of cryptographically secure random number generators, one of which is the "Hash&nbsp;DRBG", which uses a hash function with a counter to produce a requested sequence of random bits equal in size to the requested number of random bits.
+
+== Examples ==
+
+Perhaps the most common and straightforward mechanism to build a MGF is to iteratively apply a hash function together with an incrementing counter value. The counter may be incremented indefinitely to yield new output blocks until a sufficient amount of output is collected. This is the approach used in MGF1.
+
+=== MGF1 ===
+
+MGF1 is a mask generation function defined in the Public Key [[Cryptography]] Standard #1 published by RSA Laboratories.<ref name="rsa"/> It is approved by the US [[National Institute of Standards and Technology]] for use in cryptography modules which meet [[Federal Information Processing Standards]].<ref name="fips-186-5">{{cite web |title=FIPS 186-5: Digital Signature Standard (DSS) |url=https://csrc.nist.gov/pubs/fips/186-5/final |website=csrc.nist.gov |publisher=National Institute of Standards and Technology |access-date=6 March 2026 |page=19 |doi=10.6028/NIST.FIPS.186-5 |date=3 February 2023}}</ref>
+<blockquote>
+====Options====
+<math>\mathsf{Hash}</math>
+:   hash function (<math>\mathsf{hLen}</math> denotes the length in octets of the hash function output)
+
+====Input====
+<math>Z</math>
+:seed from which mask is generated, an octet string
+<math>l</math>
+:intended length in octets of the mask, at most <math>2^{32}(\mathsf{hLen})</math>
+
+====Output====
+<math>\mathsf{mask}</math>
+:mask, an octet string of length <math>l</math>; or "mask too long"
+
+====Steps====
+{{Ordered list | list_style_type=decimal
+|   If <math>l > 2^{32}(\mathsf{hLen})</math>, output "mask too long" and stop.
+|   Let <math>T</math>  be the empty octet string.
+|   For <math>\mathsf{counter}</math> from <math>0</math> to <math>\left\lceil{\tfrac{l}{\mathsf{hLen}}}\right\rceil-1</math>, do the following:
+    {{Ordered list | list_style_type=lower-alpha
+    |   Convert <math>\mathsf{counter}</math> to an octet string <math>C</math> of length <math>4</math> with the primitive <math>\mathsf{I2OSP}</math>:
+:   <math>C = \mathsf{I2OSP} (\mathsf{counter}, 4)</math>
+    |   Concatenate the hash of the seed <math>Z</math> and <math>C</math> to the octet string <math>T</math>:
+:   <math>T =   T \shortparallel \mathsf{Hash} (Z \shortparallel C)</math>
+}}
+|  Output the leading <math>l</math> octets of <math>T</math> as the octet string mask.
+}}
+</blockquote>
+
+=== Example code ===
+
+Below is Python code implementing MGF1:
+
+<syntaxhighlight lang="python">
+import hashlib
+
+def mgf1(seed: bytes, length: int, hash_func=hashlib.sha1) -> bytes:
+    """Mask generation function."""
+    hLen = hash_func().digest_size
+    # https://www.ietf.org/rfc/rfc2437.txt
+    # 1. If l > 2^32(hLen), output "mask too long" and stop.
+    if length > (hLen << 32):
+        raise ValueError("mask too long")
+    # 2. Let T be the empty octet string.
+    T = b""
+    # 3. For counter from 0 to \lceil{l / hLen}\rceil-1, do the following:
+    # Note: \lceil{l / hLen}\rceil-1 is the number of iterations needed,
+    #       but it's easier to check if we have reached the desired length.
+    counter = 0
+    while len(T) < length:
+        # a. Convert counter to an octet string C of length 4 with the primitive I2OSP: C = I2OSP (counter, 4)
+        C = int.to_bytes(counter, 4, "big")
+        # b. Concatenate the hash of the seed Z and C to the octet string T: T = T || Hash (Z || C)
+        T += hash_func(seed + C).digest()
+        counter += 1
+    # 4. Output the leading l octets of T as the octet string mask.
+    return T[:length]
+</syntaxhighlight>
+
+Example outputs of MGF1:
+
+<syntaxhighlight lang="pycon">
+Python 3.10.4 (main, Apr 16 2022, 16:28:41) [GCC 8.3.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> from mgf1 import mgf1
+>>> from hashlib import sha256
+>>> mgf1(b"foo", 3).hex()
+'1ac907'
+>>> mgf1(b"foo", 5).hex()
+'1ac9075cd4'
+>>> mgf1(b"bar", 5).hex()
+'bc0c655e01'
+>>> mgf1(b"bar", 50).hex()
+'bc0c655e016bc2931d85a2e675181adcef7f581f76df2739da74faac41627be2f7f415c89e983fd0ce80ced9878641cb4876'
+>>> mgf1(b"bar", 50, sha256).hex()
+'382576a7841021cc28fc4c0948753fb8312090cea942ea4c4e735d10dc724b155f9f6069f289d61daca0cb814502ef04eae1'
+</syntaxhighlight>
+
+== References ==
+{{reflist}}
+
+[[Category:Articles with example Python (programming language) code]]
+[[Category:Cryptographic primitives]]
+[[Category:Cryptographic hash functions]]
+[[Category:Theory of cryptography]]

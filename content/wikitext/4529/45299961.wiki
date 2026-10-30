@@ -1,0 +1,77 @@
+<!-- wikipedia: en
+     page: 45299961
+     title: Distance oracle
+     revision: 1373907932
+     timestamp: 2026-09-08T17:36:52Z
+     history: https://en.wikipedia.org/w/index.php?curid=45299961&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373907932 -->
+In [[computing]], a '''distance oracle''' ('''DO''') is a [[data structure]] for calculating distances between vertices in a [[Graph (data structure)|graph]].
+
+== Introduction ==
+
+Let ''G''(''V'',''E'') be an undirected, weighted graph, with ''n''&nbsp;=&nbsp;|''V''| nodes and ''m''&nbsp;=&nbsp;|''E''| edges. We would like to answer queries of the form "what is the distance between the nodes ''s'' and&nbsp;''t''?".
+
+One way to do this is just run the [[Dijkstra algorithm]]. This takes time <math>O(m + n \log n)</math>, and requires no extra space (besides the graph itself).
+
+In order to answer many queries more efficiently, we can spend some time in pre-processing the graph and creating an auxiliary data structure.
+
+A simple data structure that achieves this goal is a ''matrix'' which specifies, for each pair of nodes, the distance between them. This structure allows us to answer queries in constant time <math>O(1)</math>, but requires <math>O(n^2)</math> extra space. It can be initialized in time <math>O(n^3)</math> using an all-pairs shortest paths algorithm, such as the [[Floyd–Warshall algorithm]].
+
+A DO lies between these two extremes. It uses less than <math>O(n^2)</math> space in order to answer queries in less than <math>O(m + n \log n)</math> time. Most DOs have to compromise on accuracy, i.e. they don't return the accurate distance but rather a constant-factor approximation of it.
+
+== Approximate DO ==
+Thorup and Zwick<ref>{{Cite journal | doi = 10.1145/1044731.1044732| title = Approximate distance oracles| journal = Journal of the ACM| volume = 52| pages = 1–24| year = 2005| last1 = Thorup | first1 = M.|author1-link=Mikkel Thorup | last2 = Zwick | first2 = U.|author2-link=Uri Zwick | s2cid = 5425739}}</ref> describe more than 10 different DOs. They then suggest a new DO that, for every ''k'', requires space <math>O(k n^{1+1/k})</math>, such that any subsequent distance query can be approximately answered in time <math>O(k)</math>. The approximate distance returned is of stretch at most <math>2k-1</math>, that is, the quotient obtained by dividing the estimated distance by the actual distance lies between 1 and <math>2k-1</math>. The initialization time is <math>O(kmn^{1/k})</math>.
+
+Some special cases include:
+* For <math>k=1</math> we get the simple distance matrix. 
+* For <math>k=2</math> we get a structure using <math>O(n^{1.5})</math> space which answers each query in constant time and approximation factor at most 3.
+* For <math>k=\lfloor \log n \rfloor</math>, we get a structure using <math>O(n \log n)</math> space, query time <math>O(\log n)</math>, and stretch <math>O(\log n)</math>. 
+Higher values of k do not improve the space or preprocessing time.
+
+=== DO for general metric spaces ===
+The oracle is built of a decreasing collection of ''k''+1 sets of vertices:
+* <math>A_0 = V</math>
+* For every <math>i=1,\ldots,k-1</math>: <math>A_i</math> contains each element of <math>A_{i-1}</math>, independently, with probability <math>n^{-1/k}</math>. Note that the expected size of <math>A_i</math> is <math>n^{1-i/k}</math>. The elements of <math>A_i</math> are called ''i-centers''.
+* <math>A_k = \emptyset</math>
+
+For every node ''v'', calculate its distance from each of these sets:
+* For every <math>i=0,\ldots,k-1</math>: <math>d(A_i,v) = \min{(d(w,v)|w\in A_i}</math> and <math>p_i(v) = \arg \min{(d(w,v)|w\in A_i}</math>. I.e., <math>p_i(v)</math> is the i-center nearest to ''v'', and <math>d(A_i,v)</math> is the distance between them. Note that for a fixed ''v'', this distance is weakly increasing with ''i''. Also note that for every ''v'', <math>d(A_0,v)=0</math> and <math>p_0(v)=v</math>.
+* <math>d(A_k,v)=\infty</math>.
+
+For every node ''v'', calculate:
+* For every <math>i=0,\ldots,k-1</math>: <math>B_i(v) = \{w\in A_i\setminus A_{i+1}|d(w,v)<d(A_{i+1},v)\}</math>. <math>B_i(v)</math> contains all vertices in <math>A_i</math> which are strictly closer to ''v'' than all vertices in <math>A_{i+1}</math>. The partial unions of <math>B_i</math>s are balls in increasing diameter, that contain vertices with distances up to the first vertex of the next level.
+
+For every ''v'', compute its ''bunch'':
+* <math>B(v) = \bigcup_{i=0}^{k-1}B_i(v).</math>
+It is possible to show that the expected size of <math>B(v)</math> is at most <math>kn^{1/k}</math>.
+
+For every bunch <math>B(v)</math>, construct a [[hash table]] that holds, for every <math>w\in B(V)</math>, the distance <math>d(w,v)</math>.
+
+The total size of the data structure is <math>O(kn+\Sigma|B(v)|)=O(kn+nkn^{1/k})=O(kn^{1+1/k})</math>
+
+Having this structure initialized, the following algorithm finds the distance between two nodes, ''u'' and ''v'':
+
+* <math>w:=u, i:=0</math>
+* while <math>w\notin B(v)</math>:
+** <math>i:=i+1</math>
+** <math>(u,v):=(v,u)</math> (swap the two input nodes; this does not change the distance between them since the graph is undirected).
+** <math>w := p_i(u)</math>
+* return <math>d(w,u)+d(w,v)</math>
+
+It is possible to show that, in each iteration, the distance <math>d(w,u)</math> grows by at most <math>d(v,u)</math>. Since <math>A_{k-1}\subseteq B(v)</math>, there are at most ''k''-1 iterations, so finally <math>d(w,u)\leq (k-1)d(v,u)</math>. Now by the [[triangle inequality]], <math>d(w,v)\leq d(w,u)+d(u,v)\leq kd(v,u)</math>, so the distance returned is at most <math>(2k-1)d(u,v)</math>.
+
+=== Improvements ===
+The above result was later improved by Patrascu and Roditty<ref name=pr10>{{Cite conference| doi = 10.1109/FOCS.2010.83| title = Distance Oracles beyond the Thorup–Zwick Bound| conference = 2010 IEEE 51st Annual Symposium on Foundations of Computer Science (FOCS)| page = 815| year = 2010| last1 = Patrascu | first1 = M. | last2 = Roditty | first2 = L. | isbn = 978-1-4244-8525-3| author1-link = Mihai Pătrașcu (computer scientist)}}</ref> who suggest a DO of size <math>O(n^{4/3} m^{1/3})</math> which returns a factor 2 approximation.
+
+== Reduction from set intersection oracle ==
+If there is a DO with an approximation factor of at most 2, then it is possible to build a [[set intersection oracle]] (SIO) with query time <math>O(1)</math> and space requirements <math>O(N+n)</math>, where ''n'' is the number of sets and ''N'' the sum of their sizes; see [[set intersection oracle#Reduction to approximate distance oracle]]. 
+
+It is believed that the SIO problem does not have a non-trivial solution. I.e., it requires <math>\Omega(n^2)</math> space to answer queries in time <math>O(1)</math>, e.g. using an ''n''-by-''n'' table with the intersection between each two sets. If this conjecture is true, this implies that there is no DO with an approximation factor of less than 2 and a constant query time.<ref name=pr10/>
+
+== References ==
+{{reflist}}
+
+[[Category:Graph data structures]]
+[[Category:Graph theory]]
+[[Category:Computation oracles]]

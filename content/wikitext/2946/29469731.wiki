@@ -1,0 +1,228 @@
+<!-- wikipedia: en
+     page: 29469731
+     title: Filter (large eddy simulation)
+     revision: 1321953797
+     timestamp: 2025-11-13T15:50:48Z
+     history: https://en.wikipedia.org/w/index.php?curid=29469731&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1321953797 -->
+'''Filtering''' in the context of [[large eddy simulation]] (LES) is a mathematical operation intended to remove a range of small scales from the solution to the [[Navier-Stokes equations]].  Because the principal difficulty in simulating [[Turbulence|turbulent flows]] comes from the wide range of length and time scales, this operation makes turbulent flow simulation cheaper by reducing the range of scales that must be resolved.  The LES filter operation is [[Low-pass filter|low-pass]], meaning it filters out the scales associated with high frequencies.
+
+== Homogeneous filters ==
+[[File:DNS Velocity Field.png|thumb|right|200px|A velocity field produced by a [[Direct numerical simulation|direct numerical simulation (DNS)]] of [[homogeneous isotropic turbulence|homogeneous decaying turbulence]].  The domain size is {{math|<var>L</var><sup>3</sup>}}.]]
+[[File:DNS Filtered Velocity Field Small.png|thumb|right|200px|The same DNS velocity field filtered using a [[Filter (large eddy simulation)#Box filter|box filter]] and {{math| &Delta; {{=}} <var>L</var>/32}}]]
+[[File:DNS Filtered Velocity Field Large.png|thumb|right|200px|The same DNS velocity field filtered using a [[Filter (large eddy simulation)#Box filter|box filter]] and {{math| &Delta; {{=}} <var>L</var>/16}}]]
+
+=== Definition in physical space ===
+The low-pass filtering operation used in LES can be applied to a spatial and temporal field, for example <math>\phi(\boldsymbol{x},t)</math>.  The LES filter operation may be spatial, temporal, or both.  The filtered field, denoted with a bar, is defined as:<ref name="Sagaut_2006">{{cite book
+|author=Sagaut, Pierre
+|title=Large Eddy Simulation for Incompressible Flows
+|publisher=Springer
+|year=2006
+|edition=Third
+|isbn=3-540-26344-6 }}</ref><ref name="Pope_2000">{{cite book
+|first=Stephen
+|last=Pope
+|title=Turbulent Flows
+|url=http://www.cambridge.org/catalogue/catalogue.asp?isbn=0521598869
+|publisher=Cambridge University Press
+|year=2000
+|isbn=978-0-521-59886-6 }}
+</ref>
+
+:<math>
+\overline{\phi(\boldsymbol{x},t)} = \displaystyle{
+\int_{-\infty}^{\infty}} \int_{-\infty}^{\infty} \phi(\boldsymbol{r},t^{\prime}) G(\boldsymbol{x}-\boldsymbol{r},t - t^{\prime}) dt^{\prime} d \boldsymbol{r},
+</math>
+
+where <math>G</math> is a [[convolution kernel]] unique to the filter type used.  This can be written as a convolution operation:
+
+:<math>
+\overline{\phi} = G \star \phi .
+</math>
+
+The filter kernel <math>G</math> uses cutoff length and time scales, denoted <math>\Delta</math> and <math>\tau_{c},</math> respectively.  Scales smaller than these are eliminated from <math>\overline{\phi}.</math>  Using this definition, any field <math>\phi</math> may be split up into a filtered and sub-filtered (denoted with a prime) portion, as
+
+:<math>
+\phi = \bar{\phi} + \phi^{\prime} .
+</math>
+
+This can also be written as a convolution operation,
+
+:<math>
+\phi^{\prime} = \left( 1 - G \right) \star \phi .
+</math>
+
+=== Definition in spectral space ===
+
+The filtering operation removes scales associated with high frequencies, and the operation can accordingly be interpreted in [[Frequency domain|Fourier space]].  For a scalar field <math>\phi(\boldsymbol{x},t),</math> the [[Fourier transform]] of <math>\phi</math> is <math>\hat{\phi}(\boldsymbol{k},\omega),</math> a function of <math>\boldsymbol{k},</math> the spatial [[Wavenumber|wave number]], and <math>\omega,</math> the temporal frequency.  <math>\hat{\phi}</math> can be filtered by the corresponding [[Fourier transform]] of the filter kernel, denoted <math>\hat{G}(\boldsymbol{k},\omega):</math>
+
+:<math>
+\overline{ \hat{ \phi } }(\boldsymbol{k},\omega) = \hat{ \phi }(\boldsymbol{k},\omega) \hat{G}(\boldsymbol{k},\omega)
+</math>
+
+or,
+
+:<math>
+\overline{ \hat{ \phi } } = \hat{G} \hat{\phi} .
+</math>
+
+The filter width <math>\Delta</math> has an associated cutoff wave number <math>k_{c},</math> and the temporal filter width <math>\tau_{c}</math> also has an associated cutoff frequency <math>\omega_{c}.</math>  The unfiltered portion of <math>\hat{\phi}</math> is:
+
+:<math>
+\hat{\phi^{\prime}} = (1 - \hat{G}) \hat{\phi}.
+</math>
+
+The spectral interpretation of the filtering operation is essential to the filtering operation in large eddy simulation, as the [[Turbulence#Kolmogorov's theory of 1941|spectra of turbulent flows]] is central to LES subgrid-scale models, which reconstruct the effect of the sub-filter scales (the highest frequencies).  One of the challenges in subgrid modeling is to effectively mimic the cascade of [[kinetic energy]] from low to high frequencies.  This makes the spectral properties of the implemented LES filter very important to subgrid modeling efforts.
+
+=== Homogeneous filter properties ===
+
+Homogeneous LES filters must satisfy the following set of properties when applied to the Navier-Stokes equations.<ref name="Sagaut_2006" />
+
+;1. Conservation of constants
+
+:The value of a filtered constant must be equal to the constant,
+
+::<math>
+\overline{a} = a,
+</math>
+
+:which implies,
+
+::<math>
+\int_{-\infty}^{\infty} \int_{-\infty}^{\infty} G( \boldsymbol{\xi}, t^{\prime} ) d^3 \boldsymbol{\xi} dt^{\prime} = 1.
+</math>
+
+;2. Linearity
+
+::<math>
+\overline{ \phi + \psi } = \overline{\phi} + \overline{\psi}.
+</math>
+
+;3. Commutation with derivatives
+
+::<math>
+\overline{ \frac{\partial \phi}{\partial s} } = \frac{\partial \overline{\phi} }{\partial s}, \qquad s = \boldsymbol{x}, t.
+</math>
+
+:If notation is introduced for operator commutation <math>[f, g]</math> for two arbitrary operators <math>f</math> and <math>g</math>, where
+
+::<math>
+[f, g] \phi = f \circ g(\phi) - g \circ f(\phi) = f(g(\phi)) - g(f(\phi)),
+</math>
+
+:then this third property can be expressed as
+
+::<math>
+\left[ G \star, \frac{\partial}{\partial s} \right] = 0.
+</math>
+
+Filters satisfying these properties are generally not [[Reynolds operator]]s, meaning, first:
+
+:<math>
+\begin{array}{rcl}
+\overline{ \overline{ \phi } } &\neq& \overline{\phi}, \\
+G \star G \star \phi = G^2 \star \phi &\neq& G \star \phi,
+\end{array}
+</math>
+
+and second,
+
+:<math>
+\overline{\phi^{\prime}} = G \star (1-G) \star \phi \neq 0 .
+</math>
+
+== Inhomogeneous filters ==
+
+Implementations of filtering operations for all but the simplest flows are inhomogeneous filter operations.  This means that the flow either has non-periodic boundaries, causing problems with certain types of filters, or has a non-constant filter width <math>\Delta</math>, or both.  This prevents the filter from commuting with derivatives, and the commutation operation leads to several additional error terms:
+
+:<math>
+\begin{array}{rcl}
+\left[ \frac{\partial}{\partial \boldsymbol{x}}, G \star \right] \phi 
+&=& \frac{ \partial  }{ \partial \boldsymbol{x} } \left( G \star \phi \right) - G \star \frac{\partial \phi}{\partial \boldsymbol{x} } \\
+&=& \frac{ \partial }{ \partial \boldsymbol{x} } \int_{\Omega} G( \boldsymbol{x} - \boldsymbol{r}, \Delta(\boldsymbol{x},t)) \phi(\boldsymbol{r},t) d \boldsymbol{r} - G \star \frac{\partial \phi}{\partial \boldsymbol{x} } \\
+&=& \left( \frac{ \partial G }{ \partial \Delta } \star \phi \right) \frac{\partial \Delta}{\partial x} + \int_{d \Omega} G(x-r, \Delta(x,t)) \phi(r,t) \boldsymbol{n} dS
+\end{array},
+</math>
+
+where <math>\boldsymbol{n}</math> is the vector normal to the surface of the boundary <math>\Omega</math> and <math>d \Omega.</math><ref name="Sagaut_2006" />
+
+The two terms both appear due to inhomogeneities.  The first is due to the spatial variation in the filter size <math>\Delta,</math> while the second is due to the domain boundary.  Similarly, the commutation of the filter <math>G</math> with the temporal derivative leads to an error term resulting from temporal variation in the filter size,
+
+:<math>
+\left[ \frac{\partial}{\partial t}, G \star \right] = \left( \frac{\partial G}{\partial \Delta} \star \phi \right) \frac{\partial \Delta}{\partial t}.
+</math>
+
+Several filter operations which eliminate or minimize these error terms have been proposed.{{Citation needed|date=November 2010}}
+
+== Classic large eddy simulation filters ==
+
+{{Expand section|Proper alignment of plots|date=January 2020}}
+[[File:EnergySpectrumAndFilteringOperations.png|alt=Turbulent energy spectrum and effect of filtering operations|thumb|392x392px|Turbulent energy spectrum and effect of filtering operations <ref>{{Cite web|url=http://imp-turbulence.ec-lille.fr/Webpage/Laval/Lectures/trans_les_dns.pdf|title=Lecture Notes on DNS and LES for International Masters Program in Turbulence|last=Laval|first=Jean-Philippe|date=|website=|archive-url=|archive-date=|access-date=27 January 2020}}</ref>]]
+There are three filters ordinarily used for spatial filtering in large eddy simulation.  The definition of <math>G(\boldsymbol{x},t)</math> and <math>\hat{G}(\boldsymbol{k},\omega),</math> and a discussion of important properties, is given.<ref name="Pope_2000" />
+
+=== Box filter ===
+[[File:Box filter.png|alt=Box filtering operation|thumb|398x398px|Box filter in physical and spectral space]]
+The filter kernel in physical space is given by:
+
+:<math>
+G(\boldsymbol{x} - \boldsymbol{r}) = \begin{cases}
+\frac{1}{\Delta}, & \text{if} \left| \boldsymbol{x} - \boldsymbol{r} \right| \leq \frac{ \Delta }{ 2 }, \\
+0, & \text{otherwise}.
+\end{cases}
+</math>
+
+The filter kernel in [[spectral space]] is given by:
+
+:<math>
+\hat{G}(\boldsymbol{k}) = \frac{ \sin{( \frac{1}{2} k \Delta )} }{ \frac{1}{2} k \Delta }.
+</math>
+
+[[File:Gaussian filter.png|alt=Gaussian filter|thumb|398x398px|Gaussian filter in physical and spectral space]]
+
+=== Gaussian filter ===
+
+The filter kernel in physical space is given by:
+
+:<math>
+G(\boldsymbol{x} - \boldsymbol{r}) = \left( \frac{ 6 }{ \pi \Delta^{2} } \right)^{\frac{1}{2}} \exp{ \left( - \frac{6 (\boldsymbol{x-r})^2}{\Delta^2} \right) }.
+</math>
+
+The filter kernel in spectral space is given by:
+
+:<math>
+\hat{G}(\boldsymbol{k}) = \exp{ \left( -\frac{ \boldsymbol{k}^2 \Delta^2 }{ 24 } \right) }.
+</math>
+
+[[File:Cutoff filter.png|alt=Sharp spectral filter|thumb|396x396px|Sharp spectral filter in physical and spectral space]]
+
+=== Sharp spectral filter ===
+
+The filter kernel in physical space is given by:
+
+:<math>
+G(\boldsymbol{x} - \boldsymbol{r}) = \frac{ \sin{( \pi (\boldsymbol{x-r}) / \Delta )} }{ \pi (\boldsymbol{x-r}) }.
+</math>
+
+The filter kernel in spectral space is given by:
+
+:<math>
+\hat{G}(\boldsymbol{k}) = H \left( k_c - \left| k \right| \right), \qquad k_c = \frac{ \pi }{ \Delta }.
+</math>
+
+== See also ==
+
+* [[Computational fluid dynamics]]
+* [[Filter (signal processing)]]
+* [[Fluid mechanics]]
+* [[Fourier transform]]
+* [[Frequency domain]]
+* [[Large eddy simulation]]
+* [[Turbulence]]
+
+==References==
+
+<references />
+
+{{DEFAULTSORT:Filter (Large Eddy Simulation)}}
+[[Category:Turbulence models]]

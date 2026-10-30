@@ -1,0 +1,148 @@
+<!-- wikipedia: en
+     page: 19518308
+     title: SimRank
+     revision: 1364355320
+     timestamp: 2026-07-16T02:09:07Z
+     history: https://en.wikipedia.org/w/index.php?curid=19518308&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1364355320 -->
+{{Short description|Measure of semantic similarity}}
+'''SimRank''' is a general [[Semantic similarity|similarity measure]], based on a simple and intuitive [[Graph theory|graph-theoretic model]].
+SimRank is applicable in any [[Domain model|domain]] with object-to-object [[Relation (mathematics)|relationships]], that measures similarity of the structural context in which objects occur, based on their relationships with other objects.
+Effectively, SimRank is a measure that says that two objects are considered to be similar if they are referenced by similar objects. Although SimRank is widely adopted, it may output unreasonable similarity scores which are influenced by different factors, and can be solved in several ways, such as introducing an evidence weight factor,<ref name="simrank_plusplus">I. Antonellis, H. Garcia-Molina and C.-C. Chang. Simrank++: Query Rewriting through Link Analysis of the Click Graph. In [[Very large database|VLDB '08]]: Proceedings of the 34th International Conference on Very Large Data Bases, pages 408--421. [http://dbpubs.stanford.edu/pub/showDoc.Fulltext?lang=en&doc=2008-17&format=pdf&compression=&name=2008-17.pdf]</ref> inserting additional terms that are neglected by SimRank<ref>W. Yu, X. Lin, W. Zhang, L. Chang, and J. Pei.  More is Simpler: Effectively and Efficiently Assessing Node-Pair Similarities Based on Hyperlinks. In [[Very large database|VLDB '13]]: Proceedings of the 39th International Conference on Very Large Data Bases, pages 13--24. [http://www.vldb.org/pvldb/vol7/p13-yu.pdf]</ref> or using PageRank-based alternatives.<ref name=":0">H. Chen, and C. L. Giles. "ASCOS++: An Asymmetric Similarity Measure for Weighted Networks to Address the Problem of SimRank." ACM Transactions on Knowledge Discovery from Data (TKDD) 10.2 2015.[http://clgiles.ist.psu.edu/pubs/TKDD2015.pdf]</ref>
+
+== Introduction ==
+
+Many [[Application software|applications]] require a measure of "similarity" between objects.
+One obvious example is the "find-similar-document" query,
+on traditional text corpora or the [[World Wide Web|World-Wide Web]].
+More generally, a [[similarity measure]] can be used to [[Cluster analysis|cluster objects]], such as for [[collaborative filtering]] in a [[recommender system]], in which “similar” users and items are grouped based on the users’ preferences.
+
+Various aspects of objects can be used to determine similarity, usually depending on the domain and the appropriate definition of similarity for that domain.
+In a [[Text corpus|document corpus]], matching text may be used, and for collaborative filtering, similar users may be identified by common preferences.
+SimRank is a general approach that exploits the object-to-object relationships found in many domains of interest.
+On the [[World Wide Web|Web]], for example, two pages are related if there are [[hyperlink]]s between them.
+A similar approach can be applied to scientific papers and their citations, or to any other document corpus with [[cross-reference]] information.
+In the case of recommender systems, a user’s preference for an item constitutes a relationship between the user and the item.
+Such domains are naturally modeled as [[Graph (discrete mathematics)|graphs]], with [[Vertex (graph theory)|nodes]] representing objects and [[Edge (graph theory)#Graph|edges]] representing relationships.
+
+The intuition behind the SimRank algorithm is that, in many domains, similar objects are referenced by similar objects.
+More precisely, objects <math>a</math> and <math>b</math> are considered to be similar if they are pointed from objects <math>c</math> and <math>d</math>, respectively, and <math>c</math> and <math>d</math> are themselves similar.
+The [[Recursion (computer science)#Recursive programming|base case]] is that objects are maximally similar to themselves
+.<ref name=jeh_widom>G. Jeh and J. Widom. SimRank: A Measure of Structural-Context Similarity. In [[SIGKDD|KDD'02]]: Proceedings of the eighth ACM SIGKDD international conference on Knowledge discovery and data mining, pages 538-543. [[Association for Computing Machinery|ACM Press]], 2002. {{cite web |url=http://www-cs-students.stanford.edu/~glenj/simrank.pdf |title=Archived copy |accessdate=2008-10-02 |url-status=dead |archiveurl=https://web.archive.org/web/20080512152518/http://www-cs-students.stanford.edu/~glenj/simrank.pdf |archivedate=2008-05-12 }}</ref>
+
+SimRank is a general algorithm that determines only the similarity of structural context.
+SimRank applies to any domain where there are enough relevant relationships between objects to base at least some notion of similarity on relationships.
+Obviously, similarity of other domain-specific aspects are important as well; these can — and should be combined with relational structural-context similarity for an overall similarity measure.
+For example, for [[Web page]]s SimRank can be combined with traditional textual similarity; the same idea applies to scientific papers or other document corpora.
+For recommendation systems, there may be built-in known similarities between items (e.g., both computers, both clothing, etc.), as well as similarities between users (e.g., same gender, same spending level).
+Again, these similarities can be combined with the similarity scores that are computed based on preference patterns, in order to produce an overall similarity measure.
+
+== Basic SimRank equation ==
+
+For a node <math>v</math> in a directed graph, we denote by <math>I(v)</math> and <math>O(v)</math> the set of in-neighbors and out-neighbors of <math>v</math>, respectively.
+Individual in-neighbors are denoted as <math>I_i(v)</math>, for <math>1 \le i \le \left|I(v)\right|</math>, and individual
+out-neighbors are denoted as <math>O_i(v)</math>, for <math>1 \le i \le \left|O(v)\right|</math>.
+
+Let us denote the similarity between objects <math>a</math> and <math>b</math> by <math>s(a, b) \in [0, 1]</math>. 
+Following the earlier motivation, a recursive equation is written for <math>s(a, b)</math>.
+If <math>a = b</math> then <math>s(a, b)</math> is defined to be <math>1</math>.
+Otherwise,
+:<math>s(a, b) = \frac{C}{\left|I(a)\right| \left|I(b)\right|}
+ \sum_{i=1}^{\left|I(a)\right|}\sum_{j=1}^{\left|I(b)\right|}
+ s(I_i(a), I_j(b))</math>
+where <math>C</math> is a constant between <math>0</math> and <math>1</math>.
+A slight technicality here is that either <math>a</math> or <math>b</math> may not have any in-neighbors.
+Since there is no way to infer any similarity between <math>a</math> and <math>b</math> in this case, similarity is set to <math>s(a, b) = 0</math>, so the summation in the above equation is defined to be <math>0</math> when <math>I(a) = \emptyset</math> or <math>I(b) = \emptyset</math>.
+
+== Matrix representation of SimRank ==
+
+Given an arbitrary constant <math>C</math> between <math>0</math> and <math>1</math>, let <math>\mathbf{S}</math> be the similarity matrix whose entry <math>[\mathbf{S}]_{a,b}</math> denotes the similarity score <math>s(a,b)</math>, and <math>\mathbf{A}</math> be the column normalized [[adjacency matrix]] whose entry <math>[\mathbf{A}]_{a,b}=\tfrac{1}{|\mathcal{I}(b)|}</math> if there is an edge from <math>a</math> to <math>b</math>, and 0 otherwise. Then, in matrix notations, SimRank can be formulated as
+
+:<math>
+   {{\mathbf{S}}}= \max\{C\cdot (\mathbf{A}^{T} \cdot {{\mathbf{S}}}\cdot {{\mathbf{A}}} ) , {{\mathbf{I}}}\},</math>
+
+where <math>\mathbf{I}</math> is an [[identity matrix]].
+
+== Computing SimRank ==
+
+A solution to the SimRank equations for a graph <math>G</math> can be reached by [[Iterative method|iteration]] to a [[Fixed point (mathematics)|fixed-point]].
+Let <math>n</math> be the number of nodes in <math>G</math>.
+For each iteration <math>k</math>, we can keep <math>n^2</math> entries <math>s_k(*, *)</math>, where <math>s_k(a, b)</math> gives the score between <math>a</math> and <math>b</math> on iteration <math>k</math>.
+We successively compute <math>s_{k+1}(*, *)</math> based on <math>s_k(*, *)</math>.
+We start with <math>s_0(*, *)</math> where each <math>s_0(a, b)</math> is a lower bound on the actual SimRank score <math>s(a, b)</math>:
+:<math> s_0(a, b) =
+ \begin{cases}
+  1 \mbox{  } , \mbox{    } \mbox{if } a = b  \mbox{  } , \\
+  0 \mbox{  } , \mbox{    } \mbox{if } a \neq b \mbox{  } .
+ \end{cases}</math>
+
+To compute <math>s_{k+1}(a, b)</math> from <math>s_k(*, *)</math>, we use the basic SimRank equation to get:
+:<math>s_{k + 1}(a, b) = 
+ \frac{C}{\left|I(a)\right| \left|I(b)\right|}
+ \sum_{i=1}^{\left|I(a)\right|}\sum_{j=1}^{\left|I(b)\right|}
+  s_k(I_i(a), I_j(b))</math>
+for <math>a \ne b</math>, and <math>s_{k+1}(a, b) = 1</math> for <math>a = b</math>.
+That is, on each iteration <math>k + 1</math>, we update the similarity of <math>(a, b)</math> using the similarity scores of the neighbours of <math>(a, b)</math> from the previous iteration <math>k</math> according to the basic SimRank equation.
+The values <math>s_k(*, *)</math> are [[Monotonic function|nondecreasing]] as <math>k</math> increases.
+It was shown in <ref name="jeh_widom"/> that the values [[Limit of a sequence|converge]] to [[Limit of a sequence|limits]] satisfying the basic SimRank equation, the SimRank scores <math>s(*, *)</math>, i.e., for all <math>a, b \in V</math>, <math>\lim_{k \to \infty} s_k(a, b) = s(a, b)</math>.
+
+The original SimRank proposal suggested choosing the decay factor <math>C = 0.8</math> and a fixed number <math>K = 5</math> of iterations to perform.
+However, the recent research <ref name="lizorkin">D. Lizorkin, P. Velikhov, M. Grinev and D. Turdakov. Accuracy Estimate and Optimization Techniques for
+SimRank Computation. In [[Very large database|VLDB '08]]: Proceedings of the 34th International Conference on Very Large Data Bases, pages 422--433. {{cite web |url=http://modis.ispras.ru/Lizorkin/Publications/simrank_accuracy.pdf |title=Archived copy |accessdate=2008-10-25 |url-status=dead |archiveurl=https://web.archive.org/web/20090407093025/http://modis.ispras.ru/Lizorkin/Publications/simrank_accuracy.pdf |archivedate=2009-04-07 }}</ref> showed that the given values for <math>C</math> and <math>K</math> generally imply relatively low [[Accuracy and precision|accuracy]] of iteratively computed SimRank scores.
+For guaranteeing more accurate computation results, the latter paper suggests either using a smaller decay factor (in particular, <math>C = 0.6</math>) or taking more iterations.
+
+== CoSimRank ==
+
+CoSimRank is a variant of SimRank with the advantage of also having a local formulation, i.e. CoSimRank can be computed for a single node pair.<ref name="cosimrank">S. Rothe and H. Schütze. CoSimRank: A Flexible & Efficient Graph-Theoretic Similarity Measure. In [[Association for Computational Linguistics|ACL '14]]: Proceedings of the 52nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), pages 1392-1402 . [http://acl2014.org/acl2014/P14-1/pdf/P14-1131.pdf]</ref> Let <math>\mathbf{S}</math> be the similarity matrix whose entry <math>[\mathbf{S}]_{a,b}</math> denotes the similarity score <math>s(a,b)</math>, and <math>\mathbf{A}</math> be the column normalized adjacency matrix. Then, in matrix notations, CoSimRank can be formulated as:
+
+:<math>
+   {{\mathbf{S}}}= C\cdot (\mathbf{A}^{T} \cdot {{\mathbf{S}}}\cdot {{\mathbf{A}}} ) + {{\mathbf{I}}},</math>
+
+where <math>\mathbf{I}</math> is an identity matrix. To compute the similarity score of only a single node pair, let <math>p^{(0)}(i) = e_i</math>, with <math>e_i</math> being a vector of the
+[[standard basis]], i.e., the <math>i</math>-th entry is 1 and all other entries are 0. Then, CoSimRank can be computed in two steps:
+
+# <math>p^{(k)} = A p^{(k-1)}</math>
+# <math>s(i,j) = \sum_{k=0}^{\infty} C^k \langle p^{(k)}(i), p^{(k)}(j) \rangle</math>
+
+Step one can be seen a simplified version of Personalized [[PageRank]]. Step two sums up the vector similarity of each iteration. Both, matrix and local representation, compute the same similarity score. CoSimRank can also be used to compute the similarity of sets of nodes, by modifying <math>p^{(0)}(i)</math>.
+
+== Further research on SimRank ==
+
+* Fogaras and Racz <ref name="fogaras_racz">D. Fogaras and B. Racz. Scaling link-based similarity search. In [[World Wide Web Conference|WWW '05]]: Proceedings of the 14th international conference on World Wide Web, pages 641--650, New York, NY, USA, 2005. [[Association for Computing Machinery|ACM]]. [https://web.archive.org/web/20140311193305/http://www2005.org/docs/p641.pdf]</ref> suggested speeding up SimRank computation through [[Probability theory|probabilistic]] computation using the [[Monte Carlo method]].
+* Antonellis et al.<ref>Antonellis, Ioannis, Hector Garcia Molina, and Chi Chao Chang. "Simrank++: query rewriting through link analysis of the click graph." Proceedings of the VLDB Endowment 1.1 (2008): 408-421. {{Arxiv|0712.0499}}</ref> extended SimRank equations to take into consideration (i) evidence factor for [[Graph (discrete mathematics)#Properties of graphs|incident nodes]] and (ii) link weights.
+* Yu et al.<ref name="yu_icde13">W. Yu, X. Lin, W. Zhang. Towards Efficient SimRank Computation on Large Networks. In [[International Conference on Data Engineering|ICDE '13]]: Proceedings of the 29th IEEE International Conference on Data Engineering, pages 601--612. {{cite web |title=Archived copy |url=http://www.cse.unsw.edu.au/~weirenyu/pubs/icde13.pdf |url-status=dead |archiveurl=https://web.archive.org/web/20140512220118/http://www.cse.unsw.edu.au/~weirenyu/pubs/icde13.pdf |archivedate=2014-05-12 |accessdate=2014-05-09}}</ref> further improved SimRank computation via a fine-grained [[memoization]] method to share small common parts among different partial sums.
+* Chen and Giles discussed the limitations and proper use cases of SimRank.<ref name=":0" />
+
+=== Partial Sums Memoization ===
+
+Lizorkin et al.<ref name="lizorkin"/> proposed three optimization techniques for speeding up the computation of SimRank:
+
+# Essential nodes selection may eliminate the computation of a fraction of node pairs with a-priori zero scores.
+# Partial sums memoization can effectively reduce repeated calculations of the similarity among different node pairs by caching part of similarity summations for later reuse.
+# A threshold setting on the similarity enables a further reduction in the number of node pairs to be computed.
+
+In particular, the second observation of partial sums memoization plays a paramount role in greatly speeding up the computation of SimRank from <math>\mathcal{O}(Kd^2n^2)</math> to <math>\mathcal{O}(Kdn^2)</math>, where <math>K</math> is the number of iterations, <math>d</math> is average degree of a graph, and <math>n</math> is the number of nodes in a graph. The central idea of partial sums memoization consists of two steps:
+
+First, the partial sums over <math>I(a)</math> are memoized as
+:<math>
+\text{Partial}_{I(a)}^{s_{k}}(j)=\sum_{i \in I(a)}s_{k}(i,j), \qquad (\forall j \in I(b))
+</math>
+and then <math>s_{k+1} (a,b)</math> is iteratively computed from <math>\text{Partial}_{I(a)}^{s_{k}}(j)</math> as
+:<math>
+s_{k+1}( a,b )=\frac{C}{| I(a) | | I(b) |}\sum_{j \in I(b) } \text{Partial}_{I(a)}^{s_{k}}(j).
+</math>
+Consequently, the results of <math>\text{Partial}_{I(a)}^{s_{k}}(j)</math>, <math>\forall j \in I(b)</math>,
+can be reused later when we compute the similarities <math>s_{k+1}(a,*)</math> for a given vertex <math>a</math> as the first argument.
+
+== See also ==
+
+* [[PageRank]]
+
+== Citations ==
+{{reflist|30em}}
+
+== Sources ==
+* {{Cite book|last1=Cai|first1=Y.|last2=Cong|first2=G.|last3=Jia|first3=X.|last4=Liu|first4=H.|last5=He|first5=J.|last6=Lu|first6=J.|last7=Du|first7=X.|title=2009 Ninth IEEE International Conference on Data Mining |chapter=Efficient Algorithm for Computing Link-Based Similarity in Real World Networks |date=2009-12-01|pages=734–739|doi=10.1109/ICDM.2009.136|isbn=978-1-4244-5242-2|s2cid=9799597 |chapter-url=https://zenodo.org/record/890821}}
+[[Category:Cluster analysis algorithms]]
+[[Category:Similarity measures]]

@@ -1,0 +1,122 @@
+<!-- wikipedia: en
+     page: 20913204
+     title: Change-making problem
+     revision: 1369016980
+     timestamp: 2026-08-12T10:48:41Z
+     history: https://en.wikipedia.org/w/index.php?curid=20913204&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1369016980 -->
+{{Short description|Choosing the fewest coins to make a given amount of money}}
+{{distinguish|Coin problem}}
+
+The '''change-making problem''' addresses the question of finding the minimum number of coins (of certain denominations) that add up to a given amount of money. It is a [[special case]] of the integer [[knapsack problem]], and has applications wider than just currency.
+
+It is also the most common variation of the ''coin change problem'', a general case of [[partition problem|partition]] in which, given the available denominations of an [[infinite set]] of coins, the objective is to find out the number of possible ways of making change for a specific amount of money, without considering the order of the coins.
+
+It is [[Weak NP-completeness|weakly NP-hard]], but may be solved optimally in [[pseudo-polynomial time]] by [[dynamic programming]].<ref>{{cite book
+ | last1 = Cormen | first1 = Thomas H.
+ | last2 = Leiserson | first2 = Charles E.
+ | last3 = Rivest | first3 = Ronald L.
+ | last4 = Stein | first4 = Clifford
+ | at = Problem 16-1, p. 446
+ | publisher = MIT Press
+ | title = [[Introduction to Algorithms]]
+ | year = 2009}}</ref><ref>{{cite book
+ | last1 = Goodrich | first1 = Michael T.
+ | last2 = Tamassia | first2 = Roberto
+ | at = Exercise A-12.1, p. 349
+ | publisher = Wiley
+ | title = Algorithm Design and Applications
+ | year = 2015}}</ref>
+
+==Mathematical definition==
+Coin values can be modeled by a set of {{mvar|n}} distinct positive [[integer]] values (whole numbers), arranged in increasing order as {{math|''w''<sub>1</sub>}} through {{math|''w''<sub>''n''</sub>}}. The problem is: given an amount {{mvar|W}}, also a positive integer, to find a set of non-negative (positive or zero) integers {{math|{''x''<sub>1</sub>, ''x''<sub>2</sub>, ..., ''x''<sub>''n''</sub>}}}, with each {{math|''x''<sub>''j''</sub>}} representing how often the coin with value {{math|''w''<sub>''j''</sub>}} is used, which minimize the total number of coins {{math|''f''(''W'')}}
+
+: <math>f(W)=\sum_{j=1}^n x_j</math>
+
+subject to
+
+: <math>\sum_{j=1}^n w_j x_j = W.</math>
+
+==Non-currency examples==
+An application of change-making problem can be found in computing the ways one can make a [[nine dart finish]] in a game of darts.
+
+Another application is computing the possible atomic (or isotopic) composition of a given mass/charge peak in [[mass spectrometry]].
+
+==Methods of solving==
+
+===Simple dynamic programming===
+A classic [[dynamic programming]] strategy works upward by finding the combinations of all smaller values that would sum to the current threshold.<ref>{{cite journal |first=J. W. |last=Wright |title=The change-making problem |journal=Journal of the Association for Computing Machinery |volume=22 |issue=1 |year=1975 |pages=125–128 |doi=10.1145/321864.321874 |s2cid=22568052 |doi-access=free }}</ref> Thus, at each threshold, all previous thresholds are potentially considered to work upward to the goal amount ''W''. For this reason, this dynamic programming approach requires a number of steps that is O(''nW),'' where ''n'' is the number of types of coins.
+
+==== Implementation ====
+
+The following is a dynamic programming implementation (with Python 3) which uses a matrix to keep track of the optimal solutions to sub-problems, and returns the minimum number of coins, or "Infinity" if there is no way to make change with the coins given. A second matrix may be used to obtain the set of coins for the optimal solution.
+
+<syntaxhighlight lang="python">
+def _get_change_making_matrix(set_of_coins, r: int):
+    m = [[0 for _ in range(r + 1)] for _ in range(len(set_of_coins) + 1)]
+    for i in range(1, r + 1):
+        m[0][i] = float("inf")  # By default there is no way of making change
+    return m
+
+def change_making(coins, n: int):
+    """This function assumes that all coins are available infinitely.
+    if coins are only to be used once, change m[c][r - coin] to m[c - 1][r - coin].
+    n is the number to obtain with the fewest coins.
+    coins is a list or tuple with the available denominations.
+    """
+    m = _get_change_making_matrix(coins, n)
+    for c, coin in enumerate(coins, 1):
+        for r in range(1, n + 1):
+            # Just use the coin
+            if coin == r:
+                m[c][r] = 1
+            # coin cannot be included.
+            # Use the previous solution for making r,
+            # excluding coin
+            elif coin > r:
+                m[c][r] = m[c - 1][r]
+            # coin can be used.
+            # Decide which one of the following solutions is the best:
+            # 1. Using the previous solution for making r (without using coin).
+            # 2. Using the previous solution for making r - coin (without
+            #      using coin) plus this 1 extra coin.
+            else:
+                m[c][r] = min(m[c - 1][r], 1 + m[c][r - coin])
+    return m[-1][-1]
+</syntaxhighlight>
+
+===Greedy method===
+For many real-world coin systems, such as those used in the US and many other countries, a [[greedy algorithm]] of picking the largest denomination of coin which is not greater than the remaining amount to be made will produce the optimal result. This is not the case for arbitrary coin systems or even some real world systems, though. For instance, if we consider the old (now withdrawn) Indian coin denominations of 5, 10, 20 and 25 paise, then to make 40 paise, the greedy algorithm would choose three coins (25, 10, 5) whereas the optimal solution is two coins (20, 20). Another example is attempting to make 40 US cents without nickels (denomination 25, 10, 1) with similar result — the greedy chooses seven coins (25, 10, and 5 × 1), but the optimal is four (4 × 10). A coin system is called "canonical" if the greedy algorithm always solves its change-making problem optimally. It is possible to test whether a coin system is canonical in [[polynomial time]].<ref>{{cite journal
+ | last = Pearson | first = David
+ | doi = 10.1016/j.orl.2004.06.001
+ | issue = 3
+ | journal = [[Operations Research Letters]]
+ | mr = 2108270
+ | pages = 231–234
+ | title = A polynomial-time algorithm for the change-making problem
+ | volume = 33
+ | year = 2005| hdl = 1813/6219
+ | hdl-access = free
+ }}</ref>
+
+== Related problems ==
+The "optimal [[denomination (currency)|denomination]] problem"<ref>
+{{cite journal |author=J. Shallit |title=What this country needs is an 18c piece |journal=[[Mathematical Intelligencer]] |volume=25 |issue=2| year=2003 |pages=20–23 |doi=10.1007/BF02984830 |s2cid=123286384 |url=https://www.cs.uwaterloo.ca/~shallit/Papers/change2.pdf}}
+</ref> is a problem for people who design entirely new currencies. It asks what denominations should be chosen for the coins in order to minimize the average cost of making change, that is, the average number of coins needed to make change. The version of this problem assumed that the people making change will use the minimum number of coins (from the denominations available). One variation of this problem assumes that the people making change will use the "greedy algorithm" for making change, even when that requires more than the minimum number of coins. Most current currencies use a [[1-2-5 series]], but some other set of denominations would require fewer denominations of coins or a smaller average number of coins to make change or both.
+
+==See also==
+* [[List of knapsack problems]]
+* [[Coin problem]]
+* [[package-merge algorithm#The coin collector's problem|The coin collector's problem]]
+
+==References==
+{{reflist}}
+
+== Further reading ==
+* {{cite journal |author=M. Adamaszek, A. Niewiarowska |title=Combinatorics of the change-making problem |journal=European Journal of Combinatorics |volume=31 |issue=1 |year=2010 |pages=47–63 |doi=10.1016/j.ejc.2009.05.002 |arxiv=0801.0120|s2cid=13527488 }}
+
+[[Category:Number theory]]
+[[Category:Recreational mathematics]]
+[[Category:Combinatorial optimization]]
+[[Category:Articles with example Python (programming language) code]]

@@ -1,0 +1,122 @@
+<!-- wikipedia: en
+     page: 19285667
+     title: Auxiliary particle filter
+     revision: 1278819157
+     timestamp: 2025-03-04T20:08:12Z
+     history: https://en.wikipedia.org/w/index.php?curid=19285667&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1278819157 -->
+In [[statistics]], the '''auxiliary particle filter''' (APF) is a [[particle filter]] algorithm introduced by Michael K. Pitt and Neil Shephard in 1999 to improve upon the [[sequential importance resampling]] (SIR) method, a technique in [[Bayesian filtering]] that uses random samples (or "particles") to track underlying patterns in noisy data. SIR can falter when observations come from [[Heavy-tailed distribution|heavy-tailed distributions]]—where extreme values are more common than in typical models—leading to poor performance. The APF enhances this by using an auxiliary variable (an extra step to focus on likely samples) to guide the sampling process, making it more effective for complex [[State-space model|state-space models]] (systems tracking hidden patterns over time). 
+
+For example, in tracking a stock price with sudden jumps, APF adapts to erratic changes better than SIR. This method is widely used in [[time series]] analysis and [[signal processing]].
+
+== Motivation ==
+Particle filters approximate continuous [[random variable]] by <math>M</math> particles with discrete probability mass <math>\pi_t</math>, say <math>1/M</math> for uniform distribution. The random sampled particles can be used to approximate the [[probability density function]] of the continuous random variable if the value <math>M\rightarrow\infin</math>. 
+
+The empirical prediction density is produced as the weighted summation of these particles:<ref>{{Cite journal|first=Michael K. |last=Pitt|first2=Neil|last2= Shephard|title=Filtering Via Simulation: Auxiliary Particle Filters|url=http://scholar.harvard.edu/files/filterSim.pdf|journal=Journal of the American Statistical Association}}</ref>
+
+<math>\widehat{f}(\alpha_{t+1}|Y_t)=\sum_{j=1}^Mf(\alpha_{t+1}|\alpha_t^j)\pi_t^j</math>, and we can view it as the "prior" density. Note that the particles are assumed to have the same weight <math>\pi_t^j=\frac{1}{M}</math>.
+
+Combining the prior density <math>\widehat{f}(\alpha_{t+1}|Y_t)</math> and the likelihood <math>f(y_{t+1}|\alpha_{t+1})</math>, the empirical filtering density can be produced as:
+
+<math>\widehat{f}(\alpha_{t+1}|Y_{t+1})=\frac {f(y_{t+1}|\alpha_{t+1}) \widehat{f}(\alpha_{t+1}|Y_t)}{f(y_{t+1}|Y_t)} \propto f(y_{t+1}|\alpha_{t+1}) \sum_{j=1}^Mf(\alpha_{t+1}|\alpha_t^j)\pi_t^j</math>, where <math>f(y_{t+1}|Y_t) =\int f(y_{t+1}|\alpha_{t+1})dF(\alpha_{t+1}|Y_t)</math>.
+
+On the other hand, the true filtering density which we want to estimate is
+
+<math>f(\alpha_{t+1}|Y_{t+1})=\frac{f(y_{t+1}|\alpha_{t+1})f(\alpha_{t+1}|Y_t)}{f(y_{t+1}|Y_t)}</math>.
+
+The prior density <math>\widehat{f}(\alpha_{t+1}|Y_t)</math>  can be used to approximate the true filtering density <math>f(\alpha_{t+1}|Y_{t+1})</math>:
+
+* The particle filters draw <math>R</math> samples from the prior density <math>\widehat{f}(\alpha_{t+1}|Y_t)</math>. Each sample are drawn with equal probability.
+*Assign each sample with the weights <math>\pi_j=\frac{\omega_j}{\sum_{i=1}^R\omega_i},\omega_j=f(y|\alpha^j)</math>.  The weights represent the likelihood function <math>f(y_{t+1}|\alpha_{t+1})</math>.
+* If the number <math>R\rightarrow\infin</math>, than the samples converge to the desired true filtering density.
+*The <math>R</math> particles are resampled to <math>M</math> particles with the weight <math>\pi_j</math>.
+
+The weakness of the particle filters includes: 
+
+* If the weight {<math>\omega_j</math>} has a large variance, the sample amount <math>R</math> must be large enough for the samples to approximate the empirical filtering density. In other words, while the weight is widely distributed, the SIR method will be imprecise and the adaption is difficult.
+
+Therefore, the auxiliary particle filter is proposed to solve this problem.
+
+== Auxiliary particle filter ==
+
+=== Auxiliary variable ===
+Comparing with the empirical filtering density which has <math>\widehat{f}(\alpha_{t+1}|Y_{t+1})\propto f(y_{t+1}|\alpha_{t+1}) \sum_{j=1}^Mf(\alpha_{t+1}|\alpha_t^j)\pi_t^j</math>, 
+
+we now define <math>\widehat{f}(\alpha_{t+1},k|Y_{t+1})\propto f(y_{t+1}|\alpha_{t+1}) f(\alpha_{t+1}|\alpha_t^k)\pi^k</math>, where <math>k=1,...,M</math>. 
+
+Being aware that <math>\widehat{f}(\alpha_{t+1}|Y_{t+1})</math> is formed by the summation of <math>M</math> particles, the auxiliary variable <math>k</math> represents one specific particle. With the aid of <math>k</math>, we can form a set of samples which has the distribution <math>g(\alpha_{t+1},k|Y_{t+1})</math>. Then, we draw from these sample set <math>g(\alpha_{t+1},k|Y_{t+1})</math> instead of directly from <math>\widehat{f}(\alpha_{t+1}|Y_{t+1})</math>. In other words, the samples are drawn from <math>\widehat{f}(\alpha_{t+1}|Y_{t+1})</math> with different probability. The samples are ultimately utilized to approximate <math>f(\alpha_{t+1}|Y_{t+1})</math>. 
+
+Take the SIR method for example:
+
+*The particle filters draw <math>R</math> samples from <math>g(\alpha_{t+1},k|Y_{t+1})</math>.
+*Assign each samples with the weight <math>\pi_j=\frac{\omega_j}{\sum_{i=1}^R\omega_i}, \omega_j=\frac{f(y_{t+1}|\alpha_{t+1}^j)f(\alpha_{t+1}^j|\alpha_t^k)}{g(\alpha_{t+1}^j,k^j|Y_{t+1})}</math>.
+*By controlling <math>y_{t+1}</math> and <math>\alpha_t^k</math>, the weights are adjusted to be even.
+*Similarly, the <math>R</math> particles are resampled to <math>M</math> particles with the weight <math>\pi_j</math>.
+
+The original particle filters draw samples from the prior density, while the auxiliary filters draw from the joint distribution of the prior density and the likelihood. In other words, the auxiliary particle filters avoid the circumstance which the particles are generated in the regions with low likelihood. As a result, the samples can approximate <math>f(\alpha_{t+1}|Y_{t+1})</math> more precisely.
+
+=== Selection of the auxiliary variable ===
+The selection of the auxiliary variable affects <math>g(\alpha_{t+1},k|Y_{t+1})</math> and controls the distribution of the samples. A possible selection of  <math>g(\alpha_{t+1},k|Y_{t+1})</math> can be:<br /><math>g(\alpha_{t+1},k|Y_{t+1})\propto f(y_{t+1}|\mu_{t+1}^k) f(\alpha_{t+1}|\alpha_t^k)\pi^k</math>, where <math>k=1,...,M</math> and <math>\mu_{t+1}^k</math> is the mean.
+
+We sample from <math>g(\alpha_{t+1},k|Y_{t+1})</math> to approximate <math>f(\alpha_{t+1}|Y_{t+1})</math> by the following procedure:
+
+* First, we assign probabilities to the indexes of <math>f(\alpha_{t+1}|\alpha_t^k)</math>. We named these probabilities as the first-stage weights <math>\lambda_k</math>, which are proportional to <math>g(k|Y_{t+1})\propto \pi^kf(y_{t+1}|\mu_{t+1}^k)</math>.  
+* Then, we draw <math>R</math> samples from <math>f(\alpha_{t+1}|\alpha_t^k)</math> with the weighted indexes. By doing so, we are actually drawing the samples from <math>g(\alpha_{t+1},k|Y_{t+1})</math>.  
+* Moreover, we reassign the second-stage weights  <math>\pi_j=\frac{\omega_j}{\sum_{i=1}^R\omega_i}</math> as the probabilities of the <math>R</math> samples, where  <math>\omega_j=\frac{f(y_{t+1}|\alpha_{t+1}^j)}{f(y_{t+1}|\mu_{t+1}^j)}</math>. The weights are aim to compensate the effect of  <math>\mu_{t+1}^k</math>.  
+
+* Finally, the <math>R</math> particles are resampled to <math>M</math> particles with the weights <math>\pi_j</math>. 
+
+Following the procedure, we draw the <math>R</math> samples from <math>g(\alpha_{t+1},k|Y_{t+1})</math>. Since <math>g(\alpha_{t+1},k|Y_{t+1})</math> is closely related to the mean <math>\mu_{t+1}^k</math>, it has high conditional likelihood. As a result, the sampling procedure is more efficient and the value <math>R</math> can be reduced. 
+
+=== Other point of view ===
+Assume that the filtered [[Posterior probability|posterior]] is described by the following ''M'' weighted samples:
+
+: <math>
+p(x_t|z_{1:t}) \approx \sum_{i=1}^M \omega^{(i)}_t \delta \left( x_t - x^{(i)}_t \right).
+</math>
+
+Then, each step in the [[algorithm]] consists of first drawing a sample of the particle index <math>k</math> which will be propagated from <math>t-1</math> into the new step <math>t</math>. These indexes are auxiliary [[variable (mathematics)|variables]] only used as an intermediary step, hence the name of the algorithm. The indexes are drawn according to the likelihood of some reference point <math>\mu^{(i)}_t</math> which in some way is related to the transition model <math>x_t|x_{t-1}</math> (for example, the mean, a sample, etc.):
+
+: <math>
+k^{(i)} \sim P(i=k|z_t) \propto \omega^{(i)}_t p( z_t | \mu^{(i)}_t )
+</math>
+
+This is repeated for <math>i=1,2,\dots,M</math>, and using these indexes we can now draw the conditional samples:
+
+: <math>
+x_t^{(i)} \sim p( x | x^{k^{(i)}}_{t-1}).
+</math>
+
+Finally, the weights are updated to account for the mismatch between the likelihood at the actual sample and the predicted point <math>\mu_t^{k^{(i)}}</math>:
+
+: <math>
+\omega_t^{(i)} \propto \frac{p( z_t | x^{(i)}_t) } { p( z_t | \mu^{k^{(i)}}_t) }.
+</math>
+
+==References==
+{{reflist}}
+
+==Sources==
+* {{cite journal
+ |author       = Pitt, M.K.
+ |author2      = Shephard, N.
+ |year         = 1999
+ |title        = Filtering Via Simulation: Auxiliary Particle Filters
+ |journal      = Journal of the American Statistical Association
+ |volume       = 94
+ |issue        = 446
+ |pages        = 590&ndash;591
+ |url          = https://www.questia.com/PM.qst?a=o&se=gglsc&d=5002321997
+ |access-date   = 2008-05-06
+ |doi          = 10.2307/2670179
+ |jstor        = 2670179
+ |publisher    = American Statistical Association
+ |archive-url  = https://web.archive.org/web/20071016200646/http://www.questia.com/PM.qst?a=o
+ |archive-date = 2007-10-16
+ |url-status     = dead
+}}
+
+[[Category:Monte Carlo methods]]
+[[Category:Computational statistics]]
+[[Category:Nonlinear filters]]

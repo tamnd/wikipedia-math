@@ -1,0 +1,116 @@
+<!-- wikipedia: en
+     page: 456580
+     title: Branch and bound
+     revision: 1373372943
+     timestamp: 2026-09-05T16:55:31Z
+     history: https://en.wikipedia.org/w/index.php?curid=456580&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373372943 -->
+{{Short description|Optimization by removing non-optimal solutions to subproblems}}
+'''Branch-and-bound''' ('''BB''', '''B&B''', or '''BnB''')  is a method for solving optimization problems by breaking them down into smaller subproblems and using a bounding function to eliminate subproblems that cannot contain the optimal solution. 
+
+It is an [[algorithm]] [[algorithmic paradigm|design paradigm]] for [[discrete optimization|discrete]] and [[combinatorial optimization]] problems, as well as [[mathematical optimization]]. A branch-and-bound algorithm consists of a systematic enumeration of candidate solutions by means of [[state space search|state-space search]]: the set of candidate solutions is thought of as forming a [[Tree (graph theory)|rooted tree]] with the full set at the root. 
+
+The algorithm explores ''branches'' of this tree, which represent subsets of the solution set. Before enumerating the candidate solutions of a branch, the branch is checked against upper and lower estimated ''bounds'' on the optimal solution, and is discarded if it cannot produce a better solution than the best one found so far by the algorithm.
+
+The algorithm depends on efficient estimation of the lower and upper bounds of regions/branches of the search space. If no bounds are available, then the algorithm degenerates to an exhaustive search.
+
+The method was first proposed by [[Ailsa Land]] and [[Alison Harcourt|Alison Doig]] whilst carrying out research at the [[London School of Economics]] sponsored by [[BP|British Petroleum]] in 1960 for [[discrete optimization|discrete programming]],<ref name=land_doig>{{cite journal |author = A. H. Land and A. G. Doig | year = 1960 | title = An automatic method of solving discrete programming problems | journal = Econometrica | volume = 28 | issue = 3 | pages = 497–520 | doi=10.2307/1910129| jstor = 1910129 }}</ref><ref>{{Cite web|url=http://www.lse.ac.uk/newsletters/pressAndInformation/staffNews/2010/20100218.htm|title=Staff News|website=www.lse.ac.uk|access-date=2018-10-08|archive-date=2021-02-24|archive-url=https://web.archive.org/web/20210224173541/https://www.lse.ac.uk/newsletters/pressAndInformation/staffNews/2010/20100218.htm}}</ref> and has become the most commonly used tool for solving [[NP-hard]] optimization problems.<ref name="clausen99"/> The name "branch and bound" first occurred in the work of Little ''et al.'' on the [[traveling salesman problem]].<ref name="little"/><ref>{{cite report |last1=Balas |first1=Egon |first2=Paolo |last2=Toth |year=1983 |title=Branch and bound methods for the traveling salesman problem |issue=Management Science Research Report MSRR-488 |publisher=[[Carnegie Mellon University]] Graduate School of Industrial Administration |url=https://apps.dtic.mil/sti/tr/pdf/ADA126957.pdf |url-status=live |archive-url=https://web.archive.org/web/20121020235044/http://www.dtic.mil/dtic/tr/fulltext/u2/a126957.pdf |archive-date=October 20, 2012|date=}}</ref>
+
+==Overview==
+The goal of a branch-and-bound algorithm is to find a value {{mvar|x}} that maximizes or minimizes the value of a [[real-valued function]] {{math|''f''(''x'')}}, called an [[Loss function|objective function]], among some set {{mvar|S}} of admissible or [[candidate solution]]s. The set {{mvar|S}} is called the search space, or [[feasible region]]. The rest of this section assumes that minimization of {{math|''f''(''x'')}} is desired; this assumption comes [[without loss of generality]], since one can find the maximum value of {{math|''f''(''x'')}} by finding the minimum of {{math|''g''(''x'') {{=}} −''f''(''x'')}}. A B&B algorithm operates according to two principles:
+
+* It [[Recursion|recursively]] splits the search space into smaller spaces, then minimizes {{math|''f''(''x'')}} on these smaller spaces; the splitting is called ''branching''.
+* Branching alone would amount to [[Brute-force search|brute-force]] enumeration of candidate solutions and testing them all. To improve on the performance of brute-force search, a B&B algorithm keeps track of ''bounds'' on the minimum that it is trying to find, and uses these bounds to "[[pruning (decision trees)|prune]]" the search space, eliminating candidate solutions that it can prove will not contain an optimal solution.
+
+Turning these principles into a concrete algorithm for a specific optimization problem requires some kind of [[data structure]] that represents sets of candidate solutions. Such a representation is called an ''[[Instance (computer science)|instance]]'' of the problem. Denote the set of candidate solutions of an instance {{mvar|I}} by {{mvar|S<sub>I</sub>}}. The instance representation has to come with three operations:
+
+* {{math|branch(''I'')}} produces two or more instances that each represent a subset of {{mvar|S<sub>I</sub>}}. (Typically, the subsets are [[disjoint sets|disjoint]] to prevent the algorithm from visiting the same candidate solution twice, but this is not required. However, an optimal solution among {{mvar|S<sub>I</sub>}} must be contained in at least one of the subsets.<ref name="bader">{{cite encyclopedia |first1=David A. |last1=Bader |first2=William E. |last2=Hart |first3=Cynthia A. |last3=Phillips |author3-link=Cynthia A. Phillips |title=Parallel Algorithm Design for Branch and Bound |editor-first=H. J. |editor-last=Greenberg |encyclopedia=Tutorials on Emerging Methodologies and Applications in Operations Research |publisher=Kluwer Academic Press |year=2004 |url=http://www.cc.gatech.edu/~bader/papers/ParallelBranchBound.pdf |access-date=2015-09-16 |archive-url=https://web.archive.org/web/20170813145917/http://www.cc.gatech.edu/~bader/papers/ParallelBranchBound.pdf |archive-date=2017-08-13 }}</ref>)
+* {{math|bound(''I'')}} computes a lower bound on the value of any candidate solution in the space represented by {{mvar|I}}, that is, {{math|bound(''I'') ≤ ''f''(''x'')}} for all {{mvar|x}} in {{mvar|S<sub>I</sub>}}.
+* {{math|solution(''I'')}} determines whether {{mvar|I}} represents a single candidate solution. (Optionally, if it does not, then the operation may choose to return some feasible solution from among {{mvar|S<sub>I</sub>}}.{{r|bader}}) If {{math|solution(''I'')}} returns a solution, then {{math|''f''(solution(''I''))}} provides an upper bound for the optimal objective value over the whole space of feasible solutions.
+<!--(For example, {{mvar|S}} could be the set of all possible trip schedules for a bus fleet, and {{math|''f''(''x'')}} could be the expected revenue for schedule {{mvar|x}}.)-->
+
+Using these operations, a B&B algorithm performs a top-down recursive search through the [[search tree|tree]] of instances formed by the branch operation. Upon visiting an instance {{mvar|I}}, it checks whether {{math|bound(''I'')}} is equal to or greater than the current upper bound; if so, {{mvar|I}} may be safely discarded from the search and the recursion stops. This pruning step is usually implemented by maintaining a [[global variable]] that records the minimum upper bound seen among all instances examined so far.
+
+===Generic version===
+The following is the skeleton of a generic branch-and-bound algorithm for minimizing an arbitrary objective function {{mvar|f}}.<ref name="clausen99">{{cite tech report |first=Jens |last=Clausen |title=Branch and Bound Algorithms—Principles and Examples |year=1999 |publisher=[[University of Copenhagen]] |url=http://www.diku.dk/OLD/undervisning/2003e/datV-optimer/JensClausenNoter.pdf |access-date=2014-08-13 |archive-url=https://web.archive.org/web/20150923214803/http://www.diku.dk/OLD/undervisning/2003e/datV-optimer/JensClausenNoter.pdf |archive-date=2015-09-23 }}</ref> To obtain an actual algorithm from this, one requires a bounding function {{math|bound}}, that computes lower bounds of {{mvar|f}} on nodes of the [[search tree]], as well as a problem-specific branching rule.
+
+# Using a [[heuristic]], find a solution {{mvar|x<sub>h</sub>}} to the optimization problem. Store its value, {{math|''B'' {{=}} ''f''(''x<sub>h</sub>'')}}. (If no heuristic is available, set {{mvar|B}} to infinity.) {{mvar|B}} will denote the best solution found so far, and will be used as an upper bound on candidate solutions.
+# Initialize a queue to hold a partial solution with none of the variables of the problem assigned.
+# Loop until the queue is empty:
+## Take a [[Node (computer science)|node]] {{mvar|N}} off the queue.
+## If {{mvar|N}} represents a single candidate solution {{mvar|x}} and {{math|''f''(''x'') < ''B''}}, then {{mvar|x}} is the best solution so far. Record it and set {{math|''B'' ← ''f''(''x'')}}. The same can be done with a [[heuristic]] whenever the node does not identify a unique solution.
+## Else, ''branch'' on {{mvar|N}} to produce new nodes {{mvar|N<sub>i</sub>}}. Add all feasible nodes for which {{math|bound(''N<sub>i</sub>'') < ''B''}} to the queue. The remaining nodes, having a lower bound greater than or equal to the upper bound of the problem, will never lead to the optimal solution and are discarded.
+
+Several different [[queue (abstract data type)|queue]] [[Data structure|data structures]] can be used. A [[Stack (data structure)|stack]] (LIFO queue) will yield a [[depth-first search|depth-first]] algorithm. A [[Best-first search|best-first]] branch-and-bound algorithm can be obtained by using a [[priority queue]] that sorts nodes on their lower bounds.<ref name="clausen99"/> The depth-first variant is recommended when no good heuristic is available for producing an initial solution, because it quickly produces full solutions, and therefore upper bounds.<ref>{{cite book |last1=Mehlhorn |first1=Kurt |author-link1=Kurt Mehlhorn |first2=Peter |last2=Sanders|author2-link=Peter Sanders (computer scientist) |title=Algorithms and Data Structures: The Basic Toolbox |publisher=Springer |year=2008 |page=249 |url=http://people.mpi-inf.mpg.de/~mehlhorn/ftp/Toolbox/GenericMethods.pdf}}</ref>
+
+===Improvements===
+When <math>\mathbf{x}</math> is a vector of <math>\mathbb{R}^n</math>, branch-and-bound algorithms can be combined with [[Interval arithmetic|interval analysis]]<ref>{{cite book|last1=Moore|first1=R. E.|
+title=Interval Analysis|
+year=1966|publisher=Prentice-Hall|
+location=Englewood Cliff, New Jersey|isbn=0-13-476853-1}}
+</ref> and [[interval contractor|contractor]] techniques to provide guaranteed enclosures of the global minimum.<ref>
+{{cite book|last1=Jaulin|first1=L.|last2=Kieffer|first2=M.|last3=Didrit|first3=O.|last4=Walter|first4=E.|
+title=Applied Interval Analysis|year=2001|publisher=Springer|location=Berlin|isbn=1-85233-219-0}}
+</ref><ref>
+{{cite book|last=Hansen|first=E.R.|
+title=Global Optimization using Interval Analysis|year=1992|
+publisher=Marcel Dekker|location=New York}}
+</ref>
+
+== Applications ==
+{{Prose|section|date=February 2023}}
+This approach is used for a number of [[NP-hard]] problems:
+* [[Integer programming]]
+* [[Nonlinear programming]]
+* [[Travelling salesman problem]] (TSP)<ref name="little">{{cite journal |last1=Little |first1=John D. C. |last2=Murty |first2=Katta G. |last3=Sweeney |first3=Dura W. |last4=Karel |first4=Caroline |title=An algorithm for the traveling salesman problem |journal=Operations Research |volume=11 |issue=6 |year=1963 |pages=972–989 |doi=10.1287/opre.11.6.972 |bibcode=1963OpRes..11..972L |url=http://dspace.mit.edu/bitstream/handle/1721.1/46828/algorithmfortrav00litt.pdf|hdl=1721.1/46828 |hdl-access=free }}</ref><ref>{{cite book |author1-link=Richard W. Conway|author2-link=William L. Maxwell|first1=Richard Walter |last1=Conway |first2=William L. |last2=Maxwell |first3=Louis W. |last3=Miller |year=2003 |title=Theory of Scheduling |url=https://archive.org/details/theoryofscheduli0000conw |url-access=registration |publisher=Courier Dover Publications |pages=[https://archive.org/details/theoryofscheduli0000conw/page/56 56–61]|isbn=978-0-486-42817-8 }}</ref>
+* [[Quadratic assignment problem]] (QAP)
+* [[Maximum satisfiability problem]] (MAX-SAT)
+* [[Nearest neighbor search]]<ref>{{cite journal |last1=Fukunaga |first1=Keinosuke |first2=Patrenahalli M. |last2=Narendra |title=A branch and bound algorithm for computing {{mvar|k}}-nearest neighbors |journal=IEEE Transactions on Computers |year=1975 |volume=100 |issue=7 |pages=750–753|doi=10.1109/t-c.1975.224297 |bibcode=1975ITCmp.100..750F |s2cid=5941649 }}</ref> (by [[Keinosuke Fukunaga]])
+* [[Flow shop scheduling]]
+* [[Cutting stock problem]]
+* [[Computational phylogenetics]]
+* [[Set inversion]]
+* [[Set estimation|Parameter estimation]]
+* [[0/1 knapsack problem]]
+* [[Set cover problem]]
+* [[Feature selection]] in [[machine learning]]<ref>{{cite journal |title=A branch and bound algorithm for feature subset selection |last1=Narendra |first1=Patrenahalli M. |last2=Fukunaga |first2=K. |journal=IEEE Transactions on Computers |volume=C-26 |issue=9 |year=1977 |pages=917–922 |doi=10.1109/TC.1977.1674939 |bibcode=1977ITCmp.100..917N |s2cid=26204315 |url=http://www.computer.org/csdl/trans/tc/1977/09/01674939.pdf}}</ref><ref>{{cite arXiv |last1=Hazimeh |first1=Hussein| last2=Mazumder |first2=Rahul |last3=Saab |first3=Ali |eprint=2004.06152 |title=Sparse Regression at Scale: Branch-and-Bound rooted in First-Order Optimization |date=2020|class=stat.CO }}</ref>
+* [[Structured prediction]] in [[computer vision]]<ref>{{Cite journal | first1 = Sebastian | last1 = Nowozin | first2 = Christoph H. | last2 = Lampert | title = Structured Learning and Prediction in Computer Vision | journal = Foundations and Trends in Computer Graphics and Vision | volume = 6 | issue = 3–4 | year = 2011  | pages = 185–365  | doi = 10.1561/0600000033 | isbn = 978-1-60198-457-9}}</ref>{{rp|267–276}}
+* [[Arc routing problem]], including the Chinese Postman problem
+* [[Talent Scheduling]], scenes-shooting arrangement problem
+
+Branch-and-bound may also be a base of various [[heuristic]]s. For example, one may wish to stop branching when the gap between the upper and lower bounds becomes smaller than a certain threshold. This is used when the solution is "good enough for practical purposes" and can greatly reduce the computations required. This type of solution is particularly applicable when the cost function used is [[noise|''noisy'']] or is the result of [[statistics|statistical estimates]] and so is not known precisely but rather only known to lie within a range of values with a specific [[probability]].{{Citation needed|date=September 2015}}
+
+==Relation to other algorithms==
+Nau ''et al.'' present a generalization of branch and bound that also subsumes the [[A* search algorithm|A*]], [[B*]] and [[Alpha–beta pruning|alpha-beta]] search algorithms.<ref>{{cite journal |last1=Nau |first1=Dana S. |first2=Vipin |last2=Kumar |first3=Laveen |last3=Kanal |title=General branch and bound, and its relation to A∗ and AO∗ |journal=Artificial Intelligence |volume=23 |issue=1 |year=1984 |pages=29–58 |url=https://www.cs.umd.edu/~nau/papers/nau1984general.pdf | doi = 10.1016/0004-3702(84)90004-3 }}</ref>
+
+== Optimization example ==
+Branch-and-bound can be used to maximize <math>Z=5x_1+6x_2</math> with the constraints<blockquote><math>x_1+x_2\leq 50</math>
+
+<math>4x_1+7x_2\leq280</math>
+
+<math>x_1, x_2\geq0</math>
+
+<math>x_1</math> and <math>x_2</math> are integers. </blockquote>The first step is to relax the integer constraint. We have two extreme points for the first equation that form a line: <math>\begin{bmatrix} x_1  \\ x_2 \end{bmatrix}=\begin{bmatrix}50 \\0\end{bmatrix}</math> and <math>\begin{bmatrix}0 \\50\end{bmatrix}</math>. We can form the second line with the vector points <math>\begin{bmatrix}0\\40\end{bmatrix}</math> and <math>\begin{bmatrix} 70\\0\end{bmatrix}</math>. 
+[[File:Branch and Bound optimization example with linear constraints in BricsCad Ultimate Academic Edition.png|thumb|the two lines.]]
+The third point is <math>\begin{bmatrix}0\\0\end{bmatrix}</math>. This is a [[Convex hull|convex hull region]], so the solution lies on one of the vertices of the region. We can find the intersection using row reduction, which is <math>\begin{bmatrix}70/3\\80/3\end{bmatrix}</math> with a value of 276 + 2/3. We test the other endpoints by sweeping the line over the region and find this is the maximum over the reals.  
+
+We choose the variable with the maximum fractional part, in this case <math>x_2</math> becomes the parameter for the branch and bound method. We branch to <math>x_2\leq26</math> and obtain 276 at <math>\langle 24,26\rangle</math>. We have reached an integer solution so we move to the other branch <math>x_2\geq27</math>. We obtain 275.75 at <math>\langle 22.75, 27\rangle</math>. We have a decimal, so we branch <math>x_1</math> to <math>x_1\leq22</math> and we find 274.571 at <math>\langle 22,27.4286\rangle</math>. We try the other branch <math>x_1\geq23</math> and there are no feasible solutions. Therefore, the maximum is 276 with <math>x_1 = 24</math> and <math>x_2 = 26</math>.
+
+==See also==
+* [[Backtracking]]
+* [[Branch and cut|Branch-and-cut]], a hybrid between branch-and-bound and the [[cutting plane]] methods that is used extensively for solving [[integer linear programs]].
+* [[Evolutionary algorithm]]
+* [[Alpha–beta pruning]]
+
+==References==
+{{Reflist|30em}}
+
+== External links ==
+* [https://projects.coin-or.org/Cbc Cbc] – (Coin-or branch and cut) is an open-source mixed integer programming solver written in C++.
+
+{{Optimization algorithms|combinatorial|state=expanded}}
+
+{{DEFAULTSORT:Branch And Bound}}
+[[Category:Optimization algorithms and methods]]
+[[Category:Combinatorial optimization]]

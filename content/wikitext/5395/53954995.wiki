@@ -1,0 +1,129 @@
+<!-- wikipedia: en
+     page: 53954995
+     title: GHK algorithm
+     revision: 1336794192
+     timestamp: 2026-02-05T19:29:11Z
+     history: https://en.wikipedia.org/w/index.php?curid=53954995&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1336794192 -->
+{{short description|Importance sampling method}}
+
+The '''GHK algorithm''' (Geweke, Hajivassiliou and Keane)<ref>{{cite journal|last1=Hajivassiliou|first1=Vassilis|title=CLASSICAL ESTIMATION METHODS FOR LDV MODELS USING SIMULATION|journal=Handbook of Econometrics|date=1994|doi=10.1016/S1573-4412(05)80009-1 |url=http://escholarship.org/uc/item/3cg196fr.pdf}}</ref> is an [[importance sampling]] method for simulating choice probabilities in the [[multivariate probit model]]. These simulated probabilities can be used to recover parameter estimates from the maximized likelihood equation using any one of the usual well known maximization methods ([[Newton's method]], [[BFGS]], etc.). Train<ref>{{cite book|title=Discrete Choice Methods With Simulation|last1=Train|first1=Kenneth|date=2003|publisher=Cambridge University Press}}</ref> has well documented steps for implementing this algorithm for a [[multinomial probit]] model. What follows here will apply to the binary multivariate probit model.
+
+Consider the case where one is attempting to evaluate the choice probability of <math> \Pr(\mathbf{y_i} |\mathbf{X_i\beta}, \Sigma) </math> where <math> \mathbf{y_i} = (y_1, ..., y_J), \ (i = 1,...,N)</math> and where we can take <math> j </math> as choices and <math> i </math> as individuals or observations,  <math> \mathbf{X_i\beta} </math> is the mean and <math> \Sigma</math> is the covariance matrix of the model. The  probability of observing choice <math> \mathbf{y_i} </math> is 
+ 
+: <math>
+\begin{align}
+\Pr(\mathbf{y_i}|\mathbf{X_i\beta}, \Sigma) = & \int_{A_J}\cdots\int_{A_1}f_N(\mathbf{y}^*_i|\mathbf{X_i\beta}, \Sigma) dy^*_1\dots dy^*_J \\
+\Pr(\mathbf{y_i}|\mathbf{X_i\beta}, \Sigma) = & \int \mathbb{1}_{y^* \in A} f_N(\mathbf{y}^*_i|\mathbf{X_i\beta}, \Sigma) d\mathbf{y}^*_i
+\end{align} 
+</math>
+Where <math> A = A_1 \times \cdots \times A_J </math> and,
+: <math>  
+A_j = \begin{cases} (-\infty,0] & y_j = 0 \\
+(0, \infty) &  y_j = 1 \end{cases} 
+</math>
+
+Unless <math> J </math> is small (less than or equal to 2) there is no closed form solution for the integrals defined above (some work has been done with <math> J = 3 </math><ref>{{cite book|last1=Greene|first1=William|title=Econometric Analysis|date=2003|publisher=Prentice Hall}}</ref>). The alternative to evaluating these integrals closed form or by quadrature methods is to use simulation. GHK is a simulation method to simulate the probability above using importance sampling methods.
+
+Evaluating <math> \Pr(\mathbf{y_i}|\mathbf{X_i\beta}, \Sigma) =  \int \mathbb{1}_{y^* \in A} f_N(\mathbf{y}^*_i|\mathbf{X_i\beta}, \Sigma) d\mathbf{y}^*_i </math> is simplified by recognizing that the latent data model <math> \mathbf{y_i^*} = \mathbf{X_i\beta} + \epsilon </math> can be rewritten using a Cholesky factorization, <math> \Sigma = CC' </math>. This gives <math> \mathbf{y_i^*} = \mathbf{X_i\beta} + C\eta_i </math> where the <math> \eta_i </math> terms are distributed <math> N(0,\mathbf{I}) </math>.
+
+Using this factorization and the fact that the <math> \eta_i </math> are distributed independently one can simulate draws from a truncated [[multivariate normal distribution]] using draws from a univariate random normal.
+
+For example, if the region of truncation <math> \mathbf{A} </math> has lower and upper limits equal to <math> [a,b] </math> (including a,b = <math> \pm\infty </math>) then the task becomes 
+: <math> 
+\begin{array}{lcl}
+a < & y^*_1 & < b \\
+a < & y^*_2 & < b \\ 
+\vdots & \vdots & \vdots \\
+a < & y^*_J & < b \\
+\end{array}
+</math> 
+Note:  <math> \mathbf{y_i^*} = \mathbf{X_i\beta} + C\eta_i </math>, substituting:
+: <math> 
+\begin{array}{lcl}
+a < & x_1\beta_1 + c_{11}\eta_1 & < b \\
+a < & x_2\beta_2 + c_{21}\eta_1 + c_{22}\eta_2 & < b \\ 
+\vdots & \vdots & \vdots \\
+a < & x_J\beta_J + \sum_{k=1}^J c_{J,k}\eta_k & < b \\
+\end{array}
+</math>
+
+Rearranging above, 
+: <math> 
+\begin{array}{ccc}
+\frac{a - x_1\beta_1}{c_{11}} & <  \eta_1  < & \frac{b - x_1\beta_1}{c_{11}}\\
+\frac{a - (x_2\beta_2 + c_{21}\eta_1)}{c_{22}} & <   \eta_2  < & \frac{b - (x_2\beta_2 + c_{21}\eta_1)}{c_{22}} \\ 
+\vdots & \vdots & \vdots \\
+\frac{a - (x_J\beta_J + \sum_{k=1}^{J-1} c_{J,k}\eta_k)}{c_{J,J}} & <   \eta_J  < & \frac{b - (x_J\beta_J + \sum_{k=1}^{J-1} c_{J,k}\eta_{k})}{c_{J,J}} \\
+\end{array}
+</math>
+
+Now all one needs to do is iteratively draw from the truncated univariate normal distribution with the given bounds above. This can be done by the inverse CDF method and noting the truncated normal distribution is given by, 
+:<math>
+u = \frac{ \Phi( \frac{x-\mu}{\sigma}) - \Phi(\frac{a-\mu}{\sigma}) }{ \Phi(\frac{b-\mu}{\sigma}) - \Phi(\frac{a-\mu}{\sigma})}
+</math>
+Where <math> u </math> will be a number between 0 and 1 because the above is a CDF. This suggests to generate random draws from the [[truncated distribution]] one has to solve for <math> x </math> giving, 
+: <math>
+x = \sigma F^{-1}(u*(F(\beta) - F(\alpha)) + F(\alpha)) + \mu 
+</math>
+where <math> \alpha = \frac{a-\mu}{\sigma} </math> and <math> \beta = \frac{b-\mu}{\sigma} </math> and <math> F </math> is the standard normal CDF. With such draws one can reconstruct the <math> \mathbf{y^*_i} </math> by its simplified equation using the Cholesky factorization. These draws will be conditional on the draws coming before and using properties of normals the product of the conditional PDFs will be the joint distribution of the <math> \mathbf{y^*_i} </math>, 
+: <math>
+q(\mathbf{y^*_i}|\mathbf{X_1\beta}, \Sigma) = q(y^*_1|\mathbf{X_1\beta}, \Sigma)q(y^*_2|y^*_1, \mathbf{X_1\beta}, \Sigma)\dots q(y^*_J|y^*_1,\dots,y^*_{J-1},\mathbf{X_1\beta}, \Sigma)
+</math>
+Where <math> q(\cdot) </math> is the multivariate normal distribution.
+
+Because <math> y^*_j </math> conditional on <math> y_k, \ k<j </math> is restricted to the set <math> A </math> by the setup using the Cholesky factorization then we know that <math> q(\cdot) </math> is a truncated multivariate normal. The distribution function of a [[truncated normal]] is, 
+: <math> 
+\frac{ \phi(\frac{x-\mu}{\sigma })} {\sigma(\Phi(\frac{b-\mu}{\sigma}) -  \Phi(\frac{a-\mu}{\sigma})) }
+</math>
+
+Therefore, <math> y^*_j </math> has distribution, 
+:<math>
+\begin{align}
+q(\mathbf{y^*_i} | \mathbf{X_i\beta}, \Sigma) & =  
+\frac{ \frac{1}{c_{11}} \phi_1\Big( \frac{y^*_{j} - x_1\beta }{c_{11}}\Big)}{\Big( \Phi_1\Big(  \frac{b- x_1\beta}{c_{11}} \Big) -\Phi_1\Big(  \frac{a- x_1\beta}{c_{11}} \Big) \Big)}\times
+
+\dots \times
+
+\frac{\frac{1}{c_{JJ}}\phi_J\Big(\frac{y^*_J - (x_J\beta + c_{J1}\eta_1 + c_{J2}\eta_2 + \dots + c_{JJ-1} \eta_{J-1})}{c_{JJ}}\Big)   }{\Big(\Phi_J \Big(  \frac{b- (x_J\beta + c_{J1}\eta_1 + c_{J2}\eta_2 + \dots + c_{JJ-1} \eta_{J-1})}{c_{JJ}} \Big) - \Phi_J \Big(  \frac{a- (x_J\beta + c_{J1}\eta_1 + c_{J2}\eta_2 + \dots + c_{JJ-1} \eta_{J-1}}{c_{JJ}}\Big) \Big)}\\
+
+& = \frac{\prod_{j=1}^{J} \frac{1}{c_{jj}} \phi_j\Big( \frac{y^*_j - \sum_{k=1}^{k<j} c_{jk}\eta_k }{c_{jj}}\Big)}{ \prod_{j=1}^J \Big(\Phi_j \Big(  \frac{b - \sum_{k=1}^{k<j} c_{jk}\eta_k}{c_{jj}} \Big) - \Phi\Big( \frac{a - \sum_{k=1}^{k<j} c_{jk}\eta_k}{c_{jj}}\Big)\Big)} 
+\end{align} 
+</math>
+
+where <math> \phi_j </math> is the standard normal pdf for choice <math> j </math>.
+
+Because <math> y^*_{j | \{y^*_{k<j} \}} \sim N(\mathbf{X_i\beta} + \sum_{k=1}^{k<j} c_{jk}\eta_k, c_{jj}^2) </math> the above standardization makes each term mean 0 variance 1.
+
+Let the denominator <math> \prod_{j=1}^J  \Phi_j \Big(  \frac{b - \sum_{k=1}^{k<j} c_{jk}\eta_k}{c_{jj}} \Big) - \Phi\Big( \frac{a - \sum_{k=1}^{k<j} c_{jk}\eta_k}{c_{jj}}\Big) = \prod_{j=1}^J  l_{jj} </math> and the numerator <math>\prod_{j=1}^{J}\frac{1}{c_{jj}} \phi_j\Big( \frac{y^*_j - \sum_{k=1}^{k<j} c_{jk}\eta_k }{c_{jj}}\Big) = f_{N}(\mathbf{y_i^*} | \mathbf{X_i\beta}, \Sigma) </math> where <math> f_N(\cdot) </math> is the multivariate normal PDF.
+
+Going back to the original goal, to evaluate the 
+:<math>
+\begin{align}
+\Pr(\mathbf{y_i}|\mathbf{X_i\beta}, \Sigma) = & \int_{A_j}f_N(\mathbf{y}^*_i|\mathbf{X_i\beta}, \Sigma) dy^*_j \\
+\end{align}
+</math>
+
+Using importance sampling we can evaluate this integral, 
+:<math>
+\begin{align}
+\Pr(\mathbf{y_i}|\mathbf{X_i\beta}, \Sigma) = & \int_{A_j}f_N(\mathbf{y}^*_i|\mathbf{X_i\beta}, \Sigma) dy^*_j \\
+ = &\int_{A_j} \frac{f_N(\mathbf{y}^*_i|\mathbf{X_i\beta}, \Sigma)}{ q(\mathbf{y^*_i} | \mathbf{X_i\beta}, \Sigma) } q(\mathbf{y^*_i} | \mathbf{X_i\beta}, \Sigma) dy^*_j \\
+= & \int_{A_j} \frac{f_N(\mathbf{y}^*_i|\mathbf{X_i\beta}, \Sigma)}{ \frac{f_N(\mathbf{y}^*_i|\mathbf{X_i\beta}, \Sigma)}{\prod_{j=1}^J  l_{jj}} } q(\mathbf{y^*_i} | \mathbf{X_i\beta}, \Sigma) dy^*_j \\
+= & \mathbb{E}_{\mathbf{q}} \Big(  \prod_{j=1}^J  l_{jj}  \Big) \\
+\end{align}
+
+</math>
+
+This is well approximated by <math> \frac{1}{S} \sum_{s=1}^S \prod_{j=1}^J  l_{jj} </math>.
+
+==References==
+{{reflist}}
+
+*
+*
+*
+*
+
+[[Category:Regression models]]

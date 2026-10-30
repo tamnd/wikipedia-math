@@ -1,0 +1,267 @@
+<!-- wikipedia: en
+     page: 7196522
+     title: Lowest common ancestor
+     revision: 1373894477
+     timestamp: 2026-09-08T16:00:19Z
+     history: https://en.wikipedia.org/w/index.php?curid=7196522&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373894477 -->
+{{Short description|Tree node with two other nodes as descendants}}
+{{about|lowest common ancestors in graph theory and computer science|the common ancestor of a set of species in evolutionary trees|most recent common ancestor|a common ancestor of all life forms|last universal common ancestor}}
+[[Image:Lowest common ancestor.svg|thumb|upright=0.65|In this tree, the lowest common ancestor of the nodes {{mvar|x}} and {{mvar|y}} is marked in dark green. Other common ancestors are shown in light green.]]
+In [[graph theory]] and [[computer science]], the '''lowest common ancestor''' ('''LCA''') (also called '''least common ancestor''') of two nodes {{mvar|v}} and {{mvar|w}} in a [[Tree (graph theory)|tree]] or [[directed acyclic graph]] (DAG)  {{mvar|T}} is the lowest (i.e. deepest) node that has both {{mvar|v}} and {{mvar|w}} as descendants, where we define each node to be a descendant of itself (so if {{mvar|v}} has a direct connection from {{mvar|w}}, {{mvar|w}} is the lowest common ancestor).
+
+The LCA of {{mvar|v}} and {{mvar|w}} in {{mvar|T}} is the shared ancestor of {{mvar|v}} and {{mvar|w}} that is located farthest from the root. Computation of lowest common ancestors may be useful, for instance, as part of a procedure for determining the distance between pairs of nodes in a tree: the distance from {{mvar|v}} to {{mvar|w}} can be computed as the distance from the root to {{mvar|v}}, plus the distance from the root to {{mvar|w}}, minus twice the distance from the root to their lowest common ancestor {{harv|Djidjev|Pantziou|Zaroliagis|1991}}.
+
+In a [[tree data structure]] where each node points to its parent, the lowest common ancestor can be easily determined by finding the first intersection of the paths from {{mvar|v}} and {{mvar|w}} to the root. In general, the computational time required for this algorithm is {{mvar|O(h)}} where {{mvar|h}} is the height of the tree (length of longest path from a leaf to the root). However, there exist several algorithms for processing trees so that lowest common ancestors may be found more quickly. [[Tarjan's off-line lowest common ancestors algorithm]], for example, preprocesses a tree in linear time to provide constant-time LCA queries. In general DAGs, similar algorithms exist, but with super-linear complexity.
+
+==History==
+
+The lowest common ancestor problem was defined by {{harvs|last1=Aho|first1=Alfred|author1-link=Alfred Aho|last2=Hopcroft|first2=John|author2-link=John Hopcroft|last3=Ullman|first3=Jeffrey|author3-link=Jeffrey Ullman|year=1973|txt}}, but {{harvs|first1=Dov|last1=Harel|first2=Robert|last2=Tarjan|author2-link=Robert Tarjan|txt|year=1984}} were the first to develop an optimally efficient lowest common ancestor data structure. Their algorithm processes any tree in linear time, using a [[heavy path decomposition]], so that subsequent lowest common ancestor queries may be answered in constant time per query. However, their data structure is complex and difficult to implement. Tarjan also found a simpler but less efficient algorithm, based on the [[union-find]] data structure, for [[Tarjan's off-line lowest common ancestors algorithm|computing lowest common ancestors of an offline batch of pairs of nodes]].
+
+{{harvs|first1=Baruch|last1=Schieber|author1-link=Baruch Schieber|first2=Uzi|last2=Vishkin|author2-link=Uzi Vishkin|txt|year=1988}} simplified the data structure of Harel and Tarjan, leading to an implementable structure with the same asymptotic preprocessing and query time bounds. Their simplification is based on the principle that, in two special kinds of trees, lowest common ancestors are easy to determine: if the tree is a path, then the lowest common ancestor can be computed simply from the minimum of the levels of the two queried nodes, while if the tree is a [[complete binary tree]], the nodes may be indexed in such a way that lowest common ancestors reduce to simple binary operations on the indices. The structure of Schieber and Vishkin decomposes any tree into a collection of paths, such that the connections between the paths have the structure of a binary tree, and combines both of these two simpler indexing techniques.
+
+{{harvs|first1=Omer|last1=Berkman|first2=Uzi|last2=Vishkin|txt|year=1993}} discovered a completely new way to answer lowest common ancestor queries, again achieving linear preprocessing time with constant query time. Their method involves forming an [[Euler tour]] of a graph formed from the input tree by doubling every edge, and using this tour to write a sequence of level numbers of the nodes in the order the tour visits them; a lowest common ancestor query can then be transformed into a query that seeks the minimum value occurring within some subinterval of this sequence of numbers. They then handle this [[Range Minimum Query|range minimum query]] problem (RMQ) by combining two techniques, one technique based on precomputing the answers to large intervals that have sizes that are powers of two, and the other based on table   lookup for small-interval queries. This method was later presented in a simplified form by {{harvs|first1=Michael|last1=Bender|first2=Martin|last2=Farach-Colton|author2-link=Martin Farach-Colton|txt|year=2000}}. As had been previously observed by {{harvtxt|Gabow|Bentley|Tarjan|1984}}, the range minimum problem can in turn be transformed back into a lowest common ancestor problem using the technique of [[Cartesian tree]]s.
+
+Further simplifications were made by {{harvtxt|Alstrup|Gavoille|Kaplan|Rauhe|2004}} and {{harvtxt|Fischer|Heun|2006}}.
+
+{{harvs|last1=Sleator|author1-link=Daniel Sleator|last2=Tarjan|author2-link=Robert Tarjan|txt|year=1983}} proposed the dynamic LCA variant of the problem in which the data structure should be prepared to handle LCA queries intermixed with operations that change the tree (that is, rearrange the tree by adding and removing edges). This variant can be solved in <math>O(\log N)</math> time in the total size of the tree for all modifications and queries. This is done by maintaining the forest using the dynamic trees data structure with partitioning by size; this then maintains a heavy-light decomposition of each tree, and allows LCA queries to be carried out in logarithmic time in the size of the tree.
+
+== Linear space and constant search time solution to LCA in trees ==
+As mentioned above, LCA can be reduced to RMQ. An efficient solution to the resulting RMQ problem starts by partitioning the number sequence into blocks. Two different techniques are used for queries across blocks and within blocks.
+
+=== Reduction from LCA to RMQ ===
+Reduction of LCA to {{abbr|RMQ|range minimum query}} starts by walking the tree. For each node visited, record in sequence its label and depth.
+Suppose nodes {{math|''x''}} and {{math|''y''}} occur in positions {{math|''i''}} and {{math|''j''}} in this sequence, respectively. Then the LCA of {{math|''x''}} and {{math|''y''}} will be found in position RMQ({{math|''i''}}, {{math|''j''}}), where the RMQ is taken over the depth values.
+[[File:LMC to RMQ.png|none|thumb|524x524px|An example showing how LCA is reduced to RMQ.]]
+
+=== Linear space and constant search time algorithm for RMQ reduced from LCA ===
+Despite that there exists [[Range minimum query#Solution using constant time and linear space|a constant time and linear space solution]] for general RMQ, but a simplified solution can be applied that make uses of LCA's properties. This simplified solution can only be used for RMQ reduced from LCA.
+
+Similar to the solution mentioned above, we divide the sequence into each block <math>B_i</math>, where each block <math>B_i</math> has size of <math>b={1 \over 2}\log n</math>. 
+[[File:Splitting RMQ into blocks.png|none|thumb|403x403px|An illustration showing a RMQ problem is divided into blocks that each has size = b]]
+By splitting the sequence into blocks, the <math>RMQ(i,j)</math> query can be solved by solving two different cases:
+
+==== Case 1: if i and j are in different blocks ====
+To answer the <math>RMQ(i,j)</math> query in case one, there are 3 groups of variables precomputed to help reduce query time. 
+
+First, the minimum element with the smallest index in each block <math>B_i</math> is precomputed and denoted as <math>y_i</math>. A set of <math>y_i</math> takes <math>O(n/b)</math> space.
+
+Second, given the set of <math>y_i</math>, the RMQ query for this set is precomputed using [[Range minimum query#Solution using constant time and linearithmic space|the solution with constant time and linearithmic space]]. There are <math>n/b</math> blocks, so the lookup table in that solution takes <math>O({n \over b} \log {n \over b})</math> space. Because <math>b={1 \over 2}\log n</math>, <math>O({n \over b} \log {n \over b})</math> = <math>O(n)</math> space. Hence, the precomputed RMQ query using [[Range minimum query#Solution using constant time and linearithmic space|the solution with constant time and linearithmic space]] on these blocks only take <math>O(n)</math> space.
+
+Third, in each block <math>B_i</math>, let <math>k_i</math> be an index in <math>B_i</math> such that <math>0 \leq k_i < b</math>. For all <math>k_i</math> from <math>0</math> until <math>b</math>, block <math>B_i</math> is divided into two intervals <math>[0, k_i)</math> and <math>[k_i, b)</math>. Then the minimum element with the smallest index for intervals in <math>[0, k_i)</math> and <math>[k_i, b)</math> in each block <math>B_i</math> is precomputed. Such minimum elements are called as prefix min for the interval in <math>[0, k_i)</math> and suffix min for the interval in <math>[k_i, b)</math>. Each iteration of <math>k_i</math> computes a pair of prefix min and suffix min. Hence, the total number of prefix mins and suffix mins in a block <math>B_i</math> is <math>2b</math>. Since there are <math>n/b</math> blocks, in total, all prefix min and suffix min arrays take <math>O(2b \cdot {n \over b})</math> which is <math>O(n)</math> spaces.
+
+In total, it takes <math>O(n)</math> space to store all 3 groups of precomputed variables mentioned above.
+
+Therefore, answering the <math>RMQ(i,j)</math> query in case 1 is simply taking the minimum of the following three questions:
+
+Let <math>B_i</math> be the block that contains the element at index <math>i</math>, and <math>B_j</math> for index <math>j</math>.
+
+# The suffix min in <math>[i \mod b, b)</math> in the block<math>B_i</math>
+# Answering the RMQ query on a subset of <math>y</math>s from blocks <math>\{ B_{i+1} ... B_{j-1} \}</math>using [[Range minimum query#Solution using constant time and linearithmic space|the solution with constant time and linearithmic space]]
+# The prefix min in <math>[0, j \mod b)</math> in the block <math>B_j</math>
+
+All 3 questions can be answered in constant time. Hence, case 1 can be answered in linear space and constant time.
+
+==== Case 2: if i and j are in the same block ====
+The sequence of RMQ that reduced from LCA has one property that a normal RMQ doesn't have. The next element is always +1 or -1 from the current element. For example:
+[[File:+-1 for RMQ reduced from LCA.png|none|thumb|608x608px|An illustration showing how the example RMQ is encoded as a bitstring]]
+Therefore, each block <math>B_i</math> can be encoded as a bitstring with 0 represents the current depth -1, and 1 represent the current depth +1. This transformation turns a block <math>B_i</math>into a bitstring of size <math>b-1</math>. A bitstring of size <math>b-1</math> has <math>2^{b-1}</math> possible bitstrings. Since <math>b={1 \over 2}\log n</math>, so <math>2^{b-1} \leq 2^b = 2^{{1 \over 2}\log n} = n^{{1 \over 2}} = \sqrt{n}</math>.
+
+Hence, <math>B_i</math> is always one of the <math>\sqrt{n}</math> possible bitstring with size of <math>b-1</math>.
+
+Then, for each possible bitstring, we apply [[Range minimum query#Naive solution|the naïve quadratic space constant time solution]]. This will take up <math>\sqrt{n}\cdot b^2</math> spaces, which is <math>O(\sqrt{n}\cdot(\log n)^2) \le O(\sqrt{n}\cdot\sqrt{n}) = O(n)</math>.
+
+Therefore, answering the <math>RMQ(i,j)</math> query in case 2 is simply finding the corresponding block (in which is a bitstring) and perform a table lookup for that bitstring. Hence, case 2 can be solved using linear space with constant searching time.
+
+==Extension to directed acyclic graphs==
+[[File:Lowest common ancestors in a DAG.svg|thumb|upright=0.65|A DAG with the lowest common ancestors of {{mvar|x}} and {{mvar|y}} in dark green and other common ancestors in light green.]]
+While originally studied in the context of trees, the notion of lowest common ancestors can be defined for directed acyclic graphs (DAGs), using either of two possible definitions. In both, the edges of the DAG are assumed to point from parents to children.
+
+* Given {{math|''G'' {{=}} (''V'', ''E'')}}, {{harvtxt|Aït-Kaci|Boyer|Lincoln|Nasr|1989}} define a [[Partially ordered set|poset]] {{math|(''V'', ≤)}} such that {{mvar|''x'' ≤ ''y''}} iff {{mvar|x}} is reachable from {{mvar|y}}. The lowest common ancestors of {{mvar|x}} and {{mvar|y}} are then the minimum elements under ≤ of the common ancestor set {{math|{''z'' ∈ ''V'' {{!}} ''x'' ≤ ''z'' and ''y'' ≤ ''z''}}}.
+* {{harvtxt|Bender|Farach-Colton|Pemmasani|Skiena|2005}} gave an equivalent definition, where the lowest common ancestors of {{mvar|x}} and {{mvar|y}} are the nodes of [[out-degree]] zero in the [[Glossary of graph theory#Subgraphs|subgraph]] of {{mvar|G}} induced by the set of common ancestors of {{mvar|x}} and {{mvar|y}}.
+
+In a tree, the lowest common ancestor is unique; in a DAG of {{mvar|n}} nodes, each pair of nodes may have as much as {{math|''n''-2}} LCAs {{harv|Bender|Farach-Colton|Pemmasani|Skiena|2005}}, while the existence of an LCA for a pair of nodes is not even guaranteed in arbitrary connected DAGs.
+
+A brute-force algorithm for finding lowest common ancestors is given by {{harvtxt|Aït-Kaci|Boyer|Lincoln|Nasr|1989}}: find all ancestors of {{mvar|x}} and {{mvar|y}}, then return the maximum element of the intersection of the two sets. Better algorithms exist that, analogous to the LCA algorithms on trees, preprocess a graph to enable constant-time LCA queries. The problem of ''LCA existence'' can be solved optimally for sparse DAGs by means of an {{math|O({{!}}''V''{{!}}{{!}}''E''{{!}})}} algorithm due to {{harvtxt|Kowaluk|Lingas|2005}}.
+
+{{harvtxt|Dash|Scholz|Herhut|Christianson|2013}} present a unified framework for preprocessing directed acyclic graphs to compute ''a representative'' lowest common ancestor in ''a rooted DAG'' in constant time. Their framework can achieve near-linear preprocessing times for sparse graphs and is available for public use.<ref>{{Cite web | last1=Christianson| first1=B.| last2=Santanu| first2=Dash| url=http://www.herts.ac.uk/dag-pre-processing-downloadable-code/source-code | title=Try our source code for free| date=2015| doi=10.18745/ds.16553}}</ref>
+
+==Applications==
+The problem of computing lowest common ancestors of classes in an [[inheritance hierarchy]] arises in the implementation of [[object-oriented programming]] systems {{harv|Aït-Kaci|Boyer|Lincoln|Nasr|1989}}. The LCA problem also finds applications in models of [[complex system]]s found in [[distributed computing]] {{harv|Bender|Farach-Colton|Pemmasani|Skiena|2005}}.
+
+==See also==
+*[[Level ancestor problem]]
+*[[Semilattice]]
+
+==References==
+{{Reflist}}
+*{{citation|last1=Aho|first1=Alfred|author1-link=Alfred Aho|last2=Hopcroft|first2=John|author2-link=John Hopcroft|last3=Ullman|first3=Jeffrey|author3-link=Jeffrey Ullman|year=1973|contribution=On finding lowest common ancestors in trees|title=Proc. 5th ACM Symp. Theory of Computing (STOC)|pages=253–265|doi=10.1145/800125.804056|title-link=Symposium on Theory of Computing|s2cid=17705738 |doi-access=free}}.
+*{{citation |first1=H. |last1=Aït-Kaci |first2=R. |last2=Boyer |first3=P. |last3=Lincoln |first4=R. |last4=Nasr |title=Efficient implementation of lattice operations |journal=[[ACM Transactions on Programming Languages and Systems]] |volume=11 |issue=1 |pages=115–146 |year=1989 |url=http://hassan-ait-kaci.net/pdf/encoding-toplas-89.pdf |doi=10.1145/59287.59293|s2cid=2931984 }}.
+*{{citation
+ | last1 = Alstrup | first1 = Stephen
+ | last2 = Gavoille | first2 = Cyril
+ | last3 = Kaplan | first3 = Haim
+ | last4 = Rauhe | first4 = Theis
+ | title = Nearest Common Ancestors: A Survey and a New Algorithm for a Distributed Environment
+ | journal = Theory of Computing Systems
+ | doi = 10.1007/s00224-004-1155-5
+ | volume = 37 | issue = 3 | year = 2004
+ | pages = 441–456
+ | url = http://www.math.tau.ac.il/~haimk/papers/lnca-submitted.ps| s2cid = 9447127
+ }}. A preliminary version appeared in SPAA 2002.
+*{{citation
+ | last1 = Bender
+ | first1 = Michael A.
+ | last2 = Farach-Colton
+ | first2 = Martin
+ | author-link2 = Martin Farach-Colton
+ | contribution = The LCA problem revisited
+ | title = Proceedings of the 4th Latin American Symposium on Theoretical Informatics
+ | publisher = Springer-Verlag
+ | series = [[Lecture Notes in Computer Science]]
+ | volume = 1776
+ | date = 2000
+ | pages = [https://archive.org/details/latin2000theoret0000lati/page/88 88–94]
+ | doi = 10.1007/10719839_9
+ | url = https://archive.org/details/latin2000theoret0000lati/page/88
+ | isbn = 978-3-540-67306-4
+ | url-access = registration
+ }}.
+* {{citation |last1=Bender |first1=Michael A. |first2=Martín |last2=Farach-Colton|author-link2 = Martin Farach-Colton |first3=Giridhar |last3=Pemmasani |first4=Steven |last4=Skiena |author-link4=Steven Skiena |first5=Pavel |last5=Sumazin |title=Lowest common ancestors in trees and directed acyclic graphs |journal=Journal of Algorithms |volume=57 |issue=2 |year=2005 |pages=75–94 |url=http://www.cs.sunysb.edu/~bender/pub/JALG05-daglca.pdf |doi=10.1016/j.jalgor.2005.08.001}}.
+*{{citation
+ | last1 = Berkman | first1 = Omer
+ | last2 = Vishkin | first2 = Uzi | author2-link = Uzi Vishkin
+ | title = Recursive Star-Tree Parallel Data Structure
+ | journal = SIAM Journal on Computing
+ | volume = 22
+ | issue = 2
+ | pages = 221–242
+ | year = 1993
+ | doi = 10.1137/0222017| url = http://www.dtic.mil/get-tr-doc/pdf?AD=ADA227803| archive-url = https://web.archive.org/web/20170923151711/http://www.dtic.mil/get-tr-doc/pdf?AD=ADA227803| archive-date = September 23, 2017}}.
+*{{citation 
+ | last1=Dash|first1=Santanu Kumar
+ | last2=Scholz|first2=Sven-Bodo
+ | last3=Herhut|first3=Stephan
+ | last4=Christianson|first4=Bruce
+ | title=A scalable approach to computing representative lowest common ancestor in directed acyclic graphs
+ | journal=Theoretical Computer Science
+ | date=2013
+ | volume=513
+ | pages=25–37
+| doi=10.1016/j.tcs.2013.09.030|hdl=2299/12152
+ | doi-access=free
+ | hdl-access=free
+ }}
+*{{citation
+ | last1 = Djidjev | first1 = Hristo N.
+ | last2 = Pantziou | first2 = Grammati E.
+ | last3 = Zaroliagis | first3 = Christos D.
+ | contribution = Computing shortest paths and distances in planar graphs
+ | doi = 10.1007/3-540-54233-7_145
+ | pages = 327–338
+ | publisher = Springer
+ | series = Lecture Notes in Computer Science
+ | title = Automata, Languages and Programming: 18th International Colloquium, Madrid, Spain, July 8–12, 1991, Proceedings
+ | volume = 510
+ | year = 1991| isbn = 978-3-540-54233-9
+ }}.
+*{{citation
+ | last1 = Fischer | first1 = Johannes
+ | last2 = Heun | first2 = Volker
+ | contribution = Theoretical and Practical Improvements on the RMQ-Problem, with Applications to LCA and LCE
+ | title = Proceedings of the 17th Annual Symposium on Combinatorial Pattern Matching
+ | publisher = Springer-Verlag
+ | series = Lecture Notes in Computer Science
+ | volume = 4009
+ | year = 2006
+ | pages = 36–48
+ | doi = 10.1007/11780441_5| isbn = 978-3-540-35455-0
+ }}.
+*{{citation
+ | last1 = Gabow | first1 = Harold N. | author1-link = Harold N. Gabow
+ | last2 = Bentley | first2 = Jon Louis | author2-link = Jon Bentley (computer scientist)
+ | last3 = Tarjan | first3 = Robert E. | author3-link = Robert Tarjan
+ | contribution = Scaling and related techniques for geometry problems
+ | doi = 10.1145/800057.808675
+ | location = New York, NY, USA
+ | pages = 135–143
+ | publisher = ACM
+ | title = STOC '84: Proc. 16th ACM Symposium on Theory of Computing
+ | year = 1984| title-link = Symposium on Theory of Computing
+ | isbn = 978-0-89791-133-7
+ | s2cid = 17752833 }}.
+*{{citation
+ | last1 = Harel | first1 = Dov
+ | last2 = Tarjan | first2 = Robert E. | author2-link = Robert Tarjan
+ | title = Fast algorithms for finding nearest common ancestors
+ | journal = SIAM Journal on Computing
+ | volume = 13
+ | issue = 2
+ | pages = 338–355
+ | year = 1984
+ | doi = 10.1137/0213024}}.
+*{{citation
+ | last1 = Kowaluk
+ | first1 = Miroslaw
+ | last2 = Lingas
+ | first2 = Andrzej
+ | editor1-last = Caires
+ | editor1-first = Luís
+ | editor2-last = Italiano
+ | editor2-first = Giuseppe F.
+ | editor2-link = Giuseppe F. Italiano
+ | editor3-last = Monteiro
+ | editor3-first = Luís
+ | editor4-last = Palamidessi
+ | editor4-first = Catuscia | editor4-link = Catuscia Palamidessi
+ | editor5-last = Yung
+ | editor5-first = Moti
+ | contribution = LCA queries in directed acyclic graphs
+ | doi = 10.1007/11523468_20
+ | pages = [https://archive.org/details/automatalanguage2005inte/page/241 241–248]
+ | publisher = Springer
+ | series = Lecture Notes in Computer Science
+ | title = Automata, Languages and Programming, 32nd International Colloquium, ICALP 2005, Lisbon, Portugal, July 11-15, 2005, Proceedings
+ | volume = 3580
+ | year = 2005
+ | isbn = 978-3-540-27580-0
+ | url = https://archive.org/details/automatalanguage2005inte/page/241
+ }}
+*{{citation
+ | last1 = Schieber | first1 = Baruch | author1-link = Baruch Schieber
+ | last2 = Vishkin | first2 = Uzi | author2-link = Uzi Vishkin
+ | title = On finding lowest common ancestors: simplification and parallelization
+ | journal = SIAM Journal on Computing
+ | volume = 17
+ | pages = 1253–1262
+ | year = 1988
+ | doi = 10.1137/0217079
+ | issue = 6}}.
+*{{citation 
+ | last1 = Sleator
+ | author1-link = Daniel Sleator 
+ | first1 = D. D. 
+ | last2 = Tarjan 
+ | author2-link = Robert Tarjan
+ | first2 = R. E. 
+ | doi = 10.1145/800076.802464 
+ | chapter = A Data Structure for Dynamic Trees 
+ | title = Proceedings of the thirteenth annual ACM symposium on Theory of computing - STOC '81 
+ | pages = 114–122 
+ | year = 1983 
+ | s2cid = 15402750 
+ | chapter-url = https://www.cs.cmu.edu/~sleator/papers/dynamic-trees.pdf}}
+
+==External links==
+* [http://www.ritambhara.in/lowest-common-ancestor-in-binary-search-tree/ Lowest Common Ancestor of a Binary Search Tree], by Kamal Rawat
+* [http://www.ics.uci.edu/~eppstein/PADS/LCA.py Python implementation of the algorithm of Bender and Farach-Colton for trees], by [[David Eppstein]]
+* [https://github.com/networkx/networkx/blob/master/networkx/algorithms/lowest_common_ancestors.py Python implementation for arbitrary directed acyclic graphs]
+* [http://courses.csail.mit.edu/6.897/spring03/scribe_notes/L11/lecture11.pdf Lecture notes on LCAs from a 2003 MIT Data Structures course]. Course by [[Erik Demaine]], notes written by Loizos Michael and Christos Kapoutsis. [http://courses.csail.mit.edu/6.851/spring07/scribe/lec16.pdf Notes from 2007 offering of same course], written by Alison Cichowlas.
+* [http://gim.org.pl/lca/Lowest_Common_Ancestor_Fast_Implementation.html Lowest Common Ancestor in Binary Trees] in [[C (programming language)|C]]. A simplified version of the Schieber–Vishkin technique that works only for balanced binary trees.
+* [https://web.archive.org/web/20110720050818/http://stanford-online.stanford.edu/knuth/071203-knuth-300.asx Video] of [[Donald Knuth]] explaining the Schieber–Vishkin technique
+* [http://www.topcoder.com/tc?module=Static&d1=tutorials&d2=lowestCommonAncestor Range Minimum Query and Lowest Common Ancestor article in Topcoder]
+* [http://hackage.haskell.org/package/lca Documentation for the lca package for Haskell] by Edward Kmett, which includes the skew-binary random access list algorithm. [http://www.slideshare.net/ekmett/skewbinary-online-lowest-common-ancestor-search Purely functional data structures for on-line LCA] slides for the same package.
+
+[[Category:Theoretical computer science]]
+[[Category:Trees (graph theory)]]

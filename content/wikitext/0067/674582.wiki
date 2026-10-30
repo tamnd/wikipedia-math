@@ -1,0 +1,140 @@
+<!-- wikipedia: en
+     page: 674582
+     title: Trilinear interpolation
+     revision: 1339275711
+     timestamp: 2026-02-19T20:35:06Z
+     history: https://en.wikipedia.org/w/index.php?curid=674582&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1339275711 -->
+{{short description|Method of multivariate interpolation on a 3-dimensional regular grid}}
+{{No footnotes|date=October 2024}}
+[[Image:3D_interpolation2.svg|right|thumb|Trilinear interpolation as two [[bilinear interpolation]]s followed by a [[linear interpolation]]]]
+
+'''Trilinear interpolation''' is a method of [[multivariate interpolation]] on a [[Three dimensional space|3-dimensional]] [[regular grid]].  It approximates the value of a function at an intermediate point <math>(x, y, z)</math> within the local axial rectangular [[prism (geometry)|prism]] linearly, using function data on the lattice points. 
+Trilinear interpolation is frequently used in [[numerical analysis]], [[data analysis]], and [[computer graphics]].
+
+== Related methods ==
+
+Trilinear interpolation is the extension of [[linear interpolation]], which operates in spaces with [[dimension]] <math>D = 1</math>, and [[bilinear interpolation]], which operates with dimension <math>D = 2</math>, to dimension <math>D = 3</math>. These interpolation schemes all use polynomials of order 1, giving an accuracy of order 2, and it requires <math>2^D = 8</math> adjacent pre-defined values surrounding the interpolation point. There are several ways to arrive at trilinear interpolation, which is equivalent to 3-dimensional [[tensor]] [[B-spline]] interpolation of order 1, and the trilinear interpolation operator is also a tensor product of 3 linear interpolation operators.
+
+For an arbitrary, [[unstructured grid|unstructured mesh]] (as used in [[finite element]] analysis), other methods of interpolation must be used; if all the mesh elements are [[tetrahedron|tetrahedra]] (3D [[simplex|simplices]]), then [[barycentric_coordinates_(mathematics)#Barycentric_coordinates_on_tetrahedra|barycentric coordinates]] provide a straightforward procedure.
+
+==Formulation==
+[[Image:Enclosing_points.svg|right|thumb|Eight corner points on a cube surrounding the interpolation point C]]
+
+On a periodic and cubic lattice, we want the value at <math>x</math>, <math>y</math>, <math>z</math>. In the general case, each coordinate (for example,<math>x</math>) is not exactly at a lattice point, but some distance between one lattice point <math>x_\text{0}</math> and the next, <math>x_\text{1}</math>. Let <math>x_\text{d}</math> be that fractional distance away from the lower lattice point:  <math>\frac{x - x_0}{x_1 - x_0}</math>. Take a similar approach for the other coordinates:
+
+:<math>\begin{align}
+  x_\text{d} = \frac{x - x_0}{x_1 - x_0} \\
+  y_\text{d} = \frac{y - y_0}{y_1 - y_0} \\
+  z_\text{d} = \frac{z - z_0}{z_1 - z_0}
+\end{align}</math>
+
+
+First one interpolates along <math>x</math> (imagine one is "pushing" the face of the cube defined by <math>C_{0jk}</math> to the opposing face, defined by <math>C_{1jk}</math>), giving:
+: <math>\begin{align}
+  c_{00} &= c_{000} (1 - x_\text{d}) + c_{100} x_\text{d} \\
+  c_{01} &= c_{001} (1 - x_\text{d}) + c_{101} x_\text{d} \\
+  c_{10} &= c_{010} (1 - x_\text{d}) + c_{110} x_\text{d} \\
+  c_{11} &= c_{011} (1 - x_\text{d}) + c_{111} x_\text{d}
+\end{align}</math>
+
+Where <math>c_{000}</math> means the function value of <math> (x_0, y_0, z_0). </math> Then one interpolates these values (along <math>y</math>, "pushing" from <math>C_{i0k}</math> to <math>C_{i1k}</math>), giving:
+: <math>\begin{align}
+  c_0 &= c_{00}(1 - y_\text{d}) + c_{10}y_\text{d} \\
+  c_1 &= c_{01}(1 - y_\text{d}) + c_{11}y_\text{d}
+\end{align}</math>
+
+Finally one interpolates these values along <math>z</math> (walking through a line):
+:<math>c = c_0(1 - z_\text{d}) + c_1z_\text{d} .</math>
+This gives a predicted value for the point, which can also be written as follows:<math>
+\begin{aligned}
+c &= c_{000}(1-x_d)(1-y_d)(1-z_d) \\
+  &\quad + c_{100}\,x_d(1-y_d)(1-z_d) \\
+  &\quad + c_{010}(1-x_d)\,y_d(1-z_d) \\
+  &\quad + c_{110}\,x_d\,y_d(1-z_d) \\
+  &\quad + c_{001}(1-x_d)(1-y_d)\,z_d \\
+  &\quad + c_{101}\,x_d(1-y_d)\,z_d \\
+  &\quad + c_{011}(1-x_d)\,y_d\,z_d \\
+  &\quad + c_{111}\,x_d\,y_d\,z_d
+\end{aligned}
+</math>
+
+
+
+This makes it obvious that result of trilinear interpolation is independent of the order of the interpolation steps along the three axes: any other order, for instance along <math>y</math>, then along <math>z</math>, and finally along <math>x</math>, produces the same value. 
+
+
+
+===Algorithm visualization===
+[[File:Trilinear_interpolation_visualisation.svg|thumb|A geometric visualisation of trilinear interpolation. The product of the value at the desired point and the entire volume is equal to the sum of the products of the value at each corner and the partial volume diagonally opposite the corner.]]
+
+The above operations can be visualized as follows: First we find the eight corners of a cube that surround our point of interest. These corners have the values <math>c_{000}</math>, <math>c_{100}</math>, <math>c_{010}</math>, <math>c_{110}</math>, <math>c_{001}</math>, <math>c_{101}</math>, <math>c_{011}</math>, <math>c_{111}</math>.
+
+Next, we perform linear interpolation between <math>c_{000}</math> and <math>c_{100}</math> to find <math>c_{00}</math>, <math>c_{001}</math> and <math>c_{101}</math> to find <math>c_{01}</math>, <math>c_{011}</math> and <math>c_{111}</math> to find <math>c_{11}</math>, <math>c_{010}</math> and <math>c_{110}</math> to find <math>c_{10}</math>.
+
+Now we do interpolation between <math>c_{00}</math> and <math>c_{10}</math> to find <math>c_{0}</math>, <math>c_{01}</math> and <math>c_{11}</math> to find <math>c_{1}</math>. Finally, we calculate the value <math>c</math> via linear interpolation of <math>c_{0}</math> and <math>c_{1}</math>
+
+In practice, a trilinear interpolation is identical to two [[bilinear interpolation]] combined with a linear interpolation:
+:<math>c \approx l\left( b(c_{000}, c_{010}, c_{100}, c_{110}),\, b(c_{001}, c_{011}, c_{101}, c_{111})\right)</math>
+
+===Alternative algorithm===
+An alternative way to write the solution to the interpolation problem is
+:<math>f(x, y, z) \approx a_0 + a_1 x + a_2 y + a_3 z + a_4 x y + a_5 x z + a_6 y z + a_7 x y z</math>
+
+where the coefficients are found by solving the linear system
+:<math>\begin{align}
+  \begin{bmatrix}
+    1 & x_0 & y_0 & z_0 & x_0 y_0 & x_0 z_0 & y_0 z_0 & x_0 y_0 z_0 \\
+    1 & x_1 & y_0 & z_0 & x_1 y_0 & x_1 z_0 & y_0 z_0 & x_1 y_0 z_0 \\
+    1 & x_0 & y_1 & z_0 & x_0 y_1 & x_0 z_0 & y_1 z_0 & x_0 y_1 z_0 \\
+    1 & x_1 & y_1 & z_0 & x_1 y_1 & x_1 z_0 & y_1 z_0 & x_1 y_1 z_0 \\
+    1 & x_0 & y_0 & z_1 & x_0 y_0 & x_0 z_1 & y_0 z_1 & x_0 y_0 z_1 \\
+    1 & x_1 & y_0 & z_1 & x_1 y_0 & x_1 z_1 & y_0 z_1 & x_1 y_0 z_1 \\
+    1 & x_0 & y_1 & z_1 & x_0 y_1 & x_0 z_1 & y_1 z_1 & x_0 y_1 z_1 \\
+    1 & x_1 & y_1 & z_1 & x_1 y_1 & x_1 z_1 & y_1 z_1 & x_1 y_1 z_1 
+  \end{bmatrix}\begin{bmatrix}
+    a_0 \\ a_1 \\ a_2 \\ a_3 \\ a_4 \\ a_5 \\ a_6 \\ a_7
+  \end{bmatrix} = \begin{bmatrix}
+    c_{000} \\ c_{100} \\ c_{010} \\ c_{110} \\ c_{001} \\ c_{101} \\ c_{011} \\ c_{111}
+  \end{bmatrix},
+\end{align}</math>
+
+yielding the result
+
+:<math>\begin{align}
+  a_0 ={}
+    &\frac{-c_{000} x_1 y_1 z_1 + c_{001} x_1 y_1 z_0 + c_{010} x_1 y_0 z_1 - c_{011} x_1 y_0 z_0}{(x_0 - x_1) (y_0 - y_1) (z_0 - z_1)} +{} \\
+    &\frac{ c_{100} x_0 y_1 z_1 - c_{101} x_0 y_1 z_0 - c_{110} x_0 y_0 z_1 + c_{111} x_0 y_0 z_0}{(x_0 - x_1) (y_0 - y_1) (z_0 - z_1)}, \\[4pt]
+  a_1 ={}
+    &\frac{ c_{000} y_1 z_1 - c_{001} y_1 z_0 - c_{010} y_0 z_1 + c_{011} y_0 z_0}{(x_0 - x_1) (y_0 - y_1) (z_0 - z_1)} +{} \\
+    &\frac{-c_{100} y_1 z_1 + c_{101} y_1 z_0 + c_{110} y_0 z_1 - c_{111} y_0 z_0}{(x_0 - x_1) (y_0 - y_1) (z_0 - z_1)}, \\[4pt]
+  a_2 ={}
+    &\frac{ c_{000} x_1 z_1 - c_{001} x_1 z_0 - c_{010} x_1 z_1 + c_{011} x_1 z_0}{(x_0 - x_1) (y_0 - y_1) (z_0 - z_1)} +{} \\
+    &\frac{-c_{100} x_0 z_1 + c_{101} x_0 z_0 + c_{110} x_0 z_1 - c_{111} x_0 z_0}{(x_0 - x_1) (y_0 - y_1) (z_0 - z_1)}, \\[4pt]
+  a_3 ={}
+    &\frac{ c_{000} x_1 y_1 - c_{001} x_1 y_1 - c_{010} x_1 y_0 + c_{011} x_1 y_0}{(x_0 - x_1) (y_0 - y_1) (z_0 - z_1)} +{} \\
+    &\frac{-c_{100} x_0 y_1 + c_{101} x_0 y_1 + c_{110} x_0 y_0 - c_{111} x_0 y_0}{(x_0 - x_1) (y_0 - y_1) (z_0 - z_1)}, \\[4pt]
+  a_4 ={}
+    &\frac{-c_{000} z_1 + c_{001} z_0 + c_{010} z_1 - c_{011} z_0 + c_{100} z_1 - c_{101} z_0 - c_{110} z_1 + c_{111} z_0}{(x_0 - x_1) (y_0 - y_1) (z_0 - z_1)}, \\[4pt]
+  a_5 =
+    &\frac{-c_{000} y_1 + c_{001} y_1 + c_{010} y_0 - c_{011} y_0 + c_{100} y_1 - c_{101} y_1 - c_{110} y_0 + c_{111} y_0}{(x_0 - x_1) (y_0 - y_1) (z_0 - z_1)}, \\[4pt]
+  a_6 ={}
+    &\frac{-c_{000} x_1 + c_{001} x_1 + c_{010} x_1 - c_{011} x_1 + c_{100} x_0 - c_{101} x_0 - c_{110} x_0 + c_{111} x_0}{(x_0 - x_1) (y_0 - y_1) (z_0 - z_1)}, \\[4pt]
+  a_7 ={}
+    &\frac{ c_{000} - c_{001} - c_{010} + c_{011} - c_{100} + c_{101} + c_{110} - c_{111}}{(x_0 - x_1) (y_0 - y_1) (z_0 - z_1)}.
+\end{align}</math>
+
+==See also==
+* [[Linear interpolation]]
+* [[Bilinear interpolation]]
+* [[Tricubic interpolation]]
+* [[Slerp|Spherical linear interpolation]]
+
+==External links==
+*[http://www.grc.nasa.gov/WWW/winddocs/utilities/b4wind_guide/trilinear.html pseudo-code from NASA], describes an iterative inverse trilinear interpolation (given the vertices and the value of C find Xd, Yd and Zd).
+*Paul Bourke, [http://paulbourke.net/miscellaneous/interpolation/ Interpolation methods], 1999. Contains a very clever and simple method to find trilinear interpolation that is based on binary logic and can be extended to any dimension (Tetralinear, Pentalinear, ...).
+*Kenwright, Free-Form Tetrahedron Deformation. International Symposium on Visual Computing. Springer International Publishing, 2015 [https://link.springer.com/chapter/10.1007/978-3-319-27863-6_74].
+
+[[Category:Multivariate interpolation]]
+[[Category:Euclidean solid geometry]]

@@ -1,0 +1,85 @@
+<!-- wikipedia: en
+     page: 449781
+     title: Key derivation function
+     revision: 1376335581
+     timestamp: 2026-09-23T14:44:02Z
+     history: https://en.wikipedia.org/w/index.php?curid=449781&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1376335581 -->
+{{Short description|Function that derives secret keys from a secret value}}
+{{more footnotes|date=July 2013}}
+{{Use dmy dates|date=January 2016}}
+
+[[File:KDF chain.png|300px|thumb|right|Example of a Key Derivation Function chain as used in the [[Signal Protocol]]. The output of one KDF function is the input to the next KDF function in the chain.]]In [[cryptography]], a '''key derivation function''' ('''KDF''') is an [[algorithm]] that derives one or more [[key (cryptography)|secret key]]s from a secret value, such as a master key, a [[password]], or a [[passphrase]] using a [[pseudorandom function]] (which typically uses a [[cryptographic hash function]] or [[block cipher]]).<ref>{{cite book|author=Bezzi, Michele|chapter=Data privacy |editor=Camenisch, Jan|title=Privacy and Identity Management for Life|publisher=Springer|year=2011|isbn=9783642203176|pages=185–186|chapter-url=https://books.google.com/books?id=vYxzh3C6OPUC&pg=PA185|display-authors=etal|display-editors=etal}}</ref>{{Ref RFC|8018}}<ref>{{cite web|author=Chen, Lily|title=NIST SP 800-108: Recommendation for Key Derivation Using Pseudorandom Functions|publisher = NIST|date = October 2009|url=https://csrc.nist.gov/publications/detail/sp/800-108/final }}</ref> KDFs can be used to stretch keys into longer keys or to obtain keys of a required format, such as converting a group element that is the result of a [[Diffie–Hellman key exchange]] into a symmetric key for use with [[Advanced Encryption Standard|AES]]. [[HMAC|Keyed cryptographic hash functions]] are popular examples of pseudorandom functions used for key derivation.<ref>{{cite book|author=Zdziarski, Jonathan|title=Hacking and Securing IOS Applications: Stealing Data, Hijacking Software, and How to Prevent It| publisher=O'Reilly Media|year=2012|isbn=9781449318741|pages=252–253|url=https://books.google.com/books?id=2D50GNA1ULsC&pg=PA252}}</ref>
+
+== Key derivation ==
+The original use for a KDF is key derivation, the generation of keys from secret passwords or passphrases. Variations on this theme include:
+
+* In conjunction with non-secret parameters to derive one or more keys from a common secret value (which is sometimes also referred to as "'''key diversification'''"). Such use may prevent an attacker who obtains a derived key from learning useful information about either the input secret value or any of the other derived keys. A KDF may also be used to ensure that derived keys have other desirable properties, such as avoiding "weak keys" in some specific encryption systems.
+* As components of multiparty [[key-agreement protocol]]s. Examples of such key derivation functions include KDF1, defined in [[IEEE P1363|IEEE Std 1363-2000]], and similar functions in ANSI X9.42.
+* To derive keys from secret passwords or passphrases (a ''password-based KDF'').
+* To derive keys of different length from the ones provided. KDFs designed for this purpose include [[HKDF]] and SSKDF. These take an 'info' bit string as an additional optional 'info' parameter, which may be crucial to bind the derived key material to application- and context-specific information.<ref name="info">{{cite journal |last1=Krawczyk |first1=Hugo |last2=Eronen |first2=Pasi |date=May 2010 |title=The 'info' Input to HKDF |url=https://datatracker.ietf.org/doc/html/rfc5869#section-3.2 |website=datatracker.ietf.org}} RFC 5869 (2010)</ref>
+* [[Key stretching]] and key strengthening.
+
+=== Key stretching and key strengthening ===
+{{Main article|Key stretching}}
+<!-- This also should be moved into password-based approaches. -->
+Key derivation functions are also used in applications to derive keys from secret passwords or passphrases, which typically do not have the desired properties to be used directly as cryptographic keys. In such applications, it is generally recommended that the key derivation function be made deliberately slow so as to frustrate [[brute-force attack]] or [[dictionary attack]] on the password or passphrase input value.
+
+Such use may be expressed as {{math|1=DK = KDF(key, salt, iterations)}}, where {{math|1=DK}} is the derived key, {{math|1=KDF}} is the key derivation [[subroutine|function]], {{math|1=key}} is the original key or password, {{math|1=salt}} is a random number which acts as [[salt (cryptography)|cryptographic salt]], and {{math|1=iterations}} refers to the number of [[iteration]]s of a sub-function. The derived key is used instead of the original key or password as the key to the system. The values of the salt and the number of iterations (if it is not fixed) are stored with the hashed password or sent as [[Plaintext|cleartext]] (unencrypted) with an encrypted message.<ref name=salthash>{{cite web|title=Salted Password Hashing – Doing it Right|url=https://crackstation.net/hashing-security.htm|website=CrackStation.net|access-date=29 January 2015}}</ref>
+
+The difficulty of a brute force attack is increased with the number of iterations.  A practical limit on the iteration count is the unwillingness of users to tolerate a perceptible delay in logging into a computer or seeing a decrypted message. The use of [[salt (cryptography)|salt]] prevents the attackers from precomputing a dictionary of derived keys.<ref name="salthash" />
+
+An alternative approach, called '''key strengthening''', extends the key with a random salt, but then (unlike in key stretching) securely deletes the salt.<ref>Abadi, Martın, T. Mark A. Lomas, and Roger Needham. "Strengthening passwords." Digital System Research Center, Tech. Rep 33 (1997): 1997.</ref> This forces both the attacker and legitimate users to perform a brute-force search for the salt value.<ref>U. Manber, "A Simple Scheme to Make Passwords Based on One-Way Functions Much Harder to Crack," Computers & Security, v.15, n.2, 1996, pp.171–176.</ref> Although the paper that introduced key stretching<ref name="low-entropy">[http://www.schneier.com/paper-low-entropy.html Secure Applications of Low-Entropy Keys], [[John Kelsey (cryptanalyst)|J. Kelsey]], [[Bruce Schneier|B. Schneier]], C. Hall, and [[David A. Wagner|D. Wagner]] (1997)</ref> referred to this earlier technique and intentionally chose a different name, the term "key strengthening" is now often (arguably incorrectly) used to refer to key stretching.
+
+== Deriving keys from passwords ==
+High-throughput (keyed) cryptographic hash functions are inappropriate for generating cryptographic keys from low-entropy secrets like passwords, as if the function is quick to evaluate a small search space can quickly be exhaustively searched.
+
+=== History of password hash functions ===
+The first{{citation needed|date=June 2015}} deliberately slow (key stretching) password-based key derivation function was called "[[crypt (C)|crypt]]" (or "crypt(3)" after its [[manual page (Unix)|man page]]), and was invented by [[Robert Morris (cryptographer)|Robert Morris]] in 1978. It would encrypt a constant (zero), using the first 8 characters of the user's password as the key, by performing 25 iterations of a modified [[Data Encryption Standard|DES]] encryption algorithm (in which a 12-bit number read from the real-time computer clock is used to perturb the calculations). The resulting 64-bit number is encoded as 11 printable characters and then stored in the [[Unix]] password file.<ref>{{cite web | url=http://cm.bell-labs.com/cm/cs/who/dmr/passwd.ps | archive-url=https://web.archive.org/web/20030322053727/http://cm.bell-labs.com/cm/cs/who/dmr/passwd.ps | url-status=dead | archive-date=2003-03-22 | title=Password Security: A Case History. | work=Bell Laboratories | author1=Morris, Robert | author2=Thompson, Ken | date=1978-04-03 | access-date=2011-05-09 }}</ref> While it was a great advance at the time, increases in processor speeds since the [[PDP-11]] era have made [[Brute-force attack|brute-force attacks]] against crypt [[Feasible computability|feasible]], and advances in storage have rendered the 12-bit [[Salt (cryptography)|salt]] inadequate. The crypt function's design also limits the user password to 8 characters, which limits the keyspace and makes strong [[passphrase]]s impossible.
+
+Although high throughput is a desirable property in general-purpose hash functions, the opposite is true in password security applications in which defending against brute-force cracking is a primary concern. The growing use of [[Massively parallel|massively-parallel]] hardware such as [[Graphics processing unit|GPUs]], [[Field-programmable gate array|FPGAs]], and even [[Application-specific integrated circuit|ASICs]] for brute-force cracking has made the selection of a suitable algorithms even more critical because the good algorithm should enforce a certain amount of computational cost not only on CPUs, but also resist the cost/performance advantages of modern massively-parallel platforms for such tasks.  Various algorithms have been designed specifically for this purpose, including [[bcrypt]], [[scrypt]] and, more recently, [[Lyra2]] and [[Argon2]] (the latter being the winner of the [[Password Hashing Competition]]). The large-scale [[Ashley Madison data breach]] in which roughly 36 million passwords hashes were stolen by attackers illustrated the importance of algorithm selection in securing passwords. Although bcrypt was employed to protect the hashes (making large scale brute-force cracking expensive and time-consuming), a significant portion of the accounts in the compromised data also contained a password hash based on the fast, general-purpose, and [[MD5#Security|insecure]] [[MD5]] algorithm, which made it possible for over 11 million of the passwords to be cracked in a matter of weeks.<ref>{{cite web|url=https://arstechnica.com/security/2015/09/once-seen-as-bulletproof-11-million-ashley-madison-passwords-already-cracked/|title=Once seen as bulletproof, 11 million+ Ashley Madison passwords already cracked|work=[[Ars Technica]]|last=Goodin|first=Dan|date=10 September 2015|access-date=10 September 2015}}</ref>
+
+In June 2017, The U.S. National Institute of Standards and Technology (NIST) issued a new revision of their digital authentication guidelines, NIST SP 800-63B-3,<ref name="sp800-63B">{{cite book | title = SP 800-63B-3 – Digital Identity Guidelines, Authentication and Lifecycle Management | publisher = NIST | date = June 2017 | doi=10.6028/NIST.SP.800-63b | author=Grassi Paul A.}}</ref>{{rp|5.1.1.2}} stating that: "Verifiers SHALL store memorized secrets [i.e. passwords] in a form that is resistant to offline attacks. Memorized secrets SHALL be salted and hashed using a suitable one-way key derivation function. Key derivation functions take a password, a salt, and a cost factor as inputs then generate a password hash. Their purpose is to make each password guessing trial by an attacker who has obtained a password hash file expensive and therefore the cost of a guessing attack high or prohibitive." 
+
+Modern password-based key derivation functions, such as [[PBKDF2]],{{Ref RFC|8018}} are based on a recognized cryptographic hash, such as [[SHA-2]], use more salt (at least 64 bits and chosen randomly) and a high iteration count. NIST recommends a minimum iteration count of 10,000.<ref name="sp800-63B" />{{rp|5.1.1.2}} 
+"For especially critical keys, or for very powerful systems or systems where user-perceived performance is not critical, an iteration count of 10,000,000 may be appropriate.”
+<ref name="sp800-132">{{cite book |url=http://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-132.pdf|  title = SP 800-132 – Recommendation for Password-Based Key Derivation, Part 1: Storage Applications | publisher = NIST | date = December 2010 | doi=10.6028/NIST.SP.800-132 | author=Meltem Sönmez Turan | author2=Elaine Barker | author3=William Burr | author4=Lily Chen | s2cid = 56801929 }}</ref>
+
+Despite their original use for key derivation, KDFs are possibly better known for their use in '''password hashing''' ([[cryptographic hash function#Password verification|password verification by hash comparison]]), as used by the [[passwd]] file or [[shadow password]] file. Password hash functions should be relatively expensive to calculate in case of brute-force attacks, and KDFs are designed with this characteristic built in.<ref>{{cite report
+ | title = Recommendation for Password-Based Key Derivation
+ | publisher = NIST
+ | series = Special Publication
+ | volume = 800-132
+ | date = December 2010
+ | url = https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-132.pdf
+ | author = National Institute of Standards and Technology (NIST)
+}}</ref> The non-secret parameters are called "[[salt (cryptography)|salt]]" in this context.
+
+In 2013 a [[Password Hashing Competition]] was announced to choose a new, standard algorithm for password hashing. On 20 July 2015 the competition ended and [[Argon2]] was announced as the final winner. Four other algorithms received special recognition: Catena, [[Lyra2]], Makwa and [[yescrypt]].<ref>[https://password-hashing.net/ "Password Hashing Competition"]</ref>
+
+As of May 2023, the [[OWASP|Open Worldwide Application Security Project]] (OWASP) recommends the following KDFs for password hashing, listed in order of priority:<ref name="owasp">{{cite web|url=https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html | title=Password Storage Cheat Sheet | work=OWASP Cheat Sheet Series |publisher=[[OWASP]] |accessdate=2023-05-17}}</ref>
+
+# [[Argon2|Argon2id]]
+# [[scrypt]] if Argon2id is unavailable
+# [[bcrypt]] for legacy systems
+# [[PBKDF2]] if [[FIPS-140]] compliance is required
+
+== References ==
+{{Reflist}}
+
+== Further reading ==
+* {{cite web
+| last = Percival| first = Colin| author-link = Colin Percival 
+| title = Stronger Key Derivation via Sequential Memory-Hard Functions
+| date = May 2009
+| url = http://www.tarsnap.com/scrypt/scrypt.pdf
+| work = BSDCan'09 Presentation
+| access-date = 2009-05-19 }}
+* [https://web.archive.org/web/20150228035021/http://di-mgt.com.au/cryptoKDFs.html Key Derivation Functions]
+
+{{Cryptography navbox}}
+
+{{DEFAULTSORT:Key Derivation Function}}
+[[Category:Key management]]
+[[Category:Key derivation functions|*]]

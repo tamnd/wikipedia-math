@@ -1,0 +1,93 @@
+<!-- wikipedia: en
+     page: 6016645
+     title: Alpha max plus beta min algorithm
+     revision: 1363723976
+     timestamp: 2026-07-12T00:25:28Z
+     history: https://en.wikipedia.org/w/index.php?curid=6016645&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1363723976 -->
+{{short description|High-speed approximation of the square root of the sum of two squares}}
+{{Distinguish|Minimax|Alpha–beta pruning}}
+
+[[File:AlphaMaxBetaMin.png|thumb|The locus of points that give the same value in the algorithm, for different values of alpha and beta]]
+
+The '''alpha max plus beta min algorithm'''<ref>{{Cite journal |last=Assim |first=Ara Abdulsatar Assim |date=2021 |title=ASIC implementation of high-speed vector magnitude & arctangent approximator |journal=Computing, Telecommunication and Control |volume=71 |issue=4 |pages=7–14 |url=https://infocom.spbstu.ru/en/article/2021.71.01/ |language=en |doi=10.18721/JCSTCS.14401}}</ref> is a high-speed approximation of the [[square root]] of the sum of two squares. The square root of the sum of two squares, also known as [[Pythagorean addition]], is a useful function, because it finds the [[hypotenuse]] of a right triangle given the two side lengths, the [[norm (mathematics)|norm]] of a 2-D [[vector (geometric)|vector]], or the [[magnitude (mathematics)|magnitude]] <math>|z| = \sqrt{a^2 + b^2}</math> of a [[complex number]] {{math|1=''z'' = ''a'' + ''bi''}} given the [[real number|real]] and [[imaginary number|imaginary]] parts.
+
+The algorithm avoids performing the square and square-root operations, instead using simple operations such as comparison, multiplication, and addition. Some choices of the α and β parameters of the algorithm allow the multiplication operation to be reduced to a simple shift of binary digits that is particularly well suited to implementation in high-speed digital circuitry.
+
+==Formulation==
+The approximation is expressed as
+<math display="block">|z| = \alpha\,\mathbf{Max} + \beta\,\mathbf{Min},</math>
+where <math>\mathbf{Max}</math> is the maximum absolute value of ''a'' and ''b'', and <math>\mathbf{Min}</math> is the minimum absolute value of ''a'' and ''b''.
+
+For the closest approximation, the optimum values for <math>\alpha</math> and <math>\beta</math> are
+:<math>\alpha_0 = \frac{2 \cos \frac{\pi}{8}}{1 + \cos \frac{\pi}{8}} = 1 - \tan^2 \frac{\pi}{16}  = 0.960433870103...</math> and
+:<math>\beta_0 = \frac{2 \sin \frac{\pi}{8}}{1 + \cos \frac{\pi}{8}} = 2 \tan \frac{\pi}{16} = 0.397824734759...</math>, 
+giving a maximum error of 3.96%.
+
+{| class="wikitable" style="text-align:right"
+! <math>\alpha\,\!</math> || <math>\beta\,\!</math> || Largest error (%) || Mean error (%)
+|-
+| 1/1 || 1/2 || 11.80 || 8.68
+|-
+| 1/1 || 1/4 || 11.61 || 3.20
+|-
+| 1/1 || 3/8 || 6.80 || 4.25
+|-
+| 7/8 || 7/16 || 12.50 || 4.91
+|-
+| 15/16 || 15/32 || 6.25 || 3.08
+|-
+| <math>\alpha_0</math> || <math>\beta_0</math> || 3.96 || 2.41
+|}
+[[File:Alpha Max Beta Min approximation.png|800px|centre]]
+
+==Improvements==
+When <math>\alpha < 1</math>, <math>|z|</math> becomes smaller than <math>\mathbf{Max}</math> (which is geometrically impossible) near the axes where <math>\mathbf{Min}</math> is near 0.
+This can be remedied by replacing the result with <math>\mathbf{Max}</math> whenever that is greater, essentially splitting the line into two different segments.
+
+: <math>|z| = \max(\mathbf{Max}, \alpha\,\mathbf{Max} + \beta\,\mathbf{Min}).</math>
+
+Depending on the hardware, this improvement can be almost free.
+
+Using this improvement changes which parameter values are optimal, because they no longer need a close match for the entire interval. A lower <math>\alpha</math> and higher <math>\beta</math> can therefore increase precision further.
+
+This can be improved even further by, instead of using <math>|z_0| = 1\cdot\mathbf{Max} + 0\cdot\mathbf{Min}</math> as the second estimate, use a second pair of parameters <math>\alpha_0</math> and <math>\beta_0</math>, with <math>\alpha_1</math> and <math>\beta_1</math> adjusted accordingly. 
+
+: <math>|z| = \max\left(|z_0|, |z_1|\right),</math>
+: <math>|z_0| = \alpha_0\,\mathbf{Max} + \beta_0\,\mathbf{Min},</math>
+: <math>|z_1| = \alpha_1\,\mathbf{Max} + \beta_1\,\mathbf{Min}.</math>
+
+{| class="wikitable" style="text-align:right"
+|-
+! <math>\alpha_0</math> || <math>\beta_0</math> || <math>\alpha_1</math> || <math>\beta_1</math> || Largest error (%)
+|-
+| 1 || 0 || 7/8 || 17/32 || −2.66% <!-- -2.65828, +2.36462 -->
+|-
+| 1 || 0 || 29/32 || 61/128 || +2.40% <!-- -2.22039, +2.39145 -->
+|-
+| 1 || 0 || 0.898204193266868 || 0.485968200201465 || ±2.12% <!-- -2.12423, +2.12423 -->
+|-
+| 1 || 1/8 || 7/8 || 33/64 || −1.67% <!-- -1.66796, +1.56250 -->
+|-
+| 1 || 5/32 || 27/32 || 71/128 || +1.21% <!-- -1.19819, +1.21334 -->
+|-
+| 127/128 || 3/16 || 27/32 || 71/128 || −1.12% <!-- -1.11554, +0.97486 -->
+|}
+
+Of course, a non-zero <math>\beta_0</math> requires at least one extra addition and some bit-shifts (or a multiplication), nearly doubling the cost and, depending on the hardware, possibly defeating the purpose of using an approximation in the first place.
+
+==See also==
+*[[Hypot]], a precise function or algorithm that is also safe against overflow and underflow.
+
+==References==
+{{Reflist}}
+*[[Richard G. Lyons|Lyons, Richard G]]. ''Understanding Digital Signal Processing, section 13.2.'' Prentice Hall, 2004 {{ISBN|0-13-108989-7}}.
+*Griffin, Grant. [http://www.dspguru.com/dsp/tricks/magnitude-estimator DSP Trick: Magnitude Estimator].
+
+==External links==
+*{{cite web |title=Extension to three dimensions |date=May 14, 2015 |work=[[Stack Exchange]] |url=https://math.stackexchange.com/q/1282435 }}
+
+[[Category:Approximation algorithms]]
+[[Category:Root-finding algorithms]]
+[[Category:Pythagorean theorem]]

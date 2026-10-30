@@ -1,0 +1,406 @@
+<!-- wikipedia: en
+     page: 83592134
+     title: Arc-length method
+     revision: 1373395573
+     timestamp: 2026-09-05T19:01:08Z
+     history: https://en.wikipedia.org/w/index.php?curid=83592134&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373395573 -->
+{{Short description|Numerical method for structural analysis}}
+[[File:Illustration of arc-length method to trace complex curve.jpg|thumb|Illustration of arc-length method to trace a nonlinear equilibrium path]]
+In [[numerical analysis]] and [[computational mechanics]], the '''arc-length method''', also known as the Riks method<ref name="Riks1972">{{cite journal
+|last=Riks
+|first=E.
+|title=The Application of Newton's Method to the Problem of Elastic Stability
+|journal=Journal of Applied Mechanics
+|year=1972
+|volume=39
+|issue=4
+|pages=1060–1065
+|doi=10.1115/1.3422829
+}}</ref>, is a [[numerical method]] for nonlinear [[structural analysis]] in which the structural response does not necessarily increase as the applied load increases, and may instead decrease. By treating both the structural response and the applied load as unknowns, the method enables equilibrium solutions to be continued beyond limit points<ref name="Riks1972" />, at which the applied load changes from increasing to decreasing or vice versa. 
+
+The arc-length method was developed independently by Wempner<ref name="Wempner1971">{{cite journal
+|last=Wempner
+|first=G. A.
+|title=Discrete approximations related to nonlinear theories of solids
+|journal=International Journal of Solids and Structures
+|year=1971
+|volume=7
+|issue=12
+|pages=1581–1599
+|doi=10.1016/0020-7683(71)90038-2
+}}</ref> and Riks<ref name="Riks1972" /> in the 1970s and was later reformulated by Crisfield<ref name="Crisfield1981">{{cite journal
+|last=Crisfield
+|first=M. A.
+|title=A fast incremental/iterative solution procedure that handles "snap-through"
+|journal=Computers & Structures
+|year=1981
+|volume=13
+|issue=1–3
+|pages=55–62
+|doi=10.1016/0045-7949(81)90108-5
+}}</ref>. This method has been implemented in [[Finite element method|finite element]] software packages for nonlinear structural analysis such as post-[[buckling]], [[Strain (mechanics)|strain]] softening, and [[fracture]].<ref name="Shen2025">{{cite journal
+|last1=Shen
+|first1=J.
+|last2=Wang
+|first2=K.
+|last3=Fu
+|first3=Y.
+|last4=Lü
+|first4=C.
+|title=A computational strategy for enhanced nonlinear structural stability analysis in Abaqus
+|journal=Computers & Structures
+|year=2025
+|volume=318
+|article-number=107943
+|doi=10.1016/j.compstruc.2025.107943
+|doi-access=free
+}}</ref><ref name=":0">{{cite journal
+ |last1=Liu
+ |first1=Y.
+ |last2=Liu
+ |first2=Z.
+ |last3=Wang
+ |first3=X.
+ |title=Phase field modelling of brittle fracture by the Riks method: An implementation in Abaqus UEL
+ |journal=Engineering Fracture Mechanics
+ |volume=343
+ |year=2026
+ |doi=10.1016/j.engfracmech.2026.112243
+|article-number=112243}}</ref><ref name="AbaqusRiks" /><ref name="ANSYSARCLEN" /> Step-length control, root selection criteria, and branch-switching techniques for tracing multiple equilibrium solutions are important aspects of improving the numerical performance of the method.<ref name="Ritto2008" /><ref name="Chen2025" />
+
+== Basic theory ==
+
+In the arc-length method, an equilibrium state is described by the displacement vector <math>\mathbf{u}</math> and the load parameter <math>\lambda</math>. The displacement vector contains one or more displacement variables. The load parameter <math>\lambda</math> is a scalar multiplier that scales the reference load to represent the actual applied [[load]] level. The objective of the arc-length method is to find the equilibrium states at which the internal and external forces are balanced. When the equilibrium condition is not satisfied, the imbalance is represented by the following [[residual]] equation<ref name="Kadapa2021">{{cite journal
+|last=Kadapa
+|first=C.
+|title=A simple extrapolated predictor for overcoming the starting and tracking issues in the arc-length method for nonlinear structural mechanics
+|journal=Engineering Structures
+|year=2021
+|volume=234
+|doi=10.1016/j.engstruct.2020.111755
+|article-number=111755|arxiv=2005.10192
+}}</ref><math display="block">
+\mathbf{R}(\mathbf{u},\lambda)
+=
+\mathbf{R}^{\mathrm{int}}(\mathbf{u})
+-
+\lambda \mathbf{R}^{\mathrm{ext}}
+=
+\mathbf{R}^{\mathrm{int}}(\mathbf{u})
+-
+\lambda \mathbf{F}
+=
+\mathbf{0}.
+</math>In this equation, the residual vector <math>\mathbf{R}(\mathbf{u},\lambda)</math> measures the imbalance between the internal and external forces. The vector <math>\mathbf{R}^{\mathrm{int}}(\mathbf{u})</math> denotes the internal force vector. The external reference load vector is <math>\mathbf{R}^{\mathrm{ext}}</math>, which is written as <math>\mathbf{F}</math> because it remains a constant throughout the analysis. An equilibrium point is obtained when the residual vector is zero.<ref name="Ritto2008">{{cite journal
+|last1=Ritto-Corrêa
+|first1=M.
+|last2=Camotim
+|first2=D.
+|title=On the arc-length and other quadratic control methods: Established, less known and new implementation procedures
+|journal=Computers & Structures
+|year=2008
+|volume=86
+|issue=11–12
+|pages=1353–1368
+|doi=10.1016/j.compstruc.2007.08.003
+}}</ref>
+
+In conventional load-control methods, the load parameter <math>\lambda</math> is prescribed and [[Newton's method]] may be used to solve the [[residual]] equation for the displacement vector <math>\mathbf{u}</math>. Such procedures may encounter convergence difficulties when the solution contains limit points.<ref name="Riks1972" /><ref name="Wempner1971" /> In the arc-length method, the displacement vector <math>\mathbf{u}</math> and the load parameter <math>\lambda</math> are instead both treated as unknowns. Consequently, an arc-length constraint equation is introduced in addition to the residual equation, where one form of the constraint equation is<ref name="Ritto2008" /><math display="block">
+\Delta\mathbf{u}^{\mathrm{T}}\Delta\mathbf{u}
++
+\Phi\Delta\lambda^{2}
+\left(\mathbf{F}^{\mathrm{T}}\mathbf{F}\right)
+=
+\Delta s^{2}.
+</math>In this equation, the displacement increment <math>\Delta\mathbf{u}</math> and the load increment <math>\Delta\lambda</math> are measured within a solution step, and the arc-length increment, also known as the step length, is <math>\Delta s</math>. The values <math>\Phi=0</math> and <math>\Phi=1</math> correspond to the cylindrical and spherical forms of the constraint, respectively. An alternative form omits the scaling by the reference load vector<ref name="Ritto2008" /><math display="block">
+\Delta\mathbf{u}^{\mathrm{T}}\Delta\mathbf{u}
++
+\Phi\Delta\lambda^{2}
+=
+\Delta s^{2}.
+</math>Geometrically, the arc-length constraint defines a [[hypersurface]] in the combined displacement–load space spanned by the displacement vector <math>\mathbf{u}</math> and the load parameter <math>\lambda</math>. At each solution step, the equilibrium point is obtained from the intersection of this hypersurface with the equilibrium path, which consists of a continuous set of equilibrium points. Because the load parameter is allowed to increase or decrease during the solution process, the method can continue tracing the equilibrium path beyond limit points.<ref name="Riks1972" /><ref name="Crisfield1981" />
+
+== Predictor-corrector procedure ==
+
+[[File:Incremental-iterative procedure of arc-length method.jpg|thumb|Incremental-iterative procedure of the arc-length method using a Quasi-Newton's method]]
+
+In the arc-length method, each solution step consists of a predictor stage followed by a corrector stage, where one or more iterations are performed.<ref name="Kadapa2021" /><ref name="Eriksson1995">{{cite journal
+|last1=Eriksson
+|first1=A.
+|last2=Kouhia
+|first2=R.
+|title=On step size adjustments in structural continuation problems
+|journal=Computers & Structures
+|year=1995
+|volume=55
+|issue=3
+|pages=495–506
+|doi=10.1016/0045-7949(95)98875-Q
+}}</ref> Starting from a known equilibrium point <math>(\mathbf{u}_p,\lambda_p)</math> of the ''<math>p</math>-''th solution step, the predictor provides an initial estimate of the next equilibrium point, after which the corrector iteratively refines the estimate until a user-defined [[Convergence tests|convergence]] criterion is achieved.<ref name="Feng1995">{{cite journal
+|last1=Feng
+|first1=Y. T.
+|last2=Perić
+|first2=D.
+|last3=Owen
+|first3=D. R. J.
+|title=Determination of travel directions in path-following methods
+|journal=Mathematical and Computer Modelling
+|year=1995
+|volume=21
+|issue=12
+|pages=43–59
+|doi=10.1016/0895-7177(95)00030-6
+}}</ref> [[Newton's method]] is used to solve the augmented nonlinear system formed by the residual equation and the arc-length constraint equation during each iteration.<ref name="Kweon1994">{{cite journal
+|last1=Kweon
+|first1=J. H.
+|last2=Hong
+|first2=C. S.
+|title=An improved arc-length method for postbuckling analysis of composite cylindrical panels
+|journal=Computers & Structures
+|year=1994
+|volume=53
+|issue=3
+|pages=541–549
+|doi=10.1016/0045-7949(94)90099-X
+}}</ref><ref name="Salari2026">{{cite journal
+|last1=Salari
+|first1=A.
+|last2=Salari
+|first2=E.
+|last3=Ghasemi
+|first3=F.
+|last4=Akbarzadeh
+|first4=A.
+|last5=Ebrahimi
+|first5=F.
+|last6=Rastgoo
+|first6=A.
+|title=Snap-through instability of meta-sandwich shallow arches with PU foam/architected cellular cores and glass fiber reinforced ABS composite face-sheets
+|journal=European Journal of Mechanics - A/Solids
+|year=2026
+|volume=116
+|article-number=105922
+|doi=10.1016/j.euromechsol.2025.105922
+}}</ref>
+
+Using a first-order [[Taylor series|Taylor series expansion]] about the current iteration point <math>(\mathbf{u}_p^{i},\lambda_p^{i})</math>, the residual equation evaluated at <math>(\mathbf{u}_p^{i+1},\lambda_p^{i+1})</math> is approximated as<ref name="Crisfield1981" /><math display="block">
+\mathbf{R}\!\left(\mathbf{u}_{p}^{\,i+1},\,\lambda_{p}^{\,i+1}\right)
+\approx
+\mathbf{R}^{\mathrm{int}}\!\left(\mathbf{u}_{p}^{\,i}\right)
++
+\left[\mathbf{K}_{\mathrm{T}}\right]_{\mathbf{u}_{p}^{\,i}}
+\,
+\delta\mathbf{u}_{p}^{\,i+1}
+-
+\left(\lambda_{p}^{\,i}
++
+\delta\lambda_{p}^{\,i+1}\right)
+\mathbf{F}
+=
+\mathbf{0}.
+</math>In this equation, the tangent stiffness matrix evaluated at the current iteration point is <math>\left[\mathbf{K}_{\mathrm{T}}\right]_{\mathbf{u}_{p}^{\,i}}</math>. The [[Displacement (geometry)|displacement]] correction <math>\delta\mathbf{u}_{p}^{\,i+1}</math> and the [[load]] correction <math>\delta\lambda_{p}^{\,i+1}</math> are determined during the current iteration.<ref name="Fafard1993" />
+
+Following Crisfield's reformulation, the above linearized equilibrium equation is rewritten as<ref name="Crisfield1981" /><math display="block">
+\delta\mathbf{u}_{p}^{\,i+1}
+=
+-
+\left[\mathbf{K}_{\mathrm{T}}\right]_{\mathbf{u}_{p}^{\,i}}^{-1}
+\left[
+\mathbf{R}^{\mathrm{int}}\!\left(\mathbf{u}_{p}^{\,i}\right)
+-
+\lambda_{p}^{\,i}\mathbf{F}
+\right]
++
+\delta\lambda_{p}^{\,i+1}
+\left[\mathbf{K}_{\mathrm{T}}\right]_{\mathbf{u}_{p}^{\,i}}^{-1}
+\mathbf{F}.
+</math>Substituting the above equation into the arc-length constraint equation yields a quadratic equation in <math>\delta\lambda_p^{i+1}</math><ref name="Ritto2008" /><math display="block">
+a(\delta\lambda_{p}^{\,i+1})^{2}
++
+2b(\delta\lambda_{p}^{\,i+1})
++
+c
+=
+0,
+</math>where <math>a</math>, <math>b</math>, and <math>c</math> are the coefficients of the quadratic equation. [[File:Arc-Length Method Code Demonstration for Tracing Equilibrium Curves with Two Limit Points.jpg|thumb|Arc-Length Method Code Demonstration for Tracing the Equilibrium Path with Two Limit Points]]The roots of the quadratic equation are given by the quadratic formula<ref name="Fafard1993" /><math display="block">
+\delta\lambda_{p}^{\,i+1}
+=
+\frac{
+-b
+\pm
+\sqrt{b^{2}-ac}
+}{a},
+\qquad
+\text{when }
+b^{2}-ac>0.
+</math>The quadratic equation has two roots. The root corresponding to the forward search direction is selected using one of several root-selection criteria.<ref name="Bergan1978">{{cite conference
+|last1=Bergan
+|first1=P.
+|last2=Soreide
+|first2=T.
+|title=Solution of large displacement and instability problems using the current stiffness parameter
+|book-title=Finite Elements in Nonlinear Mechanics
+|year=1978
+|volume=2
+|pages=647–669
+}}</ref><ref name="Powell1981">{{cite journal
+|last1=Powell
+|first1=G.
+|last2=Simons
+|first2=J.
+|title=Improved iteration strategy for nonlinear structures
+|journal=International Journal for Numerical Methods in Engineering
+|year=1981
+|volume=17
+|issue=10
+|pages=1455–1467
+|doi=10.1002/nme.1620171003
+}}</ref><ref name="Yang1990">{{cite journal
+|last1=Yang
+|first1=Y.-B.
+|last2=Shieh
+|first2=M.-S.
+|title=Solution method for nonlinear problems with multiple critical points
+|journal=AIAA Journal
+|year=1990
+|volume=28
+|issue=12
+|pages=2110–2116
+|doi=10.2514/3.10529
+}}</ref> Substituting the selected value of <math>\delta\lambda_{p}^{i+1}</math> into the linearized equilibrium equation gives the displacement correction for the current iteration.<ref name="Fafard1993">{{cite journal
+ |last1=Fafard
+ |first1=M.
+ |last2=Massicotte
+ |first2=B.
+ |title=Geometrical interpretation of the arc-length method
+ |journal=Computers & Structures
+ |volume=46
+ |issue=4
+ |pages=603–615
+ |year=1993
+ |doi=10.1016/0045-7949(93)90389-U
+}}</ref>
+
+Repeating the procedure for successive solution steps produces a sequence of equilibrium points<math display="block">
+(\mathbf{u}_1,\lambda_1),
+(\mathbf{u}_2,\lambda_2),
+(\mathbf{u}_3,\lambda_3),\ldots
+</math>along the equilibrium path.<ref name="Crisfield1981" />
+
+== Limitations ==
+
+Although the arc-length method enables equilibrium paths to be traced beyond limit points, several numerical issues remain in practical applications. These include initialization of the first solution step, where the initial step length and predictor direction must be specified; selection of the step length, which influences both convergence and computational cost; root selection for the arc-length constraint equation, which generally produces two candidate roots; branch switching at bifurcation points, since the method follows a single equilibrium branch by default; and convergence of the iterative solution, which depends on the predictor, the tangent stiffness matrix, and the characteristics of the nonlinear problem.<ref name="Ritto2008" /><ref name="Kadapa2021" /><ref name="Eriksson1995" /><ref name="Feng1995" /><ref name="Carrera1994">{{cite journal |last=Carrera |first=E. |title=A study on arc-length-type methods and their operation failures illustrated by a simple model |journal=Computers & Structures |year=1994 |volume=50 |issue=2 |pages=217–229 |doi=10.1016/0045-7949(94)90297-6}}</ref>
+
+== Variants and extensions ==
+Several variants of the arc-length method have been developed to improve numerical performance in nonlinear analysis.<ref name="Kadapa2021" /><ref name="Eriksson1995" />
+
+Various root-selection criteria have been proposed to select the root corresponding to the forward search direction rather than the previously traced path segment.<ref name="Feng1995" /><ref name="Bergan1978" /><ref name="Powell1981" /><ref name="Yang1990" /> Adaptive step-length strategies adjust the arc-length increment according to the convergence behaviour of previous solution steps in order to improve computational efficiency and robustness.<ref name="Eriksson1995" /><ref name="Zhong2021">{{cite journal
+|last1=Zhong
+|first1=J.
+|last2=Ross
+|first2=S. D.
+|title=Differential correction and arc-length continuation applied to boundary value problems: Examples based on snap-through of circular arches
+|journal=Applied Mathematical Modelling
+|year=2021
+|volume=97
+|pages=81–95
+|doi=10.1016/j.apm.2021.03.027
+}}</ref> To trace multiple equilibrium branches, the arc-length method can be combined with branch-switching techniques based on eigenvalue analysis or perturbation methods.<ref name="Chen2025">{{cite journal
+|last=Chen
+|first=X.
+|title=Robust path-following and branch-switching in isogeometric nonlinear bifurcation analysis of variable angle tow panels with cutouts under compression
+|journal=Computers & Structures
+|year=2025
+|volume=318
+|doi=10.1016/j.compstruc.2025.107948
+|article-number=107948}}</ref>
+
+Despite these developments, most variants are based on the same underlying idea and mainly differ in the formulation of the constraint equation, predictor strategy, root-selection criterion, and step-length control.<ref name="Chen2026">{{cite journal
+|last1=Chen
+|first1=Y.
+|last2=Ma
+|first2=R.
+|last3=Gu
+|first3=H.
+|last4=Wu
+|first4=B.
+|last5=Waisman
+|first5=H.
+|title=Efficient non-consistent arc-length method for phase-field fracture problems
+|journal=International Journal of Solids and Structures
+|year=2026
+|volume=337
+|doi=10.1016/j.ijsolstr.2026.114049
+|article-number=114049}}</ref><ref name="Roerentrop2026">{{cite journal
+|last1=Rörentrop
+|first1=F.
+|last2=Langenfeld
+|first2=K.
+|last3=Mosler
+|first3=J.
+|title=A computationally efficient monolithic arc-length method for phase-field models of fracture based on the Efendiev & Mielke scheme
+|journal=Computer Methods in Applied Mechanics and Engineering
+|year=2026
+|volume=458
+|article-number=119005
+|doi=10.1016/j.cma.2026.119005
+|doi-access=free
+}}</ref>
+
+== Applications ==
+The arc-length method is used in nonlinear structural and [[solid mechanics]] problems in which the displacement does not always increase as the applied load increases. In these problems, the applied load may decrease while the displacement continues to increase, or the response may pass through snap-through or snap-back regions, where the structural response changes rapidly after a limit point is reached, or the applied load decreases while the displacement continues to increase.<ref name="Ritto2008" /><ref name="Bergan1978" /><ref name="Yang1990" />
+
+One common application is the post-buckling analysis of structural components such as plates, shells, and cylindrical panels. After the critical buckling load is reached, the structure may continue to deform along a post-buckling equilibrium path. The arc-length method is used in this context to compute the post-buckling response beyond the critical load.<ref name="AbaqusRiks" /><ref name="Kweon1994" />
+
+The method is also used in snap-through analysis of shallow arches, shells, and other structures with geometrically nonlinear behaviour. In snap-through problems, the structure may rapidly move from one equilibrium configuration to another. Because the load–displacement curve can contain limit points, the arc-length method is used to trace the equilibrium path through these regions.<ref name="Salari2026" />
+
+Variants of the arc-length method have also been applied to material nonlinearities, including strain softening, damage, and fracture problems. In these applications, loss of stiffness or crack growth can produce snap-back behaviour on the equilibrium solution. The method is therefore used to continue the numerical solution after the peak load, when the structure or material continues to deform under a decreasing load.<ref name="Chen2026" /><ref name="Roerentrop2026" /><ref name="May1997">{{cite journal
+|last1=May
+|first1=I. M.
+|last2=Duan
+|first2=Y.
+|title=A local arc-length procedure for strain softening
+|journal=Computers & Structures
+|year=1997
+|volume=64
+|issue=1–4
+|pages=297–303
+|doi=10.1016/S0045-7949(96)00172-1
+}}</ref>
+
+In finite element software, arc-length procedures are implemented under names such as ''Static Riks'', ''Riks'' , or ''arc-length control''.<ref name="AbaqusRiks">{{cite web
+ |title=Unstable collapse and postbuckling analysis
+ |website=Abaqus 2024 Documentation
+ |publisher=Dassault Systèmes
+ |url=https://docs.software.vt.edu/abaqusv2024/English/SIMACAEANLRefMap/simaanl-c-postbuckling.htm
+ |access-date=8 July 2026
+}}</ref><ref name="ANSYSARCLEN">{{cite web
+ |title=ARCLEN
+ |website=ANSYS Mechanical APDL Command Reference
+ |publisher=Ansys
+ |url=https://ansyshelp.ansys.com/public/Views/Secured/corp/v252/en/ans_cmd/Hlp_C_ARCLEN.html
+ |access-date=8 July 2026
+}}</ref> These procedures are used mainly for quasi-static nonlinear analyses involving instability, large deformation, material softening, or fracture.<ref name="Shen2025" /><ref name=":0" />
+
+== See also ==
+
+* [[Newton's method]]
+* [[Finite element method|Nonlinear finite element analysis]]
+* [[Structural stability]]
+* [[Numerical continuation]]
+* Post-[[buckling]] analysis
+
+== References ==
+
+{{reflist}}
+
+== External links ==
+
+* [https://it.mathworks.com/matlabcentral/fileexchange/44352-arc-length-method Arc-length method implementation on MATLAB File Exchange]
+* [https://onlinelibrary.wiley.com/doi/book/10.1002/9781118375938 Non-Linear Finite Element Analysis of Solids and Structures]
+
+[[Category:Numerical analysis]]
+[[Category:Finite element method]]
+[[Category:Structural analysis]]

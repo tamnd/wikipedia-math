@@ -1,0 +1,222 @@
+<!-- wikipedia: en
+     page: 7206425
+     title: Itô isometry
+     revision: 1290144920
+     timestamp: 2025-05-13T02:29:30Z
+     history: https://en.wikipedia.org/w/index.php?curid=7206425&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1290144920 -->
+{{Short description|Term in stochastic calculus}}
+In [[mathematics]], the '''Itô isometry''', named after [[Kiyoshi Itô]], is a crucial fact about [[Itô calculus|Itô stochastic integrals]]. One of its main applications is to enable the computation of [[variance]]s for random variables that are given as Itô integrals.
+
+Let <math>W : [0, T] \times \Omega \to \mathbb{R}</math> denote the canonical real-valued [[Wiener process]] defined up to time <math>T > 0</math>, and let <math>X : [0, T] \times \Omega \to \mathbb{R}</math> be a [[stochastic process]] that is [[adapted process|adapted]] to the [[natural filtration]] <math>\mathcal{F}_{*}^{W}</math> of the Wiener process.{{what|reason= Doesn't X have to be progressively measurable for the Itô integral even to be defined?|date=October 2023}} Then
+
+:<math>\operatorname{E} \left[ \left( \int_0^T X_t \, \mathrm{d} W_t \right)^2 \right] = \operatorname{E} \left[ \int_0^T X_t^2 \, \mathrm{d} t \right],</math>
+
+where <math>\operatorname{E}</math> denotes [[expected value|expectation]] with respect to [[classical Wiener measure]]. 
+
+In other words, the Itô integral, as a function from the space <math>L^2_{\mathrm{ad}} ([0,T] \times \Omega)</math> of square-integrable [[Adapted process|adapted processes]] to the space <math>L^2 (\Omega)</math> of square-integrable random variables, is an [[isometry]] of [[normed vector space]]s with respect to the norms induced by the [[inner product]]s
+
+:<math>
+\begin{align}
+( X, Y )_{L^2_{\mathrm{ad}} ([0,T] \times \Omega)} & := \operatorname{E} \left( \int_0^T X_t \, Y_t \, \mathrm{d} t \right)
+\end{align}
+</math>
+
+and
+
+:<math>( A, B )_{L^2 (\Omega)} := \operatorname{E} ( A B ) .</math>
+As a consequence, the Itô integral respects these inner products as well, i.e. we can write
+:<math>\operatorname{E} \left[ \left( \int_0^T X_t \, \mathrm{d} W_t \right) \left( \int_0^T Y_t \, \mathrm{d} W_t \right) \right] = \operatorname{E} \left[ \int_0^T X_t Y_t \, \mathrm{d} t \right]</math>
+for <math>X, Y \in L^2_{\mathrm{ad}} ([0,T] \times \Omega)</math> .
+
+== Numerical Simulation ==
+
+The Itô isometry can be illustrated through numerical simulation using [[Monte Carlo method|Monte Carlo methods]]. Such simulations help verify the theoretical relationship between the expected value of squared [[Stochastic integral|stochastic integrals]] and the expected value of integrated squared processes. A typical [[Monte Carlo method|Monte Carlo]] experiment involves generating numerous sample paths of [[Brownian motion]] and computing both sides of the isometry equation for different choices of the integrand process <math>X_t</math>. The simulation approximates the continuous-time [[stochastic integral]] using a discrete-time summation:
+
+<math>\int_0^T X_t \, dW_t \approx \sum_{i=0}^{N-1} X_{t_i} \Delta W_i</math>
+
+where <math>\Delta W_i = W_{t_{i+1}} - W_{t_i}</math> represents the Brownian increments over small time intervals. The isometry can be demonstrated using various processes <math>X_t</math> on the interval <math>[0,1]</math>:
+
+# '''Constant process:''' <math>X_t = 1</math>
+#* Analytical value: <math>\mathbb{E}[\int_0^1 1^2 \, dt] = 1</math>,
+# '''Linear deterministic process:''' <math>X_t = t</math>
+#* Analytical value: <math>\mathbb{E}[\int_0^1 t^2 \, dt] = \frac{1}{3}</math>,
+# '''Trigonometric deterministic process:''' <math>X_t = \sin(\pi t)</math>
+#* Analytical value: <math>\mathbb{E}[\int_0^1 \sin^2(\pi t) \, dt] = \frac{1}{2}</math>,
+# '''Path-dependent stochastic process:''' <math>X_t = W_t</math>
+#* Analytical value: <math>\mathbb{E}[\int_0^1 W_t^2 \, dt] = \frac{1}{2}</math>,
+# '''Compensated [[Poisson point process|Poisson]] (<math>M_t = N_t - \lambda t</math>):''' <math>X_t = 1</math>
+#* Analytical value: <math>\lambda \int_0^T 1^2 dt = \lambda T</math>.
+<syntaxhighlight lang="python3">
+# ============================================================
+#  Convergence test for five processes
+#  – 4 Brownian‑based Itô integrals
+#  – 1 compensated‑Poisson martingale integral
+#
+#  Output:
+#    • nicely formatted error table
+#    • log–log convergence plot
+#      – each Brownian curve in its own colour
+#      – Poisson curve orange & dashed
+# ============================================================
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from IPython.display import display
+
+np.random.seed(42)  # reproducible demo
+
+# ---------------------- global settings ---------------------
+T = 1.0  # horizon
+lam = 3.0  # Poisson intensity λ
+M_paths = 20_000  # Monte‑Carlo paths
+N_list = [50, 100, 200, 500, 1000, 2000, 5000]  # mesh refinements
+
+# dataframe to hold absolute errors
+index = pd.Index(N_list, name="N")
+err_table = pd.DataFrame(index=index, columns=["1", "t", "sin(πt)", "W_t", "Poisson‑1"])
+
+# -------------------- main simulation loop ------------------
+for N in N_list:
+    dt = T / N
+    sqrt_dt = np.sqrt(dt)
+    t_left = np.linspace(0.0, T, N + 1)[:-1]  # left endpoints (length N)
+
+    # --- Brownian increments & paths ------------------------
+    dW = np.random.normal(0.0, sqrt_dt, size=(M_paths, N))
+    W = np.zeros((M_paths, N + 1))
+    W[:, 1:] = np.cumsum(dW, axis=1)
+
+    # --- Compensated Poisson increments --------------------
+    dN = np.random.poisson(lam * dt, size=(M_paths, N))
+    dM = dN - lam * dt
+
+    # helper for deterministic X_t
+    lhs_det = lambda X_grid, inc: np.mean((inc * X_grid).sum(axis=1) ** 2)
+
+    # 1) X_t ≡ 1  with Brownian integrator
+    X1 = np.ones_like(t_left)
+    err_table.loc[N, "1"] = abs(lhs_det(X1, dW) - T)
+
+    # 2) X_t = t
+    Xt = t_left
+    err_table.loc[N, "t"] = abs(lhs_det(Xt, dW) - T**3 / 3)
+
+    # 3) X_t = sin(π t)
+    Xs = np.sin(np.pi * t_left)
+    err_table.loc[N, "sin(πt)"] = abs(lhs_det(Xs, dW) - 0.5 * T)
+
+    # 4) X_t = W_t   (path‑dependent)
+    lhs_W = np.mean((W[:, :-1] * dW).sum(axis=1) ** 2)
+    err_table.loc[N, "W_t"] = abs(lhs_W - T**2 / 2)
+
+    # 5) compensated Poisson with X_t ≡ 1
+    err_table.loc[N, "Poisson‑1"] = abs(lhs_det(X1, dM) - lam * T)
+
+# ---------------------- show table --------------------------
+display(
+    err_table.style.format("{:.3e}").set_caption(
+        "Absolute error of isometry vs N (5 processes)"
+    )
+)
+
+# ---------------------- plotting ----------------------------
+colour_map = {
+    "1": "tab:blue",
+    "t": "tab:green",
+    "sin(πt)": "tab:red",
+    "W_t": "tab:purple",
+    "Poisson‑1": "tab:orange",
+}
+markers = {"1": "o", "t": "s", "sin(πt)": "D", "W_t": "^", "Poisson‑1": "v"}
+styles = {"1": "-", "t": "-", "sin(πt)": "-", "W_t": "-", "Poisson‑1": "--"}
+
+plt.figure(figsize=(7, 5))
+for col in err_table.columns:
+    plt.plot(
+        N_list,
+        err_table[col],
+        marker=markers[col],
+        linestyle=styles[col],
+        color=colour_map[col],
+        label=col,
+    )
+
+plt.xscale("log")
+plt.yscale("log")
+plt.xlabel("time‑step count $N$  (log scale)")
+plt.ylabel("absolute error  (log scale)")
+plt.title(
+    "Convergence of isometry error vs $N$\n"
+    "(4 Brownian processes, 1 compensated‑Poisson process)"
+)
+plt.grid(True, which="both", ls=":")
+plt.legend()
+plt.tight_layout()
+plt.show()
+</syntaxhighlight>
+
+{| class="wikitable" style="text-align:center;"
+|+ Absolute error of isometry vs N (5 processes)
+|-
+! N !! 1 !! ''t'' !! sin(π''t'') !! ''W''<sub>''t''</sub> !! Poisson-1
+|-
+| 50 || 3.202e-03 || 5.356e-03 || 3.551e-03 || 1.497e-05 || 3.625e-02
+|-
+| 100 || 9.887e-03 || 3.152e-03 || 7.880e-03 || 8.480e-03 || 4.595e-02
+|-
+| 200 || 1.290e-02 || 6.827e-03 || 3.569e-03 || 6.790e-03 || 2.950e-02
+|-
+| 500 || 3.515e-03 || 3.692e-04 || 5.956e-03 || 6.902e-03 || 1.780e-02
+|-
+| 1000 || 5.203e-03 || 5.764e-03 || 2.894e-04 || 2.334e-03 || 3.605e-02
+|-
+| 2000 || 8.342e-03 || 4.412e-03 || 2.358e-03 || 1.208e-02 || 3.330e-02
+|-
+| 5000 || 5.890e-03 || 1.908e-03 || 6.048e-03 || 1.243e-02 || 8.335e-02
+|}
+
+A [[Monte Carlo method|Monte Carlo]] simulation with 20,000 sample paths and 1,000 time steps produces results that closely match the theoretical values predicted by the Itô isometry. As shown in the table above, the absolute errors between the simulated left-hand side <math>\mathbb{E}[(\int X_t \, dW_t)^2]</math> and the analytical right-hand side <math>\mathbb{E}[\int X_t^2 \, dt]</math> are typically on the order of <math>10^{-3}</math> or smaller, confirming the validity of the isometry relationship.
+
+These simulations serve as empirical evidence for the Itô isometry and provide insight into how the relationship holds across different types of processes, both deterministic and stochastic. The close agreement between theoretical and simulated values demonstrates the robustness of the isometry as a fundamental property of [[stochastic calculus]]. 
+
+== Generalization to Martingales ==
+
+The Itô isometry extends beyond the standard [[Wiener process]] to a broader class of [[Stochastic process|stochastic processes]], particularly [[Martingale (probability theory)|martingales]], providing a powerful framework for computing variances of [[Stochastic integral|stochastic integrals]]. A [[stochastic process]] <math>\{X_t\}_{t \geq 0}</math> is a [[Martingale (probability theory)|martingale]] with respect to the [[Filtration (probability theory)|filtration]] <math>\{\mathcal{F}_t\}_{t \geq 0}</math> if:
+
+* <math>\mathbb{E}[X_t|\mathcal{F}_s] = X_s</math> for all <math>t \geq s</math> 
+
+[[Martingale (probability theory)|Martingales]] can be further classified as:
+
+* <math>L^1</math> [[Martingale (probability theory)|martingales]] if <math>\mathbb{E}[|X_t|] < \infty</math> for all <math>t</math>
+* <math>L^2</math> [[Martingale (probability theory)|martingales]] if <math>\mathbb{E}[|X_t|^2] < \infty</math>for all <math>t</math> (and by implication, also <math>L^1</math>)
+
+A [[local martingale]] is a process <math>\{X_t\}</math> for which there exists a sequence of stopping times <math>\{\tau_n\}</math> with <math>\tau_n \rightarrow \infty</math> such that <math>\{X_{t \wedge \tau_n}\}</math> is a [[Martingale (probability theory)|martingale]] for each <math>n</math>. 
+
+=== The Itô Isometry for Martingales ===
+
+The [[Itô integral]] is defined for a broader class of integrators beyond [[Brownian motion]]. For a predictable process <math>X_t</math> and an appropriate integrator <math>Y_t</math>, the [[Itô integral]] is defined as the limit in <math>L^2</math> of simple predictable processes approximating <math>X_t</math>:
+
+:<math>\int_0^t X_s \, dY_s = \lim_{n \to \infty} \sum_{i=1}^{n-1} \xi_i(Y_{t_{i+1}} - Y_{t_i})</math>
+
+where each <math>\xi_i</math> is <math>\mathcal{F}_{t_i}</math>-[[Measurable function|measurable]].
+
+The Itô isometry holds when the integrator <math>Y_t</math> is one of:
+
+* An <math>L^1</math> [[Martingale (probability theory)|martingale]]
+* An <math>L^2</math> [[Martingale (probability theory)|martingale]]
+* A local <math>L^1</math> or <math>L^2</math> [[Martingale (probability theory)|martingale]]
+
+For these cases, the isometry takes the form:
+
+:<math>\mathbb{E}\left[\left(\int_0^T X_s \, dY_s\right)^2\right] = \mathbb{E}\left[\int_0^T X_s^2 \, d[Y]_s\right]</math>
+
+where <math>[Y]_s</math> denotes the [[quadratic variation]] process of <math>Y_s</math>.
+
+== References ==
+* {{cite book | author=Øksendal, Bernt K. | authorlink=Bernt Øksendal | title=Stochastic Differential Equations: An Introduction with Applications | publisher=Springer, Berlin | year=2003 | isbn=3-540-04758-1}}
+
+{{DEFAULTSORT:Ito Isometry}}
+[[Category:Stochastic calculus]]

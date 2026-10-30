@@ -1,0 +1,183 @@
+<!-- wikipedia: en
+     page: 64691694
+     title: Polynomial evaluation
+     revision: 1365855222
+     timestamp: 2026-07-24T20:57:36Z
+     history: https://en.wikipedia.org/w/index.php?curid=64691694&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1365855222 -->
+{{short description|Algorithms for polynomial evaluation}}
+
+In [[mathematics]] and [[computer science]], '''polynomial evaluation''' refers to computation of the value of a [[polynomial]] when its [[indeterminate (variable)|indeterminates]] are substituted for some values. In other words, evaluating the polynomial <math>P(x_1, x_2) = 2x_1x_2 + x_1^3 + 4</math> at <math>x_1=2, x_2=3</math> consists of computing <math>P(2,3)= 2\cdot 2\cdot 3 + 2^3+4=24.</math> See also {{section link|Polynomial ring|Polynomial evaluation}}
+
+For evaluating the [[univariate polynomial]] <math>a_nx^n+a_{n-1}x^{n-1}+\cdots +a_0,</math> the most naive method would use <math>n</math> multiplications to compute <math>a_n x^n</math>, use <math>n-1</math> multiplications to compute <math>a_{n-1} x^{n-1}</math> and so on for a total of <math>\tfrac{n(n+1)}{2}</math> multiplications and <math>n</math> additions.
+Using better methods, such as [[Horner's rule]], this can be reduced to <math>n</math> multiplications and <math>n</math> additions. If some preprocessing is allowed, even more savings are possible.
+
+== Background ==
+This problem arises frequently in practice. In [[computational geometry]], polynomials are used to compute function approximations using [[Taylor polynomials]]. In [[cryptography]] and [[hash table]]s, polynomials are used to compute [[k-independent hashing|''k''-independent hashing]].
+
+In the former case, polynomials are evaluated using [[floating-point arithmetic]], which is [[Floating point error|not exact]]. Thus different schemes for the evaluation will, in general, give slightly different answers. In the latter case, the polynomials are usually evaluated in a [[finite field]], in which case the answers are always exact.
+
+== General methods ==
+
+=== Horner's rule ===
+{{See also|Horner's method}}
+
+Horner's method evaluates a polynomial using repeated bracketing:
+<math display="block">\begin{align}
+a_0 + &a_1x + a_2x^2 + a_3x^3 + \cdots + a_nx^n \\
+ &= a_0 + x \bigg(a_1 + x \Big(a_2 + x \big(a_3 + \cdots + x(a_{n-1} + x\,a_n) \cdots \big) \Big) \bigg).
+\end{align}</math>
+This method reduces the number of multiplications and additions to just <math>n</math>
+
+Horner's method is so common that the "[[multiply–accumulate operation]]" is included within the [[CPU instruction set|instruction set]] of many computer processors, which allows for the addition and multiplication operations to be performed in one combined step.
+
+==== Multivariate ====
+If the polynomial is multivariate, Horner's rule can be applied recursively over some ordering of the variables.
+E.g.
+:<math>P(x, y) = 4 + x + 2 x y + 2 x^2 y + x^2 y^2</math>
+can be written as 
+:<math>\begin{align}
+P(x, y) &= 4 + x (1 + y(2) + x (y(2 + y)))
+\quad\text{or}\\
+P(x, y) &= 4 + x + y(x(2 + x(2)) + y(x^2)).
+\end{align}</math>
+
+An efficient version of this approach was described by Carnicer and Gasca.<ref>{{Cite journal |last1=Carnicer |first1=J. |last2=Gasca |first2=M. |date=1990 |title=Evaluation of Multivariate Polynomials and Their Derivatives |journal=[[Mathematics of Computation]] |volume=54 |issue=189 |pages=231–243 |doi=10.2307/2008692 |jstor=2008692 |doi-access=free}}</ref>
+
+==== Estrin's scheme ====
+{{See also|Estrin's scheme}}
+
+While it's not possible to do less computation than Horner's rule (without preprocessing), on modern computers the order of evaluation can matter a lot for the computational efficiency.
+A method known as [[Estrin's scheme]] computes a (single variate) polynomial in a tree like pattern:
+
+<math display="block">\begin{align}
+P(x) = (a_0 + a_1 x) + (a_2 + a_3 x) x^2 + ((a_4 + a_5 x) + (a_6 + a_7 x) x^2)x^4.
+\end{align}</math>
+
+Combined by [[exponentiation by squaring]], this allows parallelizing the computation. A similar idea<ref>{{cite journal |last1=Borodin  |first1=A.  |last2=Munro |first2=I |date=1971 |title=Evaluating polynomials at many points|journal=Information Processing Letters  |volume=1|issue=2 |pages=66–68 |doi=10.1016/0020-0190(71)90009-3  }}</ref> enables to involve [[Computational complexity of matrix multiplication|fast matrix multiplication algorithms]] to evaluate a polynomial in a series of points.
+
+=== Evaluation with preprocessing ===
+Arbitrary polynomials can be evaluated with fewer operations than Horner's rule requires if we first "preprocess" the coefficients <math>a_n, \dots, a_0</math>.
+
+An example was first given by Motzkin<ref>{{Cite journal|last=Motzkin|first=T. S.|date=1955|title=Evaluation of polynomials and evaluation of rational functions|journal=[[Bulletin of the American Mathematical Society]]|volume=61|issue=163|pages=10|issn=}}</ref> who noted that
+:<math>P(x)=x^4 + a_3 x^3 + a_2 x^2 + a_1 x + a_0</math>
+can be written as
+:<math>y = (x+\beta_0)x+\beta_1,\quad P(x)=(y+x+\beta_2)y+\beta_3,</math>
+where the values <math>\beta_0, \dots, \beta_3</math> are computed in advance, based on <math>a_0, \dots, a_3</math>.
+Motzkin's method uses just 3 multiplications compared to Horner's 4.
+
+The values for each <math>\beta_i</math> can be easily computed by expanding <math>P(x)</math> and equating the coefficients:
+:<math>\begin{align}
+\beta_0&=\tfrac12(a_3-1),\quad
+&z&=a_2-\beta_0(\beta_0+1),\quad
+&\beta_1&=a_1-\beta_0 z,\\
+\beta_2&=z-2\beta_1, \quad
+&\beta_3&=a_0-\beta_1(\beta_1+\beta_2).\end{align}
+</math>
+
+==== Example ====
+To compute the [[Taylor expansion]] <math>\exp(x) \approx 1+x+x^2/2+x^3/6+x^4/24</math>,
+we can upscale by a factor 24, apply the above steps, and scale back down. That gives us the three multiplication computation
+: <math>y = (x+1.5)x+11.625,\quad P(x)=(y+x-15)y/24+2.63477.</math>
+Improving over the equivalent Horner form (that is <math>P(x) = 1 + x (1 + x (1/2 + x(1/6 + x/24)))</math>) by 1 multiplication.
+
+Some general methods include the [[Knuth–Eve algorithm]] and the [[Rabin–Winograd algorithm]].
+<ref>{{cite journal |last1=Rabin |first1=Michael O. |last2=Winograd |first2=Shmuel |title=Fast evaluation of polynomials by rational preparation |journal=Communications on Pure and Applied Mathematics |date=July 1972 |volume=25 |issue=4 |pages=433–458 |doi=10.1002/cpa.3160250405}}</ref>
+
+=== Multipoint evaluation ===
+Evaluation of a degree-n polynomial <math>P(x)</math> at multiple points <math>x_1, \dots, x_m</math> can be done with <math>mn</math> multiplications by using [[Horner's method]] <math>m</math> times. Using the above preprocessing approach, this can be reduced by a factor of two; that is, to <math>mn/2</math> multiplications.
+
+However, it is possible to do better and reduce the time requirement to just <math>O\big((n + m) \log^2(n + m)\big)</math>.<ref>{{cite book |last1=Von Zur Gathen |first1=Joachim |title=Modern computer algebra |last2=Jürgen |first2=Gerhard |publisher=[[Cambridge University Press]] |year=2013 |isbn=9781139856065 |at=Chapter 10 |author-link=Joachim von zur Gathen}}</ref>
+The idea is to define two polynomials that are zero in respectively the first and second half of the points: <math>m_0(x)=(x-x_1)\cdots(x-x_{n/2})</math> and <math>m_1(x)=(x-x_{n/2+1})\cdots(x-x_{n})</math>.
+We then compute <math>R_0 = P \bmod m_0</math> and <math>R_1 = P \bmod m_1</math> using the [[polynomial division|Polynomial remainder theorem]], which can be done in <math>O(n\log n)</math> time using a [[fast Fourier transform]].
+This means <math>P(x) = Q_0(x)m_0(x) + R_0(x)</math> and <math>P(x) = Q_1(x)m_1(x) + R_1(x)</math> by construction, where <math>R_0</math> and <math>R_1</math> are polynomials of degree at most <math>n/2</math>.
+Because of how <math>m_0</math> and <math>m_1</math> were defined, we have
+:<math>\begin{align}
+R_0(x_i) &= P(x_i) \quad\text{for } i \le n/2 \quad\text{and}\\
+R_1(x_i) &= P(x_i) \quad\text{for } i > n/2.
+\end{align}</math>
+Thus to compute <math>P</math> on all <math>n</math> of the <math>x_i</math>, it suffices to compute the smaller polynomials <math>R_0</math> and <math>R_1</math> on each half of the points.
+This gives us a [[divide-and-conquer algorithm]] with <math>T(n) = 2T(n/2) + n\log n</math>, which implies <math>T(n)=O(n(\log n)^2)</math> by the [[Master theorem (analysis of algorithms)|master theorem]].
+
+In the case where the points in which we wish to evaluate the polynomials have some structure, simpler methods exist.
+For example, Knuth<ref>{{Cite book |last=Knuth |first=Donald |title=[[Art of Computer Programming]] |publisher=[[Addison-Wesley]] |year=2005 |isbn=9780201853926 |volume=2: Seminumerical Algorithms |author-link=Donald Knuth}}</ref> section 4.6.4
+gives a method for tabulating polynomial values of the type
+:<math>P(x_0 + h), P(x_0 + 2h), \dots.</math>
+
+=== Dynamic evaluation ===
+In the case where <math>x_1, \dots, x_m</math> are not known in advance, Kedlaya and Umans<ref>{{Cite journal|last1=Kedlaya|first1=Kiran S.|author-link=Kiran Kedlaya|last2=Umans|first2=Christopher|author-link2=Chris Umans|date=2011|title=Fast Polynomial Factorization and Modular Composition|journal=[[SIAM Journal on Computing]]|volume=40|issue=6|pages=1767–1802|doi=10.1137/08073408x|hdl=1721.1/71792|s2cid=412751 |url=https://drops.dagstuhl.de/entities/document/10.4230/DagSemProc.08381.5 |hdl-access=free}}</ref> gave a [[data structure]] for evaluating polynomials over a [[finite field]] of size <math>F_q</math> in time <math>(\log n)^{O(1)}(\log_2 q)^{1+o(1)}</math> per evaluation after some initial preprocessing. This was shown by [[Kasper Green Larsen|Larsen]]<ref>{{Cite book|last=Larsen|first=K. G.|title=2012 IEEE 53rd Annual Symposium on Foundations of Computer Science |chapter=Higher Cell Probe Lower Bounds for Evaluating Polynomials |author-link=Kasper Green Larsen|date=2012|publisher=[[IEEE]]|volume=53|pages=293–301|doi=10.1109/FOCS.2012.21|isbn=978-0-7695-4874-6 |s2cid=7906483 }}</ref> to be essentially optimal.
+
+The idea is to transform <math>P(x)</math> of degree <math>n</math> into a [[multivariate polynomial]] <math>f(x_1, x_2, \dots, x_m)</math>, such that <math>P(x) = f(x, x^d, x^{d^2}, \dots, x^{d^m})</math> and the individual degrees of <math>f</math> is at most <math>d</math>.
+Since this is over <math>\bmod q</math>, the largest value <math>f</math> can take (over <math>\mathbb Z</math>) is <math>M = d^m (q-1)^{dm}</math>.
+Using the [[Chinese remainder theorem]], it suffices to evaluate <math>f</math> modulo different primes <math>p_1, \dots, p_\ell</math> with a product at least <math>M</math>.
+Each prime can be taken to be roughly <math>\log M = O(dm\log q)</math>, and the number of primes needed, <math>\ell</math>, is roughly the same. Doing this process recursively, we can get the primes as small as <math>\log\log q</math>.
+That means we can compute and store <math>f</math> on all the possible values in <math>T = (\log\log q)^m</math> time and space.
+If we take <math>d = \log q</math>, we get <math>m = \tfrac{\log n}{\log\log q}</math>, so the time/space requirement is <math>n^\frac{\log\log q}{\log\log\log q}.</math>
+
+Kedlaya and Umans further show how to combine this preprocessing with fast multipoint evaluation using the fast Fourier transform.
+This allows optimal algorithms for many important algebraic problems, such as polynomial [[modular composition]].
+
+== Specific polynomials ==
+While general polynomials require <math>\Omega(n)</math> operations to evaluate, some polynomials can be computed much faster.
+For example, the polynomial <math>P(x)=x^2+2x+1</math> can be computed using just one multiplication and one addition since <math>P(x)=(x+1)^2</math>.
+
+=== Evaluation of powers ===
+{{Main|Exponentiation by squaring|Addition-chain exponentiation}}
+
+A particularly interesting type of polynomial is powers like <math>x^n</math>.
+Such polynomials can always be computed in <math>O(\log n)</math> operations. Suppose, for example, that we need to compute <math>x^{16}</math>; we could simply start with <math>x</math> and multiply by <math>x</math> to get <math>x^2</math>.
+We can then multiply that by itself to get <math>x^4</math> and so on to get <math>x^8</math> and <math>x^{16}</math> in just four multiplications. Other powers like <math>x^5</math> can similarly be computed efficiently by first computing <math>x^4</math> by 2 multiplications and then multiplying by <math>x</math>.
+
+The most efficient way to compute a given power <math>x^n</math> is provided by [[addition-chain exponentiation]]. However, this requires designing a specific algorithm for each exponent, and the computation needed for designing these algorithms are difficult ([[NP-complete]]<ref>{{cite journal |last1=Downey |first1=Peter |last2=Leong |first2=Benton |last3=Sethi |first3=Ravi |title=Computing Sequences with Addition Chains |journal=SIAM Journal on Computing |date=1981 |volume=10 |issue=3 |pages=638–646 |doi=10.1137/0210047 |url=https://epubs.siam.org/doi/10.1137/0210047 |access-date=27 January 2024|url-access=subscription }}</ref>), so exponentiation by squaring is generally preferred for effective computations.
+
+=== Polynomial families ===
+Often polynomials show up in a different form than the well known <math>a_n x^n + \dots + a_1 x + a_0</math>.
+For polynomials in [[Chebyshev form]] we can use [[Clenshaw algorithm]]. For polynomials in [[Bézier form]] we can use [[De Casteljau's algorithm]], and for [[B-spline]]s there is [[De Boor's algorithm]].
+
+=== Hard polynomials ===
+The fact that some polynomials can be computed significantly faster than "general polynomials" suggests the question: Can we give an example of a simple polynomial that cannot be computed in time much smaller than its degree? [[Volker Strassen]] has shown<ref>{{Cite journal|last=Strassen|first=Volker|author-link=Volker Strassen|date=1974|title=Polynomials with Rational Coefficients Which are Hard to Compute|url=|journal=[[SIAM Journal on Computing]]|language=en|volume=3|issue=2|pages=128–149|doi=10.1137/0203010|issn=}}</ref> that the polynomial
+:<math>P(x)=\sum_{k=0}^n 2^{2^{kn^3}}x^k</math>
+cannot be evaluated with less than <math>\tfrac12 n - 2</math> multiplications and <math>n - 4</math> additions.
+At least this bound holds if only operations of those types are allowed, giving rise to a so-called "polynomial chain of length <math><n^2/\log n</math>".
+
+The polynomial given by Strassen has very large coefficients, but by probabilistic methods, one can show there must exist even polynomials with coefficients just 0's and 1's such that the evaluation requires at least <math>\Omega(n/\log n)</math> multiplications.<ref>{{Citation|last=Schnorr|first=C. P.|chapter=On the additive complexity of polynomials and some new lower bounds|date=1979|chapter-url=|title=[[Theoretical Computer Science (journal)|Theoretical Computer Science]]|series=Lecture Notes in Computer Science |volume=67|pages=286–297|editor-last=|editor-first=|place=|publisher=[[Springer Publishing|Springer]]|doi=10.1007/3-540-09118-1_30|isbn=978-3-540-09118-9|access-date=|author-link=Claus P. Schnorr}}</ref>
+
+For other simple polynomials, the complexity is unknown.
+The polynomial <math>(x+1)(x+2)\cdots(x+n)</math> is conjectured to not be computable in time <math>(\log n)^{c}</math> for any <math>c</math>.
+This is supported by the fact that, if it can be computed fast, then [[integer factorization]] can be computed in polynomial time, breaking the [[RSA (cryptosystem)|RSA cryptosystem]].<ref>Chen, Xi, Neeraj Kayal, and Avi Wigderson. Partial derivatives in arithmetic complexity and beyond. Now Publishers Inc, 2011.</ref>
+
+== Matrix polynomials ==
+Sometimes the computational cost of scalar multiplications (like <math>ax</math>) is less than the computational cost of "non scalar" multiplications (like <math>x^2</math>). The typical example of this is matrices. If <math>M</math> is an <math>m\times m</math> matrix, a [[scalar multiplication]] <math>aM</math> takes about <math>m^2</math> arithmetic operations, while computing <math>M^2</math> takes about <math>m^3</math> (or <math>m^{2.3}</math> using [[fast matrix multiplication]]).
+
+Matrix polynomials are used, for example, for [[Matrix exponential#Computing the matrix exponential|computing matrix exponentials]].
+
+Paterson and Stockmeyer<ref>{{Cite journal|last1=Paterson|first1=Michael S.|author-link=Mike Paterson|last2=Stockmeyer|first2=Larry J.|author-link2=Larry J. Stockmeyer|date=1973|title=On the Number of Nonscalar Multiplications Necessary to Evaluate Polynomials|url=|journal=[[SIAM Journal on Computing]]|language=en|volume=2|issue=1|pages=60–66|doi=10.1137/0202007|issn=}}</ref>
+showed how to compute a degree <math>n</math> polynomial using only <math>O(\sqrt n)</math> non scalar multiplications and <math>O(n)</math> scalar multiplications. Thus a [[matrix polynomial]] of degree {{mvar|n}} can be evaluated in <math>O(m^\alpha\sqrt{n} + m^2n)</math> time, where {{tmath|m^\alpha}} is the time needed for multiplying two {{tmath|m\times m}} matices. If <math>m=n</math> this is <math>O(n^\beta),</math> where {{tmath|1=\beta=3.5}} or {{tmath|1=\beta=3}} deprending whether usual or fast matrix multiplication is used. This is to be compared to the usual [[Horner method]], which gives {{tmath|1=\beta=4}} or {{tmath|1=\beta=3.3}} respectively.
+
+This method works as follows: For a polynomial 
+:<math>P(M)=a_{n-1} M^{n-1} + \dots + a_{1}M + a_0 I,</math>
+let {{mvar|k}} be the least integer not smaller than <math>\sqrt{n}.</math>
+The powers <math>M, M^2, \dots, M^k</math> are computed with <math>k</math> matrix multiplications, and <math>M^{2k}, M^{3k}, \dots, M^{k^2-k}</math> are then computed by repeated multiplication by <math>M^k.</math>
+Now,
+:<math>\begin{align}P(M) =
+&\,(a_0 I + a_1 M + \dots + a_{k-1}M^{k-1})
+\\+&\,(a_k I + a_{k+1} M + \dots + a_{2k-1}M^{k-1})M^k
+\\+&\,\dots
+\\+&\,(a_{n-k} I + a_{n-k+1} M + \dots + a_{n-1}M^{k-1})M^{k^2-k},
+\end{align}</math>,
+where <math>a_i=0</math> for {{math|''i'' ≥ ''n''}}.
+This requires just <math>k</math> more non-scalar multiplications.
+
+The direct application of this method uses <math>2\sqrt{n}</math> non-scalar multiplications, but combining it with [[Polynomial evaluation#Evaluation with preprocessing|Evaluation with preprocessing]], Paterson and Stockmeyer show you can reduce this to <math>\sqrt{2n}</math>.
+
+Methods based on matrix polynomial multiplications and additions have been proposed allowing to save nonscalar matrix multiplications with respect to the Paterson-Stockmeyer method.<ref>{{cite journal |last1=Fasi |first1=Massimiliano |title=Optimality of the Paterson–Stockmeyer method for evaluating matrix polynomials and rational matrix functions |journal=Linear Algebra and Its Applications |date=1 August 2019 |volume=574 |page=185 |doi=10.1016/j.laa.2019.04.001 |url=http://eprints.maths.manchester.ac.uk/2676/1/fasi18.pdf |issn=0024-3795|doi-access=free }}</ref>{{clarification needed|reason=too vague for being understandable|date=May 2025}}
+
+== See also ==
+* [[Estrin's scheme]] to facilitate parallelization on modern computer architectures
+* [[Arithmetic circuit complexity]] theory studies the [[Computational complexity theory|computational complexity]] of evaluating different polynomials.
+
+== References ==
+{{reflist}}
+
+[[Category:Polynomials]]

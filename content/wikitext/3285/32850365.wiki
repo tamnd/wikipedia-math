@@ -1,0 +1,127 @@
+<!-- wikipedia: en
+     page: 32850365
+     title: Line integral convolution
+     revision: 1310331659
+     timestamp: 2025-09-09T00:22:28Z
+     history: https://en.wikipedia.org/w/index.php?curid=32850365&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1310331659 -->
+{{Short description|Method for visualizing vector fields}}
+[[File:Rotation of the Large Magellanic Cloud ESA393163.png|thumb|right|Image of the [[Large Magellanic Cloud]], one of the nearest galaxies to our Milky Way, created with LIC]]
+
+In [[scientific visualization]], '''line integral convolution''' ('''LIC''') is a method to visualize a [[vector field]] (such as [[fluid motion]]) at high spatial resolutions.<ref name="Stalling 1995" /> The LIC technique was first proposed by Brian Cabral and Leith Casey Leedom in 1993.<ref name="Cabral 1993">{{cite conference |last1=Cabral |first1=Brian |last2=Leedom |first2=Leith Casey |date=August 2–6, 1993 |title=Imaging Vector Fields Using Line Integral Convolution |conference=SIGGRAPH '93 |location=Anaheim, California |pages=263–270 |citeseerx=10.1.1.115.1636 |doi=10.1145/166117.166151 |isbn=0-89791-601-8 |book-title=Proceedings of the 20th annual conference on Computer graphics and interactive techniques}}</ref>
+
+In LIC, discrete numerical [[Line integral|line integration]] is performed along the [[field line]]s (curves) of the vector field on a [[Regular grid|uniform grid]]. The integral operation is a [[convolution]] of a filter [[Kernel (image processing)|kernel]] and an input texture, often [[white noise]].<ref name="Stalling 1995" /> In [[signal processing]], this process is known as a [[Convolution#Discrete convolution|discrete convolution]].<ref name=":0">{{Cite web |last=Ward |first=Matthew O. |date=February 5, 1996 |title=Line Integral Convolution for Flow Visualization |url=https://web.cs.wpi.edu/~matt/courses/cs563/talks/flowvis/lic.html |access-date=2024-07-21 |website= |publication-place=Worcester Polytechnic Institute}}</ref>
+
+==Overview==
+Traditional visualizations of vector fields use small arrows or lines to represent vector direction and magnitude. This method has a low [[spatial resolution]], which limits the density of presentable data and risks obscuring characteristic features in the data.<ref name="Stalling 1995" /><ref name=":0" /> More sophisticated methods, such as [[Streamlines, streaklines, and pathlines|streamlines]] and particle tracing techniques, can be more revealing but are highly dependent on proper seed points.<ref name="Stalling 1995" /> Texture-based methods, like LIC, avoid these problems since they depict the entire vector field at point-like (pixel) resolution.<ref name="Stalling 1995" />
+
+Compared to other integration-based techniques that compute field lines of the input vector field, LIC has the advantage that all structural features of the vector field are displayed, without the need to adapt the start and end points of field lines to the specific vector field. In other words, it shows the topology of the vector field.{{Citation needed|date=July 2024}}
+
+In user testing, LIC was found to be particularly good for identifying critical points.<ref name="Laidlaw 2001">{{cite conference | first1 = David H. | last1 = Laidlaw | first2 = Robert M. | last2 = Kirby | first3 = J. Scott | last3 = Davidson | first4 = Timothy S. | last4 = Miller | first5 = Marco | last5 = da Silva  | first6 = William H. | last6 = Warren | first7 = Michael J. | last7 = Tarr | title = Quantitative Comparative Evaluation of 2D Vector Field Visualization Methods | book-title = IEEE Visualization 2001, VIS '01. Proceedings | date = October 21–26, 2001 | place = San Diego, CA, USA | pages = 143–150}}</ref>
+
+== Algorithm ==
+
+=== Informal description ===
+LIC causes output values to be strongly correlated along the field lines, but uncorrelated in orthogonal directions.<ref name="Stalling 1995" /> As a result, the field lines contrast each other and stand out visually from the background.
+
+Intuitively, the process can be understood with the following example: the flow of a vector field can be visualized by overlaying a fixed, random pattern of dark and light paint. As the flow passes by the paint, the fluid picks up some of the paint's color, averaging it with the color it has already acquired. The result is a randomly striped, smeared texture where points along the same streamline tend to have a similar color. Other physical examples include:
+
+* whorl patterns of paint, oil, or foam on a river
+* visualisation of [[magnetic field]] lines using [[:commons:Category:Magnetised iron filings|randomly distributed iron filings]]
+* fine sand being blown by strong wind<ref>{{Cite web |last=Liu |first=Zhanping |date=Aug 21, 2007 |title=LIC (Line Integral Convolution) |url=http://www.zhanpingliu.org/research/flowvis/LIC/LIC.htm |access-date=2024-07-21 |website=}}</ref>
+
+=== Formal mathematical description ===
+Although the input vector field and the result image are discretized, it pays to look at it from a continuous viewpoint.<ref name="Stalling 1995">{{cite conference | first1 = Detlev | last1 = Stalling | first2 = Hans-Christian | last2 = Hege | title = Fast and Resolution Independent Line Integral Convolution | citeseerx = 10.1.1.45.5526 | book-title = Proceedings of the 22nd Annual Conference on Computer Graphics and Interactive Techniques | conference = SIGGRAPH '95 | date = August 6–11, 1995 | location = Los Angeles, California | pages = [https://archive.org/details/computergraphics00sigg/page/249 249–256] | doi = 10.1145/218380.218448 | isbn = 0-89791-701-4 | url = https://archive.org/details/computergraphics00sigg/page/249 }}</ref> Let <math>\mathbf{v}</math> be the vector field given in some domain <math>\Omega</math>. Although the input vector field is typically discretized, we regard the field <math>\mathbf{v}</math> as defined in every point of <math>\Omega</math>, i.e. we assume an [[interpolation]]. Streamlines, or more generally field lines, are tangent to the vector field in each point. They end either at the boundary of <math>\Omega</math> or at critical points where <math>\mathbf{v}=\mathbf{0}</math>. For the sake of simplicity, critical points and boundaries are ignored in the following.
+
+A field line <math>\boldsymbol \sigma</math>, parametrized by arc length <math>s</math>, is defined as
+
+<math display="block">\frac{d\boldsymbol \sigma (s)}{ds} = \frac{\mathbf{v}(\boldsymbol {\sigma}(s))}{|\mathbf{v}(\boldsymbol{\sigma}(s))|}.</math>
+
+Let <math>\boldsymbol{\sigma}_\mathbf{r}(s)</math> be the field line that passes through the point <math>\mathbf{r}</math> for <math>s=0</math>. Then the image gray value at <math>\mathbf{r}</math> is set to
+
+<math display="block">D(\mathbf{r}) = \int_{-L/2}^{L/2} k(s)N(\boldsymbol{\sigma}_{\mathbf{r}}(s)) ds</math>
+
+where <math>k(s)</math> is the convolution [[Kernel (image processing)|kernel]], <math>N(\mathbf{r})</math> is the noise image, and <math>L</math> is the length of field [[line segment]] that is followed.
+
+<math>D(\mathbf{r})</math> has to be computed for each pixel in the LIC image. If carried out naively, this is quite expensive. First, the field lines have to be computed using a [[Numerical methods for ordinary differential equations|numerical method for solving ordinary differential equations]], like a [[Runge–Kutta methods|Runge–Kutta method]], and then for each pixel the convolution along a field line segment has to be calculated.
+
+The final image will normally be colored in some way. Typically, some [[scalar field]] in <math>\Omega</math> (like the vector length) is used to determine the hue, while the grayscale LIC output determines the [[Lightness|brightness]].
+
+Different choices of convolution kernels and random noise produce different textures; for example, [[pink noise]] produces a cloudy pattern where areas of higher flow stand out as smearing, suitable for weather visualization. Further refinements in the convolution can improve the quality of the image.<ref name="Weiskopf 2009">{{cite book |last1=Weiskopf |first1=Daniel |chapter-url=https://scholar.archive.org/work/t3e74cfmmjg6zcotlqqzy5dihq |title=Mathematical Foundations of Scientific Visualization, Computer Graphics, and Massive Data Exploration |publisher=[[Springer Science+Business Media|Springer]] |year=2009 |isbn=978-3-540-25076-0 |editor1-last=Möller |editor1-first=Torsten |series=Mathematics and Visualization |location=Berlin, New York |pages=191–211 |chapter=Iterative Twofold Line Integral Convolution for Texture-Based Vector Field Visualization |doi=10.1007/b106657_10 |editor2-last=Hamann |editor2-first=Bernd |editor3-last=Russell |editor3-first=Robert D.  }}</ref>
+
+===Programming description===
+Algorithmically, LIC takes a vector field and noise texture as input, and outputs a texture. The process starts by generating in the domain of the vector field a random [[grayscale|gray level image]] at the desired output resolution. Then, for every pixel in this image, the forward and backward streamline of a fixed [[arc length]] is calculated. The value assigned to the current pixel is computed by a [[convolution]] of a suitable convolution kernel with the gray levels of all the noise pixels lying on a segment of this streamline. This creates a gray level LIC image.
+
+==Versions==
+
+===Basic===
+[[File:Line integral convolution visualisation.png|thumb|Basic LIC visualization of a flow field]]
+Basic LIC images are grayscale images, without color and animation. While such LIC images convey the direction of the field vectors, they do not indicate orientation; for stationary fields, this can be remedied by animation. Basic LIC images do not show the length of the vectors (or the strength of the field).
+
+===Color===
+[[File:Line integral convolution visualisation (color).png|thumb|LIC with color denoting velocity magnitude]]
+The length of the vectors (or the strength of the field) is usually coded in color; alternatively, animation can be used.<ref name="Cabral 1993" /><ref name="Stalling 1995" />
+
+=== Animation ===
+[[File:Animated LIC.svg|thumb|Illustration of how LIC is animated.<br/>Top: normal [[box filter]] (average).<br/>Middle: sinusoidal filter at <math>t</math>.<br/>Bottom: sinusoidal filter at <math>t + \delta t</math>.]]
+
+LIC images can be animated by using a kernel that changes over time. Samples at a constant time from the streamline would still be used, but instead of averaging all pixels in a streamline with a static kernel, a ripple-like kernel constructed from a [[periodic function]] multiplied by a [[Hann function]] acting as a window (in order to prevent artifacts) is used. The periodic function is then shifted along the period to create an animation.
+
+=== Fast LIC (FLIC)===
+The computation can be significantly accelerated by re-using parts of already computed field lines, specializing to a box function as convolution kernel <math>k(s)</math> and avoiding redundant computations during convolution.<ref name="Stalling 1995" /> The resulting fast LIC method can be generalized to convolution kernels that are arbitrary polynomials.<ref name="Hege 1998">{{Citation | first1 = Hans-Christian | last1 = Hege | first2 = Detlev | last2 = Stalling | chapter = Fast LIC with Piecewise Polynomial Filter Kernels | editor-last = Hege | editor-first = Hans-Christian | editor2-last = Polthier | editor2-first = Konrad | title = Mathematical Visualization | pages = 295–314 | publisher = Springer-Verlag | location = Berlin, Heidelberg | citeseerx = 10.1.1.31.504 | doi = 10.1007/978-3-662-03567-2_22 | isbn = 978-3-642-08373-0| year = 1998 }}</ref>
+
+===Oriented Line Integral Convolution (OLIC)===
+Because LIC does not encode flow orientation, it cannot distinguish between streamlines of equal direction but opposite orientation.<ref name=":1" /> Oriented Line Integral Convolution (OLIC) solves this issue by using a ramp-like asymmetric kernel and a low-density noise texture.<ref name=":1" /> The kernel asymmetrically modulates the intensity along the streamline, producing a trace that encodes orientation; the low-density of the noise texture prevents smeared traces from overlapping, aiding readability.
+
+Fast Rendering of Oriented Line Integral Convolution (FROLIC) is a variation that approximates OLIC by rendering each trace in discrete steps instead of as a continuous smear.<ref name=":1">{{Cite book |last1=Wegenkittl |first1=Rainer |last2=Gröller |first2=Eduard |chapter=Fast oriented line integral convolution for vector field visualization via the Internet |date=24 October 1997 |title=Proceedings. Visualization '97 (Cat. No. 97CB36155) |chapter-url=https://www.cg.tuwien.ac.at/research/vis/dynsys/frolic/frolic_crc.pdf |pages=309–316 |doi=10.1109/VISUAL.1997.663897|isbn=0-8186-8262-0 }}</ref><ref>[https://www.cg.tuwien.ac.at/research/vis/dynsys/frolic/ Java Exploration Tool for Dynamical Systems  by R. Wegenkittl and E. Gröller.]</ref>
+
+=== Unsteady Flow LIC (UFLIC) ===
+For time-dependent vector fields (unsteady flow), a variant called Unsteady Flow LIC has been designed that maintains the coherence of the flow animation.<ref name="Shen 1998">{{cite journal | last1 = Shen | first1 = Han-Wei | last2 = Kam | first2 = David L. | title =  A New Line Integral Convolution Algorithm for Visualizing Time-Varying Flow Fields | journal = IEEE Trans Vis Comput Graph | volume = 4 | issue = 2 | pages = 98–108 | publisher = IEEE | location = Los Alamitos | url = http://web.cse.ohio-state.edu/~shen.94/Research/Gravity/Project_2_files/Shen1998a.pdf | year = 1998 | issn = 1077-2626 | doi = 10.1109/2945.694952 | bibcode = 1998ITVCG...4...98H }}</ref> An interactive GPU-based implementation of UFLIC has been presented.<ref name="Ding 2015">{{cite conference |last1=Ding |first1=Zi'ang |last2=Liu |first2=Zhanping |last3=Yu |first3=Yang |last4=Chen |first4=Wei |year=2015 |title=Parallel unsteady flow line integral convolution for high-performance dense visualization |pages=25–30 |book-title=2015 IEEE Pacific Visualization Symposium, PacificVis 2015 |place=Hangzhou, China}}</ref>
+
+=== Parallel ===
+Since the computation of an LIC image is expensive but inherently parallel, the process has been [[Parallel computing|parallelized]]<ref name="Zoeckler 1996">{{cite journal | last1 = Zöckler | first1 = Malte | last2 = Stalling | first2 = Detlev | last3 = Hege | first3 = Hans-Christian | title =  Parallel Line Integral Convolution | journal = Parallel Computing | volume = 23 | issue = 7 | pages = 975–989 | publisher = North Holland | location = Amsterdam | url = http://www.zib.de/visual-publications/sources/src-1996/parLIC.pdf | year = 1997 | issn = 0167-8191 | doi = 10.1016/S0167-8191(97)00039-2 }}</ref> and, with availability of GPU-based implementations, interactive on PCs.
+
+===Multidimensional===
+Note that the domain <math>\Omega</math> does not have to be a 2D domain: the method is applicable to higher dimensional domains using multidimensional noise fields. However, the visualization of the higher-dimensional LIC texture is problematic; one way is to use interactive exploration with 2D slices that are manually positioned and rotated. The domain <math>\Omega</math> does not have to be flat either; the LIC texture can be computed also for arbitrarily shaped 2D surfaces in 3D space.<ref name="Battke 1997">{{cite book | first1 = Henrik | last1 = Battke | first2 = Detlev | last2 = Stalling | first3 = Hans-Christian | last3 = Hege | chapter = Fast Line Integral Convolution for Arbitrary Surfaces in 3D | editor1-first = Hans-Christian | editor1-last = Hege | editor2-first = Konrad | editor2-last = Polthier | title = Visualization and Mathematics: Experiments, Simulations, and Environments | url = https://archive.org/details/visualizationmat00fran | url-access = limited | publisher = [[Springer Science+Business Media|Springer]] | location = Berlin, New York | pages = [https://archive.org/details/visualizationmat00fran/page/n191 181]–195 | year = 1997 | citeseerx = 10.1.1.71.7228 | doi = 10.1007/978-3-642-59195-2_12| isbn = 3-540-61269-6 }}</ref>
+
+==Applications==
+This technique has been applied to a wide range of problems since it first was published in 1993, both scientific and creative, including:
+
+Representing vector fields:
+
+* visualization of steady (time-independent) flows (streamlines)<ref>[https://daac.hpc.mil/gettingStarted/Line%20Integral%20Convolution.html DAAC: Line  Integral Convolution]</ref>
+* visual exploration of 2D autonomous dynamical systems<ref>[https://iopscience.iop.org/article/10.1088/0143-0807/36/3/035007 Visual exploration of 2D autonomous dynamical systems Thomas Müller2,1 and Filip Sadlo1  Published 26 February 2015 • © 2015 IOP Publishing Ltd European Journal of Physics, Volume 36, Number 3]</ref>
+* wind mapping<ref>[http://hint.fm/wind/ A real-time map of the wind in the U.S. by Fernanda Viégas and Martin Wattenberg.]</ref>
+* water flow mapping
+
+Artistic effects for image generation and stylization:
+
+* pencil drawing<ref>[https://www.researchgate.net/publication/228663813_Efficient_Region-Based_Pencil_Drawing researchgate publication: Sun, Shuo & Huang, Dongwei. (2022). Efficient Region-Based Pencil Drawing.] </ref> (automatic pencil drawing generation technique using LIC pencil filter<ref>[https://ieeexplore.ieee.org/document/1323994?arnumber=1323994 S. Yamamoto, Xiaoyang Mo and A. Imamiya, "Enhanced LIC pencil filter," Proceedings. International Conference on Computer Graphics, Imaging and Visualization, 2004. CGIV 2004., 2004, pp. 251-256, doi: 10.1109/CGIV.2004.1323994.]</ref>)
+* automatic generation of hair textures<ref>[https://ieeexplore.ieee.org/document/859772?arnumber=859772 Xiaoyang Mao, M. Kikukawa, K. Kashio and A. Imamiya, "Automatic generation of hair texture with line integral convolution," 2000 IEEE Conference on Information Visualization. An International Conference on Computer Visualization and Graphics, 2000, pp. 303-308, doi: 10.1109/IV.2000.859772.]</ref>
+* creating marbling texture<ref>[https://dl.acm.org/doi/10.1145/604471.604489 Xiaoyang Mao, Toshikazu Suzuki, and Atsumi Imamiya. 2003. AtelierM: a physically based interactive system for creating traditional marbling textures. In Proceedings of the 1st international conference on Computer graphics and interactive techniques in Australasia and South East Asia (GRAPHITE '03). Association for Computing Machinery, New York, NY, USA, 79–ff. https://doi.org/10.1145/604471.604489]</ref>
+
+Terrain generalization:
+
+* creating generalized [[Terrain cartography#Shaded relief|shaded relief]]<ref>[https://www.tandfonline.com/doi/full/10.1080/15230406.2020.1833762 Bernhard Jenny (2021) Terrain generalization with line integral convolution, Cartography and Geographic Information Science, 48:1, 78-92, DOI: 10.1080/15230406.2020.1833762]</ref>
+
+==Implementations==
+* [https://github.com/RaymondMcGuire/GPU-Based-Image-Processing-Tools GPU Based Image Processing Tools by Raymond McGuire]
+* [https://www.paraview.org/Wiki/ParaView/Line%20Integral%20Convolution ParaView : Line Integral Convolution]
+* [https://github.com/andresbejarano/2DFlowVisualization A 2D flow visualization tool based on LIC and RK4. Developed using C++ and VTK. by Andres Bejarano]
+* [https://reference.wolfram.com/language/ref/LineIntegralConvolutionPlot.html Wolfram Research (2008), LineIntegralConvolutionPlot, Wolfram Language function, https://reference.wolfram.com/language/ref/LineIntegralConvolutionPlot.html (updated 2014).]
+
+==See also==
+* [[Weighted arithmetic mean]]
+
+== References ==
+{{reflist}}
+
+{{Commons category|Line integral convolution}}
+{{Wikibooks|Fractals/Mathematics/LIC}}
+
+[[Category:Numerical function drawing]]
+[[Category:Vector calculus]]
+[[Category:Fluid dynamics]]
+[[Category:Complex analysis]]
+[[Category:Computer graphics]]

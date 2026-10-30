@@ -1,0 +1,60 @@
+<!-- wikipedia: en
+     page: 55634671
+     title: Multilevel Monte Carlo method
+     revision: 1171588962
+     timestamp: 2023-08-22T02:01:27Z
+     history: https://en.wikipedia.org/w/index.php?curid=55634671&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1171588962 -->
+'''Multilevel Monte Carlo (MLMC) methods''' in [[numerical analysis]] are [[algorithm]]s for computing [[Expected value|expectation]]s that arise in [[stochastic simulation]]s. Just as [[Monte Carlo method]]s, they rely on repeated [[Simple random sample|random sampling]], but these samples are taken on different levels of accuracy. MLMC methods can greatly reduce the computational cost of standard Monte Carlo methods by taking most samples with a low accuracy and corresponding low cost, and only very few samples are taken at high accuracy and corresponding high cost.
+
+== Goal ==
+The goal of a multilevel Monte Carlo method is to approximate the [[expected value]] <math>\operatorname{E}[G]</math> of the [[random variable]] <math>G</math> that is the output of a [[stochastic simulation]]. Suppose this random variable cannot be simulated exactly, but there is a sequence of approximations <math>G_0, G_1, \ldots, G_L</math> with increasing accuracy, but also increasing cost, that converges to <math>G</math> as <math>L\rightarrow\infty</math>. The basis of the multilevel method is the [[telescoping sum]] identity,<ref>{{cite journal |last=Giles |first=M. B. |date=2015 |title=Multilevel Monte Carlo Methods |journal=Acta Numerica |volume=24 |pages=259–328 |doi=10.1017/s096249291500001x|arxiv=1304.5472 |s2cid=13805654 }}</ref>
+
+{{align|center|<math> \operatorname{E}[G_{L}] = \operatorname{E}[G_{0}] + \sum_{\ell=1}^L \operatorname{E}[G_\ell - G_{\ell-1}],</math>}}
+
+that is trivially satisfied because of the linearity of the expectation operator. Each of the expectations <math>\operatorname{E}[G_\ell - G_{\ell-1}]</math> is then approximated by a Monte Carlo method, resulting in the multilevel Monte Carlo method. Note that taking a sample of the difference <math>G_\ell - G_{\ell-1}</math> at ''level'' <math>\ell</math> requires a simulation of both <math>G_{\ell}</math> and <math>G_{\ell-1}</math>.
+
+The MLMC method works if the [[variance]]s <math>\operatorname{V}[G_\ell - G_{\ell-1}]\rightarrow0</math> as <math>\ell\rightarrow\infty</math>, which will be the case if both <math>G_{\ell}</math> and <math>G_{\ell-1}</math> approximate the same random variable <math>G</math>. By the [[Central Limit Theorem]], this implies that one needs fewer and fewer samples to accurately approximate the expectation of the difference <math>G_\ell - G_{\ell-1}</math> as <math>\ell\rightarrow\infty</math>. Hence, most samples will be taken on level <math>0</math>, where samples are cheap, and only very few samples will be required at the finest level <math>L</math>. In this sense, MLMC can be considered as a recursive [[control variate]] strategy.
+
+==Applications==
+[[File:Multilevel monte carlo sample paths for an SDE.png|thumb|Approximation of a sample path of an SDE on different levels.|right]]
+The first application of MLMC is attributed to Mike Giles,<ref>{{cite journal |last=Giles |first=M. B. |date=2008 |title=Multilevel Monte Carlo Path Simulation |journal=Operations Research |volume=56 |issue=3 |pages=607–617|url=https://ora.ox.ac.uk/objects/uuid:d9d28973-94aa-4179-962a-28bcfa8d8f00/datastreams/ATTACHMENT01 |doi=10.1287/opre.1070.0496|citeseerx=10.1.1.121.713 |s2cid=3000492 }}</ref> in the context of [[stochastic differential equations]] (SDEs) for [[Monte Carlo option model|option pricing]], however, earlier traces are found in the work of Heinrich in the context of parametric integration.<ref>{{cite book |last=Heinrich |first=S. |title=Large-Scale Scientific Computing |chapter=Multilevel Monte Carlo Methods |date=2001 |series=Lecture Notes in Computer Science |publisher=Springer |volume=2179 |pages=58–67|doi=10.1007/3-540-45346-6_5 |isbn=978-3-540-43043-8 }}</ref> Here, the random variable <math>G=f(X(T))</math> is known as the payoff function, and the sequence of approximations <math>G_\ell</math>, <math>\ell=0,\ldots,L</math> use an approximation to the sample path <math>X(t)</math> with time step <math>h_\ell=2^{-\ell}T</math>.
+
+The application of MLMC to problems in [[uncertainty quantification]] (UQ) is an active area of research.<ref>{{cite journal |last1=Cliffe |first1=A. |last2=Giles |first2=M. B. |last3=Scheichl |first3=R. |last4=Teckentrup |first4=A.|author4-link=Aretha Teckentrup |date=2011 |title=Multilevel Monte Carlo Methods and Applications to Elliptic PDEs with Random Coefficients |journal=Computing and Visualization in Science |volume=14 |issue=1 |pages=3–15|url=http://people.maths.ox.ac.uk/~gilesm/files/cgst.pdf |doi=10.1007/s00791-011-0160-x|s2cid=1687254 }}</ref><ref>{{cite journal |last1=Pisaroni |first1=M. |last2=Nobile |first2=F. B. |last3=Leyland |first3=P. |date=2017 |title=A Continuation Multi Level Monte Carlo Method for Uncertainty Quantification in Compressible Inviscid Aerodynamics |journal=Computer Methods in Applied Mechanics and Engineering |volume=326 |issue=C |pages=20–50|url=https://pdfs.semanticscholar.org/6dbc/8dde601b1757c42a4c54fa9cfd69317c82c8.pdf |archive-url=https://web.archive.org/web/20180214142033/https://pdfs.semanticscholar.org/6dbc/8dde601b1757c42a4c54fa9cfd69317c82c8.pdf |url-status=dead |archive-date=2018-02-14 |doi=10.1016/j.cma.2017.07.030|s2cid=10379943 }}</ref> An important prototypical example of these problems are [[partial differential equations]] (PDEs) with [[Stochastic partial differential equation|random coefficients]]. In this context, the random variable <math>G</math> is known as the quantity of interest, and the sequence of approximations corresponds to a [[discretization]] of the PDE with different mesh sizes.
+
+== An algorithm for MLMC simulation ==
+A simple level-adaptive algorithm for MLMC simulation is given below in pseudo-code.
+ <math>L\gets0</math>
+ '''repeat'''
+     Take warm-up samples at level <math>L</math>
+     Compute the sample variance on all levels <math>\ell=0,\ldots,L</math>
+     Define the optimal number of samples <math>N_\ell</math> on all levels <math>\ell=0,\ldots,L</math>
+     Take additional samples on each level <math>\ell</math> according to <math>N_\ell</math>
+     '''if''' <math>L\geq2</math> '''then'''
+         Test for convergence
+     '''end'''
+     '''if''' not converged '''then'''
+         <math>L\gets L+1</math>
+     '''end'''
+ '''until''' converged
+
+==Extensions of MLMC==
+Recent extensions of the multilevel Monte Carlo method include multi-index Monte Carlo,<ref>{{cite journal |last1=Haji-Ali |first1=A. L. |last2=Nobile |first2=F. |last3=Tempone |first3=R. |date=2016 |title=Multi-Index Monte Carlo: When Sparsity Meets Sampling |journal=Numerische Mathematik |volume=132 |issue=4 |pages=767–806|doi=10.1007/s00211-015-0734-5|arxiv=1405.3757 |s2cid=253742676 }}</ref> where more than one direction of refinement is considered, and the combination of MLMC with the [[Quasi-Monte Carlo method]].<ref>{{cite journal |last1=Giles |first1=M. B. |last2=Waterhouse |first2=B. |date=2009 |title=Multilevel Quasi-Monte Carlo Path Simulation |journal=Advanced Financial Modelling, Radon Series on Computational and Applied Mathematics |publisher=De Gruyter |pages=165–181|url=http://people.maths.ox.ac.uk/gilesm/files/jcf07.pdf}}</ref><ref>{{cite journal |last1=Robbe |first1=P. |last2=Nuyens |first2=D. |last3=Vandewalle |first3=S. |date=2017 |title=A Multi-Index Quasi-Monte Carlo Algorithm for Lognormal Diffusion Problems |journal=SIAM Journal on Scientific Computing |volume=39 |issue=5 |pages=A1811–C392|doi=10.1137/16M1082561 |arxiv=1608.03157 |bibcode=2017SJSC...39S.851R |s2cid=42818387 }}</ref>
+
+== See also ==
+* [[Monte Carlo method]]
+* [[Monte Carlo methods in finance]]
+* [[Quasi-Monte Carlo methods in finance]]
+* [[Uncertainty quantification]]
+* [[Stochastic partial differential equation|Partial differential equations with random coefficients]]
+
+== References ==
+{{reflist}}
+
+[[Category:Monte Carlo methods]]
+[[Category:Numerical analysis]]
+[[Category:Sampling techniques]]
+[[Category:Stochastic simulation]]
+[[Category:Randomized algorithms]]
+[[Category:Articles with example pseudocode]]

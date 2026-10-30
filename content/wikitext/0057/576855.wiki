@@ -1,0 +1,166 @@
+<!-- wikipedia: en
+     page: 576855
+     title: Binary decision diagram
+     revision: 1375827651
+     timestamp: 2026-09-20T09:00:55Z
+     history: https://en.wikipedia.org/w/index.php?curid=576855&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375827651 -->
+{{Short description|Data structure for Boolean functions}}
+{{Use dmy dates|date=May 2019|cs1-dates=y}}
+{{Redirect|Branching program||NC (complexity)#Barrington's theorem}}
+In [[computer science]], a '''binary decision diagram''' ('''BDD''') or '''branching program''' is a [[data structure]] that is used to represent a [[Boolean function]]. On a more abstract level, BDDs can be considered as a [[data compression|compressed]] representation of [[set (mathematics)|sets]] or [[relation (mathematics)|relation]]s. Unlike other compressed representations, operations are performed directly on the compressed representation, i.e. without decompression.
+
+Similar [[data structure]]s include [[negation normal form]] (NNF), [[Zhegalkin polynomial]]s, and [[propositional directed acyclic graph]]s (PDAG).
+
+== Definition ==
+A Boolean function can be represented as a [[Rooted graph|rooted]], directed, acyclic [[graph theory|graph]], which consists of several (decision) nodes and two terminal nodes. The two terminal nodes are labeled 0 (FALSE) and 1 (TRUE). Each (decision) node <math>u</math> is labeled by a Boolean variable <math>x_i</math> and has two [[child node]]s called low child and high child. The edge from node <math>u</math> to a low (or high) child represents an assignment of the value FALSE (or TRUE, respectively) to variable <math>x_i</math>. Such a '''BDD''' is called 'ordered' if different variables appear in the same order on all paths from the root. A BDD is said to be 'reduced' if the following two rules have been applied to its graph:
+* Merge any [[Graph isomorphism|isomorphic]] subgraphs.
+* Eliminate any node whose two children are isomorphic.
+
+In popular usage, the term '''BDD''' almost always refers to '''Reduced Ordered Binary Decision Diagram''' ('''ROBDD''' in the literature, used when the ordering and reduction aspects need to be emphasized). The advantage of an ROBDD is that it is canonical (unique up to isomorphism) for a particular function and variable order.<ref name="Bryant1986"/> This property makes it useful in functional equivalence checking and other operations like functional technology mapping.
+
+A path from the root node to the 1-terminal represents a (possibly partial) variable assignment for which the represented Boolean function is true. As the path descends to a low (or high) child from a node, then that node's variable is assigned to 0 (respectively 1).
+
+=== Example ===
+The left figure below shows a binary [[decision tree|decision ''tree'']] (the reduction rules are not applied), and a [[truth table]], each representing the function <math>f(x_1, x_2, x_3)</math>. In the tree on the left, the value of the function can be determined for a given variable assignment by following a path down the graph to a terminal. In the figures below, dotted lines represent edges to a low child, while solid lines represent edges to a high child. Therefore, to find <math>f(0, 1, 1)</math>, begin at x<sub>1</sub>, traverse down the dotted line to x<sub>2</sub> (since x<sub>1</sub> has an assignment to 0), then down two solid lines (since x<sub>2</sub> and x<sub>3</sub> each have an assignment to one). This leads to the terminal 1, which is the value of <math>f(0, 1, 1)</math>.
+
+The binary decision ''tree'' of the left figure can be transformed into a binary decision ''diagram'' by maximally reducing it according to the two reduction rules. The resulting '''BDD''' is shown in the right figure.
+
+{| align="center"
+|-
+| [[File:BDD.png|thumb|546px|Binary decision tree and [[truth table]] for the function <math>f(x_1, x_2, x_3)=(\neg x_1 \wedge \neg x_2 \wedge \neg x_3) \vee (x_1 \wedge x_2) \vee (x_2 \wedge x_3)</math>, described in notation for [[Boolean algebra#Basic operations|Boolean operators]].]]
+| [[File:BDD simple.svg|thumb|189px|BDD for the function ''f'']]
+|}
+
+Another notation for writing this Boolean function is <math>\overline{x}_1 \overline{x}_2 \overline{x}_3 + x_1 x_2 + x_2 x_3</math>.
+
+=== Complemented edges ===
+[[File:BDD diagram with complemented edges 2.png|thumb|Representation of a binary decision diagram using complemented edges|287x287px]]
+
+An ROBDD can be represented even more compactly, using complemented edges, also known as ''complement links''.<ref name="Brace"/><ref name="Somenzi1999"/> The resulting BDD is sometimes known as a ''typed BDD''<ref name="MB88"/> or ''signed BDD''.
+Complemented edges are formed by annotating low edges as complemented or not. If an edge is complemented, then it refers to the negation of the Boolean function that corresponds to the node that the edge points to (the Boolean function represented by the BDD with root that node). High edges are not complemented, in order to ensure that the resulting BDD representation is a canonical form. In this representation, BDDs have a single leaf node, for reasons explained below.
+
+Two advantages of using complemented edges when representing BDDs are:
+* computing the negation of a BDD takes constant time
+* space usage (i.e., required memory) is reduced (by a factor at most 2)
+However, Knuth<ref name="Knuth"/> argues otherwise:
+{{Blockquote|text=Although such links are used by all the major BDD packages, they are hard to recommend because the computer programs become much more complicated. The memory saving is usually negligible, and never better than a factor of 2; furthermore, the author's experiments show little gain in running time.}}
+
+A reference to a BDD in this representation is a (possibly complemented) "edge" that points to the root of the BDD. This is in contrast to a reference to a BDD in the representation without use of complemented edges, which is the root node of the BDD. The reason why a reference in this representation needs to be an edge is that for each Boolean function, the function and its negation are represented by an edge to the root of a BDD, and a complemented edge to the root of the same BDD. This is why negation takes constant time. It also explains why a single leaf node suffices: FALSE is represented by a complemented edge that points to the leaf node, and TRUE is represented by an ordinary edge (i.e., not complemented) that points to the leaf node.
+
+For example, assume that a Boolean function is represented with a BDD represented using complemented edges. To find the value of the Boolean function for a given assignment of (Boolean) values to the variables, we start at the reference edge, which points to the BDD's root, and follow the path that is defined by the given variable values (following a low edge if the variable that labels a node equals FALSE, and following the high edge if the variable that labels a node equals TRUE), until we reach the leaf node. While following this path, we count how many complemented edges we have traversed. If when we reach the leaf node we have crossed an odd number of complemented edges, then the value of the Boolean function for the given variable assignment is FALSE, otherwise (if we have crossed an even number of complemented edges), then the value of the Boolean function for the given variable assignment is TRUE.
+
+An example diagram of a BDD in this representation is shown on the right, and represents the same Boolean expression as shown in diagrams above, i.e., <math>(\neg x_1 \wedge \neg x_2 \wedge \neg x_3) \vee (x_1 \wedge x_2) \vee (x_2 \wedge x_3)</math>. Low edges are dashed, high edges solid, and complemented edges are signified by a circle at their source. The node with the @ symbol represents the reference to the BDD, i.e., the reference edge is the edge that starts from this node.
+
+== History ==
+The basic idea from which the data structure was created is the [[Shannon expansion]]. A [[switching function]] is split into two sub-functions (cofactors) by assigning one variable (cf. ''if-then-else normal form''). If such a sub-function is considered as a sub-tree, it can be represented by a ''[[binary decision tree]]''. Binary decision diagrams (BDDs) were introduced by C. Y. Lee,<ref name="Lee"/> and further studied and made known by Sheldon B. Akers<ref name="Akers"/> and Raymond T. Boute.<ref name="Boute_1976"/> Independently of these authors, a BDD under the name "canonical bracket form" was realized Yu. V. Mamrukov in a CAD for analysis of speed-independent circuits.<ref>{{cite thesis |url=https://b-ok.asia/book/3701100/47f57d |first=Yu. V. |last=Mamrukov |title=Analysis of aperiodic circuits and asynchronous processes |type=PhD |publisher=Leningrad Electrotechnical Institute |date=1984}}</ref> The full potential for efficient algorithms based on the data structure was investigated by [[Randal Bryant]] at [[Carnegie Mellon University]]: his key extensions were to use a fixed variable ordering (for canonical representation) and shared sub-graphs (for compression). Applying these two concepts results in an efficient data structure and algorithms for the representation of sets and relations.<ref name="Bryant-1986"/><ref name="Bryant-1992"/> By extending the sharing to several BDDs, i.e. one sub-graph is used by several BDDs, the data structure ''Shared Reduced Ordered Binary Decision Diagram'' is defined.<ref name="Brace"/> The notion of a BDD is now generally used to refer to that particular data structure.
+
+In his video lecture ''Fun With Binary Decision Diagrams (BDDs)'', [[Donald Knuth]] calls BDDs "one of the only really fundamental data structures that came out in the last twenty-five years" and mentions that Bryant's 1986 paper was for some time one of the most-cited papers in computer science.<ref name="Stanford"/> 
+
+[[Adnan Darwiche (computer scientist)|Adnan Darwiche]] and his collaborators have shown that BDDs are one of several normal forms for Boolean functions, each induced by a different combination of requirements. Another important normal form identified by Darwiche is [[decomposable negation normal form]] or DNNF.
+
+== Applications ==
+BDDs are extensively used in [[Computer Aided Design|CAD]] software to synthesize circuits ([[logic synthesis]]) and in [[formal verification]] and [[network verification]]. There are several lesser known applications of BDD, including [[fault tree]] analysis, [[Bayesian probability|Bayesian]] reasoning, product configuration, and [[private information retrieval]].<ref name="Jensen"/><ref name="Lipmaa"/>{{Citation needed|reason=Please provide examples of these applications in the literature.|date=June 2010}}
+
+Every arbitrary BDD (even if it is not reduced or ordered) can be directly implemented in hardware by replacing each node with a 2 to 1 [[Multiplexer#Digital multiplexers|multiplexer]]; each multiplexer can be directly implemented by a 4-LUT in a [[FPGA]]. It is not so simple to convert from an arbitrary network of logic gates to a BDD{{Citation needed|date=March 2008}} (unlike the [[and-inverter graph]]).
+
+BDDs have been applied in efficient [[Datalog]] interpreters.<ref>{{Cite book |last1=Whaley |first1=John |last2=Avots |first2=Dzintars |last3=Carbin |first3=Michael |last4=Lam |first4=Monica S. |title=Programming Languages and Systems |chapter=Using Datalog with Binary Decision Diagrams for Program Analysis |date=2005 |editor-last=Yi |editor-first=Kwangkeun |chapter-url=https://link.springer.com/chapter/10.1007/11575467_8 |series=Lecture Notes in Computer Science |volume=3780 |language=en |location=Berlin, Heidelberg |publisher=Springer |pages=97–118 |doi=10.1007/11575467_8 |isbn=978-3-540-32247-4|s2cid=5223577 }}</ref>
+
+== Variable ordering ==
+The size of the BDD is determined both by the function being represented and by the chosen ordering of the variables. There exist Boolean functions <math>f(x_1,\ldots, x_{n})</math> for which depending upon the ordering of the variables we would end up getting a graph whose number of nodes would be linear (in&nbsp;''n'') at best and exponential at worst (e.g., a [[ripple carry adder]]). Consider the Boolean function <math>f(x_1,\ldots, x_{2n}) = x_1x_2 + x_3x_4 + \cdots + x_{2n-1}x_{2n}.</math> Using the variable ordering <math>x_1 < x_3 < \cdots < x_{2n-1} < x_2 < x_4 < \cdots < x_{2n}</math>, the BDD needs <math>2^{n+1}</math> nodes to represent the function.  Using the ordering <math>x_1 < x_2 < x_3 < x_4 < \cdots < x_{2n-1} < x_{2n}</math>, the BDD consists of <math>2n+2</math> nodes.
+
+{| align="center"
+|-
+| [[File:BDD Variable Ordering Bad.svg|thumb|638px|BDD for the function ''ƒ''(''x''<sub>1</sub>, ..., ''x''<sub>8</sub>) = ''x''<sub>1</sub>''x''<sub>2</sub> + ''x''<sub>3</sub>''x''<sub>4</sub> + ''x''<sub>5</sub>''x''<sub>6</sub> + ''x''<sub>7</sub>''x''<sub>8</sub> using bad variable ordering]]
+| [[File:BDD Variable Ordering Good.svg|thumb|156px|Good variable ordering]]
+|}
+
+It is of crucial importance to care about variable ordering when applying this data structure in practice. The problem of finding the best variable ordering is [[NP-hard]].<ref name="Bollig"/> For any constant ''c''&nbsp;>&nbsp;1 it is even NP-hard to compute a variable ordering resulting in an OBDD with a size that is at most ''c'' times larger than an optimal one.<ref name="Sieling"/> However, there exist efficient heuristics to tackle the problem.<ref name="Rice"/>
+
+== Refinements ==
+There are functions for which the graph size is always exponential—independent of variable ordering. This holds e.g. for the multiplication function.<ref name="Bryant1986"/> In fact, the function computing the middle bit of the product of two <math>n</math>-bit numbers does not have an OBDD smaller than <math>2^{\lfloor n/2 \rfloor} / 61 - 4</math> vertices.<ref name="Woelfel_2005"/> (If the multiplication function had polynomial-size OBDDs, it would show that [[integer factorization]] is in [[P/poly]], which is not known to be true.<ref name="Lipton_2009"/>)
+Another notorious example is the hidden weight bit function, regarded as the simplest function with an exponential-sized BDD.<ref>{{cite journal |last1=Méaux |first1=Pierrick |last2=Seuré |first2=Tim |last3=Deng |first3=Tang |date=2024 |title=The Revisited Hidden Weight Bit Function |url=https://eprint.iacr.org/2024/2022.pdf |journal=IACR Cryptology ePrint Archive |volume= |issue= |publisher= |page=24 |doi= |access-date=2025-06-19}}</ref>
+
+Researchers have suggested refinements on the BDD data structure giving way to a number of related graphs, such as:
+
+* BMD ([[binary moment diagram]]s),
+* ZDD ([[zero-suppressed decision diagram]]s),
+* FBDD ([[free binary decision diagram]]s), where any path from the root to a leaf node reads every variable at most once. Any OBDD is a FBDD.
+* FDD ([[functional decision diagram]]s),
+* MDD ([[multiple-valued decision diagram]]s), which generalize BDDs by allowing decision variables to take more than two values,<ref>{{cite conference |last1=Miller |first1=D. Michael |last2=Drechsler |first2=Rolf |title=On the construction of multiple-valued decision diagrams |book-title=Proceedings of the 32nd IEEE International Symposium on Multiple-Valued Logic (ISMVL) |pages=245-253 |year=2002 |doi=10.1109/ISMVL.2002.1011095}}</ref>
+* PDD ([[parity decision diagram]]s),
+* ADD ([[algebraic decision diagram]]s) or MTBDD (multiple-terminal BDDs),
+* TDD ([[ternary decision diagram]]s), where an "unknown" branch is added to make consecutive union/disjunction operations [[lazy evaluation|lazy]], avoiding exponential size growth,<ref>{{multiref2|1={{cite thesis |last=Duboc |first=Guillaume  |date= January 19, 2026 |title=Typing Dynamic Languages with Set-Theoretic Types: The Case of Elixir |url=https://gldubc.github.io/#thesis |work= |degree=PhD |location= |publisher=Université Paris Cité }}|2={{cite web |last1=Valim |first1=José |title=Lazier Binary Decision Diagrams (BDDs) for set-theoretic types |url=https://elixir-lang.org/blog/2025/12/02/lazier-bdds-for-set-theoretic-types/ |website=The Elixir programming language |language=en |date=2 December 2025}}}}</ref>
+* NDD ([[network decision diagram]]s), where each node represents a "field" (IPv4 header), and each edge is labeled with a BDD.<ref>{{Cite web |date=2025-04-28 |title=NDD: A Decision Diagram for Network Verification |url=https://xjtu-netverify.github.io/papers/2025-ndd-a-decision-diagram-for-network-verification/ |access-date=2026-09-20 |website=NetVerify |language=en}}</ref>
+
+== Logical operations on BDDs ==
+Many logical operations on BDDs can be implemented by [[polynomial-time]] graph manipulation algorithms:<ref name="Andersen_1999"/>{{rp|20}}
+* [[logical conjunction|conjunction]]
+* [[logical disjunction|disjunction]]
+* [[negation]]
+
+However, repeating these operations several times, for example forming the conjunction or disjunction of a set of BDDs, may in the worst case result in an exponentially big BDD. This is because any of the preceding operations for two BDDs may result in a BDD with a size proportional to the product of the BDDs' sizes, and consequently for several BDDs the size may be exponential in the number of operations. Variable ordering needs to be considered afresh; what may be a good ordering for (some of) the set of BDDs may not be a good ordering for the result of the operation. Also, since constructing the BDD of a Boolean function solves the NP-complete [[Boolean satisfiability problem]] and the co-NP-complete [[Tautology (logic)|tautology problem]], constructing the BDD can take exponential time in the size of the Boolean formula even when the resulting BDD is small.
+
+Computing existential abstraction over multiple variables of reduced BDDs is NP-complete.<ref name="Huth"/>
+
+Model-counting, counting the number of satisfying assignments of a Boolean formula, can be done in polynomial time for BDDs. For general propositional formulas the problem is [[♯P]]-complete and the best known algorithms require an exponential time in the worst case.
+
+== See also ==
+* [[Boolean satisfiability problem]], the canonical [[NP-complete]] [[computational problem]]
+* [[L/poly]], a [[complexity class]] that strictly contains the set of problems with polynomially sized BDDs{{Citation needed|date=February 2020}}
+* [[Model checking]]
+* [[Radix tree]]
+* [[NC (complexity)#Barrington's theorem|Barrington's theorem]]
+* [[Hardware acceleration]]
+* [[Karnaugh map]], a method of simplifying Boolean algebra expressions
+* [[Zero-suppressed decision diagram]]
+* [[Algebraic decision diagram]], a generalization of BDDs from two-element to arbitrary finite sets
+* [[Sentential Decision Diagram]], a generalization of OBDDs
+* [[Influence diagram]]
+
+== References ==
+{{Reflist|refs=
+<ref name="Bryant1986">{{cite journal |first=Randal E. |last=Bryant |title=Graph-Based Algorithms for Boolean Function Manipulation |journal=IEEE Transactions on Computers |volume=C-35 |issue=8 |pages=677–691 |date=August 1986 |doi=10.1109/TC.1986.1676819 |url=https://apps.dtic.mil/sti/pdfs/ADA470446.pdf |s2cid=10385726 }}</ref>
+<ref name="Lee">{{cite journal |first=C.Y. |last=Lee |title=Representation of Switching Circuits by Binary-Decision Programs |journal=Bell System Technical Journal |volume=38 |issue=4 |pages=985–999 |date=1959 |doi=10.1002/j.1538-7305.1959.tb01585.x |url=}}</ref>
+<ref name="Akers">{{cite journal |author1-link=Sheldon B. Akers |first=Sheldon B |last=Akers, Jr. |title=Binary Decision Diagrams |journal=IEEE Transactions on Computers |volume=C-27 |issue=6 |pages=509–516 |date=June 1978 |doi=10.1109/TC.1978.1675141 |s2cid=21028055 |url=}}</ref>
+<ref name="Boute_1976">{{cite journal |first=Raymond T. |last=Boute |title=The Binary Decision Machine as a programmable controller |journal=EUROMICRO Newsletter |volume=1 |issue=2 |pages=16–22 |date=January 1976  |doi=10.1016/0303-1268(76)90033-X}}</ref>
+<ref name="Bryant-1986">{{cite journal |first=Randal E. |last=Bryant. |title=Graph-Based Algorithms for Boolean Function Manipulation |journal=IEEE Transactions on Computers |volume=C-35 |issue=8 |pages=677–691 |date=1986 |doi=10.1109/TC.1986.1676819 |s2cid=10385726 |url=https://apps.dtic.mil/sti/pdfs/ADA470446.pdf}}</ref>
+<ref name="Bryant-1992">{{cite journal |first=Randal E. |last=Bryant |title=Symbolic Boolean Manipulation with Ordered Binary Decision Diagrams |journal=ACM Computing Surveys |volume=24 |issue=3 |pages=293–318 |date=September 1992 |doi=10.1145/136035.136043 |s2cid=1933530 |url=https://www-2.cs.cmu.edu/~bryant/pubs.html}}</ref>
+<ref name="Brace">{{cite book |first1=Karl S. |last1=Brace |first2=Richard L. |last2=Rudell |first3=Randal E. |last3=Bryant |chapter=Efficient Implementation of a BDD Package |chapter-url= |title=Proceedings of the 27th ACM/IEEE Design Automation Conference (DAC 1990) |publisher=IEEE Computer Society Press |date=1990 |isbn=978-0-89791-363-8 |pages=40–45 |doi=10.1145/123186.123222}}</ref>
+<ref name="Stanford">{{cite web |url=http://scpd.stanford.edu/knuth/index.jsp |title=Stanford Center for Professional Development |website=scpd.stanford.edu |access-date=23 April 2018 |archive-url=https://web.archive.org/web/20140604193847/http://scpd.stanford.edu/knuth/index.jsp |archive-date=4 June 2014 }}</ref>
+<ref name="Jensen">{{cite book |first=R.M. |last=Jensen |chapter-url=https://pure.itu.dk/portal/da/publications/c4ebfd2f-4be9-499e-b44f-4d08f477737a |chapter=CLab: A C++ library for fast backtrack-free interactive product configuration |title=Proceedings of the Tenth International Conference on Principles and Practice of Constraint Programming |series=Lecture Notes in Computer Science |date=2004 |volume=3258 |page=816 |publisher=Springer |isbn=978-3-540-30201-8 |doi=10.1007/978-3-540-30201-8_94}}</ref>
+<ref name="Lipmaa">{{cite book |first=H.L. |last=Lipmaa |chapter-url=https://eprint.iacr.org/2009/395.pdf |chapter=First CPIR Protocol with Data-Dependent Computation |title=International Conference on Information Security and Cryptology |series=Lecture Notes in Computer Science |pages=193–210 |date=2009 |volume=5984 |publisher=Springer |isbn=978-3-642-14423-3 |doi=10.1007/978-3-642-14423-3_14}}</ref>
+<ref name="Bollig">{{cite journal |first1=Beate |last1=Bollig |first2=Ingo |last2=Wegener |title=Improving the Variable Ordering of OBDDs Is NP-Complete |journal=IEEE Transactions on Computers |volume=45 |issue=9 |pages=993–1002 |date=September 1996 |doi=10.1109/12.537122 |url=}}</ref>
+<ref name="Sieling">{{cite journal |first=Detlef |last=Sieling |title=The nonapproximability of OBDD minimization |journal=Information and Computation |volume=172 |issue= 2|pages=103–138 |date=2002 |doi=10.1006/inco.2001.3076 |url=|doi-access=free }}</ref>
+<ref name="Rice">{{cite web |author-last=Rice |author-first=Michael |title=A Survey of Static Variable Ordering Heuristics for Efficient BDD/MDD Construction |url=http://alumni.cs.ucr.edu/~skulhari/StaticHeuristics.pdf}}</ref>
+<ref name="Woelfel_2005">{{cite journal |first=Philipp |last=Woelfel |title=Bounds on the OBDD-size of integer multiplication via universal hashing |journal=Journal of Computer and System Sciences |volume=71 |issue= 4|pages=520–534 |date=2005 |doi=10.1016/j.jcss.2005.05.004 |url=|doi-access=free }}</ref>
+<ref name="Lipton_2009">[[Richard J. Lipton]]. [https://rjlipton.wordpress.com/2009/06/16/bdds-and-factoring/ "BDD's and Factoring"]. ''Gödel's Lost Letter and P=NP'', 2009.</ref>
+<ref name="Andersen_1999">{{cite web |author-first=H. R. |author-last=Andersen |url=https://www.cmi.ac.in/~madhavan/courses/verification-2011/andersen-bdd.pdf |title=An Introduction to Binary Decision Diagrams |work=Lecture Notes |date=1999 |publisher=IT University of Copenhagen}}</ref>
+<ref name="Huth">{{Cite book |title=Logic in computer science: modelling and reasoning about systems |author-last1=Huth<!-- 1962 --> |author-first1=Michael |date=2004 |publisher=Cambridge University Press |author-last2=Ryan<!-- 1962- --> |author-first2=Mark |isbn=978-0-52154310-1 |edition=2nd |pages=380– |oclc=54960031}}</ref>
+<ref name="Somenzi1999">{{cite book |first=Fabio |last=Somenzi |chapter=Binary decision diagrams |chapter-url=http://www.ecs.umass.edu/ece/labs/vlsicad/ece667/reading/somenzi99bdd.pdf |title=Calculational system design |publisher=IOS Press |series=NATO Science Series F: Computer and systems sciences |volume=173 |date=1999 |isbn=978-90-5199-459-9 |pages=303–366 |url=}}</ref>
+<ref name="Knuth">{{cite book |author1-link=Donald E. Knuth |first=D.E. |last=Knuth |chapter= |chapter-url= |editor= |title=Fascicle 1: Bitwise tricks & techniques; Binary Decision Diagrams |publisher=Addison–Wesley |series=[[The Art of Computer Programming]] |volume=4 |date=2009 |isbn=978-0-321-58050-4 |pages= |url=}} [http://www-cs-faculty.stanford.edu/~knuth/fasc1b.ps.gz Draft of Fascicle 1b] {{Webarchive|url=https://web.archive.org/web/20160312073634/http://www-cs-faculty.stanford.edu/~knuth/fasc1b.ps.gz |date=2016-03-12  }} available for download</ref>
+<ref name="MB88">{{cite book|author1=Jean-Christophe Madre|author2=Jean-Paul Billon|chapter=Proving Circuit Correctness Using Formal Comparison Between Expected and Extracted Behaviour|title=Proceedings of the 25th ACM/IEEE Conference on Design Automation, DAC '88, Anaheim, CA, USA, June 12-15, 1988|date=1988 |pages=205–210 |doi=10.1109/DAC.1988.14759|isbn=0-8186-0864-1 }}</ref>
+}}
+
+== Further reading ==
+*{{cite journal |first=R. |last=Ubar |title=Test Generation for Digital Circuits Using Alternative Graphs |language=ru |journal=Proc. Tallinn Technical University |issue=409 |pages=75–81 |date=1976 |location=Tallinn, Estonia |url=}}
+*{{cite book |first1=C. |last1=Meinel |first2=T. |last2=Theobald |title=Algorithms and Data Structures in VLSI-Design: OBDD – Foundations and Applications |publisher=Springer |orig-date=1998 |date=2012 |isbn=978-3-642-58940-9 |url=https://www.hpi.uni-potsdam.de/fileadmin/hpi/FG_ITS/books/OBDD-Book.pdf}} Complete textbook available for download.
+* {{cite book |author-first1=Rüdiger |author-last1=Ebendt |author-first2=Görschwin |author-last2=Fey |author-first3=Rolf |author-last3=Drechsler |title=Advanced BDD optimization |date=2005 |publisher=Springer |isbn=978-0-387-25453-1}}
+* {{cite book |author-first1=Bernd |author-last1=Becker |author-first2=Rolf |author-last2=Drechsler |title=Binary Decision Diagrams: Theory and Implementation |date=1998 |publisher=Springer |isbn=978-1-4419-5047-5}}
+
+== External links ==
+{{Commons category|Binary decision diagrams}}
+* [https://www.youtube.com/watch?v=SQE21efsf7Y Fun With Binary Decision Diagrams (BDDs)], lecture by [[Donald Knuth]]
+* [https://github.com/johnyf/tool_lists/blob/master/bdd.md List of BDD software libraries] for several programming languages.
+
+{{Data structures}}
+{{Authority control}}
+
+{{DEFAULTSORT:Binary Decision Diagram}}
+[[Category:Diagrams]]
+[[Category:Graph data structures]]
+[[Category:Model checking]]
+[[Category:Boolean algebra]]
+[[Category:Knowledge compilation]]
+{{Diagrams in logic}}

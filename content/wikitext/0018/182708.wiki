@@ -1,0 +1,317 @@
+<!-- wikipedia: en
+     page: 182708
+     title: Hoare logic
+     revision: 1359292368
+     timestamp: 2026-06-14T11:58:57Z
+     history: https://en.wikipedia.org/w/index.php?curid=182708&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1359292368 -->
+{{short description|Rules to verify computer program correctness}}
+{{use dmy dates|date=April 2025}}
+'''Hoare logic''' (also known as '''Floyd–Hoare logic''' or '''Hoare rules''') is a [[formal system]] with a set of logical rules for reasoning rigorously about the [[correctness of computer programs]]. It was proposed in 1969 by the British computer scientist and [[mathematical logic|logician]] [[Tony Hoare]], and subsequently refined by Hoare and other researchers.{{sfn|Hoare|1969}} The original ideas were seeded by the work of [[Robert W. Floyd]], who had published a similar system{{sfn|Floyd|1967}} for [[flowchart]]s.
+
+==Hoare triple==
+The central feature of '''Hoare logic''' is the '''Hoare triple'''. A triple describes how the execution of a piece of code changes the state of the computation. A Hoare triple is of the form
+
+: <math>\{P\} C \{Q\}</math>
+
+where <math>P</math> and <math>Q</math> are ''[[assertion (computing)|assertions]]'' and <math>C</math> is a ''command''.<ref group=note>Hoare originally wrote "<math>P\{C\}Q</math>" rather than "<math>\{P\}C\{Q\}</math>".</ref> <math>P</math> is named the ''[[precondition]]'' and <math>Q</math> the ''[[postcondition]]'': when the precondition is met, executing the command establishes the postcondition. Assertions are formulae in [[predicate logic]].
+
+Hoare logic provides [[axiom]]s and [[inference rule]]s for all the constructs of a simple [[Imperative programming|imperative programming language]]. In addition to the rules for the simple language in Hoare's original paper, rules for other language constructs have been developed since then by Hoare and many other researchers. There are rules for [[Concurrency (computer science)|concurrency]], [[procedure (computer science)|procedure]]s, [[jump (computer science)|jump]]s, and [[pointer (computer programming)|pointer]]s.
+
+==Partial and total correctness==
+Using standard Hoare logic, only [[partial correctness]] can be proven. [[Total correctness]] additionally requires [[Termination analysis|termination]], which can be proven separately or with an extended version of the While rule.{{sfn|Reynolds|2009|loc=Sect. 3.4, p. 64}} Thus, the intuitive reading of a Hoare triple is: Whenever <math>P</math> holds of the state before the execution of <math>C</math>, then <math>Q</math> will hold afterwards, or <math>C</math> does not terminate. In the latter case, there is no "after", so <math>Q</math> can be any statement at all. Indeed, one can choose <math>Q</math> to be false to express that <math>C</math> does not terminate.
+
+"Termination" here and in the rest of this article is meant in the broader sense that computation will eventually be finished, that is, it implies the absence of infinite loops; it does not imply the absence of implementation limit violations (e.g., division by zero), stopping the program prematurely. In his 1969 paper, Hoare used a narrower notion of termination, which also entailed the absence of implementation limit violations, and expressed his preference for the broader notion of termination as it keeps assertions implementation-independent:
+
+{{quote|1=Another deficiency in the axioms and rules quoted above is that they give no basis for a proof that a program successfully terminates. Failure to terminate may be due to an infinite loop; or it may be due to violation of an implementation-defined limit, for example, the range of numeric operands, the size of storage, or an operating system time limit. Thus the notation “<math>P\{Q\}R</math>” should be interpreted “provided that the program successfully terminates, the properties of its results are described by <math>R</math>.” It is fairly easy to adapt the axioms so that they cannot be used to predict the “results” of nonterminating programs; but the actual use of the axioms would now depend on knowledge of many implementation-dependent features, for example, the size and speed of the computer, the range of numbers, and the choice of overflow technique. Apart from proofs of the avoidance of infinite loops, it is probably better to prove the “conditional” correctness of a program and rely on an implementation to give a warning if it has had to abandon execution of the program as a result of violation of an implementation limit.|source={{harvnb|Hoare|1969|pp=578-579}}}}
+
+==Rules==
+
+===Empty statement axiom schema===
+The [[NOP (code)|empty statement]] rule asserts that the {{mono|skip}} statement does not change the state of the program, thus whatever holds true before {{mono|skip}} also holds true afterwards.<ref group=note>This article uses a [[natural deduction]] style notation for rules. For example, <math>\dfrac{\alpha,\beta}{\phi}</math> informally means "If both {{mvar|&alpha;}} and {{mvar|&beta;}} hold, then also {{mvar|&phi;}} holds"; {{mvar|&alpha;}} and {{mvar|&beta;}} are called antecedents of the rule, {{mvar|&phi;}} is called its succedent. A rule without antecedents is called an axiom, and written as <math>\dfrac{}{\quad\phi\quad}</math>.</ref>
+
+: <math>\dfrac{}{\{P\}\texttt{skip}\{P\}}</math>
+
+===Assignment axiom schema===
+The assignment axiom states that, after the assignment, any predicate that was previously true for the right-hand side of the assignment now holds for the variable. Formally, let {{mvar|P}} be an assertion in which the variable {{mvar|x}} is [[Free variables and bound variables|free]]. Then:
+
+<!-- NB: This version of the axiom schema is sound. Do not exchange the precondition with the postcondition. -->
+: <math>\dfrac{}{\{P[E/x]\} x := E \{P\}}</math>
+
+where <math>P[E/x]</math> denotes the assertion {{mvar|P}} in which each [[Free variables and bound variables|free occurrence]] of {{mvar|x}} has been [[Substitution (logic)|replaced]] by the expression {{mvar|E}}.
+
+The assignment axiom scheme means that the truth of <math>P[E/x]</math> is equivalent to the after-assignment truth of {{mvar|P}}. Thus, were <math>P[E/x]</math> true before the assignment, by the assignment axiom, then {{mvar|P}} would be true afterwards. Conversely, were <math>P[E/x]</math> false (i.e. <math>\neg P[E/x]</math> true) prior to the assignment statement, {{mvar|P}} must then be false afterwards.
+
+Examples of valid triples include:
+:*<math>\{ x+1 = 43 \}   y := x + 1   \{ y = 43 \}</math>
+:*<math>\{ x + 1 \leq N \}  x := x  + 1  \{ x \leq N \}</math>
+
+All preconditions that are not modified by the expression can be carried over to the postcondition. In the first example, assigning <math>y:=x+1</math> does not change the fact that <math>x+1=43</math>, so both statements may appear in the postcondition. Formally, this result is obtained by applying the axiom schema with {{mvar|P}} being (<math>y=43</math> and <math>x+1=43</math>), which yields <math>P[(x+1)/y]</math> being (<math>x+1=43</math> and <math>x+1=43</math>), which can in turn be simplified to the given precondition <math>x+1=43</math>.
+
+The assignment axiom scheme is equivalent to saying that to find the precondition, first take the post-condition and replace all occurrences of the left-hand side of the assignment with the right-hand side of the assignment. Be careful not to try to do this backwards by following this ''incorrect'' way of thinking: <math>\{P\} x:=E \{P[E/x]\}</math>;
+this rule leads to nonsensical examples like:
+: <math>\{ x = 5 \} x := 3 \{ 3 = 5 \}</math>
+
+Another ''incorrect'' rule looking tempting at first glance is <math>\{P\} x:=E \{P \wedge x=E\}</math>; it leads to nonsensical examples like:
+: <math>\{ x = 5 \}   x := x + 1   \{ x = 5 \wedge x = x + 1 \}</math>
+
+While a given postcondition {{mvar|P}} uniquely determines the precondition <math>P[E/x]</math>, the converse is not true. For example:
+:*<math>\{ 0 \leq y\cdot y \wedge y\cdot y \leq 9 \}   x := y \cdot y   \{ 0 \leq x \wedge x \leq 9 \}</math>,
+:*<math>\{ 0 \leq y\cdot y \wedge y\cdot y \leq 9 \}   x := y \cdot y   \{ 0 \leq x \wedge y\cdot y \leq 9 \}</math>,
+:*<math>\{ 0 \leq y\cdot y \wedge y\cdot y \leq 9 \}   x := y \cdot y   \{ 0 \leq y\cdot y \wedge x \leq 9 \} </math>, and
+:*<math>\{ 0 \leq y\cdot y \wedge y\cdot y \leq 9 \}   x := y \cdot y   \{ 0 \leq y\cdot y \wedge y\cdot y \leq 9 \}</math>
+are valid instances of the assignment axiom scheme.
+
+The assignment axiom proposed by Hoare ''does not apply'' when more than one name may refer to the same stored value. For example,
+: <math>\{ y = 3 \}   x := 2   \{ y = 3 \}</math>
+is wrong if {{mvar|x}} and {{mvar|y}} refer to the same variable ([[aliasing (computing)|aliasing]]), although it is a proper instance of the assignment axiom scheme (with both <math>\{P\}</math> and <math>\{P[2/x]\}</math> being <math>\{y=3\}</math>).
+
+===Rule of composition===
+{| align=right class="wikitable collapsible collapsed"
+|-
+! Verifying swap-code<BR>without auxiliary variables
+|-
+|
+{| style="border:1px solid grey;"
+|+ The three statements below (line 2, 4, 6) exchange the values of the variables {{mvar|a}} and {{mvar|b}}, without needing an auxiliary variable. In the verification proof, the initial value of {{mvar|a}} and {{mvar|b}} is denoted by the constant {{mvar|A}} and {{mvar|B}}, respectively. The proof is best read backwards, starting from line 7; for example, line 5 is obtained from line 7 by replacing {{mvar|a}} (target expression in line 6) by <math>a-b</math> (source expression in line 6). Some arithmetical simplifications are used tacitly, viz. <math>a-(a-b) = b</math> (line 5→3), and <math>a+b-b = a</math> (line 3→1).
+|-
+| '''Nr''' || '''Code''' || COLSPAN=6 | '''Assertions'''
+|-
+| '''1:''' &nbsp; &nbsp; &nbsp; || || <math>\{a  = A \wedge b = B \}</math>
+|-
+| '''2:''' || <math>a := a + b;</math> &nbsp; &nbsp; &nbsp; 
+|-
+| '''3:''' || || <math>\{ a - b = A \wedge b = B \}</math>
+|-
+| '''4:''' || <math>b := a - b;</math>
+|-
+| '''5:''' || || <math>\{b=A\wedge a-b=B\}</math>
+|-
+| '''6:''' || <math>a := a - b</math>
+|-
+| '''7:''' || || <math>\{b= A\wedge a = B \}</math>
+|}
+|}
+Hoare's rule of composition applies to sequentially executed programs {{mvar|S}} and {{mvar|T}}, where {{mvar|S}} executes prior to {{mvar|T}} and is written <math>S;T</math> ({{mvar|Q}} is called the ''midcondition''):{{sfn|Huth|Ryan|2004}}
+
+:<math>\dfrac{\{P\} S \{Q\}\quad,\quad   \{Q\} T \{R\}}{\{P\} S;T \{R\}}</math>
+
+For example, consider the following two instances of the assignment axiom:
+
+:<math>\{ x + 1 = 43 \}   y := x + 1   \{ y = 43 \}</math>
+
+and
+
+:<math>\{ y = 43 \}   z := y   \{ z = 43 \}</math>
+
+By the sequencing rule, one concludes:
+
+:<math>\{ x + 1 = 43 \}   y := x + 1; z := y   \{ z = 43 \}</math>
+
+Another example is shown in the right box.
+
+===Conditional rule===
+
+:<math>\dfrac{\{B \wedge P\} S \{Q\}\quad,\quad \{\neg B \wedge P \} T \{Q\}}{\{P\} \texttt{if}\ B\ \texttt{then}\ S\ \texttt{else}\ T\ \texttt{endif} \{Q\}}</math>
+
+The conditional rule states that a postcondition {{mvar|Q}} common to {{mono|then}} and {{mono|else}} part is also a postcondition of the whole {{mono|if...endif}} statement.{{sfn|Apt|Olderog|2019}} In the {{mono|then}} and the {{mono|else}} part, the unnegated and negated condition {{mvar|B}} can be added to the precondition {{mvar|P}}, respectively.
+The condition, {{mvar|B}}, must not have side effects.
+An example is given in the [[#Consequence_rule|next section]].
+
+This rule was not contained in Hoare's original publication.{{sfn|Hoare|1969}}
+However, since a statement 
+:<math>\texttt{if}\ B\ \texttt{then}\ S\ \texttt{else}\ T\ \texttt{endif}</math>
+has the same effect as a one-time loop construct
+:<math>\texttt{bool}\ b:=\texttt{true};   \texttt{while}\ B\wedge b\ \texttt{do}\ S; b:=\texttt{false}\ \texttt{done};   b:=\texttt{true};   \texttt{while}\ \neg B\wedge b\ \texttt{do}\ T; b:=\texttt{false}\ \texttt{done}</math>
+the conditional rule can be derived from the other Hoare rules.
+In a similar way, rules for other derived program constructs, like {{mono|for}} loop, {{mono|do...until}} loop, {{mono|switch}}, {{mono|break}}, {{mono|continue}} can be reduced by [[program transformation]] to the rules from Hoare's original paper.
+
+===Consequence rule===
+
+:<math>\dfrac{P_1 \rightarrow P_2\quad   ,\quad   \{P_2\} S \{Q_2\}\quad   ,\quad   Q_2 \rightarrow Q_1}{\{P_1\} S \{Q_1\}}</math>
+
+This rule permits strengthening the precondition <math>P_2</math> and/or to weaken the postcondition <math>Q_2</math>.
+It is used, e.g., to achieve literally identical postconditions for the {{mono|then}} and the {{mono|else}} part.
+
+For example, a proof of
+:<math>\{0 \leq x \leq 15 \}\texttt{if}\ x<15\ \texttt{then}\ x:=x+1\ \texttt{else}\ x:=0\ \texttt{endif} \{0 \leq x \leq 15 \}</math>
+needs to apply the conditional rule, which in turn requires to prove
+:<math>\{0 \leq x \leq 15 \wedge x < 15 \}   x:=x+1   \{ 0 \leq x \leq 15 \}</math>, &nbsp; or simplified 
+:<math>\{0 \leq x < 15 \}   x:=x+1   \{0 \leq x \leq 15 \}</math>
+for the {{mono|then}} part, and
+:<math>\{0 \leq x \leq 15 \wedge x \geq 15\}   x:=0   \{0 \leq x \leq 15\}</math>, &nbsp; or simplified 
+:<math>\{x=15\}   x:=0   \{0 \leq x \leq 15 \}</math>
+for the {{mono|else}} part.
+
+However, the assignment rule for the {{mono|then}} part requires to choose {{mvar|P}} as <math>0\leq x \leq 15</math>; rule application hence yields
+:<math>\{0 \leq x+1 \leq 15\}   x:=x+1   \{0 \leq x \leq 15\}</math>, &nbsp; which is logically equivalent to
+:<math>\{-1 \leq x < 15\}   x:=x+1   \{0 \leq x \leq 15\}</math>.
+The consequence rule is needed to strengthen the precondition <math>\{-1 \leq x < 15\}</math> obtained from the assignment rule to <math>\{0 \leq x < 15\}</math> required for the conditional rule.
+
+Similarly, for the {{mono|else}} part, the assignment rule yields
+:<math>\{0 \leq 0 \leq 15\}   x:=0   \{0 \leq x \leq 15\}</math>, &nbsp; or equivalently
+:<math>\{\texttt{true}\}   x:=0   \{0 \leq x \leq 15\}</math>,
+hence the consequence rule has to be applied with <math>P_1</math> and <math>P_2</math> being <math>\{x=15\}</math> and <math>\{\texttt{true}\}</math>, respectively, to strengthen again the precondition. Informally, the effect of the consequence rule is to "forget" that <math>\{x=15\}</math> is known at the entry of the {{mono|else}} part, since the assignment rule used for the {{mono|else}} part doesn't need that information.
+
+===While rule===
+
+:<math>\dfrac{\{P \wedge B\} S \{P\}}{\{P\} \texttt{while}\ B\ \texttt{do}\ S\ \texttt{done} \{\neg B \wedge P\}}</math>
+
+Here {{mvar|P}} is the [[loop invariant]], which is to be preserved by the loop body {{mvar|S}}.
+After the loop is finished, this invariant {{mvar|P}} still holds, and moreover <math>\neg B</math> must have caused the loop to end.
+As in the conditional rule, {{mvar|B}} must not have side effects.
+
+For example, a proof of 
+:<math>\{x \leq 10\} \texttt{while}\ x<10\ \texttt{do}\ x:=x+1\ \texttt{done} \{\neg x < 10 \wedge x \leq 10\}</math>
+by the while rule requires to prove
+:<math>\{x \leq 10 \wedge x < 10\}   x := x + 1   \{x \leq 10 \}</math>, &nbsp; or simplified
+:<math>\{x < 10\}   x := x + 1   \{x \leq 10 \}</math>,
+which is easily obtained by the assignment rule.
+Finally, the postcondition <math>\{\neg x <10 \wedge x\leq 10\}</math> can be simplified to <math>\{x=10\}</math>.
+
+For another example, the while rule can be used to formally verify the following strange program to compute the exact square root {{mvar|x}} of an arbitrary number {{mvar|a}}—even if {{mvar|x}} is an integer variable and {{mvar|a}} is not a square number:
+:<math>\{\texttt{true}\}   \texttt{while}\ x\cdot x \neq a\ \texttt{do}\ \texttt{skip}\ \texttt{done}   \{x \cdot x = a \wedge \texttt{true}\}</math>
+After applying the while rule with {{mvar|P}} being {{mono|true}}, it remains to prove
+:<math>\{\texttt{true} \wedge x\cdot x \neq a\}   \texttt{skip}   \{\texttt{true}\}</math>,
+which follows from the skip rule and the consequence rule.
+
+In fact, the strange program is ''partially'' correct: if it happened to terminate, it is certain that {{mvar|x}} must have contained (by chance) the value of {{mvar|a}}'s square root.
+In all other cases, it will not terminate; therefore, it is not ''totally'' correct.
+
+===While rule for total correctness===
+If the [[#While_rule|above ordinary while rule]] is replaced by the following one, the Hoare calculus can also be used to prove [[total correctness]], i.e., termination as well as partial correctness. Commonly, square brackets are used here instead of curly braces to indicate the different notion of program correctness.
+
+:<math>\dfrac{<\ \text{is a well-founded ordering on the set}\ D\quad,\quad [P \wedge B \wedge t \in D \wedge t = z]   S   [P \wedge t \in D \wedge t < z ]}{[P \wedge t \in D]   \texttt{while}\ B\ \texttt{do}\ S\ \texttt{done}   [\neg B \wedge P \wedge t \in D]}</math>
+
+In this rule, in addition to maintaining the loop invariant, one also proves [[termination proof|termination]] by way of an expression {{mvar|t}}, called the [[loop variant]], whose value strictly decreases with respect to a [[well-founded relation]] {{mvar|<}} on some domain set {{mvar|D}} during each iteration. Since {{mvar|<}} is well-founded, a strictly decreasing [[chain (order theory)|chain]] of members of {{mvar|D}} can have only finite length, so {{mvar|t}} cannot keep decreasing forever. (For example, the usual order {{mvar|<}} is well-founded on positive [[integer]]s <math>\mathbb{N}</math>, but neither on the integers <math>\mathbb{Z}</math> nor on [[positive real numbers]] <math>\mathbb{R}^+</math>; all these sets are meant in the mathematical, not in the computing sense, they are all infinite in particular.)
+
+Given the loop invariant {{mvar|P}}, the condition {{mvar|B}} must imply that {{mvar|t}} is not a [[minimal element]] of {{mvar|D}}, for otherwise the body {{mvar|S}} could not decrease {{mvar|t}} any further, i.e. the premise of the rule would be false. (This is one of various notations for total correctness.)
+{{#tag:ref| Hoare's 1969 paper didn't provide a total correctness rule; cf. his discussion on p.579 (top left). For example Reynolds' textbook{{sfn|Reynolds|2009}} gives the following version of a total correctness rule: <math>\dfrac{P \wedge B \rightarrow 0\leq t\quad ,\quad   [P \wedge B \wedge t=z] S [P \wedge t<z]}{[P] \texttt{while}\ B\ \texttt{do}\ S\ \texttt{done} [P \wedge \neg B]}</math>  when {{mvar|z}} is an integer variable that doesn't occur free in {{mvar|P}}, {{mvar|B}}, {{mvar|S}}, or {{mvar|t}}, and {{mvar|t}} is an integer expression (Reynolds' variables renamed to fit with this article's settings). |group=note}}
+
+Resuming the first example of the [[#While_rule|previous section]], for a total-correctness proof of
+:<math>[x \leq 10]\texttt{while}\ x < 10\ \texttt{do}\ x:=x+1\ \texttt{done} [\neg x < 10 \wedge x \leq 10]</math>
+the while rule for total correctness can be applied with e.g. {{mvar|D}} being the non-negative integers with the usual order, and the expression {{mvar|t}} being  <math>10 - x</math>, which then in turn requires to prove
+:<math>[x \leq 10 \wedge x < 10 \wedge 10-x \geq 0 \wedge 10-x = z] x:= x+1 [x \leq 10 \wedge 10-x \geq 0 \wedge 10-x < z]</math>
+Informally speaking, we have to prove that the distance <math>10-x</math> decreases in every loop cycle, while it always remains non-negative; this process can go on only for a finite number of cycles.
+
+The previous proof goal can be simplified to
+:<math>[x < 10 \wedge 10-x = z]   x:=x+1   [x \leq 10 \wedge 10-x < z]</math>,
+which can be proven as follows:
+:<math>[x+1 \leq 10 \wedge 10-x-1 < z]   x:=x+1   [x \leq 10 \wedge 10-x < z]</math> is obtained by the assignment rule, and 
+:<math>[x+1 \leq 10 \wedge 10-x-1 < z]</math> can be strengthened to <math> [x < 10 \wedge 10-x = z]</math> by the consequence rule.
+
+For the second example of the [[#While_rule|previous section]], of course, no expression {{mvar|t}} can be found that is decreased by the empty loop body, hence termination cannot be proved.
+
+==See also==
+{{columns-list|colwidth=20em|
+* [[Assertion (software development)]]
+* [[Denotational semantics]]
+* [[Design by contract]]
+* [[Dynamic logic (modal logic)|Dynamic logic]]
+* [[Formal verification]]
+* [[Loop invariant]]
+* [[Predicate transformer semantics]]
+* [[Static program analysis]]
+* [[Separation logic]]}}
+
+==Notes==
+{{reflist|group=note}}
+
+==References==
+{{Reflist|30em}}
+
+==Bibliography==
+*{{cite journal
+ |last1=Apt
+ |first1=Krzysztof R.
+ |last2=Olderog
+ |first2=Ernst-Rüdiger
+ |author-link2=Ernst-Rüdiger Olderog
+ |title=Fifty years of Hoare's logic
+ |journal=Formal Aspects of Computing
+ |date=December 2019
+ |volume=31
+ |issue=6
+ |page=759
+ |doi=10.1007/s00165-019-00501-3
+ |s2cid=102351597
+ |url=https://ir.cwi.nl/pub/29146
+}}
+
+*{{Cite journal
+ |last=Floyd 
+ |first=R. W.  
+ |author-link=Robert W. Floyd 
+ |title=Assigning meanings to programs
+ |url=https://www.cs.tau.ac.il/~nachumd/term/FloydMeaning.pdf
+ |journal=[[Proceedings of the American Mathematical Society]]
+ |series=Symposia on Applied Mathematics
+ |volume=19 
+ |pages=19–31
+ |year= 1967
+}}
+
+*{{Cite journal
+ |last=Hoare 
+ |first=C. A. R. 
+ |author-link=Tony Hoare 
+ |title=An Axiomatic Basis for Computer Programming
+ |doi=10.1145/363235.363259 
+ |journal=[[Communications of the ACM]] 
+ |volume=12 
+ |issue=10 
+ |pages=576-583
+ |date=October 1969 
+ |s2cid=207726175 
+ |doi-access=free 
+}}
+
+*{{cite book
+ |last1=Huth
+ |first1=Michael
+ |last2=Ryan
+ |first2=Mark
+ |date=2004-08-26
+ |title=Logic in Computer Science: Modelling and reasoning about systems
+ |publisher=[[Cambridge University Press]]
+ |edition=second
+ |pages= XIV, 427
+ |isbn=978-0521543101
+}}
+
+*{{cite book
+ |last=Reynolds
+ |first=John C.
+ |year=2009
+ |orig-year=1998
+ |author-link=John C. Reynolds
+ |title=Theories of Programming Languages
+ |publisher=[[Cambridge University Press]]
+ |isbn=978-0521106979
+}}
+
+*{{cite book
+ |last=Tennent
+ |first=Robert D.
+ |year=2002
+ |title=Specifying Software
+ |url=https://research.cs.queensu.ca/home/specsoft/
+ |publisher=[[Cambridge University Press]]
+ |pages=XII, 289
+ |isbn=978-0521004015
+ |quote=A textbook that includes an introduction to Hoare logic
+}}
+
+==External links==
+* [https://formal.kastel.kit.edu/key/download/hoare/ KeY-Hoare] is a semi-automatic verification system built on top of the [[KeY]] theorem prover. It features a Hoare calculus for a simple while language.
+* [https://web.archive.org/web/20210818235657/http://j-algo.binaervarianz.de/index.php?language=en j-Algo Hoare Calculus module] ([https://github.com/tud-fop/j-Algo j-Algo] on [[GitHub]], [https://sourceforge.net/projects/j-algo/ j-Algo] on [[SourceForge]]) – A visualisation of the Hoare calculus in the algorithm visualisation program j-Algo.
+
+{{Hoare}}
+{{Program analysis}}
+{{Authority control}}
+
+[[Category:1969 in computing]]
+[[Category:Program logic]]
+[[Category:Static program analysis]]
+[[Category:Tony Hoare]]

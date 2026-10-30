@@ -1,0 +1,387 @@
+<!-- wikipedia: en
+     page: 1396397
+     title: Bicubic interpolation
+     revision: 1350972429
+     timestamp: 2026-04-25T04:13:16Z
+     history: https://en.wikipedia.org/w/index.php?curid=1396397&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1350972429 -->
+{{Short description|Extension of cubic spline interpolation}}
+{{More citations needed|date=December 2025}}
+{{comparison of 1D and 2D interpolation.svg}}
+In [[mathematics]], '''bicubic interpolation''' is an extension of [[Cubic interpolation#Interpolation on a single interval|cubic spline interpolation]] (a method of applying cubic interpolation to a data set) for [[interpolation|interpolating]] data points on a [[two-dimensional]] [[regular grid]]. The interpolated surface (meaning the kernel shape, not the image) is [[Smooth function|smoother]] than corresponding surfaces obtained by [[bilinear interpolation]] or [[nearest-neighbor interpolation]]. Bicubic interpolation can be accomplished using either [[Lagrange polynomial]]s, [[cubic spline]]s, or [[#Bicubic convolution algorithm|cubic convolution]] algorithm.
+
+In [[image processing]], bicubic interpolation is often chosen over bilinear or nearest-neighbor interpolation in [[resampling (bitmap)|image resampling]], when speed is not an issue. In contrast to bilinear interpolation, which only takes 4 [[pixel]]s (2×2) into account, bicubic interpolation considers 16 pixels (4×4). Images resampled with bicubic interpolation can have different interpolation [[Spatial anti-aliasing|artifacts]], depending on the b and c values chosen.
+
+==Computation==
+
+[[Image:Interpolation-bicubic.svg|thumb|right|Bicubic interpolation on the square <math>[0,4] \times [0,4]</math> consisting of 25 unit squares patched together. Bicubic interpolation as per [[Matplotlib]]'s implementation. Colour indicates function value. The black dots are the locations of the prescribed data being interpolated. Note how the color samples are not radially symmetric.]]
+[[Image:Interpolation-bilinear.svg|thumb|right|[[Bilinear interpolation]] on the same dataset as above.{{dubious|reason=Either this is not the same data as above, or the color mapping is not performed according to the color bars. The reason is that compared with (bi)linear interpolation, (bi)cubic interpolation stays at the extreme values much longer (and often even "overshoots" the extremes), which should make the yellow regions that can be seen in the bilinearly interpolated data more pronounced in the bicubicly interpolated data. Instead, the yellow regions are non-existing in the bicubicly interpolated data, which is contradicting.|date=November 2025}} Derivatives of the surface are not continuous over the square boundaries.]]
+[[Image:Interpolation-nearest.svg|thumb|right|[[Nearest-neighbor interpolation]] on the same dataset as above]]
+
+Suppose the function values <math>f</math> and the derivatives <math>f_x</math>, <math>f_y</math> and <math>f_{xy}</math> are known at the four corners <math>(0,0)</math>, <math>(1,0)</math>, <math>(0,1)</math>, and <math>(1,1)</math> of the unit square. The interpolated surface can then be written as
+<math display="block">p(x,y) = \sum\limits_{i=0}^3 \sum_{j=0}^3 a_{ij} x^i y^j.</math>
+
+The interpolation problem consists of determining the 16 coefficients <math>a_{ij}</math>.
+Matching <math>p(x,y)</math> with the function values yields four equations:
+# <math>f(0,0)      = p(0,0)   = a_{00},</math>
+# <math>f(1,0)      = p(1,0)   = a_{00} + a_{10} + a_{20} + a_{30},</math>
+# <math>f(0,1)      = p(0,1)   = a_{00} + a_{01} + a_{02} + a_{03},</math>
+# <math>f(1,1)      = p(1,1)   = \textstyle \sum\limits_{i=0}^3 \sum\limits_{j=0}^3 a_{ij}.</math>
+
+Likewise, eight equations for the derivatives in the <math>x</math> and the <math>y</math> directions:
+# <math>f_x(0,0)    = p_x(0,0) = a_{10},</math>
+# <math>f_x(1,0)    = p_x(1,0) =  a_{10} + 2a_{20} + 3a_{30},</math>
+# <math>f_x(0,1)    = p_x(0,1) = a_{10} + a_{11} + a_{12} + a_{13},</math>
+# <math>f_x(1,1)    = p_x(1,1) = \textstyle \sum\limits_{i=1}^3 \sum\limits_{j=0}^3 a_{ij} i,</math>
+# <math>f_y(0,0)    = p_y(0,0) = a_{01},</math>
+# <math>f_y(1,0)    = p_y(1,0) = a_{01} + a_{11} + a_{21} + a_{31},</math>
+# <math>f_y(0,1)    = p_y(0,1) = a_{01} + 2a_{02} + 3a_{03},</math>
+# <math>f_y(1,1)    = p_y(1,1) = \textstyle \sum\limits_{i=0}^3 \sum\limits_{j=1}^3 a_{ij} j.</math>
+
+And four equations for the <math>xy</math> [[mixed partial derivative]]:
+# <math>f_{xy}(0,0) = p_{xy}(0,0) = a_{11},</math>
+# <math>f_{xy}(1,0) = p_{xy}(1,0) = a_{11} + 2a_{21} + 3a_{31},</math>
+# <math>f_{xy}(0,1) = p_{xy}(0,1) = a_{11} + 2a_{12} + 3a_{13},</math>
+# <math>f_{xy}(1,1) = p_{xy}(1,1) = \textstyle \sum\limits_{i=1}^3 \sum\limits_{j=1}^3 a_{ij} i j.</math>
+
+The expressions above have used the following identities:
+<math display="block">p_x(x,y) = \textstyle \sum\limits_{i=1}^3 \sum\limits_{j=0}^3 a_{ij} i x^{i-1} y^j,</math>
+<math display="block">p_y(x,y) = \textstyle \sum\limits_{i=0}^3 \sum\limits_{j=1}^3 a_{ij} x^i j y^{j-1},</math>
+<math display="block">p_{xy}(x,y) = \textstyle \sum\limits_{i=1}^3 \sum\limits_{j=1}^3 a_{ij} i x^{i-1} j y^{j-1}.</math>
+
+This procedure yields a surface <math>p(x,y)</math> on the [[unit square]] <math>[0,1] \times [0,1]</math> that is continuous and has continuous derivatives. Bicubic interpolation on an arbitrarily sized [[regular grid]] can then be accomplished by patching together such bicubic surfaces, ensuring that the derivatives match on the boundaries.
+
+Grouping the unknown parameters <math>a_{ij}</math> in a vector
+<math display="block">\alpha=\left[\begin{smallmatrix}a_{00}&a_{10}&a_{20}&a_{30}&a_{01}&a_{11}&a_{21}&a_{31}&a_{02}&a_{12}&a_{22}&a_{32}&a_{03}&a_{13}&a_{23}&a_{33}\end{smallmatrix}\right]^T</math>
+and letting
+<math display="block">x=\left[\begin{smallmatrix}f(0,0)&f(1,0)&f(0,1)&f(1,1)&f_x(0,0)&f_x(1,0)&f_x(0,1)&f_x(1,1)&f_y(0,0)&f_y(1,0)&f_y(0,1)&f_y(1,1)&f_{xy}(0,0)&f_{xy}(1,0)&f_{xy}(0,1)&f_{xy}(1,1)\end{smallmatrix}\right]^T,</math>
+the above system of equations can be reformulated into a matrix for the [[linear equation]] <math>A\alpha=x</math>.
+
+Inverting the matrix gives the more useful linear equation <math>A^{-1}x=\alpha</math>, where
+<math display="block">A^{-1}=\left[\begin{smallmatrix}\begin{array}{rrrrrrrrrrrrrrrr}
+ 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+ 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+ -3 & 3 & 0 & 0 & -2 & -1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+ 2 & -2 & 0 & 0 & 1 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+ 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+ 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 & 0 \\
+ 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & -3 & 3 & 0 & 0 & -2 & -1 & 0 & 0 \\
+ 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 2 & -2 & 0 & 0 & 1 & 1 & 0 & 0 \\
+ -3 & 0 & 3 & 0 & 0 & 0 & 0 & 0 & -2 & 0 & -1 & 0 & 0 & 0 & 0 & 0 \\
+ 0 & 0 & 0 & 0 & -3 & 0 & 3 & 0 & 0 & 0 & 0 & 0 & -2 & 0 & -1 & 0 \\
+ 9 & -9 & -9 & 9 & 6 & 3 & -6 & -3 & 6 & -6 & 3 & -3 & 4 & 2 & 2 & 1 \\
+ -6 & 6 & 6 & -6 & -3 & -3 & 3 & 3 & -4 & 4 & -2 & 2 & -2 & -2 & -1 & -1 \\
+ 2 & 0 & -2 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 1 & 0 & 0 & 0 & 0 & 0 \\
+ 0 & 0 & 0 & 0 & 2 & 0 & -2 & 0 & 0 & 0 & 0 & 0 & 1 & 0 & 1 & 0 \\
+ -6 & 6 & 6 & -6 & -4 & -2 & 4 & 2 & -3 & 3 & -3 & 3 & -2 & -1 & -2 & -1 \\
+ 4 & -4 & -4 & 4 & 2 & 2 & -2 & -2 & 2 & -2 & 2 & -2 & 1 & 1 & 1 & 1
+\end{array}\end{smallmatrix}\right],</math>
+which allows <math>\alpha</math> to be calculated quickly and easily.
+
+There can be another concise matrix form for 16 coefficients:
+<math display="block">\begin{bmatrix}
+f(0,0)&f(0,1)&f_y (0,0)&f_y (0,1)\\f(1,0)&f(1,1)&f_y (1,0)&f_y (1,1)\\f_x (0,0)&f_x (0,1)&f_{xy} (0,0)&f_{xy} (0,1)\\f_x (1,0)&f_x (1,1)&f_{xy} (1,0)&f_{xy} (1,1)
+\end{bmatrix} =
+\begin{bmatrix}
+1&0&0&0\\1&1&1&1\\0&1&0&0\\0&1&2&3
+\end{bmatrix}
+\begin{bmatrix}
+a_{00}&a_{01}&a_{02}&a_{03}\\a_{10}&a_{11}&a_{12}&a_{13}\\a_{20}&a_{21}&a_{22}&a_{23}\\a_{30}&a_{31}&a_{32}&a_{33}
+\end{bmatrix}
+\begin{bmatrix}
+1&1&0&0\\0&1&1&1\\0&1&0&2\\0&1&0&3
+\end{bmatrix},</math>
+or
+<math display="block">
+\begin{bmatrix}
+a_{00}&a_{01}&a_{02}&a_{03}\\a_{10}&a_{11}&a_{12}&a_{13}\\a_{20}&a_{21}&a_{22}&a_{23}\\a_{30}&a_{31}&a_{32}&a_{33}
+\end{bmatrix}
+=
+\begin{bmatrix}
+1&0&0&0\\0&0&1&0\\-3&3&-2&-1\\2&-2&1&1
+\end{bmatrix}
+\begin{bmatrix}
+f(0,0)&f(0,1)&f_y (0,0)&f_y (0,1)\\f(1,0)&f(1,1)&f_y (1,0)&f_y (1,1)\\f_x (0,0)&f_x (0,1)&f_{xy} (0,0)&f_{xy} (0,1)\\f_x (1,0)&f_x (1,1)&f_{xy} (1,0)&f_{xy} (1,1)
+\end{bmatrix}
+\begin{bmatrix}
+1&0&-3&2\\0&0&3&-2\\0&1&-2&1\\0&0&-1&1
+\end{bmatrix},
+</math>
+where
+<math display="block">p(x,y)=\begin{bmatrix}1
+&x&x^2&x^3\end{bmatrix}
+\begin{bmatrix}
+a_{00}&a_{01}&a_{02}&a_{03}\\a_{10}&a_{11}&a_{12}&a_{13}\\a_{20}&a_{21}&a_{22}&a_{23}\\a_{30}&a_{31}&a_{32}&a_{33}
+\end{bmatrix}
+\begin{bmatrix}1\\y\\y^2\\y^3\end{bmatrix}.</math>
+
+==Extension to rectilinear grids==
+
+Often, applications call for bicubic interpolation using data on a rectilinear grid, rather than the unit square. In this case, the identities for <math>p_x, p_y,</math> and <math>p_{xy}</math> become
+<math display="block">p_x(x,y) = \textstyle \sum\limits_{i=1}^3 \sum\limits_{j=0}^3 \frac{a_{ij} i x^{i-1} y^j}{\Delta x},</math>
+<math display="block">p_y(x,y) = \textstyle \sum\limits_{i=0}^3 \sum\limits_{j=1}^3 \frac{a_{ij} x^i j y^{j-1}}{\Delta y},</math>
+<math display="block">p_{xy}(x,y) = \textstyle \sum\limits_{i=1}^3 \sum\limits_{j=1}^3 \frac{a_{ij} i x^{i-1} j y^{j-1}}{\Delta x \Delta y},</math>
+where <math>\Delta x</math> is the <math>x</math> spacing of the cell containing the point <math>(x,y)</math> and similar for <math>\Delta y</math>.
+In this case, the most practical approach to computing the coefficients <math>\alpha</math> is to let
+<math display="block">x=\left[\begin{smallmatrix}f(0,0)&f(1,0)&f(0,1)&f(1,1)&\Delta x f_x(0,0)&\Delta xf_x(1,0)&\Delta x f_x(0,1)&\Delta x f_x(1,1)&\Delta y f_y(0,0)&\Delta y f_y(1,0)&\Delta y f_y(0,1)&\Delta y f_y(1,1)&\Delta x \Delta y f_{xy}(0,0)&\Delta x \Delta y f_{xy}(1,0)&\Delta x \Delta y f_{xy}(0,1)&\Delta x \Delta y f_{xy}(1,1)\end{smallmatrix}\right]^T,</math>
+then to solve <math>\alpha=A^{-1}x</math> with <math>A</math> as before. Next, the normalized interpolating variables are computed as
+<math display="block">\begin{align}
+\overline{x} &= \frac{x-x_0}{x_1-x_0}, \\
+\overline{y} &= \frac{y-y_0}{y_1-y_0}
+\end{align}</math>
+where <math>x_0, x_1, y_0,</math> and <math>y_1</math> are the <math>x</math> and <math>y</math> coordinates of the grid points surrounding the point <math>(x,y)</math>. Then, the interpolating surface becomes
+<math display="block">p(x,y) = \sum\limits_{i=0}^3 \sum_{j=0}^3 a_{ij} {\overline{x}}^i {\overline{y}}^j.</math>
+
+==Finding derivatives from function values==
+
+If the derivatives are unknown, they are typically approximated from the function values at points neighbouring the corners of the unit square, e.g. using [[finite differences]].
+
+To find either of the single derivatives, <math>f_x</math> or <math>f_y</math>, using that method, find the slope between the two ''surrounding'' points in the appropriate axis. For example, to calculate <math>f_x</math> for one of the points, find <math>f(x,y)</math> for the points to the left and right of the target point and calculate the slope of the straight line between them, and similarly for <math>f_y</math>.
+
+To find the cross derivative <math>f_{xy}</math>, take the derivative in both axes, one at a time. For example, one can first use the <math>f_x</math> procedure to find the <math>x</math> derivatives of the points above and below the target point, then use the <math>f_y</math> procedure on those values (rather than, as usual, the values of <math>f</math> for those points) to obtain the value of <math>f_{xy}(x,y)</math> for the target point.  (Or one can do it in the opposite direction, first calculating <math>f_y</math> and then <math>f_x</math> from those.  The two give equivalent results.)
+
+At the edges of the dataset, when one is missing some of the surrounding points, the missing points can be approximated by a number of methods. A simple and common method is to assume that the slope from the existing point to the target point continues without further change, and using this to calculate a hypothetical value for the missing point.
+
+==Bicubic convolution algorithm==
+
+[[File:Bicubic graph1e.svg|thumb|Convolution kernel <math>W(x)</math>]]
+[[File:Bicubic graph3.svg|thumb|Convolution kernel (expanded in 2D)]]
+
+Bicubic spline interpolation requires the solution of the [[linear system]] described above for each [[grid cell]]. An interpolator with similar properties can be obtained by applying a [[convolution]] with the following kernel in both dimensions:
+<math display="block">W(x) = 
+\begin{cases}
+ (a+2)|x|^3-(a+3)|x|^2+1 & \text{for } |x| \leq 1, \\
+ a|x|^3-5a|x|^2+8a|x|-4a & \text{for } 1 < |x| < 2, \\
+ 0                       & \text{otherwise},
+\end{cases}
+</math>
+where <math>a</math> is usually set to −0.5 or −0.75. Note that <math>W(0)=1</math> and <math>W(n)=0</math> for all nonzero integers <math>n</math>.
+
+This approach was proposed by Rifman of TRW Systems Group, targeting image data from ERTS (Earth Resources Technology Satellite, later [[Landsat 1]]).
+<ref>{{cite journal|first1=Samuel S.|last1=Rifman|year=1973|title=Digital rectification of ERTS multispectral imagery|journal=NASA Technical Report 73N28327|url=https://ntrs.nasa.gov/citations/19730019595}}</ref>
+<ref>{{cite journal|first1=Brian P.|last1=Bauer|year=1980|title=SURVEY OF RESAMPLING TECHNIQUES USING MSS AND SYNTHETIC IMAGERY|journal=EDC Document 0044, USGS EROS Data Center|page=12|url=https://pubs.usgs.gov/unnumbered/70159186/report.pdf}}</ref>
+<ref>{{cite book|first=George|last=Wolberg|year=1994|title=Digital Image Warping, Third Edition|pages=130-131|isbn=0-8186-8944-7}}</ref>
+Initially, <math>a</math> was fixed at -1, but later it was parameterized by Simon of the same company, making -0.5, -0.75, and -1.0 meaningful values.
+<ref>{{cite journal|first1=K. W.|last1=Simon|year=1975|title=Digital Image Reconstruction and Resampling for Geometric Manipulation|journal=LARS Symposia, Paper 67|url=http://docs.lib.purdue.edu/lars_symp/67}}</ref>
+However, these proposals did not sufficiently present the derivation process or formulas, so Keys later re-proposed it in a complete form, demonstrating that with <math>a=-0.5</math>, cubic convergence is achieved regarding the sampling interval of the original function.
+<ref name=Keys>{{cite journal
+ | author = R. Keys
+ | year = 1981
+ | title = Cubic convolution interpolation for digital image processing
+ | journal = IEEE Transactions on Acoustics, Speech, and Signal Processing
+ | doi = 10.1109/TASSP.1981.1163711
+ | volume = 29
+ | pages = 1153–1160
+ | issue = 6
+| bibcode = 1981ITASS..29.1153K
+ | citeseerx = 10.1.1.320.776
+ }}</ref>
+
+The convolution kernel <math>W(x)</math> is derived as follows<ref>Keys (1981), pp.1153-1154</ref>:
+<math display="block">W(x) = 
+\begin{cases}
+ A_1|x|^3+B_1|x|^2+C_1|x|+D_1 & \text{for } |x| \leq 1 \\
+ A_2|x|^3+B_2|x|^2+C_2|x|+D_2 & \text{for } 1 < |x| < 2 \\
+ 0                            & \text{otherwise}
+\end{cases}
+</math>
+
+With the conditions: <math>W(0)=1</math>, <math>W(1)=W(2)=0</math>, also for first derivative: <math>W'(0)=W'(2)=0</math>, <math>W'(1)=a</math>, we get;
+# <math>W(0)=D_1=1,</math>
+# <math>W(1^-)=A_1+B_1+C_1+D_1=0,</math>
+# <math>W(1^+)=A_2+B_2+C_2+D_2=0,</math>
+# <math>W(2^-)=8A_2+4B_2+2C_2+D_2=0,</math>
+# <math>W'(0)=C_1=0,</math>
+# <math>W'(1^-)=3A_1+2B_1+C_1=a,</math>
+# <math>W'(1^+)=3A_2+2B_2+C_2=a,</math>
+# <math>W'(2^-)=12A_2+4B_2+C_2=0.</math>
+
+Solving the above simultaneous equations gives us;
+<math display="block">A_1=a+2, \quad B_1=-(a+3), \quad C_1=0, \quad D_1=1,</math>
+<math display="block">A_2=a, \quad B_2=-5a, \quad C_2=8a, \quad D_2=-4a,</math>
+and the above equation.
+
+=== Matrix notation ===
+[[file:Bicubic graph2.svg|thumb|Convolution kernel shifted into 0 to 1 for matrix notation]]
+
+If we use the matrix notation, we can express the equation in a more friendly manner:
+<math display="block">p(t) =
+\begin{bmatrix}
+1 & t & t^2 & t^3
+\end{bmatrix}
+
+\begin{bmatrix}
+0 & 1 & 0 & 0 \\
+a & 0 & -a & 0 \\
+-2a & -a-3 & 2a+3 & a \\
+a & a+2 & -a-2 & -a
+\end{bmatrix}
+
+\begin{bmatrix}
+f_{-1} \\
+f_0 \\
+f_1 \\
+f_2
+\end{bmatrix}
+</math>
+for <math>t</math> between 0 and 1 for one dimension<ref name="qb1">{{cite web |url=https://qiita.com/kumanomi1000/items/848483535e4215c0b85e |title=Introduction to Bicubic Interpolation for Implementation Engineers - #1 |website=Qiita}}</ref>. Note that for 1-dimensional cubic convolution interpolation 4 sample points are required. For each inquiry two samples are located on its left and two samples on the right. These points are indexed from −1 to 2 in this text. The distance from the point indexed with 0 to the inquiry point is denoted by <math>t</math> here.
+
+Since <math>a=-0.5</math>, it coincides with the [[Catmull-Rom spline]]<ref name="qb1" />.
+Therefore, bicubic interpolation with <math>a</math> set to <math>-0.5</math> is sometimes called "Catmull-Rom interpolation".<ref>Example where the term "Catmull-Rom interpolation" is used: [https://github.com/opencv/opencv/issues/17720 INTER_CUBIC should default to Catmull-Rom interpolation #17720]</ref>
+
+For two dimensions first applied once in <math>x</math> and again in <math>y</math>:
+<math display="block">\begin{align}
+b_{-1}&= p(t_x, f_{(-1,-1)}, f_{(0,-1)}, f_{(1,-1)}, f_{(2,-1)}), \\[1ex]
+b_{0} &= p(t_x, f_{(-1,0)}, f_{(0,0)}, f_{(1,0)}, f_{(2,0)}), \\[1ex]
+b_{1} &= p(t_x, f_{(-1,1)}, f_{(0,1)}, f_{(1,1)}, f_{(2,1)}), \\[1ex]
+b_{2} &= p(t_x, f_{(-1,2)}, f_{(0,2)}, f_{(1,2)}, f_{(2,2)}),
+\end{align}</math>
+<math display="block">p(x,y) = p(t_y, b_{-1}, b_{0}, b_{1}, b_{2}).</math>
+
+=== Differential Continuity ===
+It is continuous in the first derivative by definition, and can be easily verified using the following matrix notation.
+:<math>
+p_i'(1) =
+\begin{bmatrix}
+0 & a & 0 & -a
+\end{bmatrix}
+\begin{bmatrix}
+f_{i-1} \\
+f_i \\
+f_{i+1} \\
+f_{i+2}
+\end{bmatrix}
+=
+p_{i+1}'(0) =
+\begin{bmatrix}
+a & 0 & -a & 0
+\end{bmatrix}
+\begin{bmatrix}
+f_i \\
+f_{i+1} \\
+f_{i+2} \\
+f_{i+3}
+\end{bmatrix}
+</math>
+Hence, it is continuous in the first derivative.
+:<math>
+p_i''(1) =
+\begin{bmatrix}
+2a & 4a+6 & -2a-6 & -4a
+\end{bmatrix}
+\begin{bmatrix}
+f_{i-1} \\
+f_i \\
+f_{i+1} \\
+f_{i+2}
+\end{bmatrix}
+\neq
+p_{i+1}''(0) =
+\begin{bmatrix}
+-4a & -2a-6 & 4a+6 & 2a
+\end{bmatrix}
+\begin{bmatrix}
+f_i \\
+f_{i+1} \\
+f_{i+2} \\
+f_{i+3}
+\end{bmatrix}
+</math>
+Hence, it is not continuous in the second derivative.
+
+=== Comparison with other methods ===
+Below is a comparison of the kernel functions for each method:
+
+{| class="wikitable" style="text-align:center;"
+|-
+! Method || Kernel Function || Kernel Function (2D expansion)
+|-
+| Nearest neighbor || [[File:KernelFunction_NN.png|218px]] || [[File:KernelFunction_2D_NN.png|210px]]
+|-
+| Bilinear interpolation || [[File:KernelFunction_bilinear.png|218px]] || [[File:KernelFunction_2D_bilinear.png|210px]]
+|-
+| Bicubic interpolation || [[File:KernelFunction_bicubic.png|218px]] || [[File:KernelFunction_2D_bicubic.png|210px]]
+|}
+
+==Use in computer graphics==
+{{see also|Comparison gallery of image scaling algorithms}}
+The bicubic algorithm is frequently used for scaling images and video for display (see [[Resampling (bitmap)|bitmap resampling]]). It preserves fine detail better than the common [[bilinear filtering|bilinear]] algorithm.
+
+Bicubic algorithm is also used for image downscaling, but because resampling during downscaling differs from the effect of zooming out in real optics, other methods may be more suitable<ref name="qb4">{{cite web |url=https://qiita.com/kumanomi1000/items/8d2d67a4e57289c829ab |title=Introduction to Bicubic Interpolation for Implementation Engineers - #4 |website=Qiita}}</ref>.
+
+=== Effect of parameter "a" ===
+[[Image:Acutance example.svg|250px|thumb|The lower half of this figure is a magnification of the upper half, showing how the apparent sharpness of the left-hand line is created. Bicubic interpolation causes overshoot, which increases [[acutance]].]]<!--Don't scale the image, it will greatly reduce the effect-->
+
+However, due to the negative lobes on the kernel, it causes [[overshoot (signal)|overshoot]] (haloing). This can cause [[Clipping (signal processing)|clipping]], and is an artifact (see also [[ringing artifacts]]), but it increases [[acutance]] (apparent sharpness), and can be desirable. This effect is larger when the parameter <math>a</math> is <math>-0.75</math> or <math>-1.0</math> than when it is <math>-0.5</math>.
+[[File:Bicubic graph5.png|600px|Comparison of interpolation kernels]]
+
+When <math>a=-0.5</math>, the interpolation result matches the Taylor approximation up to the second derivative (excluding the remainder term) of the original image (the [[continuous function]] before sampling).<ref>Keys (1981), pp.1154-1155</ref><ref>Wolberg (1994), p.130</ref>
+A clear example of this effect is when the original image is a linear function (a simple gradient image), and the interpolated result is a linear function only when <math>a=-0.5</math>.
+For example, if the input is
+<math display="block">\begin{bmatrix} f_{i-1} & f_i & f_{i+1} & f_{i+2} \end{bmatrix} = \begin{bmatrix} -1 & 0 & 1 & 2 \end{bmatrix},</math>
+the interpolated result is
+<math display="block">p(t) = -2(2a+1)t^3+3(2a+1)t^2-2at,</math>
+and it is a linear function (quadratic and cubic terms are 0) only when <math>a=-0.5</math>.<ref name="simon">Simon (1975), p.3A-3</ref>
+
+{| class="wikitable" style="text-align:center;"
+|-
+! <math>a=-0.5</math> || <math>a=-0.75</math>  || <math>a=-1.0</math>
+|-
+| [[file:Bicubic graph7 050.svg|200px|Interpolation graph (a=-0.5)]] || [[file:Bicubic graph7 075.svg|200px|Interpolation graph (a=-0.75)]] || [[file:Bicubic graph7 100.svg|200px|Interpolation graph (a=-1.0)]]
+|}
+
+Below are a simple gradient image enlarged 16x, and a portion of the [[standard test image]] "cameraman"<ref>[https://dome.mit.edu/handle/1721.3/195767 MIT Works Acquired Digitally - cameraman]</ref> enlarged 8x<ref name="qb2">{{cite web |url=https://qiita.com/kumanomi1000/items/414f1e4b546f76918029 |title=Introduction to Bicubic Interpolation for Implementation Engineers - #2 |website=Qiita}}</ref>.
+The vertical stripes in the former and the artificial mottled pattern around the temples in the latter are artifacts caused by the above-mentioned effect.
+
+{| class="wikitable" style="text-align:center;"
+|-
+! <math>a=-0.5</math> || <math>a=-0.75</math> || <math>a=-1.0</math> || Nearest neighbor interpolation<br />(for comparison)
+|-
+| [[File:grad_050.png|128px|Enlarged example (a=-0.5)]] || [[File:grad_075.png|128px|Enlarged example (a=-0.75)]] || [[File:grad_100.png|128px|Enlarged example (a=-1.0)]] || [[File:grad_NN.png|128px|Enlarged example (nearest neighbor interpolation)]]
+|-
+| [[File:Cameraman x8 050.png|200px|Enlarged example (a=-0.5)]] || [[File:Cameraman x8 075.png|200px|Enlarged image example (a=-0.75)]] || [[File:Cameraman x8 100.png|200px|Enlarged example (a=-1.0)]] || [[File:Cameraman x8 NN.png|200px|Enlarged example (nearest neighbor interpolation)]]
+|}
+
+Note that when <math>a=-0.75</math>, the second derivative of the convolution kernel is continuous at <math>x=1</math><ref name="simon" />, but the interpolation result does not have a continuous second derivative.
+Also, when <math>a=-1.0</math>, the derivative of the convolution kernel matches the derivative of the [[sinc function]] at <math>x=1</math><ref name="simon" />, but this has no significance other than for comparison with [[sinc interpolation]].
+
+=== Resampling Position ===
+When enlarging an image by an [[integer]] multiple, it is common to set the resampling position between the input image pixels so that the center of gravity of the enlarged image does not shift relative to the input image (see the left image below). <br />
+On the other hand, there is also a method of setting the resampling position to overlap the input image pixels (see the right image below). This method ensures the reversibility of the transformation.<ref name="qb3">{{cite web |url=https://qiita.com/kumanomi1000/items/1bf004a56fdb1198abbc |title=Introduction to Bicubic Interpolation for Implementation Engineers - #3 |website=Qiita}}</ref>
+
+[[File:Bicubic graph4e.svg|600px|center|Example of resample position]]
+
+=== Extrapolation ===
+Two pixels of the input image are required on the left and right (or top and bottom) for interpolation. Since the outer edges of the image are invalid, extrapolation is required. The extrapolation method varies depending on the implementation. <br />
+The following is an example of copying and extrapolating the outermost pixels.<ref name="qb3" />
+
+[[File:Bicubic graph6e.svg|600px|center|Example of extrapolation by copying the outermost pixel values]]
+
+==See also==
+
+{{portal|Mathematics}}
+
+* [[Spatial anti-aliasing]]
+* [[Bézier surface]]
+* [[Bilinear interpolation]]
+* [[Cubic Hermite spline]], the one-dimensional analogue of bicubic spline
+* [[Lanczos resampling]]
+* [[Natural neighbor interpolation]]
+* [[Sinc filter]]
+* [[Spline interpolation]]
+* [[Tricubic interpolation]]
+* [[Directional Cubic Convolution Interpolation]]
+
+==References==
+{{reflist}}
+
+==External links==
+* [https://web.archive.org/web/20051024202307/http://www.geovista.psu.edu/sites/geocomp99/Gc99/082/gc_082.htm Application of interpolation to elevation samples]
+* [https://sepwww.stanford.edu/data/media/public/docs/sep107/paper_html/node20.html Interpolation theory]
+* [http://www.paulinternet.nl/?page=bicubic Explanation and Java/C++ implementation of (bi)cubic interpolation]
+* [http://mathformeremortals.wordpress.com/2013/01/15/bicubic-interpolation-excel-worksheet-function/ Excel Worksheet Function for Bicubic Lagrange Interpolation]
+
+{{DEFAULTSORT:Bicubic Interpolation}}
+[[Category:Image processing]]
+[[Category:Multivariate interpolation]]

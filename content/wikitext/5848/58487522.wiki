@@ -1,0 +1,109 @@
+<!-- wikipedia: en
+     page: 58487522
+     title: Preconditioned Crank–Nicolson algorithm
+     revision: 1215509771
+     timestamp: 2024-03-25T15:40:35Z
+     history: https://en.wikipedia.org/w/index.php?curid=58487522&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1215509771 -->
+In [[computational statistics]], the '''preconditioned Crank–Nicolson algorithm (pCN)''' is a [[Markov chain Monte Carlo]] (MCMC) method for obtaining [[pseudo-random number sampling|random samples]] – sequences of random observations – from a target [[probability distribution]] for which direct sampling is difficult.
+
+The most significant feature of the pCN algorithm is its dimension robustness, which makes it well-suited for high-dimensional sampling problems.  The pCN algorithm is well-defined, with non-degenerate acceptance probability, even for target distributions on infinite-dimensional [[Hilbert space]]s.  As a consequence, when pCN is implemented on a real-world computer in large but finite dimension ''N'', i.e. on an ''N''-dimensional subspace of the original Hilbert space, the convergence properties (such as [[ergodicity]]) of the algorithm are independent of ''N''.  This is in strong contrast to schemes such as Gaussian random walk [[Metropolis–Hastings algorithm|Metropolis–Hastings]] and the [[Metropolis-adjusted Langevin algorithm]], whose acceptance probability degenerates to zero as ''N'' tends to infinity.
+
+The algorithm as named was highlighted in 2013 by Cotter, [[Gareth Roberts (statistician)|Roberts]], [[Andrew M. Stuart|Stuart]] and White,<ref name="CRSW2013">{{cite journal
+| last1 = Cotter
+| first1 = S. L.
+| last2 = Roberts
+| first2 = G. O.
+| last3 = Stuart
+| first3 = A. M.
+| last4 = White
+| first4 = D.
+| title = MCMC methods for functions: modifying old algorithms to make them faster
+| journal = Statist. Sci.
+| volume = 28
+| year = 2013
+| number = 3
+| pages = 424&ndash;446
+| issn = 0883-4237
+| doi = 10.1214/13-STS421| arxiv = 1202.0709
+| s2cid = 36562755
+}}</ref> and its ergodicity properties were proved a year later by [[Martin Hairer|Hairer]], Stuart and Vollmer.<ref name="HSV2014">{{cite journal
+| last1 = Hairer
+| first1 = M.
+| last2 = Stuart
+| first2 = A. M.
+| last3 = Vollmer
+| first3 = S. J.
+| title = Spectral gaps for a Metropolis&ndash;Hastings algorithm in infinite dimensions
+| journal = Ann. Appl. Probab.
+| volume = 24
+| year = 2014
+| number = 6
+| pages = 2455&ndash;2490
+| issn = 1050-5164
+| doi = 10.1214/13-AAP982| arxiv = 1112.1392
+| s2cid = 73662504
+}}</ref>  In the specific context of sampling diffusion bridges, the method was introduced in 2008.<ref name="BRSV2008">{{cite journal
+| last1 = Beskos
+| first1 = A.
+| last2 = Roberts
+| first2 = G. O.
+| last3 = Stuart
+| first3 = A. M.
+| last4 = Voss
+| first4 = J.
+| title = MCMC Methods for Diffusion Bridges
+| journal = Stochastics and Dynamics
+| volume = 8
+| year = 2008
+| number = 3
+| pages = 319&ndash;350
+| doi = 10.1142/S0219493708002378
+| url = https://authors.library.caltech.edu/69496/
+}}</ref>
+
+==Description of the algorithm==
+
+===Overview===
+
+{{see also|Metropolis–Hastings algorithm}}
+
+The pCN algorithm generates a Markov chain <math>(X_{n})_{n \in \mathbb{N}}</math> on a Hilbert space <math>\mathcal{H}</math> whose [[invariant measure]] is a probability measure <math>\mu</math> of the form
+:<math>\mu(E) = \frac{1}{Z} \int_{E} \exp(- \Phi(x)) \, \mu_{0} (\mathrm{d} x)</math>
+for each [[measurable set]] <math>E \subseteq \mathcal{H}</math>, with normalising constant <math>Z</math> given by
+:<math>Z = \int_{\mathcal{H}} \exp(- \Phi(x)) \, \mu_{0} (\mathrm{d} x) ,</math>
+where <math>\mu_{0} = \mathcal{N}(0, C_{0})</math> is a [[Gaussian measure]] on <math>\mathcal{H}</math> with [[covariance operator]] <math>C_{0}</math> and <math>\Phi \colon \mathcal{H} \to \mathbb{R}</math> is some function.  Thus, the pCN method applied to target probability measures that are re-weightings of a reference Gaussian measure.
+
+The [[Metropolis–Hastings algorithm]] is a general class of methods that try to produce such Markov chains <math>(X_{n})_{n \in \mathbb{N}}</math>, and do so by a two-step procedure of first ''proposing'' a new state <math>X'_{n + 1}</math> given the current state <math>X_{n}</math> and then ''accepting'' or ''rejecting'' this proposal, according to a particular acceptance probability, to define the next state <math>X_{n + 1}</math>. The idea of the pCN algorithm is that a clever choice of (non-symmetric) proposal for a new state <math>X'_{n + 1}</math> given <math>X_{n}</math> might have an associated acceptance probability function with very desirable properties.
+
+===The pCN proposal===
+
+The special form of this pCN proposal is to take
+:<math>X'_{n + 1} = \sqrt{ 1 - \beta^{2} } X_{n} + \beta \Xi_{n + 1} , </math>
+:<math>\Xi_{n + 1} \sim \mu_{0} \text{ i.i.d.}</math>
+or, equivalently,
+:<math>X'_{n + 1} | X_{n} \sim \mathcal{N} \left( \sqrt{ 1 - \beta^{2} } X_{n} , \beta^2 C_{0} \right) .</math>
+The parameter <math>0 < \beta < 1</math> is a step size that can be chosen freely (and even optimised for statistical efficiency).  One then generates <math>Z_{n + 1} \sim \mathrm{Unif}([0, 1])</math> and sets
+:<math>X_{n + 1} = X'_{n + 1} \text{ if } Z_{n + 1} \leq \alpha(X_{n}, X'_{n + 1}) ,</math>
+:<math>X_{n + 1} = X_{n} \text{ if } Z_{n + 1} > \alpha(X_{n}, X'_{n + 1}) .</math>
+The acceptance probability takes the simple form
+:<math>\alpha(x, x') = \min ( 1 , \exp ( \phi(x) - \phi(x') ) ).</math>
+
+It can be shown<ref name="HSV2014"/> that this method not only defines a Markov chain that satisfies [[detailed balance]] with respect to the target distribution <math>\mu</math>, and hence has <math>\mu</math> as an invariant measure, but also possesses a spectral gap that is independent of the dimension of <math>\mathcal{H}</math>, and so the law of <math>X_{n}</math> converges to <math>\mu</math> as <math>n \to \infty</math>.  Thus, although one may still have to tune the step size parameter <math>\beta</math> to achieve a desired level of statistical efficiency, the performance of the pCN method is robust to the dimension of the sampling problem being considered.
+
+===Contrast with symmetric proposals===
+
+This behaviour of pCN is in stark contrast to the Gaussian random walk proposal
+:<math>X'_{n + 1} \mid X_n \sim \mathcal{N} \left( X_n, \beta \Gamma \right)</math>
+with any choice of proposal covariance <math>\Gamma</math>, or indeed any symmetric proposal mechanism.  It can be shown using the [[Cameron–Martin theorem]] that for infinite-dimensional <math>\mathcal{H}</math> this proposal has acceptance probability zero for <math>\mu</math>-[[almost all]] <math>X'_{n+1} </math> and <math>X_n</math>.  In practice, when one implements the Gaussian random walk proposal in dimension <math>N</math>, this phenomenon can be seen in the way that
+* for fixed <math>\beta</math>, the acceptance probability tends to zero as <math>N \to \infty</math>, and
+* for a fixed desired positive acceptance probability, <math>\beta \to 0</math> as <math>N \to \infty</math>.
+
+==References==
+<references />
+
+{{DEFAULTSORT:Preconditioned Crank-Nicolson algorithm}}
+[[Category:Monte Carlo methods]]
+[[Category:Markov chain Monte Carlo]]
+[[Category:Sampling techniques]]

@@ -1,0 +1,276 @@
+<!-- wikipedia: en
+     page: 26978338
+     title: Gale–Shapley algorithm
+     revision: 1367839432
+     timestamp: 2026-08-05T14:12:51Z
+     history: https://en.wikipedia.org/w/index.php?curid=26978338&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1367839432 -->
+{{Short description|Procedure for finding a stable matching}}
+{{Good article}}
+{{Use mdy dates|cs1-dates=ly|date=December 2023}}
+{{Use list-defined references|date=December 2023}}
+{{bots|deny=Citation bot}}
+In [[mathematics]], [[economics]], and [[computer science]], the '''Gale–Shapley algorithm''' (also known as the '''deferred acceptance algorithm''',{{r|roth}} '''propose-and-reject algorithm''',{{r|carter-price}} or '''Boston Pool algorithm'''{{r|roth}}) is an [[algorithm]] for finding a solution to the [[stable matching problem]]. It is named for [[David Gale]] and [[Lloyd Shapley]], who published it in 1962 in ''[[The American Mathematical Monthly]]'', although it had been used for the [[National Resident Matching Program]] since 1952 despite lacking the theoretical foundation.{{r|roth}} Shapley and [[Alvin E. Roth]] (who pointed out its prior application) won the 2012 [[Nobel Memorial Prize in Economic Sciences|Nobel Prize in Economics]] for work including this algorithm.<ref>{{cite web |last1=The Royal Swedish Academy of Sciences |title=The Prize in Economic Sciences 2012: Popular Information |url=https://www.nobelprize.org/prizes/economic-sciences/2012/popular-information/ |website=The Nobel Prize |access-date=2026-08-05}}</ref> It had been said that Gale would have been the third co-recipient of the Prize, if he were alive.<ref>{{cite web |last1=Freyd |first1=Peter |title=The Gale-Shapley Algorithm -- A Nobel Tale |url=https://www.math.upenn.edu/events/gale-shapley-algorithm-nobel-tale |website=University of Pennsylvania Department of Mathematics |access-date=2026-08-05}}</ref>
+
+The stable matching problem seeks to pair up equal numbers of participants of two types, using preferences from each participant. The pairing must be stable: no pair of matched participants should mutually prefer each other to their assigned match. In each round of the Gale–Shapley algorithm, unmatched participants of one type propose a match to the next participant on their preference list. Each proposal is accepted if its recipient prefers it to their current match. The resulting procedure is a [[truthful mechanism]] from the point of view of the proposing participants, who receive their most-preferred pairing consistent with stability. In contrast, the recipients of proposals receive their least-preferred pairing. The algorithm can be implemented to run in time quadratic in the number of participants, and [[linear time|linear]] in the size of the input to the algorithm.
+
+The stable matching problem, and the Gale–Shapley algorithm solving it, have widespread real-world applications, including matching American medical students to residencies and French university applicants to schools. For more, see {{slink|Stable marriage problem|Applications}}.
+
+==Background==
+{{main|Stable matching problem}}
+The stable matching problem, in its most basic form, takes as input equal numbers of two types of participants ({{mvar|n}} job applicants and {{mvar|n}} employers, for example), and an ordering for each participant giving their preference for whom to be matched to among the participants of the other type. A matching pairs each participant of one type with a participant of the other type. A matching is ''not'' stable if:
+
+{{Ordered list|list-style-type=numeric
+|There is an element ''A'' of the first matched set which prefers some given element ''B'' of the second matched set over the element to which ''A'' is already matched, and
+|''B'' also prefers ''A'' over the element to which ''B'' is already matched.
+}}
+
+In other words, a matching is stable when there is no pair (''A'', ''B'') where both participants prefer each other to their matched partners. If such a pair exists, the matching is not stable, in the sense that the members of this pair would prefer to leave the system and be matched to each other, possibly leaving other participants unmatched. A stable matching always exists, and the algorithmic problem solved by the Gale–Shapley algorithm is to find one.{{r|gusfield-irving}}
+
+The stable matching problem has also been called the ''stable marriage problem'', using a metaphor of marriage between men and women, and many sources describe the Gale–Shapley algorithm in terms of [[Marriage proposal|marriage proposals]]. However, this metaphor has been criticized as both sexist and unrealistic: the steps of the algorithm do not accurately reflect typical or even stereotypical human behavior.{{r|wagner|giagkousi}}
+
+==Solution==
+[[File:Gale-Shapley.gif|thumb|upright=1.35|Animation showing an example of the Gale–Shapley algorithm]]
+In 1962, [[David Gale]] and [[Lloyd Shapley]] proved that, for any equal number of participants of each type, it is always possible to find a matching in which all pairs are stable. They presented an algorithm to do so.{{r|gale-shapley|mairson}} In 1984, [[Alvin E. Roth]] observed that essentially the same algorithm had already been in practical use since the early 1950s, as the "Boston Pool algorithm" used by the [[National Resident Matching Program]].{{r|roth|bergstrom}}
+
+The Gale–Shapley algorithm involves a number of "rounds" (or "[[iteration]]s"). In terms of job applicants and employers, it can be expressed as follows:{{r|jeffe}}
+* In each round, one or more employers with open job positions each make a job offer to the applicant they prefer, among the ones they have not yet already made an offer to.
+* Each applicant who has received an offer evaluates it against their current position (if they have one). If the applicant is not yet employed, or if they receive an offer from an employer they like better than their current employer, they accept the best new offer and become matched to the new employer (possibly leaving a previous employer with an open position). Otherwise, they reject the new offer.
+* This process is repeated until all employers have either filled their positions or exhausted their lists of applicants.
+
+===Implementation details and time analysis===
+To implement the algorithm efficiently, each employer needs to be able to find its next applicant quickly, and each applicant needs to be able to compare employers quickly. One way to do this is to number each applicant and each employer from 1 to <math>n</math>, where <math>n</math> is the number of employers and applicants, and to store the following [[data structure]]s:{{r|kt}}
+*A [[Set (abstract data type)|set]] of employers with unfilled positions
+*A one-dimensional [[Array (data structure)|array]] indexed by employers, specifying the preference index of the next applicant to whom the employer would send an offer, initially 1 for each employer
+*A one-dimensional array indexed by applicants, specifying their current employer, initially a [[sentinel value]] such as 0 indicating they are unemployed
+*A two-dimensional array indexed by an applicant and an employer, specifying the position of that employer in the applicant's preference list
+*A two-dimensional array indexed by an employer and a number <math>i</math> from 1 to <math>n</math>, naming the applicant who is each employer's {{nowrap|<math>i</math>th}} preference
+Setting up these data structures takes <math>O(n^2)</math> time. With these structures it is possible to find an employer with an unfilled position, make an offer from that employer to their next applicant, determine whether the offer is accepted, and update all of the data structures to reflect the results of these steps, in constant time per offer. Once the algorithm terminates, the resulting matching can be read off from the array of employers for each applicant. There can be <math>O(n^2)</math> offers before each employer runs out of offers to make, so the total time is <math>O(n^2)</math>.{{r|kt}}
+
+Although this time bound is [[Quadratic growth|quadratic]] in the number of participants, it may be considered as [[linear time]] when measured in terms of the size of the input, two matrices of preferences of size <math>O(n^2)</math>.{{sfnp|Gusfield|Irving|1989|p=182}}
+
+===Correctness guarantees===
+This algorithm guarantees that:
+; Everyone gets matched: At the end, there cannot be an applicant and employer both unmatched. An employer left unmatched at the end of the process must have made an offer to all applicants. But an applicant who receives an offer remains employed for the rest of the process, so there can be no unemployed applicants. Since the numbers of applicants and job openings are equal, there can also be no open positions remaining.{{r|jeffe}}
+; The matches are stable: No applicant ''X'' and employer ''Y'' can prefer each other over their final match. If ''Y'' makes an offer to ''X'', then ''X'' would only reject ''Y'' after receiving an even better offer, so ''X'' cannot prefer ''Y'' to their final match. And if ''Y'' stops making offers before reaching ''X'' in their preference list, ''Y'' cannot prefer ''X'' to their final match. In either case, ''X'' and ''Y'' do not form an unstable pair.{{r|jeffe}}
+
+==Optimality of the solution==
+{{main|Lattice of stable matchings}}
+There may be many stable matchings for the same system of preferences. This raises the question: which matching is returned by the Gale–Shapley algorithm? Is it the matching better for applicants, for employers, or an intermediate one? As it turns out, the Gale–Shapley algorithm in which employers make offers to applicants always yields the same stable matching (regardless of the order in which job offers are made), and its choice is the stable matching that is the ''best for all employers'' and ''worst for all applicants'' among all stable matchings.{{r|jeffe}}
+
+In a reversed form of the algorithm, each round consists of unemployed applicants writing a single job application to their preferred employer, and the employer either accepting the application (possibly firing an existing employee to do so) or rejecting it. This produces a matching that is best for all applicants and worst for all employers among all stable matchings. These two matchings are the top and bottom elements of the [[lattice of stable matchings]].{{r|knuth}}
+
+In both forms of the algorithm, one group of participants proposes matches, and the other group decides whether to accept or reject each proposal. The matching is always best for the group that makes the propositions, and worst for the group that decides how to handle each proposal.{{r|knuth}}
+
+== Strategic considerations ==
+The Gale–Shapley algorithm is a [[truthful mechanism]] from the point of view of the proposing side. This means that no proposer can get a better matching by misrepresenting their preferences. Moreover, the Gale–Shapley algorithm is even ''group-strategy proof'' for proposers, i.e., no coalition of proposers can coordinate a misrepresentation of their preferences such that all proposers in the coalition are strictly better-off.{{r|dubins-freedman}} However, it is possible for some coalition to misrepresent their preferences such that some proposers are better-off, and the others retain the same partner.{{r|huang}}
+
+The Gale–Shapley algorithm is non-truthful for the non-proposing participants. Each may be able to misrepresent their preferences and get a better match.{{r|sisterhood}} A particular form of manipulation is ''truncation'': presenting only the topmost alternatives, implying that the bottom alternatives are not acceptable at all. Under complete information, it is sufficient to consider misrepresentations of the form of truncation strategies. However, successful misrepresentation requires knowledge of the other agents' preferences; without such knowledge, misrepresentation can give an agent a worse assignment. Moreover, even after an agent sees the final matching, they cannot deduce a strategy that would guarantee a better outcome in hindsight. This makes the Gale–Shapley algorithm a [[Regret-free mechanism|''regret-free truth-telling mechanism'']]. Moreover, in the Gale–Shapley algorithm, truth-telling is the only strategy that guarantees no regret. The Gale–Shapley algorithm is the only regret-free mechanism in the class of quantile-stable matching mechanisms.<ref>{{Cite web |last=Fernandez |first=Marcelo Ariel |date=July 31, 2020 |title=Deferred acceptance and regret-free truth-telling |url=https://ideas.repec.org//p/jhu/papers/65832.html |type=Working paper|publisher=Johns Hopkins University Department of Economics}}</ref>
+
+==Generalizations==
+In their original work on the problem, Gale and Shapley considered a more general form of the stable matching problem, suitable for [[university and college admission]]. In this problem, each university or college may have its own ''quota'', a target number of students to admit, and the number of students applying for admission may differ from the sum of the quotas, necessarily causing either some students to remain unmatched or some quotas to remain unfilled. Additionally, preference lists may be incomplete: if a university omits a student from their list, it means they would prefer to leave their quota unfilled than to admit that student, and if a student omits a university from their list, it means they would prefer to remain unadmitted than to go to that university. Nevertheless, it is possible to define stable matchings for this more general problem, to prove that stable matchings always exist, and to apply the same algorithm to find one.{{r|gale-shapley}}
+
+A form of the Gale–Shapley algorithm, performed through a real-world protocol rather than calculated on computers, has been used for coordinating higher education admissions in France since 2018, through the [[Parcoursup]] system. In this process, over the course of the summer before the start of school, applicants receive offers of admission, and must choose in each round of the process whether to accept any new offer (and if so turn down any previous offer that they accepted). The method is complicated by additional constraints that make the problem it solves not exactly the stable matching problem. It has the advantage that the students do not need to commit to their preferences at the start of the process, but rather can determine their own preferences as the algorithm progresses, on the basis of head-to-head comparisons between offers that they have received. It is important that this process performs a small number of rounds of proposals, so that it terminates before the start date of the schools, but although high numbers of rounds can occur in theory, they tend not to occur in practice.{{r|mathieu}} It has been shown theoretically that, if the Gale–Shapley algorithm needs to be terminated early, after a small number of rounds in which every vacant position makes a new offer, it nevertheless produces matchings that have a high ratio of matched participants to unstable pairs.{{r|almost}}
+
+==Parallelization==
+The Gale–Shapley algorithm has a natural source of parallelism that makes it suitable for parallel hardware such as multicore CPUs and graphics processing units (GPUs). In each round, all employers with unfilled positions can independently advance along their preference lists and make offers concurrently. A parallel implementation can assign threads to independent employers so that many offers are made simultaneously. When multiple employers make offers to the same applicant, synchronization primitives are used to resolve the competing offers, ensuring that only the applicant’s most-preferred employer is tentatively accepted while the rejected employers continue to their next choices.{{r|manne-greedy|liu-bamboo}}
+
+To reduce synchronization overhead, it is advantageous to avoid repeatedly returning rejected employers to the shared set of employers with unfilled positions, since concurrent updates to this set require synchronization. Instead, a rejected employer immediately continues to the next applicant on its preference list. If an applicant accepts a new offer, the displaced employer likewise continues from its next preference.{{r|manne-greedy|liu-bamboo}}
+
+Other optimization techniques include locality-aware data structures, which combine the employer preference array with the applicant rank array to reduce random memory accesses and improve cache efficiency, and advanced synchronization primitives, which resolve contention among simultaneous offers more efficiently. Heterogeneous approaches further improve performance by using the GPU for highly parallel stages and switching to the CPU when few employers remain unmatched, avoiding GPU underutilization during mostly sequential work.{{r|liu-bamboo}}
+
+==Recognition==
+Shapley and Roth were awarded the 2012 [[Nobel Memorial Prize in Economic Sciences]] "for the theory of stable allocations and the practice of [[market design]]". Gale had died in 2008, making him ineligible for the prize.{{r|nobel}}
+
+==See also==
+*[[Deferred-acceptance auction]]
+*[[Stable roommates problem]]
+*[[Kolkata Paise Restaurant Problem]]
+
+==References==
+<references>
+
+<ref name=almost>{{cite journal
+ | last1 = Floréen | first1 = Patrik
+ | last2 = Kaski | first2 = Petteri
+ | last3 = Polishchuk | first3 = Valentin
+ | last4 = Suomela | first4 = Jukka
+ | date = August 2009
+ | doi = 10.1007/s00453-009-9353-9
+ | issue = 1
+ | journal = Algorithmica
+ | pages = 102–118
+ | title = Almost stable matchings by truncating the Gale–Shapley algorithm
+ | volume = 58| arxiv = 0812.4893
+ }}</ref>
+
+<ref name=bergstrom>{{cite journal|last=Bergstrom|first=Theodore C.|date=June 1992|issue=2|journal=[[Journal of Economic Literature]]|jstor=2727713|pages=896–898|title=Review of ''Two-Sided Matching: A Study in Game-Theoretic Modeling and Analysis'' by A. E. Roth and M. A. O. Sotomayor|volume=30}}</ref>
+
+<ref name=carter-price>{{cite book
+ | last1 = Carter | first1 = Michael W.
+ | last2 = Price | first2 = Camille C.
+ | isbn = 9780849322563
+ | page = 102
+ | publisher = CRC Press
+ | title = Operations Research: A Practical Introduction
+ |url=https://books.google.com/books?id=CbFwJLHpX7sC&pg=PA102
+ | year = 2000}}</ref>
+
+<ref name=dubins-freedman>{{cite journal
+ | last1 = Dubins | first1 = L. E. | author1-link = Lester Dubins
+ | last2 = Freedman | first2 = D. A. | author2-link = David A. Freedman
+ | doi = 10.2307/2321753
+ | issue = 7
+ | journal = [[The American Mathematical Monthly]]
+ | mr = 628016
+ | pages = 485–494
+ | title = Machiavelli and the Gale–Shapley algorithm
+ | volume = 88
+ | year = 1981| jstor = 2321753 }}</ref>
+
+<ref name=giagkousi>{{cite thesis |last=Giagkousi |first=Kyriaki |date=March 2021 |title=Gender and Computing Algorithms: The case of Stable Matching |url=https://pergamos.lib.uoa.gr/uoa/dl/object/2940468/file.pdf |degree=Master's |publisher=National and Kapodistrian University of Athens, Department of History and Philosophy of Science and Department of Informatics and Telecommunications |access-date=2023-12-20}}</ref>
+
+<ref name=gale-shapley>{{cite journal |first1=D. |last1=Gale|author1-link=David Gale |first2=L. S. |last2=Shapley|author2-link=Lloyd Shapley |title=College admissions and the stability of marriage |journal=[[The American Mathematical Monthly]] |volume=69 |issue=1 |pages=9–14 |year=1962 |jstor=2312726 |doi=10.2307/2312726 |url=http://www.dtic.mil/get-tr-doc/pdf?AD=AD0251958 |access-date=2019-11-20 |archive-date=2017-09-25 |archive-url=https://web.archive.org/web/20170925172517/http://www.dtic.mil/get-tr-doc/pdf?AD=AD0251958 |url-status=dead }}</ref>
+
+<ref name=gusfield-irving>{{cite book
+ | last1 = Gusfield | first1 = Dan | author1-link = Dan Gusfield
+ | last2 = Irving | first2 = Robert W.
+ | isbn = 9780262515528
+ | page = 6
+ | publisher = MIT Press
+ | title = The Stable Marriage Problem: Structure and Algorithms
+ | year = 1989}}</ref>
+
+<ref name=huang>{{cite conference
+ | last = Huang | first = Chien-Chung
+ | editor1-last = Azar | editor1-first = Yossi
+ | editor2-last = Erlebach | editor2-first = Thomas
+ | contribution = Cheating by men in the Gale-Shapley stable matching algorithm
+ | doi = 10.1007/11841036_39
+ | mr = 2347162
+ | pages = 418–431
+ | publisher = Springer
+ | series = Lecture Notes in Computer Science
+ | title = Algorithms – ESA 2006, 14th Annual European Symposium, Zurich, Switzerland, September 11–13, 2006, Proceedings
+ | volume = 4168
+ | year = 2006}}</ref>
+
+<ref name=jeffe>{{cite book
+ | last = Erickson | first = Jeff
+ | contribution = 4.5 Stable matching
+ | contribution-url=https://jeffe.cs.illinois.edu/teaching/algorithms/book/04-greedy.pdf
+ | access-date = 2023-12-19
+ | date = June 2019
+ | pages = 170–176
+ | publisher = University of Illinois
+ | title = Algorithms}}</ref>
+
+<ref name=knuth>{{cite book
+ | last = Knuth | first = Donald E. | authorlink = Donald Knuth
+ | isbn = 0-8405-0342-3
+ | language = French
+ | mr = 0488980
+ | publisher = Les Presses de l'Université de Montréal
+ | location = Montréal, Quebec
+ | title = Mariages stables et leurs relations avec d'autres problèmes combinatoires
+ |url= https://www-cs-faculty.stanford.edu/~knuth/mariages-stables.pdf
+ | year = 1976}} See in particular Problem 6, pp. 87–94.</ref>
+
+<ref name=kt>{{cite book
+ | last1 = Kleinberg | first1 = Jon | author1-link = Jon Kleinberg
+ | last2 = Tardos | first2 = Éva | author2-link = Éva Tardos
+ | contribution = 2.3 Implementing the stable matching algorithm using lists and arrays
+ | pages = 42–47
+ | publisher = Addison-Wesley
+ | title = Algorithm Design
+ | year = 2006}}</ref>
+
+<ref name=mairson>{{cite journal
+ | last = Mairson | first = Harry | author-link = Harry Mairson
+ | journal = The Brandeis Review
+ | title = The stable marriage problem
+ |url= https://www1.cs.columbia.edu/~evs/intro/stable/writeup.html
+ | volume = 12
+ | year = 1992}}</ref>
+
+<ref name=mathieu>{{cite web|url=https://www.youtube.com/watch?v=wQuXE3wB4s8|first=Claire|last=Mathieu|author-link=Claire Mathieu|title=College admission algorithms in the real world|type=Invited lecture at the European Symposium of Algorithms|year=2018|publisher=Aalto University}}</ref>
+
+<ref name=nobel>{{cite journal
+ | last = Bhattacharjee | first = Yudhijit
+ | date = October 15, 2012
+ | journal = [[Science (journal)|Science]]
+ | title = Economics Nobel honors matchmaking finesse | volume = 338
+ | issue = 6105
+ | page = 314
+ | doi = 10.1126/science.338.6105.314
+ | pmid = 23087221}}</ref>
+
+<ref name=roth>{{cite journal
+ | last = Roth | first = Alvin E. | author-link = Alvin E. Roth
+ | date = February 2003
+ | doi = 10.1001/jama.289.7.909
+ | issue = 7
+ | journal = [[JAMA]]
+ | pages = 909–912
+ | title = The origins, history, and design of the resident match
+ | volume = 289}}</ref>
+
+<ref name=sisterhood>{{cite journal
+ | last1 = Gonczarowski | first1 = Yannai A.
+ | last2 = Friedgut | first2 = Ehud
+ | date = April 2013
+ | doi = 10.37236/3267
+ | issue = 2
+ | journal = [[Electronic Journal of Combinatorics]]
+ | pages = P12:1–P12:18
+ | title = Sisterhood in the Gale–Shapley matching algorithm
+ | volume = 20| doi-access = free
+ | arxiv = 1104.2217
+ }}</ref>
+
+<ref name=wagner>{{cite journal
+ | last = Wagner | first = Roy
+ | date = April 2009
+ | doi = 10.1177/0306312708099443
+ | issue = 2
+ | journal = [[Social Studies of Science]]
+ | pages = 289–308
+ | title = Mathematical marriages: Intercourse between mathematics and semiotic choice
+ | volume = 39| hdl = 20.500.11850/121579
+ | hdl-access = free
+ }}</ref>
+
+<ref name=manne-greedy>{{cite conference
+ | last1 = Manne | first1 = Fredrik
+ | last2 = Naim | first2 = Md.
+ | last3 = Lerring | first3 = Håkon
+ | last4 = Halappanavar | first4 = Mahantesh
+ | title = On Stable Marriages and Greedy Matchings
+ | book-title = 2016 Proceedings of the Seventh SIAM Workshop on Combinatorial Scientific Computing
+ | pages = 92–101
+ | publisher = SIAM
+ | year = 2016
+ | doi = 10.1137/1.9781611974690.ch10
+| hdl = 1956/16754
+ | hdl-access = free
+ }}</ref>
+
+<ref name=liu-bamboo>{{cite conference
+ | last1 = Liu | first1 = Jiaxin
+ | last2 = Lee | first2 = Rubao
+ | last3 = Xia | first3 = Cathy H.
+ | last4 = Zhang | first4 = Xiaodong
+ | title = A Stable Marriage Requires a Shared Residence with Low Contention and Mutual Complementarity
+ | book-title = 2025 34th International Conference on Parallel Architectures and Compilation Techniques (PACT)
+ | year = 2025
+ | publisher = IEEE
+ | url = https://xiaodongzhang1911.github.io/Zhang-papers/TR-25-4.pdf
+}}</ref>
+
+</references>
+
+{{DEFAULTSORT:Gale-Shapley algorithm}}
+[[Category:Stable matching]]
+[[Category:Lloyd Shapley]]
+[[Category:Combinatorial algorithms]]

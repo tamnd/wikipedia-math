@@ -1,0 +1,152 @@
+<!-- wikipedia: en
+     page: 23632960
+     title: Sardinas–Patterson algorithm
+     revision: 1352985115
+     timestamp: 2026-05-07T13:09:08Z
+     history: https://en.wikipedia.org/w/index.php?curid=23632960&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1352985115 -->
+In [[coding theory]], the '''Sardinas–Patterson algorithm''' is a classical algorithm for determining in [[polynomial time]] whether a given [[variable-length code]] is uniquely decodable, named after August Albert Sardinas and George W. Patterson, who published it in 1953.{{sfnp|Sardinas|Patterson|1953}} The algorithm carries out a systematic search for a string which admits two different decompositions into codewords. As [[Donald Knuth|Knuth]] reports, the algorithm was rediscovered about ten years later in 1963 by [[Robert W. Floyd|Floyd]], despite the fact that it was at the time already well known in coding theory.<ref>Knuth (2003), p. 2</ref>
+
+==Idea of the algorithm==
+Consider the code  <math>\{\, \texttt{a} \mapsto \texttt{1}, \texttt{b} \mapsto \texttt{011}, \texttt{c}\mapsto \texttt{01110}, \texttt{d}\mapsto \texttt{1110}, \texttt{e}\mapsto \texttt{10011}\,\}</math>. This code, which is based on an example by Berstel,<ref>Berstel et al. (2009), Example 2.3.1 p. 63</ref> is an example of a code which is not uniquely decodable, since the string
+
+:011101110011
+
+can be interpreted as the sequence of codewords
+
+:{{mono|01110 – 1110 – 011}},
+
+but also as the sequence of codewords
+
+:{{mono|011 – 1 – 011 – 10011}}.
+
+Two possible decodings of this encoded string are thus given by {{mono|cdb}} and {{mono|babe}}.
+
+In general, a codeword can be found by the following idea: In the first round, we choose two codewords <math>x_1</math> and <math>y_1</math> such that <math>x_1</math> is a [[Prefix (computer science)|prefix]] of <math>y_1</math>, that is,
+<math>x_1w = y_1</math> for some "dangling suffix" <math>w</math>. If one tries first <math>x_1=\texttt{011}</math> and <math>y_1=\texttt{01110}</math>, the dangling [[Suffix (computer science)|suffix]] is <math>\texttt{w} = \texttt{10}</math>. If we manage to find two sequences <math>x_2,\ldots,x_p</math> and <math>y_2,\ldots,y_q</math> of codewords such that
+<math>x_2\cdots x_p = wy_2\cdots y_q</math>, then we are finished: For then the string <math>x = x_1x_2\cdots x_p</math> can alternatively be decomposed as <math>y_1y_2\cdots y_q</math>, and we have found the desired string having at least two different decompositions into codewords.
+
+In the second round, we try out two different approaches: the first trial is to look for a codeword that has ''w'' as prefix. Then we obtain a new dangling suffix ''w'', with which we can continue our search. If we eventually encounter a dangling suffix that is itself a codeword (or the [[empty word]]), then the search will terminate, as we know there exists a string with two decompositions. The second trial is to seek for a codeword that is itself a prefix of ''w''. In our example, we have <math>w = \texttt{10}</math>, and the sequence {{mono|1}} is a codeword. We can thus also continue with <math>w = \texttt{0}</math> as the new dangling suffix.
+
+==Precise description of the algorithm==
+
+{| align=right class="wikitable collapsible collapsed"
+! colspan=8 | Ambiguity from result
+|-
+! 1 || 1 || 1 || 0 || 0 || 1 || 1 ||
+|-
+| COLSPAN=4 | d || COLSPAN=3 | b ||
+|-
+| a || COLSPAN=3 | F || COLSPAN=3 | b || since d = aF
+|-
+| a || a || COLSPAN=2 | H || COLSPAN=3 | b || since F = aH
+|-
+| a || a || COLSPAN=5 | e || since e = Hb
+|-
+! 1 || 1 || 1 || 0 || 0 || 1 || 1 ||
+|}
+{| align="right" class="wikitable collapsible collapsed"
+! colspan=2 | Example run
+|-
+! COLSPAN=2 | <MATH>C</MATH>:
+|-
+| {{mono|a}} || {{mono|1}}
+|-
+| {{mono|b}} || {{mono|011}}
+|-
+| {{mono|c}} || {{mono|01110}}
+|-
+| {{mono|d}} || {{mono|1110}}
+|-
+| {{mono|e}} || {{mono|10011}}
+|-
+! COLSPAN=2 | <MATH>S_1</MATH>:
+|-
+| F=a<SUP>-1</SUP>d || {{mono|110}}
+|-
+| G=a<SUP>-1</SUP>e || {{mono|0011}}
+|-
+| H=b<SUP>-1</SUP>c || {{mono|10}}
+|-
+! COLSPAN=2 | <MATH>S_2</MATH>:
+|-
+| H=a<SUP>-1</SUP>F || {{mono|10}}
+|-
+| I=a<SUP>-1</SUP>H || {{mono|0}}
+|-
+| {{color|#ff0000|2= b=H<SUP>-1</SUP>e}} || {{mono|{{color|#ff0000|011}}}}    
+|-
+| J=I<SUP>-1</SUP>b || {{mono|11}}
+|-
+| K=I<SUP>-1</SUP>c || {{mono|1110}}
+|}
+
+The algorithm is described most conveniently using [[Quotient_of_a_formal_language|quotients]] of [[formal language]]s. In general, for two sets of strings ''D'' and ''N'', the (left) quotient <math>N^{-1}D</math> is defined as the residual words obtained from ''D'' by removing some prefix in ''N''. Formally, <math>N^{-1}D = \{\,y \mid xy\in D ~\textrm{ and }~ x \in N \,\}</math>. Now let <math>C</math> denote the (finite) set of codewords in the given code.
+
+The algorithm proceeds in rounds, where we maintain in each round not only one dangling suffix as described above, but the (finite) set of all potential dangling suffixes. Starting with round <math>i=1</math>, the set of potential dangling suffixes will be denoted by <math>S_i</math>. The sets <math>S_i</math> are defined [[recursive definition|inductively]] as follows:
+
+<math>S_1 = C^{-1}C \setminus \{\varepsilon\}</math>. Here, the symbol <math>\varepsilon</math> denotes the [[empty word]].
+
+<math>S_{i+1} = C^{-1}S_i\cup S_i^{-1}C</math>, for all <math>i\ge 1</math>.
+
+The algorithm computes the sets <math>S_i</math> in increasing order of <math>i</math>. As soon as one of the <math>S_i</math> contains a word from ''C'' or the empty word, then the algorithm terminates and answers that the given code is not uniquely decodable. Otherwise, once a set <math>S_i</math>
+equals a previously encountered set <math>S_j</math> with <math>j<i</math>, then the algorithm would enter in principle an endless loop. Instead of continuing endlessly, it answers that the given code is uniquely decodable.
+
+See the left box for an example run of the algorithm on the given code; lower and upper case letters denote code and "dangling suffix" strings, respectively. During the construction of <math>S_2</math>, the code word {{mono|b}} is encountered (shown in red), and the algorithm stops. The right box indicates how the example string 1110011 can be shown to have multiple encodings ({{mono|db}}, {{mono|aae}}), using the equations that were collected during the algorithm run.
+
+==Termination and correctness of the algorithm==
+Since all sets <math>S_i</math> are sets of suffixes of a finite set of codewords, there are only finitely many different candidates for <math>S_i</math>. Since visiting one of the sets for the second time will cause the algorithm to stop, the algorithm cannot continue endlessly and thus must always [[wikt:terminate|terminate]]. More precisely, the total number of dangling suffixes that the algorithm considers is at most equal to the total of the lengths of the codewords in the input, so the algorithm runs in [[polynomial time]] as a function of this input length. By using a [[suffix tree]] to speed the comparison between each dangling suffix and the codewords, the time for the algorithm can be bounded by O(''nk''), where ''n'' is the total length of the codewords and ''k'' is the number of codewords.{{sfnp|Rodeh|1982}} The algorithm can be implemented using a [[pattern matching]] machine. {{sfnp|Apostolico|Giancarlo|1984}} The algorithm can also be implemented to run on a [[nondeterministic Turing machine]] that uses only [[NL (complexity)|logarithmic space]]; the problem of testing unique decipherability is [[NL-complete]], so this space bound is optimal.<ref>{{harvtxt|Rytter|1986}} proves that the complementary problem, of testing for the existence of a string with two decodings, is NL-complete, and therefore that unique decipherability is co-NL-complete. The equivalence of NL-completeness and co-NL-completeness follows from the [[Immerman–Szelepcsényi theorem]].</ref>
+
+A proof that the algorithm is [[correctness (computer science)|correct]], i.e. that it always gives the correct answer, is found in the textbooks by [[Arto Salomaa|Salomaa]]<ref>Salomaa (1981)</ref> and by Berstel et al.<ref>Berstel et al. (2009), Chapter 2.3</ref>
+
+==See also==
+
+*[[Kraft's inequality]] in some cases provides a quick way to exclude the possibility that a given code is uniquely decodable.
+*[[Prefix code]]s and [[block code]]s are important classes of codes which are uniquely decodable by definition.
+*[[Timeline of information theory]]
+* [[Post's correspondence problem]] is similar, yet undecidable.
+
+==Notes==
+
+<references/>
+
+==References==
+* {{cite book | last1=Berstel | first1=Jean | last2=Perrin | first2=Dominique | last3=Reutenauer | first3=Christophe | title=Codes and automata | series=Encyclopedia of Mathematics and its Applications | volume=129 | location=Cambridge | publisher=Cambridge University Press | year=2010 | isbn=978-0-521-88831-8 | url=http://www-igm.univ-mlv.fr/~berstel/LivreCodes/Codes.html | zbl=1187.94001 }}
+* {{cite book | last1=Berstel | first1=Jean | last2=Reutenauer | first2=Christophe | title=Noncommutative rational series with applications | series=Encyclopedia of Mathematics and Its Applications | volume=137 | location=Cambridge | publisher=[[Cambridge University Press]] | year=2011 | isbn=978-0-521-19022-0 | zbl=1250.68007 }}
+* {{cite journal | first=Donald E. | last=Knuth | authorlink=Donald Knuth | title=Robert W Floyd, In Memoriam | journal=SIGACT News | volume=34 | number=4 | pages=3–13 | date=December 2003 | doi=10.1145/954092.954488| s2cid=35605565 }}
+*{{cite journal | last = Rodeh | first = M.
+ | doi = 10.1109/TIT.1982.1056535
+ | issue = 4
+ | journal = IEEE Transactions on Information Theory
+ | pages = 648–651
+ | title = A fast test for unique decipherability based on suffix trees (Corresp.)
+ | volume = 28
+ | year = 1982}}.
+*{{cite journal | last1 = Apostolico | first1 = A. | last2 = Giancarlo | first2 = R.
+ | volume = 18
+ | issue = 3
+ | journal = Information Processing Letters
+ | pages = 155–158
+ | title = Pattern matching machine implementation of a fast test for unique decipherability
+ | year = 1984 | doi=10.1016/0020-0190(84)90020-6}}.
+*{{cite journal | last = Rytter | first = Wojciech
+ | doi = 10.1016/0020-0190(86)90121-3
+ | issue = 1
+ | journal = Information Processing Letters
+ | mr = 853618
+ | pages = 1–3
+ | title = The space complexity of the unique decipherability problem
+ | volume = 23
+ | year = 1986}}.
+* {{cite book | first=Arto | last=Salomaa | authorlink=Arto Salomaa | title=Jewels of Formal Language Theory | publisher=Pitman Publishing | isbn=0-273-08522-0 | year=1981 | zbl=0487.68064 }}
+*{{Citation|first1=August Albert|last1=Sardinas|first2=George W.|last2=Patterson|contribution=A necessary and sufficient condition for the unique decomposition of coded messages|title=Convention Record of the [[Institute of Radio Engineers|I.R.E.]], 1953 National Convention, Part 8: Information Theory|pages=104–108|year=1953}}.
+
+;Further reading
+
+* [[Robert G. Gallager]]: ''Information Theory and Reliable Communication.'' Wiley, 1968
+
+{{DEFAULTSORT:Sardinas-Patterson algorithm}}
+[[Category:Algorithms]]
+[[Category:Coding theory]]
+[[Category:Data compression]]

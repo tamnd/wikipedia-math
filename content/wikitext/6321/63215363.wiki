@@ -1,0 +1,234 @@
+<!-- wikipedia: en
+     page: 63215363
+     title: Parallel single-source shortest path algorithm
+     revision: 1315062833
+     timestamp: 2025-10-04T17:30:59Z
+     history: https://en.wikipedia.org/w/index.php?curid=63215363&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1315062833 -->
+{{Short description|Computational problem of graph theory}}
+A central problem in algorithmic [[graph theory]] is the [[shortest path problem]]. One of the generalizations of the shortest path problem is known as the '''single-source-shortest-paths (SSSP)''' problem, which consists of finding the shortest paths from a source vertex <math>s</math> to all other vertices in the graph. There are classical [[sequential algorithm]]s which solve this problem, such as [[Dijkstra's algorithm]]. In this article, however, we present two [[parallel algorithm]]s solving this problem.
+
+Another variation of the problem is the all-pairs-shortest-paths (APSP) problem, which also has parallel approaches: [[Parallel all-pairs shortest path algorithm]].
+
+== Problem definition ==
+Let <math>G=(V,E)</math> be a directed graph with <math>|V|=n</math> nodes and <math>|E|=m</math> edges. Let <math>s</math> be a distinguished vertex (called "source") and <math>c</math> be a function assigning a non-negative real-valued weight to each edge. The goal of the single-source-shortest-paths problem is to compute, for every vertex <math>v</math> reachable from <math>s</math>, the weight of a minimum-weight path from <math>s</math> to <math>v</math>, denoted by <math>\operatorname{dist}(s,v)</math> and abbreviated <math>\operatorname{dist}(v)</math>. The weight of a path is the sum of the weights of its edges. We set <math>\operatorname{dist}(u,v):=\infty</math> if <math>v</math> is unreachable from <math>u</math>.<ref name=":0">{{Cite journal|last1=Meyer|first1=U.|last2=Sanders|first2=P.|date=2003-10-01|title=Δ-stepping: a parallelizable shortest path algorithm|journal=Journal of Algorithms|series=1998 European Symposium on Algorithms|volume=49|issue=1|pages=114–152|doi=10.1016/S0196-6774(03)00076-2|issn=0196-6774|doi-access=free}}</ref>
+
+Sequential shortest path algorithms commonly apply iterative labeling methods based on maintaining a tentative distance for all nodes; <math>\operatorname{tent}(v)</math> is always <math>\infty</math> or the weight of some path from <math>s</math> to <math>v</math> and hence an upper bound on <math>\operatorname{dist}(v)</math>. Tentative distances are improved by performing edge relaxations, i.e., for an edge <math>(v,w)\in E</math>  the algorithm sets <math>\operatorname{tent}(w):=\min\{\operatorname{tent}(w), \operatorname{tent}(v)+c(v,w)\}</math>.<ref name=":0" />
+
+For all parallel algorithms we will assume a [[Parallel random-access machine|PRAM]] model with concurrent reads and concurrent writes.
+
+== Delta stepping algorithm ==
+The delta stepping algorithm is a label-correcting algorithm, which means the tentative distance of a vertex can be corrected several times via edge relaxations until the last step of the algorithm, when all tentative distances are fixed.
+
+The algorithm maintains eligible nodes with tentative distances in an array of buckets each of which represents a distance range of size <math>\Delta</math>. During each phase, the algorithm removes all nodes of the first nonempty bucket and relaxes all outgoing edges of weight at most <math>\Delta</math>. Edges of a higher weight are only relaxed after their respective starting nodes are surely settled.<ref name=":0" /> The parameter  <math>\Delta</math> is a positive real number that is also called the "step width" or "bucket width".<ref name=":0" />
+
+Parallelism is obtained by concurrently removing all nodes of the first nonempty bucket and relaxing their outgoing light edges in a single phase. If a node <math>v</math> has been removed from the current bucket <math>B[i]</math> with non-final distance value then, in some subsequent phase, <math>v</math> will eventually be reinserted into <math>B[i]</math> , and the outgoing light edges of <math>v</math>  will be re-relaxed. The remaining heavy edges emanating from all nodes that have been removed from <math>B[i]</math> so far are relaxed once and for all when <math>B[i]</math> finally remains empty. Subsequently, the algorithm searches for the next nonempty bucket and proceeds as described above.<ref name=":0" />
+
+The maximum shortest path weight for the source node <math>s</math> is defined as <math>L(s):=\max\{\operatorname{dist}(s,v) : \operatorname{dist}(s,v)<\infty\}</math>, abbreviated <math>L</math>.<ref name=":0" /> Also, the size of a path is defined to be the number of edges on the path.
+
+We distinguish light edges from heavy edges, where light edges have weight at most <math>\Delta</math>  and heavy edges have weight bigger than <math>\Delta</math> .
+
+Following is the delta stepping algorithm in pseudocode:
+ 1  '''foreach''' <math>v \in V</math> '''do''' <math>\operatorname{tent}(v):=\infty</math>
+ 2  <math>relax(s, 0)</math>;                                                    (*Insert source node with distance 0*)
+ 3  '''while''' <math>\lnot isEmpty(B)</math> '''do'''                           (*A phase: Some queued nodes left (a)*)
+ 4      <math>i:=\min\{j\geq 0: B[j]\neq \emptyset\}</math>                      (*Smallest nonempty bucket (b)*)
+ 5      <math>R:=\emptyset</math>                                                (*No nodes deleted for bucket B[i] yet*)
+ 6      '''while''' <math>B[i]\neq \emptyset</math> '''do'''                     (*New phase (c)*)
+ 7          <math>Req:=findRequests(B[i],light)</math>                           (*Create requests for light edges (d)*)
+ 8          <math>R:=R\cup B[i]</math>                                           (*Remember deleted nodes (e)*)
+ 9          <math>B[i]:=\emptyset</math>                                         (*Current bucket empty*)
+ 10         <math>relaxRequests(Req)</math>                                      (*Do relaxations, nodes may (re)enter B[i] (f)*)
+ 11     <math>Req:=findRequests(R,heavy)</math>                                  (*Create requests for heavy edges (g)*)
+ 12     <math>relaxRequests(Req)</math>                                          (*Relaxations will not refill B[i] (h)*)
+ 13
+ 14 '''function''' <math>findRequests(V',kind:\{\text{light}, \text{heavy}\})</math>:set of Request
+ 15     '''return''' <math>\{(w, \operatorname{tent}(v)+c(v,w)): v\in V' \land (v,w) \in E_\text{kind}\}</math>
+ 16
+ 17 '''procedure''' <math>relaxRequests(Req)</math>
+ 18     '''foreach''' <math>(w, x)\in Req</math> '''do''' <math>relax(w,x)</math>
+ 19
+ 20 '''procedure''' <math>relax(w,x)</math>                                             (*Insert or move w in B if <math>x<\operatorname{tent}(w)</math>*)
+ 21     '''if''' <math>x < \operatorname{tent}(w)</math> '''then'''
+ 22         <math>B[\lfloor \operatorname{tent}(w)/\Delta\rfloor]:=B[\lfloor \operatorname{tent}(w)/\Delta\rfloor]\setminus \{w\}      </math>                      (*If in, remove from old bucket*)
+ 23         <math>B[\lfloor x/\Delta\rfloor]:=B[\lfloor x/\Delta\rfloor]\cup \{w\}      </math>                                 (*Insert into new bucket*)
+ 24         <math>\operatorname{tent}(w):=x      </math>
+
+=== Example ===
+[[File:Delta_stepping_example_graph.png|alt=|thumb|300x300px|Example graph]]
+Following is a step by step description of the algorithm execution for a small example graph. The source vertex is the vertex A and <math>\Delta</math> is equal to 3.
+
+At the beginning of the algorithm, all vertices except for the source vertex A have infinite tentative distances.
+
+Bucket <math>B[0]</math> has range <math>[0,2]</math>, bucket <math>B[1]</math> has range <math>[3,5]</math> and bucket <math>B[2]</math> has range <math>[6,8]</math>.
+
+The bucket <math>B[0]</math> contains the vertex A. All other buckets are empty.
+{| class="wikitable"
+!Node
+!A
+!B
+!C
+!D
+!E
+!F
+!G
+|-
+|Tentative distance
+|0
+|<math>\infty</math>
+|<math>\infty</math>
+|<math>\infty</math>
+|<math>\infty</math>
+|<math>\infty</math>
+|<math>\infty</math>
+|}
+The algorithm relaxes all light edges incident to <math>B[0]</math>, which are the edges connecting A to B, G and E.
+
+The vertices B,G and E are inserted into bucket <math>B[1]</math>. Since <math>B[0]</math> is still empty, the heavy edge connecting A to D is also relaxed.
+{| class="wikitable"
+!Node
+!A
+!B
+!C
+!D
+!E
+!F
+!G
+|-
+|Tentative distance
+|0
+|3
+|<math>\infty</math>
+|5
+|3
+|<math>\infty</math>
+|3
+|}
+Now the light edges incident to <math>B[1]</math> are relaxed. The vertex C is inserted into bucket <math>B[2]</math>. Since now <math>B[1]</math> is empty, the heavy edge connecting E to F can be relaxed.
+{| class="wikitable"
+!Node
+!A
+!B
+!C
+!D
+!E
+!F
+!G
+|-
+|Tentative distance
+|0
+|3
+|6
+|5
+|3
+|8
+|3
+|}
+On the next step, the bucket <math>B[2]</math> is examined, but doesn't lead to any modifications to the tentative distances.
+
+The algorithm terminates.
+
+=== Runtime ===
+As mentioned earlier, <math>L</math> is the maximum shortest path weight.
+
+Let us call a path with total weight at most <math>\Delta</math> and without edge repetitions a <math>\Delta</math>-path.
+
+Let <math>C_\Delta</math> denote the set of all node pairs <math>\langle u,v \rangle</math> connected by some <math>\Delta</math>-path <math>(u,\dots, v)</math>  and let <math>n_\Delta:=|C_{\Delta}|</math>. Similarly, define <math>C_{\Delta+}</math> as the set of triples <math>\langle u,v',v \rangle</math> such that <math>\langle u,v' \rangle \in C_\Delta</math> and <math>(v',v)</math> is a light edge and let <math>m_\Delta:=|C_{\Delta+}|</math>.
+
+The sequential delta-stepping algorithm needs at most<math>\mathcal{O} (n+m + n_\Delta + m_\Delta + L/\Delta)</math> operations. A simple parallelization runs in time <math>\mathcal{O} \left(\frac{L}{\Delta}\cdot d\ell_\Delta \log n\right)</math> .<ref name=":0" />
+
+If we take <math>\Delta = \Theta(1/d)</math> for graphs with maximum degree <math>d</math> and random edge weights uniformly distributed in <math>[0,1]</math>, the sequential version of the algorithm needs <math>\mathcal{O}(n+m+dL)</math> total average-case time and a simple parallelization takes on average <math>\mathcal{O}(d^2 L \log^2n)</math>.<ref name=":0" />
+
+=== Graph 500 ===
+The third computational kernel of the [[Graph500|Graph 500]] benchmark runs a single-source shortest path computation.<ref>{{Cite web|url=https://graph500.org/?page_id=12#sec-7|title=Graph 500|last=|first=|date=9 March 2017|website=|archive-url=|archive-date=|access-date=}}</ref> The reference implementation of the Graph 500 benchmark uses the delta stepping algorithm for this computation.
+
+== Radius stepping algorithm ==
+For the radius stepping algorithm, we must assume that our graph <math>G</math> is undirected.
+
+The input to the algorithm is a weighted, undirected graph, a source vertex, and a target radius value for every vertex, given as a function <math>r : V \rightarrow \mathbb{R}_+</math>.<ref name=":1">{{Cite book|last1=Blelloch|first1=Guy E.|last2=Gu|first2=Yan|last3=Sun|first3=Yihan|last4=Tangwongsan|first4=Kanat|title=Proceedings of the 28th ACM Symposium on Parallelism in Algorithms and Architectures |chapter=Parallel Shortest Paths Using Radius Stepping |date=2016|pages=443–454|location=New York, New York, USA|publisher=ACM Press|doi=10.1145/2935764.2935765|isbn=978-1-4503-4210-0|doi-access=free}}</ref> The algorithm visits vertices in increasing distance from the source <math>s</math>.  On each step <math>i</math>, the Radius-Stepping increments the radius centered at <math>s</math> from <math>d_{i-1}</math> to <math>d_i</math> , and settles all vertices <math>v</math> in the annulus <math>d_{i-1}<d(s,v)\leq d_i</math>.<ref name=":1" />
+
+Following is the radius stepping algorithm in pseudocode:
+     '''Input''': A graph <math>G=(V,E,w)</math>, vertex radii <math>r(\cdot)</math>, and a source node <math>s</math>.
+     '''Output''': The graph distances <math>\delta(\cdot)</math> from <math>s</math>.
+  1  <math>\delta(\cdot)\leftarrow +\infty</math>, <math>\delta(s)\leftarrow 0</math>
+  2  '''foreach''' <math>v \in N(s)</math> '''do''' <math>\delta(v)\leftarrow w(s,v)</math>, <math>S_0\leftarrow \{s\}</math>, <math>i \leftarrow 1</math>
+  3  '''while''' <math>|S_{i-1}|<|V|</math> '''do'''
+  4      <math>d_i\leftarrow \min_{v\in V\setminus S_{i-1}}\{\delta(v) + r(v)\}</math>
+  5      '''repeat'''   
+  6          '''foreach''' <math>u \in V\setminus S_{i-1}</math> s.t <math>\delta(u) \leq d_i</math> '''do'''
+  7              '''foreach''' <math>v \in N(u)\setminus S_{i-1}</math> '''do'''
+  8                  <math>\delta(v) \leftarrow \min\{\delta(v), \delta(u)+w(u,v)\}</math>
+  9      '''until''' no <math>\delta(v)\leq d_i</math> was updated
+  10     ''<math>S_i=\{v\;|\;\delta(v)\leq d_i\}</math>''
+  11     <math>i=i+1</math>
+  12 '''return''' <math>\delta(\cdot)</math>
+For all <math>S\subseteq V</math>, define <math>N(S)=\bigcup_{u\in S}\{v\in V\mid d(u,v)\in E\}</math> to be the '''neighbor set''' of S. During the execution of standard [[breadth-first search]] or [[Dijkstra's algorithm]], the '''frontier''' is the neighbor set of all visited vertices.<ref name=":1" />
+
+In the Radius-Stepping algorithm, a new round distance <math>d_i</math> is decided on each round with the goal of bounding the number of substeps. The algorithm takes a radius <math>r(v)</math> for each vertex and selects a <math>d_i</math> on step <math>i</math> by taking the minimum <math>\delta(v) + r(v)</math> over all <math>v</math> in the frontier (Line 4).
+
+Lines 5-9 then run the [[Bellman–Ford algorithm|Bellman-Ford]] substeps until all vertices with radius less than <math>d_i</math> are settled. Vertices within <math>d_i
+</math> are then added to the visited set <math>S_i
+</math>.<ref name=":1" />
+
+=== Example ===
+[[File:Delta_stepping_example_graph.png|alt=|thumb|300x300px|Example graph]]
+Following is a step by step description of the algorithm execution for a small example graph. The source vertex is the vertex A and the radius of every vertex is equal to 1.
+
+At the beginning of the algorithm, all vertices except for the source vertex A have infinite tentative distances, denoted by <math>\delta</math> in the pseudocode.
+
+All neighbors of A are relaxed and <math>S_0=\{A\}</math>.
+{| class="wikitable"
+!Node
+!A
+!B
+!C
+!D
+!E
+!F
+!G
+|-
+|Tentative distance
+|0
+|3
+|<math>\infty</math>
+|5
+|3
+|<math>\infty</math>
+|3
+|}
+The variable <math>d_1</math> is chosen to be equal to 4 and the neighbors of the vertices B, E and G are relaxed. <math>S_1=\{A,B,E,G\}</math>
+{| class="wikitable"
+!Node
+!A
+!B
+!C
+!D
+!E
+!F
+!G
+|-
+|Tentative distance
+|0
+|3
+|6
+|5
+|3
+|8
+|3
+|}
+The variable <math>d_2</math> is chosen to be equal to 6 and no values are changed. <math>S_2=\{A,B,C,D,E,G\}</math>.
+
+The variable <math>d_3</math> is chosen to be equal to 9 and no values are changed. <math>S_3=\{A,B,C,D,E,F, G\}</math>.
+
+The algorithm terminates.
+
+=== Runtime ===
+After a preprocessing phase, the radius stepping algorithm can solve the SSSP problem in <math>\mathcal{O}(m\log n)</math> work and  <math>\mathcal{O}(\frac{n}{p}\log n\log pL)</math> depth, for <math>p\leq \sqrt{n}</math>. In addition, the preprocessing phase takes  <math>\mathcal{O}(m\log n + np^2)</math> work and  <math>\mathcal{O}(p^2)</math> depth, or <math>\mathcal{O}(m\log n + np^2\log n)</math> work and  <math>\mathcal{O}(p\log p)</math> depth.<ref name=":1" />
+
+== References ==
+{{Reflist}}
+<references responsive="1"></references>
+
+
+[[Category:Graph algorithms]]

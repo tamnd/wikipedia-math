@@ -1,0 +1,82 @@
+<!-- wikipedia: en
+     page: 48777793
+     title: Boolean satisfiability algorithm heuristics
+     revision: 1373578848
+     timestamp: 2026-09-06T18:55:24Z
+     history: https://en.wikipedia.org/w/index.php?curid=48777793&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373578848 -->
+In [[computer science]], there are certain classes of algorithms ([[Heuristic (computer science)|heuristics]]) that solves types of the [[Boolean satisfiability problem]] despite there being [[P versus NP problem|no known efficient algorithm]] in the general case.
+
+== Overview ==
+
+The Boolean satisfiability (or SAT) problem can be stated formally as: given a Boolean expression <Math>B</Math> with variables <Math>V = \{v_0, \ldots , v_n\}</Math>, finding an assignment <Math>V^*</Math> of the variables such that <Math>B(V^*)</Math> is true. It is seen as the canonical [[NP-complete]] problem. Although no known algorithm is known to solve SAT in polynomial time, there are classes of SAT problems which do have efficient algorithms that solve them.
+
+The classes of problems amenable to SAT heuristics arise from many practical problems in [[AI planning]], [[Circuit satisfiability problem|circuit testing]], and [[software verification]].<ref>Aloul, Fadi A., "On Solving Optimization Problems Using Boolean Satisfiability", American University of Sharjah (2005), http://www.aloul.net/Papers/faloul_icmsao05.pdf</ref><ref name = "princeton">Zhang, Lintao. Malik, Sharad. "The Quest for Efficient Boolean Satisfiability Solvers", Department of Electrical Engineering, Princeton University. https://www.princeton.edu/~chaff/publication/cade_cav_2002.pdf</ref> Research on constructing efficient SAT solvers has been based on various principles such as [[Resolution (logic)|resolution]], search, local search and [[random walk]], binary decisions, and Stalmarck's algorithm.<ref name = "princeton"/> Some of these algorithms are [[Deterministic algorithm|deterministic]], while others may be [[Randomized algorithm|stochastic]].
+
+As there exist polynomial-time algorithms to convert any [[Boolean expression]] to [[conjunctive normal form]] (such as [[Tseytin transformation|Tseitin's algorithm]]), posing SAT problems in CNF does not change their computational difficulty. SAT problems are canonically expressed in CNF because CNF has certain properties that can help prune the search space and speed up the search process.<ref name = "princeton"/>
+
+== Branching heuristics in conflict-driven algorithms ==
+
+One of the cornerstone SAT-solver algorithms is the [[DPLL algorithm]].<ref name = "princeton"/> The algorithm works by iteratively assigning free variables, and when the algorithm encounters a bad assignment, it backtracks to a previous iteration and chooses a different assignment of variables. It relies on a ''branching heuristic'' to pick the next free variable assignment; the branching algorithm effectively makes choosing the variable assignment into a decision tree. Different implementations of this heuristic produce markedly different decision trees, and thus have significant effect on the efficiency of the solver.
+
+=== Early branching heuristics ===
+
+Heuristics such as ''Bohm's heuristic'', ''maximum occurrences on minimum-sized clauses'', and the ''Jeroslow-Wang heuristic'' can be regarded as [[greedy algorithms]]. Their basic premise is to choose a free-variable assignment that will satisfy the most already-unsatisfied clauses in the Boolean expression. However, as Boolean expressions get larger, more complicated, or more structured, these heuristics fail to capture useful information about these problems that could improve efficiency; they often get stuck in local maxima or do not consider the distribution of variables. Additionally, larger problems require more processing, as the operation of counting free variables in unsatisfied clauses dominates the run time.
+
+=== Variable state-independent decaying sum === 
+An influential heuristic called ''variable state-independent decaying sum'' (VSIDS) attempts to score each variable. VSIDS grades variables by their presence in conflicts and learned clauses, and selects the highest-graded variable to make the next decision from. To prioritize recent conflicts over older ones, it periodically decays each variable's score by some constant.
+
+VSIDS is quite effective because the scores of variable phases are independent of the current variable assignment, so [[backtracking]] is much easier. Further, VSIDS guarantees that each variable assignment satisfies the greatest number of recently searched segments of the Boolean expression.
+
+== Stochastic solvers ==
+
+For [[MAX-SAT]], the version of SAT in which the number of satisfied clauses is maximized, solvers also use probabilistic algorithms.<ref>Sung, Phil. "Maximum Satisfiability" (2006) http://math.mit.edu/~goemans/18434S06/max-sat-phil.pdf</ref> If we are given a Boolean expression <Math>B</Math> with variables <math>V = \{v_0, \ldots , v_n\}</math>, and we set each variable randomly, then for each clause <math>c</math>, with <math>|c|</math> variables, the chance of <math>B</math> being satisfied by a particular variable assignment is 
+:<math>\operatorname{Pr}(c\text{ is satisfied}) = 1 - 2^{-|c|}.</math>
+This is  because each variable in <Math>c</Math> has probability {{sfrac|1|2}} of being satisfied, and we only need one variable in <Math>c</Math> to be satisfied. This works for all <Math> |c| \geq 1</Math>, so 
+: <math>\operatorname{Pr}(c\text{ is satisfied}) = 1 - 2^{-|c|} \geq \frac{1}{2}.</math>
+
+Now we show that randomly assigning variable values is a {{sfrac|1|2}}-[[approximation algorithm]], which means that is an optimal approximation algorithm unless P = NP. Suppose we are given a Boolean expression <math>B = \{c_i\}_{i=1}^n</math> and
+
+: <math>\delta_{ij} = \begin{cases}
+0 &\text{if } c_i \text{ is satisfied},   \\
+1 &\text{if } c_i \text{ is not satisfied}. \end{cases}</math>
+
+Then we have that 
+: <math>
+\begin{align}
+E[\text{Num Clauses Satisfied}] & = \sum_i E[\delta_i] = \sum_{i} 1-2^{-|c_i|} \\
+& \geq \sum_i \frac{1}{2} = \frac{1}{2}|i| = \frac{1}{2} OPT.
+\end{align}
+</math>
+
+This algorithm cannot be further optimized by the [[PCP theorem]] unless P = NP.
+
+Other stochastic SAT solvers, such as [[WalkSAT]] and [[GSAT]] are an improvement to the above procedure. They start by randomly assigning values to each variable and then traverse the given Boolean expression to identify which variables to flip to minimize the number of unsatisfied clauses. They may randomly select a variable to flip or select a new [[random variable]] assignment to escape local maxima, much like a [[simulated annealing]] algorithm.
+
+== Weighted SAT problems ==
+Numerous weighted SAT problems exist as [[Optimization problem|optimization versions]] of the general SAT problem. In this class of problems, each clause in a CNF Boolean expression is given a weight. The objective is the maximize or minimize the total sum of the weights of the satisfied clauses given a Boolean expression. Weighted Max-SAT is the maximization version of this problem, and [[Maximum satisfiability problem|Max-SAT]] is an instance of weighted MAX-SAT problem where the weights of each clause are the same. The partial Max-SAT problem is the problem where some clauses necessarily must be satisfied (hard clauses) and the sum total of weights of the rest of the clauses (soft clauses) are to be maximized or minimized, depending on the problem. Partial Max-SAT represents an intermediary between Max-SAT (all clauses are soft) and SAT (all clauses are hard).
+
+Stochastic probabilistic solvers can also be used to find approximations for Max-SAT.
+
+=== Variable splitting ===
+{{main|Variable splitting}}
+Variable splitting is a tool to find [[upper and lower bounds]] on a Max-SAT problem. It involves splitting a variable <math>a</math> into new variables for all but one occurrence of <Math>a</Math> in the original Boolean expression. For example, the Boolean expression<blockquote><math>B = (a \lor b \lor c) \wedge (\neg a \lor e \lor \neg b) \wedge (a \lor \neg c \lor f)</math></blockquote>becomes<blockquote><math>B^* = (a \lor b \lor c) \wedge (\neg a_1 \lor e \lor \neg b) \wedge (a_2 \lor \neg c \lor f),</math></blockquote>with <math>a,a_1,a_2,\ldots,a_n</math> being all distinct variables.
+
+This relaxes the problem by introducing new variables into the Boolean expression,<ref name="jsat">{{cite journal |last1=Pipatsrisawat |first1=Knot |last2=Palyan |first2=Akop |last3=Chavira |first3=Mark |last4=Choi |first4=Arthur |last5=Darwiche |first5=Adnan |title=Solving Weighted Max-SAT Problems in a Reduced Search Space: A Performance Analysis |journal=Journal on Satisfiability Boolean Modeling and Computation  |date=2008 |volume=4(2008) |page=4 |url=http://reasoning.cs.ucla.edu/fetch.php?id=86&type=pdf |access-date=18 April 2022 |publisher=UCLA}}</ref> which has the effect of removing many of the constraints in the expression. Because any assignment of variables in <math>B</math> can be represented by an assignment of variables in <math>B^*</math>, the minimization and maximization of the weights of <math>B^*</math> represent lower and upper bounds on the minimization and maximization of the weights of <math>B</math>.
+
+=== Partial Max-SAT ===
+Partial Max-SAT can be solved by first considering all of the hard clauses and solving them as an instance of SAT. The total maximum (or minimum) weight of the soft clauses can be evaluated given the variable assignment necessary to satisfy the hard clauses and trying to optimize the free variables (the variables that the satisfaction of the hard clauses does not depend on). The latter step is an implementation of Max-SAT given some pre-defined variables. Of course, different variable assignments that satisfy the hard clauses might have different optimal free variable assignments, so it is necessary to check different hard-clause satisfaction variable assignments.
+
+== Data structures for storing clauses ==
+
+As SAT solvers and practical SAT problems (e.g. circuit verification) get more advanced, the Boolean expressions of interest may exceed millions of variables with several million clauses; therefore, efficient data structures to store and evaluate the clauses must be used.<ref name = "princeton"/>
+
+Expressions can be stored as a list of clauses, where each clause is a list of variables, much like an [[adjacency list]]. Though these data structures are convenient for manipulation (adding elements, deleting elements, etc.), they rely on many pointers, which increases their memory overhead, decreases [[cache locality]], and increases [[cache misses]], which renders them impractical for problems with large clause counts and large clause sizes.
+
+When clause sizes are large, more-efficient analogous implementations include storing expressions as a list of clauses, where each clause is represented as a matrix that represents the clauses and the variables present in that clause, much like an [[adjacency matrix]]. The elimination of pointers and the contiguous memory occupation of arrays serve to decrease memory usage and increase cache locality and cache hits, which offers a run-time speedup compared to the aforesaid implementation.
+
+== References ==
+{{reflist}}
+
+[[Category:Boolean algebra]]

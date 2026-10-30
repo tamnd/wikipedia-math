@@ -1,0 +1,60 @@
+<!-- wikipedia: en
+     page: 45391945
+     title: Kneser–Ney smoothing
+     revision: 1310556932
+     timestamp: 2025-09-10T08:34:05Z
+     history: https://en.wikipedia.org/w/index.php?curid=45391945&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1310556932 -->
+{{short description|Statistical method}}
+'''Kneser–Ney smoothing''', also known as '''Kneser–Essen–Ney smoothing''', is a method primarily used to calculate the [[probability]] distribution of [[n-gram|''n''-gram]]s in a [[document]] based on their histories.<ref>[http://www.stats.ox.ac.uk/~teh/research/compling/hpylm.pdf 'A Bayesian Interpretation of Interpolated Kneser-Ney NUS School of Computing Technical Report TRA2/06']</ref> It is widely considered the most effective method of [[smoothing]] due to its use of absolute discounting by subtracting a fixed value from the probability's lower order terms to omit ''n''-grams with lower frequencies. This approach has been considered equally effective for both higher and lower order ''n''-grams. The method was proposed in a 1994 paper by Reinhard Kneser, Ute Essen and {{ill|Hermann Ney|de}}.<ref name="neykneser94onstructprob">{{cite journal |last1=Ney |first1=Hermann |last2=Essen |first2=Ute |last3=Kneser |first3=Reinhard |title=On structuring probabilistic dependences in stochastic language modelling |journal=Computer Speech & Language |date=January 1994 |volume=8 |issue=1 |pages=1–38 |doi=10.1006/csla.1994.1001}}</ref>
+
+A common example that illustrates the concept behind this method is the frequency of the [[bigram]] "[[San Francisco]]". If it appears several times in a training [[Text corpus|corpus]], the frequency of the [[unigram]] "Francisco" will also be high. Relying on only the unigram frequency to predict the frequencies of ''n''-grams leads to skewed results;<ref>[https://cs.brown.edu/courses/cs146/assets/files/langmod.pdf 'Brown University: Introduction to Computational Linguistics ']</ref> however, Kneser–Ney smoothing corrects this by considering the frequency of the unigram in relation to possible words preceding it.
+
+==Method==
+Let <math>c(w,w')</math> be the number of occurrences of the word <math>w</math> followed by the word <math>w'</math> in the corpus.
+
+The equation for bigram probabilities is as follows:
+
+<math>
+p_{KN}(w_i|w_{i-1}) = \frac{\max(c(w_{i-1},w_{i}) - \delta,0)}{\sum_{w'} c(w_{i-1},w')} + \lambda_{w_{i-1}} p_{KN}(w_i) 
+</math><ref>[http://www.foldl.me/2014/kneser-ney-smoothing/ 'Kneser Ney Smoothing Explained']</ref>
+
+Where the unigram probability <math>p_{KN}(w_i)</math> depends on how likely it is to see the word <math>w_i</math> in an unfamiliar context, which is estimated as the number of times it appears after any other word divided by the number of distinct pairs of consecutive words in the corpus:
+
+<math>
+p_{KN}(w_i) = \frac { |\{ w' : 0 < c(w',w_i)     \} | } 
+                    { |\{ (w',w'') : 0 < c(w',w'') \} | }
+</math>
+
+Note that <math>p_{KN}</math> is a proper distribution, as the values defined in the above way are non-negative and sum to one.
+
+The parameter <math>\delta</math> is a constant which denotes the discount value subtracted from the count of each ''n''-gram, usually between 0 and 1.
+
+The value of the normalizing constant <math>\lambda_{w_{i-1}}</math> is calculated to make the sum of conditional probabilities <math>p_{KN}(w_i|w_{i-1})</math> over all <math>w_i</math> equal to one. 
+Observe that (provided <math>\delta < 1 </math>) for each <math>w_i</math> which occurs at least once in the context of <math>w_{i-1}</math> in the corpus we discount the probability by exactly the same constant amount <math>{\delta} / \left(\sum_{w'} c(w_{i-1},w')\right)</math>,
+so the total discount depends linearly on the number of unique words <math>w_i</math> that can occur after <math>w_{i-1}</math>.
+This total discount is a budget we can spread over all <math>p_{KN}(w_i|w_{i-1})</math> proportionally to <math>p_{KN}(w_i)</math>.
+As the values of <math>p_{KN}(w_i)</math> sum to one, we can simply define <math>\lambda_{w_{i-1}}</math> to be equal to this total discount:
+
+<math>
+\lambda_{w_{i-1}} = \frac {\delta} {\sum_{w'} c(w_{i-1},w')} |\{ w' : 0 < c(w_{i-1},w') \} |
+</math>
+
+This equation can be extended to ''n''-grams. Let <math>w_{i-n+1}^{i-1}</math> be the <math>n-1</math> words before <math>w_i</math>:
+
+<math>
+p_{KN}(w_i|w_{i-n+1}^{i-1}) = \frac{\max(c(w_{i-n+1}^{i-1},w_{i}) - \delta,0)}{\sum_{w'} c(w_{i-n+1}^{i-1},w')} + \delta \frac{| \{ w' : 0 < c(w_{i-n+1}^{i-1},w') \} |}{\sum_{w'} c(w_{i-n+1}^{i-1},w')} p_{KN}(w_i|w_{i-n+2}^{i-1})
+</math><ref>[http://nlp.stanford.edu/~wcmac/papers/20050421-smoothing-tutorial.pdf 'NLP Tutorial: Smoothing']</ref>
+
+This model uses the concept of absolute-discounting interpolation which incorporates information from higher and lower order language models. The addition of the term for lower order ''n''-grams adds more weight to the overall probability when the count for the higher order ''n''-grams is zero.<ref>[http://u.cs.biu.ac.il/~yogo/courses/mt2013/papers/chen-goodman-99.pdf 'An empirical study of smoothing techniques for language modeling']</ref> Similarly, the weight of the lower order model decreases when the count of the ''n''-gram is non zero.
+
+== Modified Kneser–Ney smoothing ==
+Modifications of this method also exist. Chen and Goodman's 1998 paper lists and benchmarks several such modifications. Computational efficiency and scaling to multi-core systems is the focus of Chen and Goodman’s 1998 modification.<ref>[https://people.eecs.berkeley.edu/~klein/cs294-5/chen_goodman.pdf An Empirical Study of Smoothing Techniques for Language Modeling] p 21</ref> This approach is once used for [[Google Translate]] under a [[MapReduce]] implementation.<ref>[https://aclanthology.org/D07-1090.pdf Large Language Models in Machine Translation]</ref> KenLM is a performant open-source implementation.<ref>{{cite web | url=https://kheafield.com/code/kenlm/estimation/ | title=Estimation . Kenlm . Code . Kenneth Heafield }}</ref>
+
+==References==
+{{Reflist}}
+
+{{DEFAULTSORT:Kneser-Ney smoothing}}
+[[Category:Statistical methods]]
+[[Category:Language modeling]]

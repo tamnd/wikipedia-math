@@ -1,0 +1,233 @@
+<!-- wikipedia: en
+     page: 903032
+     title: Modular exponentiation
+     revision: 1339838574
+     timestamp: 2026-02-22T16:18:43Z
+     history: https://en.wikipedia.org/w/index.php?curid=903032&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1339838574 -->
+{{Short description|Exponentation in modular arithmetic}}
+{{more citations needed|date=February 2018}}
+'''Modular exponentiation''' is [[exponentiation]] performed over a [[modular arithmetic|modulus]]. It is useful in [[computer science]], especially in the field of [[public-key cryptography]], where it is used in both [[Diffie–Hellman key exchange]] and [[RSA (cryptosystem)|RSA public/private keys]].
+
+Modular exponentiation is the remainder {{math|''c''}} when an integer {{math|''b''}} (the base) is raised to the power {{math|''e''}} (the exponent), and divided by a [[positive integer]] {{math|''m''}} (the modulus); that is, {{math|''c'' {{=}} ''b''<sup>''e''</sup> [[Modulo operation|mod]] ''m''}}. From the definition of division, it follows that {{math|0 ≤ ''c'' &lt; ''m''}}.
+
+For example, given {{math|1=''b'' = 5}}, {{math|1=''e'' = 3}} and {{math|1=''m'' = 13}}, dividing {{math|5<sup>3</sup> {{=}} 125}} by {{math|13}} leaves a remainder of {{math|1=''c'' = 8}}.
+
+When {{math|''b''}} and {{math|''m''}} are [[Coprime integers|relatively prime]], one can also allow the exponent {{math|''e''}} to be negative by finding the [[Modular multiplicative inverse|multiplicative inverse]] {{math|''d''}} of {{math|''b''}} modulo {{math|''m''}} (for instance by using [[Modular multiplicative inverse#Extended Euclidean algorithm|extended Euclidean algorithm]]). More precisely:
+:{{math|''c'' {{=}} ''b''{{sup|''e''}} mod ''m'' {{=}} ''d''{{sup|−''e''}} mod ''m''}}, where {{math|''e'' < 0}} and {{math|''b'' ⋅ ''d'' ≡ 1 (mod ''m'')}}.
+
+Modular exponentiation is efficient to compute, even for very large integers.  On the other hand, computing the modular [[discrete logarithm]] – that is, finding the exponent {{math|''e''}} when given {{math|''b''}}, {{math|''c''}}, and {{math|''m''}} – is believed to be difficult. This [[one-way function]] behavior makes modular exponentiation a candidate for use in cryptographic algorithms.
+
+== Direct method ==
+The most direct method of calculating a modular exponent is to calculate {{math|''b''<sup>''e''</sup>}} directly, then to take this number modulo {{math|''m''}}.  Consider trying to compute {{math|''c''}}, given {{math|''b'' {{=}} 4}}, {{math|''e'' {{=}} 13}}, and {{math|''m'' {{=}} 497}}:
+: {{math|''c'' ≡ 4{{sup|13}} (mod 497)}}
+
+One could use a calculator to compute 4<sup>13</sup>; this comes out to 67,108,864.  Taking this value modulo 497, the answer {{math|''c''}} is determined to be 445.
+
+Note that {{math|''b''}} is only one digit in length and that {{math|''e''}} is only two digits in length, but the value {{math|''b''<sup>''e''</sup>}} is eight digits in length.
+
+In strong cryptography, {{math|''b''}} is often at least 1024 [[bit]]s.<ref>{{Cite web|url=https://weakdh.org/|title=Weak Diffie–Hellman and the Logjam Attack|website=weakdh.org|access-date=2019-05-03}}</ref>  Consider {{math|''b'' {{=}} 5 × 10<sup>76</sup>}} and {{math|''e'' {{=}} 17}}, both of which are perfectly reasonable values.  In this example, {{math|''b''}} is 77 digits in length and {{math|''e''}} is two digits in length, but the value {{math|''b''<sup>''e''</sup>}} is 1,304 decimal digits in length.  Such calculations are possible on modern computers, but the sheer magnitude of such numbers causes the speed of calculations to drop considerably.  As {{math|''b''}} and {{math|''e''}} increase even further to provide better security, the value {{math|''b''<sup>''e''</sup>}} becomes unwieldy.
+
+The time required to perform the exponentiation depends on the operating environment and the processor.  The method described above requires {{math|[[Big O notation|Θ]](''e'')}} multiplications to complete.
+
+== Memory-efficient method ==
+Keeping the numbers smaller requires additional modular reduction operations, but the reduced size makes each operation faster, saving time (as well as memory) overall.
+
+This algorithm makes use of the identity
+: {{math|(''a'' ⋅ ''b'') mod ''m'' {{=}} [(''a'' mod ''m'') ⋅ (''b'' mod ''m'')] mod ''m''}}
+
+The modified algorithm is:
+:'''Inputs''' ''An integer {{mvar|b}} (base), integer {{mvar|e}} (exponent), and a positive integer {{mvar|m}} (modulus)''
+:'''Outputs''' ''The modular exponent {{mvar|c}} where'' {{math|''c'' {{=}} ''b''<sup>''e''</sup> ''mod m''}}
+:# Initialise {{math|''c'' {{=}} 1}} and loop variable {{math|''e′'' {{=}} 0}}
+:# While {{math|''e′'' &lt; ''e''}} do
+:## Increment {{mvar|e′}} by 1
+:## Calculate {{math|''c'' {{=}} (''b'' ⋅ ''c'') mod ''m''}}
+:# Output {{mvar|c}}
+
+Note that at the end of every iteration through the loop, the equation {{math|''c'' ≡ ''b''{{sup|''e′''}} (mod ''m'')}} holds true.  The algorithm ends when the loop has been executed {{mvar|e}} times. At that point {{mvar|c}} contains the result of {{math|''b''<sup>''e''</sup> mod ''m''}}.
+
+In summary, this algorithm increases {{mvar|e′}} by one until it is equal to {{mvar|e}}. At every step multiplying the result from the previous iteration, {{mvar|c}}, by {{mvar|b}} and performing a modulo operation on the resulting product, thereby keeping the resulting {{mvar|c}} a small integer.
+
+The example {{math|''b'' {{=}} 4}}, {{math|''e'' {{=}} 13}}, and {{math|''m'' {{=}} 497}} is presented again.  The algorithm performs the iteration thirteen times:
+: {{math|''(e′'' {{=}} {{spaces|en}}1) {{spaces|em}} ''c'' {{=}} (4 ⋅ 1) mod 497 {{=}} 4 mod 497 {{=}} '''4'''}}
+: {{math|''(e′'' {{=}} {{spaces|en}}2) {{spaces|em}} ''c '' {{=}} (4 ⋅ 4) mod 497 {{=}} 16 mod 497 {{=}} '''16'''}}
+: {{math|''(e′'' {{=}} {{spaces|en}}3) {{spaces|em}} ''c'' {{=}} (4 ⋅ 16) mod 497 {{=}} 64 mod 497 {{=}} '''64'''}}
+: {{math|''(e′'' {{=}} {{spaces|en}}4) {{spaces|em}} ''c'' {{=}} (4 ⋅ 64) mod 497 {{=}} 256 mod 497 {{=}} '''256'''}}
+: {{math|''(e′'' {{=}} {{spaces|en}}5) {{spaces|em}} ''c'' {{=}} (4 ⋅ 256) mod 497 {{=}} 1024 mod 497 {{=}} '''30'''}}
+: {{math|''(e′'' {{=}} {{spaces|en}}6) {{spaces|em}} ''c'' {{=}} (4 ⋅ 30) mod 497 {{=}} 120 mod 497 {{=}} '''120'''}}
+: {{math|''(e′'' {{=}} {{spaces|en}}7) {{spaces|em}} ''c'' {{=}} (4 ⋅ 120) mod 497 {{=}} 480 mod 497 {{=}} '''480'''}}
+: {{math|''(e′'' {{=}} {{spaces|en}}8) {{spaces|em}} ''c'' {{=}} (4 ⋅ 480) mod 497 {{=}} 1920 mod 497 {{=}} '''429'''}}
+: {{math|''(e′'' {{=}} {{spaces|en}}9) {{spaces|em}} ''c'' {{=}} (4 ⋅ 429) mod 497 {{=}} 1716 mod 497 {{=}} '''225'''}}
+: {{math|''(e′'' {{=}} 10) {{spaces|em}} ''c'' {{=}} (4 ⋅ 225) mod 497 {{=}} 900 mod 497 {{=}} '''403'''}}
+: {{math|''(e′'' {{=}} 11) {{spaces|em}} ''c'' {{=}} (4 ⋅ 403) mod 497 {{=}} 1612 mod 497 {{=}} '''121'''}}
+: {{math|''(e′'' {{=}} 12) {{spaces|em}} ''c'' {{=}} (4 ⋅ 121) mod 497 {{=}} 484 mod 497 {{=}} '''484'''}}
+: {{math|''(e′'' {{=}} 13) {{spaces|em}} ''c'' {{=}} (4 ⋅ 484) mod 497 {{=}} 1936 mod 497 {{=}} '''445'''}}
+
+The final answer for {{mvar|c}} is therefore 445, as in the [[#Direct method|direct method]].
+
+Like the first method, this requires {{math|O(''e'')}} multiplications to complete.  However, since the numbers used in these calculations are much smaller than the numbers used in the first algorithm's calculations, the computation time decreases by a factor of at least {{math|O(''e'')}} in this method.
+
+In pseudocode, this method can be performed the following way:
+ '''function''' modular_pow(base, exponent, modulus) '''is'''
+     '''if''' modulus = 1 '''then'''
+         '''return''' 0
+     c := 1
+     '''for''' e_prime = 0 '''to''' exponent-1 '''do'''
+         c := (c * base) '''mod''' modulus
+     '''return''' c
+
+== Right-to-left binary method ==
+A third method drastically reduces the number of operations to perform modular exponentiation, while keeping the same [[memory footprint]] as in the previous method.  It is a combination of the previous method and a more general principle called [[exponentiation by squaring]] (also known as ''binary exponentiation'').
+
+First, it is required that the exponent {{math|''e''}} be [[Binary numeral system#Decimal|converted to binary notation]].  That is, {{math|''e''}} can be written as:
+: <math>e = \sum_{i=0}^{n-1} a_i 2^i</math>
+
+In such notation, the ''length'' of {{math|''e''}} is {{math|''n''}} bits. {{math|''a''<sub>''i''</sub>}} can take the value 0 or 1 for any {{math|''i''}} such that {{math|0 ≤ ''i'' < ''n''}}.  By definition, {{math|''a''<sub>''n'' − 1</sub> {{=}} 1}}.
+
+The value {{math|''b''<sup>''e''</sup>}} can then be written as:
+: <math>b^e = b^{\left( \sum_{i=0}^{n-1} a_i 2^i \right)} = \prod_{i=0}^{n-1} b^{a_i 2^i}</math>
+
+The solution {{math|''c''}} is therefore:
+: <math>c \equiv \prod_{i=0}^{n-1} b^{a_i 2^i} \pmod m</math>
+
+=== Pseudocode ===
+
+The following is an example in pseudocode based on ''Applied Cryptography'' by [[Bruce Schneier]].<ref name="schneier96p244">[[#Schneier96|Schneier 1996]], p. 244.</ref>  The inputs <var>base</var>, <var>exponent</var>, and <var>modulus</var> correspond to {{mvar|b}}, {{mvar|e}}, and {{mvar|m}} in the equations given above.
+
+ '''function''' modular_pow(base, exponent, modulus) '''is'''
+     '''if''' modulus = 1 '''then'''
+         '''return''' 0
+     [[Assertion (computing)|Assert]] :: (modulus - 1) * (modulus - 1) does not overflow base
+     result := 1
+     base := base '''mod''' modulus
+     '''while''' exponent > 0 '''do'''
+         '''if''' (exponent '''mod''' 2 == 1) '''then'''
+             result := (result * base) '''mod''' modulus
+         exponent := exponent >> 1
+         base := (base * base) '''mod''' modulus
+     '''return''' result
+
+Note that upon entering the loop for the first time, the code variable <var>base</var> is equivalent to {{mvar|b}}.  However, the repeated squaring in the third line of code ensures that at the completion of every loop, the variable <var>base</var> is equivalent to {{math|''b''{{sup|2{{sup|''i''}}}} mod ''m''}}, where {{mvar|i}} is the number of times the loop has been iterated.  (This makes {{mvar|i}} the next working bit of the binary exponent <var>exponent</var>, where the least-significant bit is <var>exponent<sub>0</sub></var>).
+
+The first line of code simply carries out the multiplication in <math>\prod_{i=0}^{n-1} b^{a_i 2^i}\pmod m</math>.  If {{mvar|a}} is zero, no code executes since this effectively multiplies the running total by one.  If {{mvar|a}} instead is one, the variable <var>base</var> (containing the value {{math|''b''{{sup|2{{sup|''i''}}}} mod ''m''}} of the original base) is simply multiplied in.
+
+In this example, the base {{mvar|b}} is raised to the exponent {{math|1=''e'' = 13}}.
+The exponent is 1101 in binary. There are four binary digits, so the loop executes four times, with values {{math|1=''a''<sub>0</sub> = 1, ''a''<sub>1</sub> = 0, ''a''<sub>2</sub> = 1}}, and {{math|1=''a''<sub>3</sub> = 1}}.
+
+First, initialize the result <math>R</math> to 1 and preserve the value of {{math|''b''}} in the variable {{math|''x''}}:
+: <math> R \leftarrow 1 \, ( = b^0) \text{ and } x \leftarrow b </math>.
+: Step 1)  bit 1 is 1, so set <math> R \leftarrow R \cdot x \text{ }(= b^1) </math>;
+:: set <math> x \leftarrow x^2 \text{ }(= b^2) </math>.
+: Step 2)  bit 2 is 0, so do not reset {{math|''R''}};
+:: set <math> x \leftarrow x^2 \text{ }(= b^4) </math>.
+: Step 3)  bit 3 is 1, so set <math> R \leftarrow R \cdot x \text{ }(= b^5) </math>;
+:: set <math> x \leftarrow x^2 \text{ }(= b^8) </math>.
+: Step 4)  bit 4 is 1, so set <math> R \leftarrow R \cdot x \text{ }(= b^{13}) </math>;
+:: This is the last step so we don't need to square {{math|''x''}}.
+We are done: {{math|''R''}} is now <math>b^{13}</math>.
+
+Here is the above calculation, where we compute {{math|1=''b'' = 4}} to the power  {{math|1=''e'' = 13}}, performed modulo 497.
+
+Initialize:
+: <math> R \leftarrow 1 \, ( = b^0) </math>  and  <math> x \leftarrow b = 4 </math>.
+: Step 1)  bit 1 is 1, so set <math>R \leftarrow R \cdot 4 \equiv 4 \pmod{497} </math>;
+:: set <math> x \leftarrow x^2 \text{ }(= b^2) \equiv 4^2 \equiv 16 \pmod{497} </math>.
+: Step 2) bit 2 is 0, so do not reset {{math|''R''}};
+:: set <math> x \leftarrow x^2 \text{ }(= b^4) \equiv 16^2\equiv 256 \pmod{497} </math>.
+: Step 3)  bit 3 is 1, so set <math> R \leftarrow R \cdot x \text{ }(= b^5) \equiv 4 \cdot 256 \equiv 30 \pmod{497} </math>;
+:: set <math> x \leftarrow x^2 \text{ }(= b^8) \equiv 256^2 \equiv 429 \pmod{497} </math>.
+: Step 4)  bit 4 is 1, so set <math> R \leftarrow R \cdot x \text{ }(= b^{13}) \equiv 30 \cdot 429 \equiv 445 \pmod{497} </math>;
+
+We are done: {{mvar|R}} is now <math>4^{13} \equiv 445 \pmod{497}</math>, the same result obtained in the previous algorithms.
+
+The running time of this algorithm is {{math|O(log }}<var>exponent</var>{{math|)}}.  When working with large values of <var>exponent</var>, this offers a substantial speed benefit over the previous two algorithms, whose time is {{math|O(}}<var>exponent</var>{{math|)}}. For example, if the exponent was 2<sup>20</sup> = 1048576, this algorithm would have 20 steps instead of 1048576 steps.
+
+=== Implementation in [[Lua (programming language)|Lua]] ===
+
+ '''function''' modPow(b, e, m)
+   '''if''' m == 1 '''then'''
+     '''return''' 0
+   '''end'''
+   '''local''' r = 1
+   b = b % m
+   '''while''' e > 0 '''do'''
+     '''if''' e % 2 == 1 '''then'''
+       r = (r*b) % m
+     '''end'''
+     b = (b*b) % m
+     e = e >> 1     --use 'e = math.floor(e / 2)' on Lua 5.2 or older
+   '''end'''
+   '''return''' r
+ '''end'''
+
+== Left-to-right binary method ==
+We can also use the bits of the exponent in left to right order. In practice, we would usually want the result modulo some modulus {{math|''m''}}. In that case, we would reduce each multiplication result {{math|(mod ''m'')}} before proceeding. For simplicity, the modulus calculation is omitted here. This example shows how to compute <math>b^{13}</math> using left to right binary exponentiation. The exponent is 1101 in binary; there are four bits, so there are four iterations.
+
+Initialize the result to 1: <math>r \leftarrow 1 \, ( = b^0)</math>.
+: Step 1) <math>r \leftarrow r^2 \, ( = b^0)</math>; bit 1 = 1, so compute <math>r \leftarrow r \cdot b \,( = b^1)</math>;
+: Step 2) <math>r \leftarrow r^2 \, ( = b^2)</math>; bit 2 = 1, so compute <math>r \leftarrow r \cdot b \, ( = b^3)</math>;
+: Step 3) <math>r \leftarrow r^2 \, ( = b^6)</math>; bit 3 = 0, so we are done with this step;
+: Step 4) <math>r \leftarrow r^2 \, ( = b^{12})</math>; bit 4 = 1, so compute <math>r \leftarrow r \cdot b \, ( = b^{13})</math>.
+
+=== Minimum multiplications ===
+In ''[[The Art of Computer Programming]], Vol. 2, Seminumerical Algorithms'', page 463, [[Donald Knuth]] notes that contrary to some assertions, this method does {{em|not}} always give the minimum possible number of multiplications. The smallest counterexample is for a power of 15, when the binary method needs six multiplications. Instead, form ''x''<sup>3</sup> in two multiplications, then ''x''<sup>6</sup> by squaring ''x''<sup>3</sup>, then ''x''<sup>12</sup> by squaring ''x''<sup>6</sup>, and finally ''x''<sup>15</sup> by multiplying ''x''<sup>12</sup> and ''x''<sup>3</sup>, thereby achieving the desired result with only five multiplications. However, many pages follow describing how such sequences might be contrived in general.
+
+== Generalizations ==
+=== Matrices ===
+The {{mvar|m}}-th term of any [[constant-recursive sequence]] (such as [[Fibonacci numbers]] or [[Perrin numbers]]) where each term is a linear function of {{mvar|k}} previous terms can be computed efficiently modulo {{mvar|n}} by computing {{math|''A<sup>m</sup>'' mod ''n''}}, where {{mvar|A}} is the corresponding {{math|''k''×''k''}} [[Companion matrix#Linear recursive sequences|companion matrix]]. The above methods adapt easily to this application. This can be used for [[Fibonacci number#Primality testing|primality testing]] of large numbers {{mvar|n}}, for example.
+
+; Pseudocode
+A recursive algorithm for <code>ModExp(A, b, c)</code> = {{math|''A<sup>b</sup>'' mod ''c''}}, where {{mvar|A}} is a square matrix.
+ '''function''' Matrix_ModExp(Matrix A, int b, int c) '''is'''
+     '''if''' b == 0 '''then'''
+         '''return''' I  // The identity matrix
+     '''if''' (b '''mod''' 2 == 1) '''then'''
+         '''return''' (A * Matrix_ModExp(A, b - 1, c)) '''mod''' c
+     Matrix D := Matrix_ModExp(A, b / 2, c)
+     '''return''' (D * D) '''mod''' c
+
+=== Finite cyclic groups ===
+[[Diffie–Hellman key exchange]] uses exponentiation in finite cyclic groups. The above methods for modular matrix exponentiation clearly extend to this context. The modular matrix multiplication {{math|''C'' ≡ ''AB'' (mod ''n'')}} is simply replaced everywhere by the group multiplication {{math|1=''c'' = ''ab''}}.
+
+=== Reversible and quantum modular exponentiation ===
+
+In [[quantum computing]], modular exponentiation appears as the bottleneck of [[Shor's algorithm]], where it must be computed by a circuit consisting of [[reversible computing|reversible gates]], which can be further broken down into [[quantum gate]]s appropriate for a specific physical device. Furthermore, in Shor's algorithm it is possible to know the base and the modulus of exponentiation at every call, which enables various circuit optimizations.<ref>{{cite journal|author=I. L. Markov, M. Saeedi |title=Constant-Optimized Quantum Circuits for Modular Multiplication and Exponentiation |journal=Quantum Information and Computation |volume=12 |issue=5–6 |pages=0361–0394 |year=2012 |doi=10.26421/QIC12.5-6-1 |arxiv=1202.6614 |bibcode=2012arXiv1202.6614M |s2cid=16595181 }}</ref>
+
+== Software implementations ==
+Because modular exponentiation is an important operation in computer science, and there are efficient algorithms (see above) that are much faster than simply exponentiating and then taking the remainder, many programming languages and arbitrary-precision integer libraries have a dedicated function to perform modular exponentiation:
+* [[Python (programming language)|Python]]'s built-in <code>pow()</code> (exponentiation) function [https://docs.python.org/library/functions.html#pow] takes an optional third argument, the modulus
+* [[.NET Framework]]'s <code>BigInteger</code> class has a <code>[http://msdn.microsoft.com/en-us/library/system.numerics.biginteger.modpow%28v=vs.100%29.aspx#pow ModPow()]</code> method to perform modular exponentiation
+* [[Java (programming language)|Java]]'s <code>java.math.BigInteger</code> class has a {{Javadoc:SE|name=modPow()|java/math|BigInteger|modPow(java.math.BigInteger,java.math.BigInteger)}} method to perform modular exponentiation
+* [[MATLAB]]'s <code>powermod</code> function from Symbolic Math Toolbox
+*Wolfram Language has the [https://reference.wolfram.com/language/ref/PowerMod.html PowerMod] function
+* [[Perl]]'s <code>Math::BigInt</code> module has a <code>bmodpow()</code> method [http://perldoc.perl.org/Math/BigInt.html#bmodpow%28%29] to perform modular exponentiation
+* [[Raku (programming language)|Raku]] has a built-in routine <code>expmod</code>.
+* [[Go (programming language)|Go]]'s <code>big.Int</code> type contains an <code>Exp()</code> (exponentiation) method [http://golang.org/pkg/big/#Int.Exp] whose third parameter, if non-nil, is the modulus
+* [[PHP]]'s BC Math library has a <code>bcpowmod()</code> function [http://www.php.net/manual/en/function.bcpowmod.php] to perform modular exponentiation
+* The [[GNU Multiple Precision Arithmetic Library]] (GMP) library contains a <code>mpz_powm()</code> function [http://gmplib.org/manual/Integer-Exponentiation.html] to perform modular exponentiation
+* Custom Function <code>[http://www.briandunning.com/cf/1482 @PowerMod()]</code> for [[FileMaker]] Pro (with 1024-bit [[RSA (algorithm)|RSA]] encryption example)
+* [[Ruby (programming language)|Ruby]]'s <code>openssl</code> package has the <code>OpenSSL::BN#mod_exp</code> method [https://docs.ruby-lang.org/en/master/OpenSSL/BN.html#method-i-mod_exp] to perform modular exponentiation.
+
+== See also ==
+* [[Montgomery reduction]], for calculating the remainder when the modulus is very large.
+* [[Kochanski multiplication]], serializable method for calculating the remainder when the modulus is very large
+* [[Barrett reduction]], algorithm for calculating the remainder when the modulus is very large.
+
+== References ==
+{{reflist}}
+
+== External links ==
+{{Wikibooks|Algorithm Implementation|Mathematics/Modular Exponentiation|Modular Exponentiation}}
+
+*{{cite book|title=Applied Cryptography: Protocols, Algorithms, and Source Code in C, Second Edition|url=https://archive.org/details/Applied_Cryptography_2nd_ed._B._Schneier|last=Schneier|first=Bruce|authorlink=Bruce Schneier|year=1996|publisher=Wiley|edition=2nd|isbn=978-0-471-11709-4|ref=Schneier96}}
+* Paul Garrett, [http://www.math.umn.edu/~garrett/crypto/a01/FastPow.html Fast Modular Exponentiation Java Applet]
+* {{cite journal | last=Gordon | first=Daniel M. | title=A Survey of Fast Exponentiation Methods | url=https://www.dmgordon.org/papers/jalg.pdf | journal=Journal of Algorithms | publisher=Elsevier BV | volume=27 | issue=1 | year=1998 | issn=0196-6774 | doi=10.1006/jagm.1997.0913 | pages=129–146}}
+
+{{number theoretic algorithms}}
+
+[[Category:Cryptographic algorithms]]
+[[Category:Number theoretic algorithms]]
+[[Category:Modular arithmetic]]
+[[Category:Articles with example pseudocode]]

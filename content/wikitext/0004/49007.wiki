@@ -1,0 +1,420 @@
+<!-- wikipedia: en
+     page: 49007
+     title: Stream cipher
+     revision: 1374519762
+     timestamp: 2026-09-12T15:43:06Z
+     history: https://en.wikipedia.org/w/index.php?curid=49007&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374519762 -->
+{{short description|Type of symmetric key cipher}}
+{{multiple issues|
+{{More citations needed|date=October 2021}}
+{{update|reason=The article puts [[WP:undue|undue]] emphasis on shift register-based stream ciphers, where common and actually secure stream ciphers like [[AES-CTR]] or [[ChaCha20]] (or formerly [[RC4]]) do not use shift registers|date=October 2025}}
+}}
+[[Image:A5-1 GSM cipher.svg|280px|thumbnail|
+The operation of the [[keystream]] generator in [[A5/1]], an LFSR-based stream cipher used to encrypt mobile phone conversations.]]
+
+A '''stream cipher''' is a [[symmetric key algorithm|symmetric key]] [[cipher]] where [[plaintext]] digits are combined with a [[pseudorandom]] cipher digit stream ([[keystream]]). In a stream cipher, each plaintext [[numerical digit|digit]] is encrypted one at a time with the corresponding digit of the keystream, to give a digit of the [[ciphertext]] stream. Since encryption of each digit is dependent on the current state of the cipher, it is also known as '''''state cipher'''''. In practice, a digit is typically a [[bit]] and the combining operation is an [[exclusive-or]] (XOR).
+
+The pseudorandom keystream is typically generated serially from a random [[seed value]] using digital [[shift register]]s. The seed value serves as the [[cryptographic key]] for decrypting the ciphertext stream. Stream ciphers represent a different approach to symmetric encryption from [[block cipher]]s. Block ciphers operate on large blocks of digits with a fixed, unvarying transformation. This distinction is not always clear-cut: in some [[block cipher mode of operation|modes of operation]], a block cipher primitive is used in such a way that it acts effectively as a stream cipher. Stream ciphers typically execute at a higher speed than block ciphers and have lower hardware complexity. However, stream ciphers can be susceptible to security breaches (see [[stream cipher attack]]s); for example, when the same starting state (seed) is used twice.
+
+==Loose inspiration from the one-time pad==
+Stream ciphers can be viewed as approximating the action of a proven unbreakable cipher, the [[one-time pad]] (OTP). A one-time pad uses a [[keystream]] of completely [[random]] digits. The keystream is combined with the plaintext digits one at a time to form the ciphertext. This system was proven to be secure by [[Claude E. Shannon]] in 1949.<ref>{{cite book |last1 = Deane |first1 = Arthur |last2 = Kraus |first2 = Aaron |date = 2021 |title = The Official (ISC)2 CISSP CBK Reference |edition = 6th |publication-place = Hoboken, New Jersey |publisher = John Wiley & Sons, Inc. |chapter = Chapter 3: Domain 3: Security Architecture and Engineering |page = 232 |isbn = 978-1-119-78999-4}}</ref> However, the keystream must be generated completely at random with at least the same length as the plaintext and cannot be used more than once. This makes the system cumbersome to implement in many practical applications, and as a result the one-time pad has not been widely used, except for the most critical applications. Key generation, distribution and management are critical for those applications.
+
+A stream cipher makes use of a much smaller and more convenient key such as 128 bits. Based on this key, it generates a pseudorandom keystream which can be combined with the plaintext digits in a similar fashion to the one-time pad. However, this comes at a cost. The keystream is now pseudorandom and so is not truly random. The proof of security associated with the one-time pad no longer holds. It is quite possible for a stream cipher to be completely insecure.<ref>{{Cite web |title=Stream Cipher - an overview {{!}} ScienceDirect Topics |url=https://www.sciencedirect.com/topics/computer-science/stream-cipher |access-date=2026-02-27 |website=www.sciencedirect.com}}</ref>
+
+==Types==
+A stream cipher generates successive elements of the keystream based on an internal state. This state is updated in essentially two ways: if the state changes independently of the plaintext or [[ciphertext]] messages, the cipher is classified as a ''synchronous'' stream cipher. By contrast, ''self-synchronising'' stream ciphers update their state based on previous plaintext or ciphertext digits. A system that incorporates the plaintext into the key is also known as an [[autokey cipher]] or autoclave cipher.
+
+===Synchronous stream ciphers===
+[[File:Lorenz Cipher Machine.jpg|thumb|[[Lorenz cipher|Lorenz SZ cipher]] machine as used by the German military during World War II]]
+In a '''synchronous stream cipher''' a stream of pseudorandom digits is generated independently of the plaintext and ciphertext messages, and then combined with the plaintext (to encrypt) or the ciphertext (to decrypt). In the most common form, binary digits are used ([[bit]]s), and the keystream is combined with the plaintext using the [[exclusive or]] operation (XOR). This is termed a '''binary additive stream cipher'''.
+
+In a synchronous stream cipher, the sender and receiver must be exactly in step for decryption to be successful. If digits are added or removed from the message during transmission, synchronisation is lost. To restore synchronisation, various offsets can be tried systematically to obtain the correct decryption. Another approach is to tag the ciphertext with markers at regular points in the output.
+
+If, however, a digit is corrupted in transmission, rather than added or lost, only a single digit in the plaintext is affected and the error does not propagate to other parts of the message. This property is useful when the transmission error rate is high; however, it makes it less likely the error would be detected without further mechanisms. Moreover, because of this property, synchronous stream ciphers are very susceptible to [[Attack (computing)#Phenomenology|active attack]]s: if an attacker can change a digit in the ciphertext, they might be able to make predictable changes to the corresponding plaintext bit; for example, flipping a bit in the ciphertext causes the same bit to be flipped in the plaintext.
+
+===Self-synchronizing stream ciphers===
+Another approach uses several of the previous ''N'' ciphertext digits to compute the keystream. Such schemes are known as '''self-synchronizing stream ciphers''', '''asynchronous stream ciphers''' or '''ciphertext autokey''' ('''CTAK'''). The idea of self-synchronization was patented in 1946 and has the advantage that the receiver will automatically synchronise with the keystream generator after receiving ''N'' ciphertext digits, making it easier to recover if digits are dropped or added to the message stream. Single-digit errors are limited in their effect, affecting only up to ''N'' plaintext digits.
+
+An example of a self-synchronising stream cipher is a block cipher in [[cipher feedback]] (CFB) [[block cipher modes of operation|mode]].
+
+==Based on linear-feedback shift registers==
+Binary stream ciphers are often constructed using [[linear-feedback shift register]]s (LFSRs) because they can be easily implemented in hardware and can be readily analysed mathematically. The use of LFSRs on their own, however, is insufficient to provide good security. Various schemes have been proposed to increase the security of LFSRs.
+
+===Non-linear combining functions===
+[[Image:Nonlinear-combo-generator.png|thumbnail|One approach is to use ''n'' LFSRs in parallel, their outputs combined using an ''n''-input binary Boolean function (''F'').]]
+Because LFSRs are inherently linear, one technique for removing the linearity is to feed the outputs of several parallel LFSRs into a non-linear [[Boolean function]] to form a ''combination generator''. Various properties of such a ''combining function'' are critical for ensuring the security of the resultant scheme, for example, in order to avoid [[correlation attack]]s. 
+{{Expand section|date=June 2008}}
+
+===Clock-controlled generators===
+Normally LFSRs are stepped regularly. One approach to introducing non-linearity is to have the LFSR clocked irregularly, controlled by the output of a second LFSR. Such generators include the [[stop-and-go generator]], the [[alternating step generator]] and the [[shrinking generator]].
+
+An [[alternating step generator]] comprises three LFSRs, which we will call LFSR0, LFSR1 and LFSR2 for convenience. The output of one of the registers decides which of the other two is to be used; for instance, if LFSR2 outputs a 0, LFSR0 is clocked, and if it outputs a 1, LFSR1 is clocked instead. The output is the exclusive OR of the last bit produced by LFSR0 and LFSR1. The initial state of the three LFSRs is the key.
+
+The stop-and-go generator (Beth and Piper, 1984) consists of two LFSRs. One LFSR is clocked if the output of a second is a 1, otherwise it repeats its previous output. This output is then (in some versions) combined with the output of a third LFSR clocked at a regular rate.
+
+The [[shrinking generator]] takes a different approach. Two LFSRs are used, both clocked regularly. If the output of the first LFSR is 1, the output of the second LFSR becomes the output of the generator. If the first LFSR outputs 0, however, the output of the second is discarded, and no bit is output by the generator. This mechanism suffers from timing attacks on the second generator, since the speed of the output is variable in a manner that depends on the second generator's state. This can be alleviated by buffering the output.
+
+===Filter generator===
+Another approach to improving the security of an LFSR is to pass the entire state of a single LFSR into a non-linear ''filtering function''.
+
+{{Expand section|date=June 2008}}
+
+==Other designs==
+[[Image:RC4.svg|280px|thumbnail|[[RC4]] is one of the most widely used stream cipher designs.{{needs update|date=October 2025|reason=Does anyone actually use RC4, with all its flaws, anymore?}}]]
+Instead of a linear driving device, one may use a nonlinear update function. For example, Klimov and Shamir proposed triangular functions ([[T-function]]s) with a single cycle on n-bit words.
+{{Expand section|date=June 2008}}
+
+==Security==
+{{main|Stream cipher attacks}}
+
+For a stream cipher to be secure, its keystream must have a large [[periodic function|period]], and it must be impossible to ''recover the cipher's key'' or internal state from the keystream. Cryptographers also demand that the keystream be free of even subtle biases that would let attackers ''distinguish'' a stream from random noise, and free of detectable relationships between keystreams that correspond to ''related keys'' or related [[cryptographic nonce]]s. That should be true for all keys (there should be no ''[[weak key]]s''), even if the attacker can ''know'' or ''choose'' some ''plaintext'' or ''ciphertext''.
+
+As with other attacks in cryptography, stream cipher attacks can be ''certificational'' so they are not necessarily practical ways to break the cipher but indicate that the cipher might have other weaknesses.
+
+Securely using a secure synchronous stream cipher requires that one never reuse the same keystream twice. That generally means a different [[Cryptographic nonce|nonce]] or key must be supplied to each invocation of the cipher. Application designers must also recognize that most stream ciphers provide not ''authenticity'' but ''privacy'': encrypted messages may still have been modified in transit.
+
+Short periods for stream ciphers have been a practical concern. For example, 64-bit block ciphers like [[Data Encryption Standard|DES]] can be used to generate a keystream in [[output feedback]] (OFB) mode. However, when not using full feedback, the resulting stream has a period of around 2<sup>32</sup> blocks on average; for many applications, the period is far too low. For example, if encryption is being performed at a rate of 8 [[megabyte]]s per second, a stream of period 2<sup>32</sup> blocks will repeat after about an hour.
+
+Some applications using the stream cipher [[RC4]] are attackable because of weaknesses in RC4's key setup routine; new applications should either avoid RC4 or make sure all keys are unique and ideally [[related key|unrelated]] (such as generated by a well-seeded [[Cryptographically secure pseudorandom number generator|CSPRNG]] or a [[cryptographic hash function]]) and that the first bytes of the keystream are discarded.
+
+The elements of stream ciphers are often much simpler to understand than block ciphers and are thus less likely to hide any accidental or malicious weaknesses.
+
+==Usage==
+Stream ciphers are often used for their speed and simplicity of implementation in hardware, and in applications where plaintext comes in quantities of unknowable length like a secure [[wireless network|wireless]] connection. If a [[block cipher]] (not operating in a stream cipher mode) were to be used in this type of application, the designer would need to choose either transmission efficiency or implementation complexity, since block ciphers cannot directly work on blocks shorter than their block size. For example, if a 128-bit block cipher received separate 32-bit bursts of plaintext, three quarters of the data transmitted would be [[padding (cryptography)|padding]]. Block ciphers must be used in [[ciphertext stealing]] or [[residual block termination]] mode to avoid padding, while stream ciphers eliminate this issue by naturally operating on the smallest unit that can be transmitted (usually bytes).
+
+Another advantage of stream ciphers in military cryptography is that the cipher stream can be generated in a separate box that is subject to strict security measures and fed to other devices such as a radio set, which will perform the XOR operation as part of their function. The latter device can then be designed and used in less stringent environments.
+
+[[ChaCha20|ChaCha]] is becoming the most widely used stream cipher in software;<ref>{{Cite web|url=https://blog.cloudflare.com/do-the-chacha-better-mobile-performance-with-cryptography/|title = Do the ChaCha: Better mobile performance with cryptography|date = 23 February 2015}}</ref> others include: 
+[[RC4]],
+[[A5/1]],
+[[A5/2]],
+[[Chameleon (cipher)|Chameleon]], 
+[[FISH (cipher)|FISH]], 
+[[Helix (cipher)|Helix]],
+[[ISAAC (cipher)|ISAAC]], 
+[[MUGI]],
+[[Panama (cipher)|Panama]],
+[[Phelix]], 
+[[Pike (cipher)|Pike]],
+[[Salsa20]],
+[[SEAL (cipher)|SEAL]], 
+[[SOBER]],
+[[SOBER-128]],
+and
+[[WAKE (cipher)|WAKE]].
+
+Several stream ciphers have national origins or are mandated by specific national or international standards. Notable examples include [[ZUC stream cipher|ZUC]] (China), [[SNOW]] / SNOW 3G (Sweden, used in 3GPP standards alongside ZUC for 5G encryption), and the [[A5/1]] and [[A5/2]] algorithms (designed by ETSI for GSM). The [[eSTREAM]] portfolio finalists also have specific national origins, including [[Grain (cipher)|Grain]] (Sweden), [[Trivium (cipher)|Trivium]] (Belgium), and [[Rabbit (cipher)|Rabbit]] (Denmark).
+
+==Comparison==
+{{More citations needed section|date=July 2014}}
+{| style="font-size: 85%; text-align: center;" class="wikitable sortable plainrowheaders"
+!rowspan=2|Stream<br />cipher
+!rowspan=2|Creation<br />date
+!rowspan=2 data-sort-type="numeric" | Speed<br />([[cycles per byte]])
+!colspan=3|(bits)
+!colspan=2|Attack
+|-
+!Effective<br />[[Key (cryptography)|key-]][[Key size|length]]
+!data-sort-type="numeric" | [[Initialization vector]]
+!data-sort-type="numeric" | Internal<br />state
+!class="unsortable"|Best known
+!data-sort-type="numeric" | Computational<br />complexity
+|-
+! scope=row |[[A5/1]]
+|1989
+|{{dunno}}
+|54 or 64 (in [[2G]])
+|22 (in 2G)
+|64
+|Active [[Known-plaintext attack|KPA]] OR<br />[[Known-plaintext attack|KPA]] time–memory tradeoff
+|~&nbsp;2 seconds OR<br />2<sup>39.91</sup>
+|-
+! scope=row |[[A5/2]]
+|1989
+|{{dunno}}
+|54
+|114
+|64?
+|Active
+|4.6 milliseconds
+|-
+! scope=row |[[Achterbahn (stream cipher)| Achterbahn-128/80]]
+|2006
+|1 (hardware)
+|80/128
+|80/128
+|297/351
+|Brute force for frame lengths ''L''&nbsp;≤&nbsp;2<sup>44</sup>. [http://www.matpack.de/achterbahn/Goettfert_Gammel_On_the_frame_length_of_Achterbahn-128-80_ITW2007.pdf Correlation attack for ''L''&nbsp;≥&nbsp;2<sup>48</sup>].
+|2<sup>80</sup> resp. 2<sup>128</sup> for ''L''&nbsp;≤&nbsp;2<sup>44</sup>.
+|-
+! scope=row |[[CryptMT]]
+|2005
+|{{dunno}}
+| Variable
+|data-sort-value="19968" | up to 19968
+| 19968
+| {{N/A}} (2008)
+| {{N/A}} (2008)
+|-
+! scope=row |[[Crypto-1]]
+|data-sort-value="1994" | Pre-1994
+|{{dunno}}
+| 48
+|data-sort-value="16" | 16
+| 48
+| Active KPA (2008)
+| 40 ms OR<br />2<sup>48</sup> (2008)<ref>{{cite web |last1=Garcia |first1=Flavio D. |first2=Gerhard |last2=de Koning Gans |first3=Ruben |last3=Muijrers |first4=Peter |last4=van Rossum |first5=Roel |last5=Verdult |first6=Ronny Wichers |last6=Schreur |first7=Bart |last7=Jacobs |url=https://www.cs.ru.nl/~flaviog/publications/Dismantling.Mifare.pdf |title=Dismantling MIFARE Classic |publisher=13th European Symposium on Research in Computer Security (ESORICS 2008), LNCS, Springer |date=4 October 2008 |access-date=25 June 2022 |archive-date=23 February 2021 |archive-url=https://web.archive.org/web/20210223113847/https://www.cs.ru.nl/~flaviog/publications/Dismantling.Mifare.pdf }}</ref>
+|-
+! scope=row |[[E0 (cipher)]]
+|data-sort-value="1999" | Pre-1999
+|{{dunno}}
+| Variable<br />(usually 128)
+|data-sort-value="4" | 4
+| 132
+| KPA (2005)
+| 2<sup>38</sup> (2005)<ref>{{cite book
+ | first1 = Yi | last1 = Lu | first2 = Willi | last2 = Meier | first3 =Serge | last3 = Vaudenay
+ | title = Advances in Cryptology – CRYPTO 2005 | chapter = The Conditional Correlation Attack: A Practical Attack on Bluetooth Encryption | year = 2005 | location = Santa Barbara, California, USA
+ | volume = 3621 | pages = 97–117
+ | doi = 10.1007/11535218_7
+ | url = https://www.iacr.org/archive/crypto2005/36210097/36210097.pdf
+ | series = Lecture Notes in Computer Science
+ | isbn = 978-3-540-28114-6 
+}}</ref>
+|-
+! scope=row |[[FISH (cipher)|FISH]]
+|1993
+|{{dunno}}
+|Variable
+|{{dunno}}
+|{{dunno}}
+|[[Known-plaintext attack]]
+|2<sup>11</sup>
+|-
+! scope=row |[[Grain (cipher)|Grain]]
+|data-sort-value="2004" | Pre-2004
+|{{dunno}}
+|80
+|64
+|160
+|Key derivation
+|2<sup>43</sup> (2006)<ref>{{cite web |author=[[Côme Berbain]] |author2=[[Henri Gilbert]] |author3=Alexander Maximov |title = Cryptanalysis of Grain |publisher = eSTREAM |date = 2006-01-02 |url = http://www.ecrypt.eu.org/stream/papersdir/2006/019.pdf |access-date = 2006-02-26 |archive-date = 2006-10-11 |archive-url = https://web.archive.org/web/20061011134927/http://www.ecrypt.eu.org/stream/papersdir/2006/019.pdf }}</ref>
+|-
+! scope=row |[[HC-256]]
+|data-sort-value="2004" | Pre-2004
+|4 [[Pentium 4|(W<sub>P4</sub>)]]
+|256
+|256
+|65536
+|{{dunno}}
+|{{dunno}}
+|-
+! scope=row |[[ISAAC (cipher)|ISAAC]]
+|1996
+|2.375 [[64-bit|(W<sub>64-bit</sub>)]] –<br />4.6875 [[32-bit|(W<sub>32-bit</sub>)]]
+|8–8288<br />(usually 40–256)
+|{{N/A}}
+|8288
+|(2006) First-round<br />weak-internal-state-derivation
+|4.67×10<sup>1240</sup> (2001)
+|-
+! scope=row |[[MICKEY]]
+|data-sort-value="2004" | Pre-2004
+|{{dunno}}
+| 80
+|data-sort-value="40" | Variable (0 to 80)
+| 200
+| Differential Fault Attack (2013)
+| 2<sup>32.5</sup> (2013)<ref>{{cite journal|url=http://eprint.iacr.org/2013/029|title=A Differential Fault Attack on MICKEY 2.0|journal=Cryptology ePrint Archive|year=2013|last1=Banik|first1=Subhadeep|last2=Maitra|first2=Subhamoy|last3=Sarkar|first3=Santanu|archive-date=2024-04-15|access-date=2022-06-25|archive-url=https://web.archive.org/web/20240415082002/https://eprint.iacr.org/2013/029|url-status=dead}}</ref>
+|-
+! scope=row |[[MUGI]]
+|1998–2002
+|{{dunno}}
+|128
+|128
+|1216
+|{{N/A}} (2002)
+|~&nbsp;2<sup>82</sup>
+|-
+! scope=row |[[PANAMA]]
+|1998
+|2
+|256
+|128?
+|1216?
+|Hash collisions (2001)
+|2<sup>82</sup>
+|-
+! scope=row |[[Phelix]]
+|data-sort-value="2004" | Pre-2004
+|data-sort-value="8" | up to 8 [[X86 architecture|(W<sub>x86</sub>)]]
+|256 + a 128-bit [[cryptographic nonce|nonce]]
+|128?
+|{{dunno}}
+|Differential (2006)
+|2<sup>37</sup>
+|-
+! scope=row |[[Pike (cipher)|Pike]]
+|1994
+|{{dunno}}
+|Variable
+|{{dunno}}
+|{{dunno}}
+|{{N/A}} (2004)
+|{{N/A}} (2004)
+|-
+! scope=row |[[Py (cipher)|Py]]
+|data-sort-value="2004" | Pre-2004
+|2.6
+|8–2048?<br />(usually 40–256?)
+|64
+|8320
+|[[Cryptanalysis|Cryptanalytic]] theory (2006)
+|2<sup>75</sup>
+|-
+! scope=row |[[Rabbit (cipher)|Rabbit]]
+|2003-Feb
+|3.7[[Pentium III|(W<sub>P3</sub>)]] – 9.7[[ARM7TDMI|(W<sub>ARM7</sub>)]]
+|128
+|64
+|512
+|{{N/A}} (2006)
+|{{N/A}} (2006)
+|-
+! scope=row |[[RC4]]
+|1987
+|7 [[Intel P5 (microarchitecture)|W<sub>P5</sub>]]<ref>{{cite journal |author=P. Prasithsangaree and P. Krishnamurthy |year=2003 |title=Analysis of Energy Consumption of RC4 and AES Algorithms in Wireless LANs | journal = IEEE Globecom |url=http://www.sis.pitt.edu/~is3966/group5_paper2.pdf |archive-url=https://web.archive.org/web/20131203082918/http://www.sis.pitt.edu/~is3966/group5_paper2.pdf |archive-date=2013-12-03 }}</ref>
+|8–2048<br />(usually 40–256)
+|RC4 does not take an IV. If one desires an IV, it must be mixed into the key somehow.
+|2064
+|[[Adi Shamir|Shamir]] initial-bytes [[Weak key#List of algorithms with weak keys|key-derivation]] OR [[Known-plaintext attack|KPA]]
+|2<sup>13</sup> OR 2<sup>33</sup>
+|-
+! scope=row |[[Salsa20]]
+|data-sort-value="2004" | Pre-2004
+|4.24 [[PowerPC G4|(W<sub>G4</sub>)]] –<br />11.84 [[Pentium 4#Willamette|(W<sub>P4</sub>)]]
+|256
+|data-sort-value="128" | a 64-bit nonce + a 64-bit stream position
+|512
+|Probabilistic neutral bits method
+|2<sup>251</sup> for 8 rounds (2007)
+|-
+! scope=row |[[Scream (cipher)|Scream]]
+|2002
+|4–5 [[software|(W<sub>soft</sub>)]]
+|128 + a 128-bit nonce
+|32?
+|64-bit round function
+|{{dunno}}
+|{{dunno}}
+|-
+! scope=row |[[SEAL (cipher)|SEAL]]
+|1997
+|{{dunno}}
+|{{dunno}}
+|32?
+|{{dunno}}
+|{{dunno}}
+|{{dunno}}
+|-
+! scope=row |[[SNOW]]
+|data-sort-value="2003" | Pre-2003
+|{{dunno}}
+|128 or 256
+|32
+|{{dunno}}
+|{{dunno}}
+|{{dunno}}
+|-
+! scope=row |[[SOBER-128]]
+|2003
+|{{dunno}}
+|up to 128
+|{{dunno}}
+|{{dunno}}
+|{{dunno}}
+|{{dunno}}
+|-
+! scope=row |[[SOSEMANUK]]
+|data-sort-value="2004" | Pre-2004
+|{{dunno}}
+|128
+|128
+|{{dunno}}
+|{{dunno}}
+|{{dunno}}
+|-
+! scope=row |[[Trivium (cipher)|Trivium]]
+|data-sort-value="2004" | Pre-2004
+|4 [[X86 architecture|(W<sub>x86</sub>)]] –<br/>8 [[Logic gate|(W<sub>LG</sub>)]]
+|80
+|80
+|288
+|[[Brute force attack]] (2006)
+|2<sup>135</sup>
+|-
+! scope=row |[[Turing (cipher)|Turing]]
+|2000–2003
+|5.5 [[X86 architecture|(W<sub>x86</sub>)]]
+|{{dunno}}
+|160
+|{{dunno}}
+|{{dunno}}
+|{{dunno}}
+|-
+! scope=row |[[VEST]]
+|2005
+|42 [[Application-specific integrated circuit|(W<sub>ASIC</sub>)]] –<br />64 [[Field-programmable gate array|(W<sub>FPGA</sub>)]]
+|data-sort-value="80" – 256|Variable<br />(usually 80–256)
+|data-sort-value="80" – 256|Variable<br />(usually 80–256)
+|256–800
+|{{N/A}} (2006)
+|{{N/A}} (2006)
+|-
+! scope=row |[[WAKE (cipher)|WAKE]]
+|1993
+|{{dunno}}
+|{{dunno}}
+|{{dunno}}
+|8192
+|[[Chosen-plaintext attack|CPA]] & [[Chosen-ciphertext attack|CCA]]
+|Vulnerable
+|-
+!rowspan=2|Stream<br />cipher
+!rowspan=2|Creation<br />date
+!rowspan=2|Speed<br />([[cycles per byte]])
+!colspan=3|(bits)
+!colspan=2|Attack
+|-
+!Effective<br />[[Key (cryptography)|key-]][[Key size|length]]
+![[Initialization vector]]
+!Internal<br />state
+!Best known
+!Computational<br />complexity
+|}
+
+==See also==
+* [[eSTREAM]]
+* [[Linear-feedback shift register]] (LFSR)
+* [[Nonlinear-feedback shift register]] (NLFSR)
+
+==Notes==
+{{reflist}}
+
+==References==
+* Matt J. B. Robshaw, Stream Ciphers Technical Report TR-701, version 2.0, RSA Laboratories, 1995 [http://www.networkdls.com/Articles/tr-701.pdf (PDF)] {{Webarchive|url=https://web.archive.org/web/20210903075015/http://www.networkdls.com/Articles/tr-701.pdf |date=2021-09-03 }}.
+* {{Cite book|last1=Beth|first1=Thomas|last2=Piper|first2=Fred|title=Advances in Cryptology |chapter=The Stop-and-Go-Generator |series=Lecture Notes in Computer Science |date=1985 |volume=209 |chapter-url=https://link.springer.com/content/pdf/10.1007/3-540-39757-4_9.pdf |archive-url=https://web.archive.org/web/20190329161904/https://link.springer.com/content/pdf/10.1007/3-540-39757-4_9.pdf |archive-date=2019-03-29 |url-status=live |pages=88–92|doi=10.1007/3-540-39757-4_9|doi-access=free|isbn=978-3-540-16076-2 }}
+* Christof Paar, Jan Pelzl, [https://web.archive.org/web/20120309084439/http://wiki.crypto.rub.de/Buch/movies.php "Stream Ciphers"], Chapter 2 of "Understanding Cryptography, A Textbook for Students and Practitioners". (companion web site contains online cryptography course that covers stream ciphers and LFSR), Springer, 2009.
+
+==External links==
+* [ftp://ftp.rsasecurity.com/pub/pdfs/tr701.pdf RSA technical report on stream cipher operation.]{{dead link|date=May 2025|bot=medic}}{{cbignore|bot=medic}}
+* [http://www.cosic.esat.kuleuven.be/publications/thesis-167.pdf Cryptanalysis and Design of Stream Ciphers (thesis by Hongjun Wu).]
+* [https://web.archive.org/web/20110706225443/http://biblion.epfl.ch/EPFL/theses/2008/4040/EPFL_TH4040.pdf Analysis of Lightweight Stream Ciphers (thesis by S. Fischer).]
+
+{{Cryptography navbox | stream}}
+
+{{DEFAULTSORT:Stream Cipher}}
+[[Category:Stream ciphers| ]]
+[[Category:Cryptographic primitives]]

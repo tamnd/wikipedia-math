@@ -1,0 +1,165 @@
+<!-- wikipedia: en
+     page: 3063552
+     title: Partially observable Markov decision process
+     revision: 1362373773
+     timestamp: 2026-07-03T14:45:57Z
+     history: https://en.wikipedia.org/w/index.php?curid=3063552&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1362373773 -->
+{{short description|Generalization of a Markov decision process}}
+A '''partially observable Markov decision process''' ('''POMDP''') is a generalization of a [[Markov decision process]] (MDP). A POMDP models an agent decision process in which it is assumed that the [[system dynamics]] are determined by an MDP, but the agent cannot directly observe the underlying state. Instead, it must maintain a sensor model (the [[probability distribution]] of different observations given the underlying state) and the underlying MDP. Unlike the policy function in MDP which maps the underlying states to the actions, POMDP's policy is a mapping from the history of observations (or belief states) to the actions.
+
+The POMDP framework is general enough to model a variety of real-world sequential decision processes. Applications include [[robot navigation]] problems, machine maintenance, and planning under uncertainty in general. The general framework of Markov decision processes with [[imperfect information]] was described by [[Karl Johan Åström]] in 1965<ref>{{cite journal  |author=Åström, K.J.  |title=Optimal control of Markov processes with incomplete state information |journal=Journal of Mathematical Analysis and Applications |volume=10 |pages=174–205 |year=1965|doi=10.1016/0022-247X(65)90154-X |url=https://lup.lub.lu.se/record/8867084 |doi-access=free }}</ref> in the case of a discrete state space, and it was further studied in the [[operations research]] community where the acronym POMDP was coined. It was later adapted for problems in [[artificial intelligence]] and [[automated planning]] by [[Leslie P. Kaelbling]] and [[Michael L. Littman]].<ref name="Kaelbling98">{{cite journal |doi=10.1016/S0004-3702(98)00023-X |author=Kaelbling, L.P., Littman, M.L., Cassandra, A.R. |title=Planning and acting in partially observable stochastic domains |journal=Artificial Intelligence |volume=101 |issue=1–2 |pages=99–134 |year=1998 }}</ref>
+
+An exact solution to a POMDP yields the optimal action for each possible belief over the world states. The optimal action maximizes the expected reward (or minimizes the cost) of the agent over a possibly infinite horizon. The sequence of optimal actions is known as the optimal policy of the agent for interacting with its environment.
+
+==Definition==
+
+===Formal definition===
+A discrete-time POMDP is a 8-tuple <math>(\mathcal{S},\mathcal{A},\mathcal{O},\mathbb{T}, \mathbb{T}_0, \mathbb{O}, R, N)</math>, where
+* <math>\mathcal{S}</math> is a set, denoting the state-space,
+* <math>\mathcal{A}</math> is a set, denoting the action-space,
+* <math>\mathcal{O}</math> is a set, denoting the observation-space,
+* <math>\mathbb{T}(s_{t+1} | s_t, a_t): \mathcal{S} \times \mathcal{S} \times \mathcal{A} \to [0,1]</math> is a probability measure, defining the (Markovian) system dynamics
+* <math>\mathbb{T}_0(s): S \to [0, 1]</math> is a probability measure, defining the distribution of initial states.
+* <math>\mathbb{O}(o_{t+1} | s_{t+1}, a_t): \mathcal{O} \times \mathcal{S} \times \mathcal{A} \rightarrow [0, 1]</math> is a probability measure of observations in a given state and after a given action, 
+* <math>R: (\mathcal{O} \times \mathcal{A})^N \times \mathcal{O} \to \mathbb{R}</math> is the reward function for episodes <math>\tau \in (\mathcal{O} \times \mathcal{A})^N \times \mathcal{O}</math>
+* <math>N \in \mathbb{N} \cup \{+\infty\}</math> is the time-horizon of the process.
+
+Initially, at time <math>t = 0</math>, we sample an initial unobservable state <math>\mathcal{S} \ni s_0 \sim \mathbb{T}_0</math>. At time <math>1 \leq t \leq N</math>, we have some unobservable state <math>s_t \in \mathcal{S}</math>, we choose an action <math>a_t \in \mathcal{A}</math>, and we update our unobservable world state by sampling <math>\mathcal{S} \ni s_{t+1} | s_t, a_t \sim \mathbb{T}</math>. Additionally, at each time <math>0 \leq t \leq N</math> our agent receives an observation <math>\mathcal{O} \ni o_t | s_t \sim \mathbb{O}</math>. All together, we observe an ''episode'' <math>\tau = (((o_0, a_0), \dots, (o_{N-1}, a_{N-1})), o_N) \in (\mathcal{O} \times \mathcal{A})^{N-1} \times \mathcal{O} =: \mathcal{T}</math> with reward <math>R(\tau) \in \mathbb{R}</math>. The agent's goal is to choose a policy <math>\pi = \{\pi_h: \mathcal{T}_h \to \Delta(\mathcal{A})\}</math>, where <math>\mathcal{T}_h := (\mathcal{O} \times \mathcal{A})^h \times \mathcal{O}</math> is the space of <math>h</math>-trajectories and <math>\Delta(\mathcal{A})</math> is the <math>\mathcal{A}</math>-simplex, namely the space of probability measures on <math>\mathcal{A}</math>, to maximise the expected episodic reward <math>\mathbb{E}_{\tau \sim \mathbb{T}^\pi} R(\tau)</math>, where <math>\mathbb{T}^\pi</math> is the episodic distribution where actions are sampled according to the policy <math>\pi</math>.
+
+===Discussion===
+Because the agent does not directly observe the environment's state, the agent must make decisions under uncertainty of the true environment state. However, by interacting with the environment and receiving observations, the agent may update its belief in the true state by updating the probability distribution of the current state. A consequence of this property is that the optimal behavior may often include (information gathering) actions that are taken purely because they improve the agent's estimate of the current state, thereby allowing it to make better decisions in the future.
+
+It is instructive to compare the above definition with the definition of a [[Markov decision process#Definition|Markov decision process]]. An MDP does not include the observation set, because the agent always knows with certainty the environment's current state. Alternatively, an MDP can be reformulated as a POMDP by setting the observation set to be equal to the set of states and defining the observation conditional probabilities to deterministically select the observation that corresponds to the true state.
+
+==Belief update==
+
+After having taken the action <math>a</math> and observing <math>o</math>, an agent needs to update its belief in the state the environment may (or not) be in. Since the state is Markovian (by assumption), maintaining a belief over the states solely requires knowledge of the previous belief state, the action taken, and the current observation. The operation is denoted <math>b' = \tau(b,a,o)</math>. Below we describe how this belief update is computed.
+
+After reaching <math>s'</math>, the agent observes <math>o \in \mathcal{O}</math> with probability <math>\mathbb{O}(o\mid s',a)</math>. Let <math>b</math> be a probability distribution over the state space <math>S</math>. <math>b(s)</math> denotes the probability that the environment is in state <math>s</math>. Given <math>b(s)</math>, then after taking action <math>a</math> and observing <math>o</math>,
+:<math>
+b'(s') = \eta \mathbb{O}(o\mid s',a) \sum_{s\in S} \mathbb{T}(s'\mid s,a)b(s)
+</math>
+where <math>\eta=1/\Pr(o\mid b,a)</math> is a [[normalizing constant]] with <math>\Pr(o\mid b,a) = \sum_{s'\in S}\mathbb{O}(o\mid s',a)\sum_{s\in S}\mathbb{T}(s'\mid s,a)b(s)</math>.
+
+==Belief MDP==
+A Markovian belief state allows a POMDP to be formulated as a [[Markov decision process]] where every belief is a state. The resulting ''belief MDP'' will thus be defined on a continuous state space (even if the "originating" POMDP has a finite number of states: there are infinite belief states (in <math>B</math>) because there are an infinite number of probability distributions over the states (of <math>\mathcal{S}</math>)).<ref name="Kaelbling98" />
+
+Formally, the belief MDP is defined as a [[tuple]] <math>(B,A,\tau,r,\gamma)</math> where
+
+* <math>B</math> is the set of belief states over the POMDP states,
+* <math>A</math> is the same [[finite set]] of action as for the original POMDP,
+* <math>\tau</math> is the belief state transition function,
+* <math>r:B \times A \to \mathbb{R}</math> is the reward function on belief states,
+* <math>\gamma</math> is the discount factor equal to the <math>\gamma</math> in the original POMDP.
+
+Of these, <math>\tau</math> and <math>r</math> need to be derived from the original POMDP. <math>\tau</math> is
+
+<math>\tau(b,a,b') = \sum_{o\in \mathcal{O}} \Pr(b'|b,a,o) \Pr(o | a, b),</math>
+
+where <math>\Pr(o | a,b)</math> is the value derived in the previous section and
+
+<math>Pr(b'|b,a,o) = \begin{cases}
+1 &\text{if the belief update with arguments } b,a,o \text{ returns } b'  \\
+0 &\text{otherwise }  \end{cases}.</math>
+
+The belief MDP reward function (<math>r</math>) is the expected reward from the POMDP reward function over the belief state distribution:
+
+<math>r(b,a) = \sum_{s\in \mathcal{S}} b(s) R(s,a)</math>.
+
+The belief MDP is not partially observable anymore, since at any given time the agent knows its belief, and by extension the state of the belief MDP.
+
+===Policy and value function===
+Unlike the "originating" POMDP (where each action is available from only one state), in the corresponding Belief MDP all belief states allow all actions, since you (almost) always have ''some'' probability of believing you are in any (originating) state. As such, <math>\pi</math> specifies an action <math>a=\pi(b)</math> for any belief <math>b</math>.
+
+Here it is assumed the objective is to maximize the expected total discounted reward over an infinite horizon. When <math>R</math> defines a cost, the objective becomes the minimization of the expected cost.
+
+The expected reward for policy <math>\pi</math> starting from belief <math>b_0</math> is defined as
+:<math>
+V^\pi(b_0) = \sum_{t=0}^\infty  \gamma^t r(b_t, a_t) = \sum_{t=0}^\infty \gamma^t E\Bigl[ R(s_t,a_t) \mid b_0, \pi \Bigr]
+</math>
+where <math>\gamma<1</math> is the discount factor. The optimal policy <math>\pi^*</math> is obtained by optimizing the long-term reward.
+:<math>
+\pi^* = \underset{\pi}{\mbox{argmax}}\ V^\pi(b_0)
+</math>
+where <math>b_0</math> is the initial belief.
+
+The optimal policy, denoted by <math>\pi^*</math>, yields the highest expected reward value for each belief state, compactly represented by the optimal value function <math>V^*</math>. This value function is solution to the [[Bellman equation|Bellman optimality equation]]:
+:<math>
+V^*(b) = \max_{a\in A}\Bigl[ r(b,a) + \gamma\sum_{o\in \Omega} \Pr(o\mid b,a) V^*(\tau(b,a,o)) \Bigr]
+</math>
+For finite-horizon POMDPs, the optimal value function is piecewise-linear and convex.<ref>{{Cite thesis |degree=PhD |title=The optimal control of partially observable Markov processes |last=Sondik |first=E.J. |year=1971 |publisher=Stanford University |url=https://apps.dtic.mil/docs/citations/AD0730503|archive-url=https://web.archive.org/web/20191017142947/https://apps.dtic.mil/docs/citations/AD0730503|url-status=dead|archive-date=October 17, 2019}}</ref> It can be represented as a finite set of vectors. In the infinite-horizon formulation, a finite vector set can approximate <math>V^*</math> arbitrarily closely, whose shape remains convex. Value iteration applies [[dynamic programming]] update to gradually improve on the value until convergence to an <math>\epsilon</math>-optimal value function, and preserves its piecewise linearity and convexity.<ref>{{cite journal |doi=10.1287/opre.21.5.1071 |author=Smallwood, R.D., Sondik, E.J. |title=The optimal control of partially observable Markov decision processes over a finite horizon |journal=Operations Research |volume=21 |issue=5 |pages=1071–88 |year=1973 }}</ref> By improving the value, the policy is implicitly improved. Another dynamic programming technique called policy iteration explicitly represents and improves the policy instead.<ref>{{cite journal |doi=10.1287/opre.26.2.282 |author=Sondik, E.J. |title=The optimal control of partially observable Markov processes over the infinite horizon: discounted cost |journal=Operations Research |volume=26 |issue=2 |pages=282–304 |year=1978 }}</ref><ref>{{cite conference |book-title=Proceedings of the Fourteenth International Conference on Uncertainty In Artificial Intelligence (UAI-98) |title=Solving POMDPs by searching in policy space |first=E. |last=Hansen |year=1998 |arxiv=1301.7380 }}</ref>
+
+==Approximate POMDP solutions==
+In practice, POMDPs are often computationally [[Computational complexity theory#Intractability|intractable]] to solve exactly. This intractability is often due to the [[curse of dimensionality]] or the curse of history (the fact that optimal policies may depend on the entire history of actions and observations). To address these issues, computer scientists have developed various approximate POMDP solutions.<ref>{{cite journal |doi=10.1613/jair.678 |author=Hauskrecht, M. |title=Value function approximations for partially observable Markov decision processes|journal=Journal of Artificial Intelligence Research|volume=13|pages=33–94|year=2000|doi-access=free|arxiv=1106.0234}}</ref> These solutions typically attempt to approximate the problem or solution with a limited number of parameters, plan only over a small part of the belief space online, or summarize the action-observation history compactly.
+
+Grid-based algorithms<ref>{{cite journal |doi=10.1287/opre.39.1.162 |author=Lovejoy, W. |title=Computationally feasible bounds for partially observed Markov decision processes |journal=Operations Research |volume=39 |pages=162–175 |year=1991 }}</ref> comprise one approximate solution technique.  In this approach, the value function is computed for a set of points in the belief space, and interpolation is used to determine the optimal action to take for other belief states that are encountered which are not in the set of grid points. More recent work makes use of sampling techniques, generalization techniques and exploitation of problem structure, and has extended POMDP solving into large domains with millions of states.<ref name=hoey>{{cite conference |title=Assisting Persons with Dementia during Handwashing Using a Partially Observable Markov Decision Process |author1=Jesse Hoey |author2=Axel von Bertoldi |author3=Pascal Poupart |author4=Alex Mihailidis |book-title=Proceedings of the International Conference on Computer Vision Systems |date=2007 |doi=10.2390/biecoll-icvs2007-89}}</ref><ref name=hoeyCVIU>{{cite journal |doi=10.1016/j.cviu.2009.06.008 | title=Automated Handwashing Assistance For Persons With Dementia Using Video and a Partially Observable Markov Decision Process |author1=Jesse Hoey |author2=Pascal Poupart |author3=Axel von Bertoldi |author4=Tammy Craig |author5=Craig Boutilier |author6=Alex Mihailidis. |journal=Computer Vision and Image Understanding |volume=114 | issue=5 | pages=503–519 | year=2010| citeseerx=10.1.1.160.8351 }}</ref> For example, adaptive grids and point-based methods sample random reachable belief points to constrain the planning to relevant areas in the belief space.<ref>{{cite conference |title=Point-based value iteration: An anytime algorithm for POMDPs |author=Pineau, J., Gordon, G., Thrun, S. |book-title=International Joint Conference on Artificial Intelligence (IJCAI). Acapulco, Mexico |date=August 2003 |pages=1025–32 |url=http://www.fore.robot.cc/papers/Pineau03a.pdf}}</ref><ref>{{cite conference |title=Incremental methods for computing bounds in partially observable Markov decision processes |author=Hauskrecht, M.|book-title=Proceedings of the 14th National Conference on Artificial Intelligence (AAAI). Providence, RI |date=1997 |pages=734–739 |citeseerx=10.1.1.85.8303}}</ref>
+[[Dimensionality reduction]] using [[Principle component analysis|PCA]] has also been explored.<ref>{{cite book |author1=Roy, Nicholas |author1-link=Nicholas Roy|author2=Gordon, Geoffrey |chapter=Exponential Family PCA for Belief Compression in POMDPs |title=Advances in Neural Information Processing Systems |year=2003 |chapter-url=http://papers.nips.cc/paper/2319-exponential-family-pca-for-belief-compression-in-pomdps.pdf}}</ref>
+
+Online planning algorithms approach large POMDPs by constructing a new policy for the current belief each time a new observation is received. Such a policy only needs to consider future beliefs reachable from the current belief, which is often only a very small part of the full belief space. This family includes variants of [[Monte Carlo tree search]]<ref>{{cite conference |author=David Silver and Joel Veness| title=Monte-Carlo planning in large POMDPs| conference=Advances in neural information processing systems| date=2010}}</ref> and [[heuristic]] search.<ref>{{cite journal |author=Nan Ye, Adhiraj Somani, David Hsu, and Wee Sun Lee |journal=Journal of Artificial Intelligence Research |title= DESPOT: Online POMDP Planning with Regularization  |doi=10.1613/jair.5328 |volume=58 |date=2017|pages=231–266 |doi-access=free |arxiv=1609.03250 }}</ref> Similar to MDPs, it is possible to construct online algorithms that find arbitrarily near-optimal policies and have no direct computational complexity dependence on the size of the state and observation spaces.<ref>{{cite journal |author=Michael H. Lim, Tyler J. Becker, Mykel J. Kochenderfer, Claire J. Tomlin, and Zachary N. Sunberg |title=Optimality Guarantees for Particle Belief Approximation of POMDPs |journal=Journal of Artificial Intelligence Research |volume=77 |date=2023 |pages=1591–1636 |doi=10.1613/jair.1.14525 |doi-access=free |arxiv=2210.05015 }}</ref>
+
+Another line of approximate solution techniques for solving POMDPs relies on using (a subset of) the history of previous observations, actions and rewards up to the current time step as a pseudo-state. Usual techniques for solving MDPs based on these pseudo-states can then be used (e.g. [[Q-learning]]). Ideally the pseudo-states should contain the most important information from the whole history (to reduce bias) while being as compressed as possible (to reduce [[overfitting]]).<ref>{{cite conference |title=On overfitting and asymptotic bias in batch reinforcement learning with partial observability| author=Francois-Lavet, V., Rabusseau, G., Pineau, J., Ernst, D., Fonteneau, R.| journal=Journal of Artificial Intelligence Research | date=2019| volume=65| pages=1–30 | url=https://www.jair.org/index.php/jair/article/view/11478| arxiv=1709.07796}}</ref>
+
+== POMDP theory ==
+Planning in POMDP is [[Undecidable problem|undecidable]] in general. However, some settings have been identified to be decidable (see Table 2 in,<ref name=":0">{{Cite journal|last1=Chatterjee|first1=Krishnendu|last2=Chmelík|first2=Martin|last3=Tracol|first3=Mathieu|date=2016-08-01|title=What is decidable about partially observable Markov decision processes with ω-regular objectives|journal=Journal of Computer and System Sciences|volume=82|issue=5|pages=878–911|doi=10.1016/j.jcss.2016.02.009|issn=0022-0000|doi-access=free}}</ref> reproduced below). Different objectives have been considered. Büchi objectives are defined by [[Büchi automaton|Büchi automata]]. [[Reachability]] is an example of a Büchi condition (for instance, reaching a good state in which all robots are home). coBüchi objectives correspond to traces that do not satisfy a given Büchi condition (for instance, not reaching a bad state in which some robot died). Parity objectives are defined via [[parity game]]s; they enable to define complex objectives such that reaching a good state every 10 timesteps. The objective can be satisfied:
+
+* almost-surely, that is the probability to satisfy the objective is 1;
+* positive, that is the probability to satisfy the objective is strictly greater than 0;
+* quantitative, that is the probability to satisfy the objective is greater than a given threshold.
+
+We also consider the finite memory case in which the agent is a [[finite-state machine]], and the general case in which the agent has an infinite memory.
+{| class="wikitable"
+|+
+!Objectives
+!Almost-sure (infinite memory)
+!Almost-sure (finite memory)
+!Positive (inf. mem.)
+!Positive (finite mem.)
+!Quantitative (inf. mem)
+!Quantitative (finite mem.)
+|-
+|[[Büchi automaton|Büchi]]
+|[[EXPTIME]]-complete
+|EXPTIME-complete
+|undecidable
+|EXPTIME-complete<ref name=":0" />
+|undecidable
+|undecidable
+|-
+|coBüchi
+|undecidable
+|EXPTIME-complete<ref name=":0" />
+|EXPTIME-complete
+|EXPTIME-complete
+|undecidable
+|undecidable
+|-
+|[[Parity game|parity]]
+|undecidable
+|EXPTIME-complete<ref name=":0" />
+|undecidable
+|EXPTIME-complete<ref name=":0" />
+|undecidable
+|undecidable
+|}
+
+==Applications==
+POMDPs can be used to model many kinds of real-world problems. Notable applications include the use of a POMDP in management of patients with ischemic heart disease,<ref>{{cite journal |doi=10.1016/S0933-3657(99)00042-1| pmid=10675716| title=Planning treatment of ischemic heart disease with partially observable Markov decision processes|author=Hauskrecht, M., Fraser, H. | journal=Artificial Intelligence in Medicine|volume=18|issue=3|pages=221–244|year=2000}}</ref> [[assistive technology]] for persons with dementia,<ref name=hoey/><ref name=hoeyCVIU/> the conservation of the critically endangered and difficult to detect Sumatran tigers<ref name="chades">{{cite journal |author=Chadès, I., McDonald-Madden, E., McCarthy, M.A., Wintle, B., Linkie, M., Possingham, H.P. |title=When to stop managing or surveying cryptic threatened species |journal=Proc. Natl. Acad. Sci. U.S.A. |volume=105 |issue=37 |pages=13936–40 |date=16 September 2008 |pmid=18779594 |pmc=2544557 |doi=10.1073/pnas.0805265105 |bibcode=2008PNAS..10513936C|doi-access=free }}</ref> and aircraft collision avoidance.<ref>{{cite book |author=Kochenderfer, Mykel J. |chapter=Optimized Airborne Collision Avoidance |title=Decision Making Under Uncertainty |publisher=The MIT Press |year=2015 |pages=249–276 |isbn=978-0-262-33170-8 |chapter-url=https://ieeexplore.ieee.org/document/7288641}}</ref>
+
+One application is a teaching case, a crying baby problem, where a parent needs to sequentially decide whether to feed the baby based on the observation of whether the baby is crying or not, which is an imperfect representation of the actual baby's state of hunger.<ref name="ADM">{{cite book |last1=Kochenderfer |first1=Mykel J.|last2=Wheeler|first2=Tim A. |last3=Wray|first3=Kyle H. |date=2022 |title=Algorithms for decision making |url=https://algorithmsbook.com/ |location= Cambridge, Massachusetts; London, England|publisher=MIT Press |page=678 |isbn=9780262047012}}</ref><ref name="crying_baby">{{cite web |last1=Moss|first1=Robert J.|title=WATCH: POMDPs: Decision Making Under Uncertainty POMDPs.jl. Crying baby problem |url=https://www.youtube.com/watch?v=KDFzObtE6cs |website=youtube.com |publisher=[[Julia (programming language)|The Julia Programming Language]] |language=en |format=video |date=Sep 24, 2021}}</ref>
+
+==References==
+{{reflist}}
+
+==External links==
+* [http://bigbird.comp.nus.edu.sg/pmwiki/farm/appl/index.php?n=Main.HomePage APPL], a fast point-based POMDP solver
+* [https://www.cs.kent.ac.uk/people/staff/mg483/code/IsoFreeBB/ Finite-state Controllers using Branch-and-Bound] An Exact POMDP Solver for Policies of a Bounded Size
+* [https://github.com/mhahsler/pomdp pomdp: Infrastructure for Partially Observable Markov Decision Processes (POMDP)] an R package which includes an interface to Tony Cassandra's [https://www.pomdp.org/code/ pomdp-solve] program.
+* [https://github.com/JuliaPOMDP/POMDPs.jl POMDPs.jl], an interface for defining and solving MDPs and POMDPs in [[Julia (programming language)|Julia]] and python with a variety of solvers.
+* [http://bitbucket.org/bami/pypomdp pyPOMDP], a (PO)MDP toolbox (simulator, solver, learner, file reader) for Python by Oliver Stollmann and Bastian Migge
+* [https://longhorizon.org/trey/zmdp/ zmdp], a POMDP solver by Trey Smith
+
+[[Category:Dynamic programming]]
+[[Category:Markov processes]]
+[[Category:Stochastic control]]

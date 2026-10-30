@@ -1,0 +1,374 @@
+<!-- wikipedia: en
+     page: 420373
+     title: Π-calculus
+     revision: 1371914202
+     timestamp: 2026-08-29T08:27:14Z
+     history: https://en.wikipedia.org/w/index.php?curid=420373&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1371914202 -->
+{{Short description|Process calculus}}
+{{DISPLAYTITLE:{{pi}}-calculus}}
+In [[theoretical computer science]], the '''{{pi}}-calculus''' (or '''pi-calculus''') is a [[process calculus]]. The {{pi}}-calculus allows channel names to be communicated along the channels themselves, and in this matter, it is able to describe [[concurrent computation]]s whose network configuration may change during the computation. 
+
+The {{pi}}-calculus has few terms and is a small, yet expressive language (see {{section link||Syntax}}). Functional programs can be encoded into the {{pi}}-calculus, and the encoding emphasises the dialogue nature of computation, drawing connections with [[game semantics]]. Extensions of the {{pi}}-calculus, such as the spi calculus and applied {{pi}}, have been successful in reasoning about [[cryptographic protocol]]s{{Citation needed|date=March 2025}}. Beside the original use in describing concurrent systems, the {{pi}}-calculus has also been used to reason through [[business process]]es,<ref name="omg">OMG Specification (2011). [http://www.omg.org/spec/BPMN/2.0 "Business Process Model and Notation (BPMN) Version 2.0"], ''[[Object Management Group]]''. p.21</ref> [[molecular biology]].<ref name="reeve" /> and [[autonomous agent]]s in [[artificial intelligence]].
+
+== Informal definition ==
+The {{pi}}-calculus belongs to the family of [[process calculi]], mathematical formalisms for describing and analyzing properties of concurrent computation. In fact, the {{pi}}-calculus, like the [[lambda calculus|λ-calculus]], is so minimal that it does not contain primitives such as numbers, Booleans, data structures, variables, functions, or even the usual [[control flow]] statements (such as <code>if-then-else</code>, <code>while</code>).
+
+=== Process constructs ===
+
+Central to the {{pi}}-calculus is the notion of ''name''. The simplicity of the calculus lies in the dual role that names play as ''communication channels'' and ''variables''.
+
+The process constructs available in the calculus are the following<ref>{{Cite web|url=https://www.cs.tufts.edu/~nr/cs257/archive/jeannette-wing/pi.pdf|title=FAQ on π-Calculus|last=Wing|first=Jeannette M.|date=27 December 2002}}</ref> (a precise definition is given in the following section):
+
+* ''concurrency'', written <math>P \mid Q</math>, where <math>P</math> and <math>Q</math> are two processes or threads executed concurrently.
+* ''communication'', where
+** ''input prefixing'' <math>c\left(x\right).P</math> is a process waiting for a message that was sent on a communication channel named <math>c</math> before proceeding as {{nowrap|<math>P</math>,}} binding the name received to the name {{nowrap|{{mvar|x}}.}} Typically, this models either a process expecting a communication from the network or a label <code>c</code> usable only once by a <code>goto c</code> operation.
+** ''output prefixing''  <math>\overline{c} \langle y \rangle.P</math> describes that the name <math>y</math> is emitted on channel <math>c</math> before proceeding as {{nowrap|<math>P</math>.}} Typically, this models either sending a message on the network or a <code>goto c</code> operation.
+* ''replication'', written <math>!\,P</math>, which may be seen as a process which can always create a new copy of {{nowrap|<math>P</math>.}} Typically, this models either a [[network service]] or a label <code>c</code> waiting for any number of <code>goto c</code> operations.
+* ''creation of a new name'', written <math>\left(\nu x\right)P</math>, which may be seen as a process allocating a new constant {{mvar|x}} within {{nowrap|<math>P</math>.}} The constants of {{nowrap|{{pi}}-calculus}} are defined by their names only and are always communication channels. Creation of a new name in a process is also called ''restriction''.
+* the nil process, written <math>0</math>, is a process whose execution is complete and has stopped.
+
+Although the minimalism of the {{pi}}-calculus prevents us from writing programs in the normal sense, it is easy to extend the calculus. In particular, it is easy to define both control structures such as recursion, loops and sequential composition and datatypes such as first-order functions, [[truth value]]s, lists and integers. Moreover, extensions of the {{nowrap|{{pi}}-calculus}} have been proposed which take into account distribution or [[public-key cryptography]]. The ''applied {{nowrap|{{pi}}-calculus}}'' due to Abadi and Fournet [https://www.soe.ucsc.edu/~abadi/Papers/isss02.pdf] put these various extensions on a formal footing by extending the {{nowrap|{{pi}}-calculus}} with arbitrary datatypes.
+
+=== A small example ===
+
+Below is a tiny example of a process which consists of three parallel components. The channel name {{mvar|x}} is only known by the first two components.
+
+:<math>
+\begin{align}
+  (\nu x) & \; ( \; \overline{x} \langle z \rangle . \; 0  \\
+          & \; | \; x(y) . \; \overline{y}\langle x \rangle . \; x(y) . \; 0 \; )  \\
+          & \; | \; z(v) . \; \overline{v}\langle v \rangle . 0
+\end{align}
+</math>
+
+The first two components are able to communicate on the channel {{mvar|x}}, and the name {{mvar|y}} becomes bound to {{mvar|z}}. The next step in the process is therefore
+
+:<math>
+\begin{align}
+  (\nu x) & \; ( \; 0 \\
+          & \; | \; \overline{z} \langle x \rangle . \; x(y). \; 0 \; )  \\
+          & \; | \; z(v). \; \overline{v}\langle v \rangle . \; 0
+\end{align}
+</math>
+
+Note that the remaining {{mvar|y}} is not affected because it is defined in an inner scope.
+The second and third parallel components can now communicate on the channel name {{mvar|z}}, and the name {{mvar|v}} becomes bound to {{mvar|x}}. The next step in the process is now
+
+:<math>
+\begin{align}
+  (\nu x) & \; ( \; 0 \\
+          & \; | \; x(y). \; 0  \\
+          & \; | \; \overline{x}\langle x \rangle . \; 0 \; )
+\end{align}
+</math>
+
+Note that since the local name {{mvar|x}} has been output, the scope of {{mvar|x}} is extended to cover the third component as well. Finally, the channel {{mvar|x}} can be used for sending the name {{mvar|x}}. After that all concurrently executing processes have stopped
+
+:<math>
+\begin{align}
+  (\nu x) & \; ( \; 0  \\
+          & \; | \; 0  \\
+          & \; | \; 0 \; )
+
+\end{align}
+</math>
+
+== Formal definition ==
+
+=== Syntax ===
+
+Let Χ be a set of objects called ''names''. The [[abstract syntax]] for the {{pi}}-calculus is built from the following [[BNF grammar]] (where ''x'' and ''y'' are any names from Χ):<ref>[https://www.lfcs.inf.ed.ac.uk/reports/89/ECS-LFCS-89-85/ A Calculus of Mobile Processes part 1] page 10, by R. Milner, J. Parrow and D. Walker published in Information and Computation 100(1) pp.1-40, Sept 1992</ref>
+
+:<math>
+\begin{align}
+P, Q ::= & \; x(y).P \,\,\, \, \, & \text{Receive on channel }x\text{, bind the result to }y\text{, then run }P \\
+& \; | \; \overline{x} \langle y \rangle.P \,\,\, \, \, &\text{Send the value }y\text{ over channel }x\text{, then run }P \\
+& \; | \; P|Q \,\,\, \, \, \, \, \, \, &\text{Run }P\text{ and }Q\text{ simultaneously} \\
+& \; | \; (\nu x)P  \,\,\, &\text{Create a new channel }x\text{ and run }P \\
+& \; | \; !P \,\,\, &\text{Repeatedly spawn copies of }P \\
+& \; | \; 0 & \text{Terminate the process}
+\end{align}
+</math>
+<!-- "P,Q,R" -- was R needed? -->
+
+In the concrete syntax below, the prefixes bind more tightly than the parallel composition (|), and parentheses are used to disambiguate.
+
+Names are bound by the restriction and input prefix constructs. Formally, the set of free names of a process in {{pi}}–calculus are defined inductively by the table below. The set of bound names of a process are defined as the names of a process that are not in the set of free names.
+{| class="wikitable" style="width: 100%;"
+! Construct
+! Free names
+|-
+| <math>x(y).P</math>
+| ''x''; free names of ''P'' except for ''y''
+|-
+| <math>\overline{x} \langle y \rangle.P</math>
+| ''x''; ''y''; all free names of ''P''
+|-
+| <math>P|Q</math>
+| All free names of ''P'' and ''Q''
+|-
+| <math>(\nu x)P</math>
+| Free names of ''P'' except for ''x''
+|-
+| <math>!P</math>
+| All free names of ''P''
+|-
+| <math>0</math>
+| None
+|}
+
+=== Structural congruence ===
+
+Central to both the reduction semantics and the labelled transition semantics is the notion of '''structural congruence'''. Two processes are structurally congruent, if they are identical up to structure. In particular, parallel composition is commutative and associative.
+
+More precisely, structural congruence is defined as the least [[equivalence relation]] preserved by the process constructs and satisfying:
+
+''Alpha-conversion'':
+
+:* <math>P \equiv Q</math> if <math>Q</math> can be obtained from <math>P</math> by renaming one or more bound names in <math>P</math>.
+
+''Axioms for parallel composition'':
+
+:* <math>P|Q \equiv Q|P</math>
+:* <math>(P|Q)|R \equiv P|(Q|R)</math>
+:*<math>P | 0 \equiv P</math>
+
+''Axioms for restriction'':
+
+:* <math>(\nu x)(\nu y)P \equiv (\nu y)(\nu x)P</math>
+:* <math>(\nu x)0 \equiv 0</math>
+
+''Axiom for replication'':
+
+:* <math>!P \equiv P|!P</math>
+
+''Axiom relating restriction and parallel'':
+
+:* <math>(\nu x)(P | Q) \equiv (\nu x)P | Q </math> if {{mvar|x}} is not a free name of <math>Q</math>.
+
+This last axiom is known as the "scope extension" axiom. This axiom is central, since it describes how a bound name {{mvar|x}} may be extruded by an output action, causing the scope of {{mvar|x}} to be extended. In cases where {{mvar|x}} is a free name of <math>Q</math>, alpha-conversion may be used to allow extension to proceed.
+
+=== Reduction semantics ===
+
+We write <math>P \rightarrow P'</math> if <math>P</math> can perform a computation step, following which it is now <math>P'</math>.
+This ''reduction relation'' <math>\rightarrow</math> is defined as the least relation closed under a set of reduction rules.
+
+The main reduction rule which captures the ability of processes to communicate through channels is the following:
+* <math>\overline{x}\langle z \rangle.P | x(y).Q \rightarrow P | Q[z/y] </math>
+: where <math>Q[z/y]</math> denotes the process <math>Q</math> in which the free name <math>z</math> has been ''substituted'' for the free occurrences of <math>y</math>. If a free occurrence of <math>y</math> occurs in a location where <math>z</math> would not be free, alpha-conversion may be required.
+
+There are three additional rules:
+* If <math>P \rightarrow Q</math> then also <math>P|R \rightarrow Q|R</math>.
+: This rule says that parallel composition does not inhibit computation.
+* If <math>P \rightarrow Q</math>, then also <math>(\nu x)P \rightarrow (\nu x)Q</math>.
+: This rule ensures that computation can proceed underneath a restriction.
+* If <math>P \equiv P'</math> and <math>P' \rightarrow Q'</math> and <math>Q' \equiv Q</math>, then also <math>P \rightarrow Q</math>.
+
+The latter rule states that processes that are structurally congruent have the same reductions.
+
+=== The example revisited ===
+
+Consider again the process
+
+:<math> (\nu x)(\overline{x} \langle z \rangle.0  |  x(y).   \overline{y}\langle x \rangle . x(y).0 ) | z(v) . \overline{v}\langle v \rangle. 0 </math>
+
+Applying the definition of the reduction semantics, we get the reduction
+
+:<math> (\nu x)(\overline{x} \langle z \rangle.0  |  x(y).   \overline{y}\langle x \rangle . x(y).0 ) | z(v) . \overline{v}\langle v \rangle. 0  \rightarrow (\nu x)(0|  \overline{z}\langle x \rangle . x(y). 0 ) | z(v). \overline{v}\langle v \rangle .0 </math>
+
+Note how, applying the reduction substitution axiom, free occurrences of <math>y</math> are now labeled as <math>z</math>.
+
+Next, we get the reduction
+
+:<math> (\nu x)(0|  \overline{z}\langle x \rangle . x(y). 0 ) | z(v). \overline{v}\langle v \rangle .0 \rightarrow (\nu x)(0|  x(y). 0  | \overline{x}\langle x \rangle .0)  </math>
+
+Note that since the local name {{mvar|x}} has been output, the scope of {{mvar|x}} is extended to cover the third component as well.  This was captured using the scope extension axiom.
+
+Next, using the reduction substitution axiom, we get
+
+:<math> (\nu x)(0 | 0 | 0) </math>
+
+Finally, using the axioms for parallel composition and restriction, we get
+
+:<math> 0 </math>
+
+=== Labelled semantics ===
+
+Alternatively, one may give the pi-calculus a labelled transition semantics (as has been done with the [[Calculus of Communicating Systems]]). <br />
+In this semantics, a transition from a state <math>P</math> to some other state <math>P'</math> after an action <math>\alpha</math> is notated as: 
+*<math>P\,\xrightarrow{\overset{}\alpha} P'</math>
+Where states <math>P</math> and <math>P'</math> represent processes and <math>\alpha</math> is either an ''input action'' <math>a(x)</math>, an ''output action'' ''<math>\overline{a}\langle x \rangle</math>'', or a ''silent action'' {{mvar|&tau;}}.<ref>Robin Milner, Communicating and Mobile Systems: The Pi Calculus, Cambridge University Press, {{ISBN|0521643201}}. 1999</ref>
+
+A standard result about the labelled semantics is that it agrees with the reduction semantics up to structural congruence, in the sense that 
+<math>P \rightarrow P'</math> [[if and only if]] 
+<math>P\,\xrightarrow{\overset{}\tau}\equiv P'</math> <ref>Sangiorgi, D., & Walker, D. (2003). p51, The Pi-Calculus. Cambridge University Press.</ref>
+
+== Extensions and variants ==
+
+The syntax given above is a minimal one. However, the syntax may be modified in various ways.
+
+A ''nondeterministic choice operator'' <math>P + Q</math> can be added to the syntax.
+
+A test for ''name equality'' <math>[x=y]P</math> can be added to the syntax. This ''match operator'' can proceed as <math>P</math> if and only if {{mvar|x}} and <math>y</math> are the same name.
+Similarly, one may add a ''mismatch operator'' for '''name inequality'''. Practical programs which can pass names (URLs or pointers) often use such functionality: for directly modeling such functionality inside the calculus, this and related extensions are often useful.
+
+The ''asynchronous {{pi}}-calculus''<ref>{{cite book|last1=Boudol|first1=G.|title=Asynchrony and the {{pi}}-calculus. Technical Report 1702, INRIA, Sophia-Antipolis| date=1992}}</ref><ref>{{cite book|last1=Honda |first1=K. | last2=Tokoro | first2=M. |title=An Object Calculus for Asynchronous Communication. ECOOP 91|publisher=Springer Verlag| date=1991}}</ref>
+allows only outputs with no continuation, i.e. output atoms of the form <math>\overline{x}\langle y \rangle</math>, yielding a smaller calculus. However, any process in the original calculus can be represented by the smaller asynchronous {{pi}}-calculus using an extra channel to simulate explicit acknowledgement from the receiving process. Since a continuation-free output can model a message-in-transit, this fragment shows that the original {{pi}}-calculus, which is intuitively based on synchronous communication, has an expressive asynchronous communication model inside its syntax. However, the nondeterministic choice operator defined above cannot be expressed in this way, as an [[guard (computer science)|unguarded]] choice would be converted into a guarded one; this fact has been used to demonstrate that the asynchronous calculus is strictly less expressive than the synchronous one (with the choice operator).<ref>{{cite journal|last=Palamidessi|first=Catuscia|author-link=Catuscia Palamidessi|title=Comparing the expressive power of the Synchronous and the Asynchronous pi-calculus|journal=Proceedings of the 24th ACM Symposium on Principles of Programming Languages|year=1997|pages=256–265|arxiv=cs/9809008|bibcode=1998cs........9008P}}</ref>
+
+The ''polyadic {{pi}}-calculus'' allows communicating more than one name in a single action: <math>\overline{x}\langle z_1,...,z_n\rangle.P</math> ''(polyadic output)'' and <math>x(z_1,...,z_n).P</math> ''(polyadic input)''. This polyadic extension, which is useful especially when studying types for name passing processes,  can be encoded in the monadic calculus by passing the name of a private channel through which the multiple arguments are then passed in sequence. The encoding is defined recursively by the clauses
+
+<math>\overline{x}\langle y_1,\cdots,y_n\rangle.P</math> is encoded as <math>(\nu w) \overline{x}\langle w \rangle.\overline{w}\langle y_1\rangle.\cdots.\overline{w}\langle y_n\rangle.[P]</math>
+
+<math>x(y_1,\cdots,y_n).P</math> is encoded as <math>x(w).w(y_1).\cdots.w(y_n).[P]</math>
+
+All other process constructs are left unchanged by the encoding.
+
+In the above, <math>[P]</math> denotes the encoding of all prefixes in the continuation <math>P</math> in the same way.
+
+The full power of replication <math>!P</math> is not needed. Often, one only considers ''replicated input'' <math>! x(y).P</math>, whose structural congruence axiom is <math>! x(y).P \equiv x(y).P | !x(y).P</math>.
+
+Replicated input process such as <math> !x(y).P</math> can be understood as servers, waiting on channel
+{{mvar|x}} to be invoked by clients. Invocation of a server spawns a new copy of
+the process <math>P[a/y]</math>, where a is the name passed by the client to the
+server, during the latter's invocation.
+
+A ''higher order {{pi}}-calculus'' can be defined where not only names but processes are sent through channels.
+The key reduction rule for the higher order case is
+
+<math>\overline{x}\langle R \rangle.P | x(Y).Q \rightarrow P | Q[R/Y] </math>
+
+Here, <math>Y</math> denotes a ''process variable'' which can be instantiated by a process term. Sangiorgi
+established that the ability to pass processes does not
+increase the expressivity of the {{pi}}-calculus: passing a process ''P'' can be
+simulated by just passing a name that points to ''P'' instead.
+
+== Properties ==
+
+=== Turing completeness ===
+
+The {{pi}}-calculus is a [[Turing complete|universal model of computation]]. This was first observed by [[Robin Milner|Milner]] in his paper "Functions as Processes",<ref>{{cite journal|last=Milner|first=Robin|author-link=Robin Milner|title=Functions as Processes|journal=Mathematical Structures in Computer Science|pages=119–141|year=1992|volume=2|issue=2|doi=10.1017/s0960129500001407|url=https://hal.archives-ouvertes.fr/docs/00/07/54/05/PDF/RR-1154.pdf|hdl=20.500.11820/159b09c0-1147-4f32-baf0-23bed198f12a|s2cid=36446818 |hdl-access=free}}</ref> in which he presents two encodings of the [[lambda-calculus]] in the {{pi}}-calculus. One encoding simulates the eager (call-by-value) [[evaluation strategy]], the other encoding simulates the normal-order (call-by-name) strategy. In both of these, the crucial insight is the modeling of environment bindings – for instance, "{{mvar|x}} is bound to term <math display="inline">M</math>" – as replicating agents that respond to requests for their bindings by sending back a connection to the term <math>M</math>.
+
+The features of the {{pi}}-calculus that make these encodings possible are name-passing and replication (or, equivalently, recursively defined agents). In the absence of replication/recursion, the {{pi}}-calculus ceases to be Turing-complete. This can be seen by the fact that [[bisimulation]] equivalence becomes decidable for the recursion-free calculus and even for the finite-control {{pi}}-calculus where the number of parallel components in any process is bounded by a constant.<ref>{{cite journal|last=Dam|first=Mads|title=On the Decidability of Process Equivalences for the pi-Calculus|journal=Theoretical Computer Science|issue=2|pages=215–228|year=1997|volume=183|doi=10.1016/S0304-3975(96)00325-8|doi-access=}}</ref>
+
+== Bisimulations in the {{pi}}-calculus ==
+
+{{See also|Bisimulation}}
+
+As for process calculi, the {{pi}}-calculus allows for a definition of bisimulation equivalence. In the {{pi}}-calculus, the definition of bisimulation equivalence (also known as bisimilarity) may be based on either the reduction semantics or on the labelled transition semantics.
+
+There are (at least) three different ways of defining ''labelled bisimulation equivalence'' in the {{pi}}-calculus: Early, late and open bisimilarity. This stems from the fact that the {{pi}}-calculus is a value-passing process calculus.
+
+In the remainder of this section, we let <math>p</math> and <math>q</math> denote processes and <math>R</math> denote binary relations over processes.
+
+=== Early and late bisimilarity ===
+
+Early and late bisimilarity were both formulated by Milner, Parrow and Walker in their original paper on the {{pi}}-calculus.<ref>{{cite journal|last=Milner|first=R.|author2=J. Parrow |author3= D. Walker|title=A calculus of mobile processes|journal=Information and Computation|issue=1|pages=1–40|year=1992|doi=10.1016/0890-5401(92)90008-4|volume=100|url=https://www.pure.ed.ac.uk/ws/files/16426053/A_Calculus_of_Mobile_Processes_I.pdf|hdl=20.500.11820/cdd6d766-14a5-4c3e-8956-a9792bb2c6d3|hdl-access=free}}</ref>
+
+A [[binary relation]] <math>R</math> over processes is an ''early bisimulation'' if for every pair of processes <math>(p, q) \in R</math>,
+* whenever <math>
+p \,\xrightarrow{a(x)}\,p'
+</math> then for every name <math>y</math> there exists some <math>q'</math> such that <math>
+q \,\xrightarrow{a(x)}\,q'
+</math> and <math>(p'[y/x],q'[y/x]) \in R</math>;
+* for any non-input action <math>\alpha</math>, if <math>{
+p \xrightarrow{\overset{}{\alpha}}  p'
+}  </math> then there exists some <math>q'</math> such that <math>
+q \xrightarrow{\overset{}{\alpha}} q'
+  </math> and <math>(p',q') \in R</math>;
+* and symmetric requirements with <math>p</math> and <math>q</math> interchanged.
+
+Processes <math>p</math> and <math>q</math> are said to be early bisimilar, written <math>p \sim_e q</math> if the pair <math>(p,q) \in R</math> for some early bisimulation <math>R</math>.
+
+In late bisimilarity, the transition match must be independent of the name being transmitted.
+A binary relation <math>R</math> over processes is a ''late bisimulation'' if for every pair of processes <math>(p, q) \in R</math>,
+* whenever <math>
+p \xrightarrow{a(x)}  p'
+</math> then for some <math>q'</math> it holds that <math>
+q \xrightarrow{a(x)} q'
+</math> and <math>(p'[y/x],q'[y/x]) \in R</math> ''for every name y'';
+*for any non-input action <math>\alpha</math>, if <math>
+p \xrightarrow{\overset{}{\alpha}} p'
+  </math> implies that there exists some <math>q'</math> such that <math>
+q \xrightarrow{\overset{}{\alpha}} q'
+  </math>and <math>(p',q') \in R</math>;
+* and symmetric requirements with <math>p</math> and <math>q</math> interchanged.
+Processes <math>p</math> and <math>q</math> are said to be late bisimilar, written <math>p \sim_l q</math> if the pair <math>(p,q) \in R</math> for some late bisimulation <math>R</math>.
+
+Both <math>\sim_e</math> and <math>\sim_l</math> suffer from the problem that they are not ''congruence relations'' in the sense that they are not preserved by all process constructs. More precisely, there exist processes <math>p</math> and <math>q</math> such that <math>p \sim_e q</math> but <math>a(x).p \not \sim_e a(x).q</math>. One may remedy this problem by considering the maximal congruence relations included in <math>\sim_e</math> and <math>\sim_l</math>, known as ''early congruence'' and ''late congruence'', respectively.
+
+=== Open bisimilarity ===
+
+Fortunately, a third definition is possible, which avoids this problem, namely that of ''open bisimilarity'', due to Sangiorgi.<ref>{{cite journal|last=Sangiorgi|first=D.|title=A theory of bisimulation for the π-calculus|journal=Acta Informatica|volume=33|pages=69–97|year=1996|doi=10.1007/s002360050036|s2cid=18155730 }}</ref>
+
+A binary relation <math>R</math> over processes is an ''open bisimulation'' if for every pair of elements <math>(p, q) \in R</math> and for every name substitution <math>\sigma</math> and every action <math>\alpha</math>, whenever <math>
+p\sigma \xrightarrow{\overset{}{\alpha}}  p'</math> then there exists some <math>q'</math> such that <math>
+q\sigma  \xrightarrow{\overset{}{\alpha}} q'
+  </math> and <math>(p',q') \in R</math>.
+
+Processes <math>p</math> and <math>q</math> are said to be open bisimilar, written <math>p \sim_o q</math> if the pair <math>(p,q) \in R</math> for some open bisimulation <math>R</math>.
+
+==== Early, late and open bisimilarity are distinct ====
+
+Early, late and open bisimilarity are distinct. The containments are proper, so <math>\sim_o \subsetneq \sim_l \subsetneq \sim_e</math>.
+
+In certain subcalculi such as the asynchronous pi-calculus, late, early and open bisimilarity are known to coincide. However, in this setting a more appropriate notion is that of ''asynchronous bisimilarity''.
+In the literature, the term ''open bisimulation'' usually refers to a more sophisticated notion, where processes and relations are indexed by distinction relations; details are in Sangiorgi's paper cited above.
+
+=== Barbed equivalence ===
+
+Alternatively, one may define bisimulation equivalence directly from the reduction semantics. We write <math>p \Downarrow a</math> if process <math>p</math> immediately allows an input or an output on name <math>a</math>.
+
+A binary relation <math>R</math> over processes is a ''barbed bisimulation'' if it is a symmetric relation which satisfies that for every pair of elements <math>(p, q) \in R</math> we have that
+
+:(1) <math>p \Downarrow a</math> if and only if <math>q \Downarrow a</math> for every name <math>a</math>
+
+and
+
+:(2) for every reduction <math> p \rightarrow p'</math> there exists a reduction <math> q \rightarrow  q' </math>
+
+such that <math>(p',q') \in R</math>.
+
+We say that <math>p</math> and <math>q</math> are ''barbed bisimilar'' if there exists a barbed bisimulation <math>R</math> where <math>(p,q) \in R</math>.
+
+Defining a context as a {{pi}} term with a hole [] we say that two processes P and Q are ''barbed congruent'', written <math>P \sim_b Q\,\!</math>, if for every context <math>C[] </math> we have that <math>C[P]</math> and <math>C[Q]</math> are barbed bisimilar. It turns out that barbed congruence coincides with the congruence induced by early bisimilarity.
+
+== Applications ==<!-- This section is linked from [[SPI]] -->
+
+The {{pi}}-calculus has been used to describe many different kinds of concurrent systems. In fact, some of the most recent applications lie outside the realm of traditional computer science.
+
+In 1997, [[Martin Abadi]] and Andrew Gordon proposed an extension of the {{pi}}-calculus, the Spi-calculus, as a formal notation for describing and reasoning about cryptographic protocols. The spi-calculus extends the {{pi}}-calculus with primitives for encryption and decryption. In 2001, [[Martin Abadi]] and Cedric Fournet generalised the handling of cryptographic protocols to produce the applied {{pi}} calculus. There is now a large body of work devoted to variants of the applied {{pi}} calculus, including a number of experimental verification tools. One example is the tool [[ProVerif]] [http://www.proverif.ens.fr/] due to Bruno Blanchet, based on a translation of the applied {{pi}}-calculus into Blanchet's [[logic programming]] framework. Another example is Cryptyc [http://www.cryptyc.org], due to Andrew Gordon and Alan Jeffrey, which uses Woo and Lam's method of correspondence assertions as the basis for type systems that can check for authentication properties of cryptographic protocols.
+
+Around 2002, Howard Smith and Peter Fingar became interested that {{pi}}-calculus would become a description tool for modeling business processes. By July 2006, there is discussion in the community about how useful this would be. Most recently, the {{pi}}-calculus has formed the theoretical basis of [[Business Process Modeling Language]] (BPML), and of Microsoft's XLANG.<ref>{{usurped|1=[https://web.archive.org/web/20030315083914/http://www.bpmi.org/downloads/BPML-BPEL4WS.pdf "BPML {{!}} BPEL4WS: A Convergence Path toward a Standard BPM Stack."]}} BPMI.org Position Paper. August 15, 2002.</ref>
+
+The {{pi}}-calculus has also attracted interest in molecular biology. In 1999, [[Aviv Regev]] and [[Ehud Shapiro]] showed that one can describe a cellular signaling pathway (the so-called [[Receptor tyrosine kinase|RTK]]/[[MAPK]] cascade)  and in particular the molecular "lego" which implements these tasks of communication in an extension of the {{pi}}-calculus.<ref name="reeve">{{cite book|first=Aviv|last=Regev|author-link=Aviv Regev|author2=William Silverman |author3= Ehud Y. Shapiro|year=2001|chapter=Representation and Simulation of Biochemical Processes Using the pi-Calculus Process Algebra|title=Biocomputing 2001: Proceedings of the Pacific Symposium |pages=459–470|doi=10.1142/9789814447362_0045 |pmid=11262964 |isbn=978-981-02-4515-3 }}</ref> Following this seminal paper, other authors described the whole metabolic network of a minimal cell.<ref>{{cite journal|first=Davide|last=Chiarugi|author2=Pierpaolo Degano |author3= Roberto Marangoni|year=2007|title=A computational approach to the functional screening of genomes|journal=[[PLOS Computational Biology]]|volume=3|issue=9|pages=1801–1806|pmc=1994977|doi=10.1371/journal.pcbi.0030174 |doi-access=free|pmid=17907794|bibcode=2007PLSCB...3..174C }}</ref> In 2009, Anthony Nash and [[Sara Kalvala]] proposed a {{pi}}-calculus framework to model the signal transduction that directs ''Dictyostelium discoideum'' aggregation.<ref>{{cite journal|author=Nash, A.|author2=Kalvala, S.|title= A Framework Proposition for Cellular Locality of Dictyostelium Modelled in π-Calculus|journal=CoSMoS 2009|year=2009 |url= https://cosmos-research.org/docs/cosmos2009-proceedings.pdf#page=93}}</ref>
+
+== History ==
+The {{pi}}-calculus was originally developed by [[Robin Milner]], Joachim Parrow and David Walker in 1992, based on ideas by Uffe Engberg and Mogens Nielsen.<ref>{{cite journal|author1=Engberg, U.|author2=Nielsen, M.|date=1986|title=A Calculus of Communicating Systems with Label Passing|journal=DAIMI Report Series|volume=15|issue=208|doi= 10.7146/dpb.v15i208.7559|doi-access=free}}</ref> It can be seen as a continuation of Milner's work on the process calculus CCS ([[Calculus of Communicating Systems]]).  In his Turing lecture, Milner describes the development of the {{pi}}-calculus as an attempt to capture the uniformity of values and processes in [[Actor model|actors]].<ref>{{cite journal|author=Robin Milner|date=1993|title=Elements of interaction: Turing award lecture|journal=Commun. ACM |volume=36|issue=1|pages=78–89|doi= 10.1145/151233.151240|doi-access=free}}</ref>
+
+== Implementations ==
+
+The following programming languages implement the {{pi}}-calculus or one of its variants:
+
+* [[Business Process Modeling Language]] (BPML)
+* [[occam-π]]
+* [[Pict programming language|Pict]]
+* [[JoCaml]] (based on the [[Join-calculus]])
+* RhoLang
+
+== Notes ==
+{{Reflist}}
+
+== References ==
+* {{cite book|last=Milner|first=Robin|author-link=Robin Milner|title=Communicating and Mobile Systems: The π-calculus|year=1999|publisher=Cambridge University Press|location=Cambridge, UK|isbn=0-521-65869-1|url-access=registration|url=https://archive.org/details/communicatingmob00robi}}
+* {{cite book|last=Milner|first=Robin|author-link=Robin Milner|editor=F. L. Hamer |editor2=W. Brauer |editor3=H. Schwichtenberg|title=Logic and Algebra of Specification|chapter-url=https://www.lfcs.inf.ed.ac.uk/reports/91/ECS-LFCS-91-180/ECS-LFCS-91-180.ps|year=1993|publisher=Springer-Verlag|chapter=The Polyadic π-Calculus: A Tutorial}}
+* {{cite book|last1=Sangiorgi|first1=Davide|author-link1=Davide Sangiorgi|last2=Walker|first2=David|author-link2=David Walker (computer scientist)|title=The π-calculus: A Theory of Mobile Processes|year=2001|publisher=Cambridge University Press|location=Cambridge, UK|isbn=0-521-78177-9}}
+* {{cite book|last=Mironov|first=Andrew|author-link=Andrew Mironov|title=A simple proof of the coincidence of observational and labeled equivalence of processes in applied pi-calculus|year=2025|arxiv=2510.07258 }}
+
+{{Concurrent computing}}
+{{Authority control}}
+
+{{DEFAULTSORT:Pi Calculus}}
+[[Category:Process calculi]]
+[[Category:Theoretical computer science]]

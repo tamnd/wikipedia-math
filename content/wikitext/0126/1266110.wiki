@@ -1,0 +1,1002 @@
+<!-- wikipedia: en
+     page: 1266110
+     title: Smoothed-particle hydrodynamics
+     revision: 1372870736
+     timestamp: 2026-09-02T18:18:32Z
+     history: https://en.wikipedia.org/w/index.php?curid=1266110&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1372870736 -->
+{{Short description|Method of hydrodynamics simulation}}
+{{Use American English|date = February 2019}}
+[[Image:SPHInterpolationColorsVerbose.svg|thumb|Schematic view of an SPH convolution]]
+[[File:Sph flow cylinder fs.jpg|thumb|Flow around cylinder with free surface modelled with SPH. See<ref name="colagrossietal2019"/> for similar simulations.]]
+
+'''Smoothed-particle hydrodynamics''' ('''SPH''') is a computational method used for simulating the mechanics of continuum media, such as [[solid mechanics]] and [[Fluid dynamics|fluid]] flows. It was developed by [[robert A. Gingold|Gingold]] and [[Joseph J. Monaghan|Monaghan]]<ref>
+{{cite journal 
+|first1=Robert A. |last1=Gingold 
+|first2=Joseph J. |last2=Monaghan 
+|title=Smoothed particle hydrodynamics: theory and application to non-spherical stars 
+|journal=Monthly Notices of the Royal Astronomical Society 
+|volume=181 
+|issue=3 
+|pages=375–89 
+|year=1977 
+|doi=10.1093/mnras/181.3.375 
+|bibcode=1977MNRAS.181..375G 
+|doi-access=free}}
+</ref> and Lucy<ref>
+{{ cite journal |
+last= L.B. Lucy |
+title= A numerical approach to the testing of the fission hypothesis|
+journal= Astron. J.|
+volume= 82 |
+pages = 1013–1024 |
+year=1977
+|
+doi= 10.1086/112164|
+bibcode= 1977AJ.....82.1013L}}
+</ref> in 1977, initially for astrophysical problems.  It has been used in many fields of research, including [[astrophysics]], [[ballistics]], [[volcanology]], and [[oceanography]]. It is a [[Meshfree methods|meshfree]] [[Lagrangian and Eulerian specification of the flow field|Lagrangian method]] (where the co-ordinates move with the fluid), and the resolution of the method can easily be adjusted with respect to variables such as [[density]].
+
+== Method ==
+
+=== Advantages ===
+
+* By construction, SPH is a [[meshfree method]], which makes it ideally suited to simulate problems dominated by complex boundary dynamics, like [[free surface]] flows, or large boundary displacement.
+* The lack of a mesh significantly simplifies the model implementation and its parallelization, even for [[many-core]] architectures.<ref name="harada2007smoothed">{{cite conference
+  | title = Smoothed particle hydrodynamics on GPUs
+  | author1 = Takahiro Harada
+  | author2 = Seiichi Koshizuka
+  | author3 = Yoichiro Kawaguchi
+  | journal = Computer Graphics International
+  | year = 2007
+  | pages = 63–70
+}}</ref><ref name="crespo2011gpus">{{cite journal
+ | title = GPUs, a new tool of acceleration in CFD: efficiency and reliability on smoothed particle hydrodynamics methods
+ | author1 = Alejandro Crespo
+ | author2 = Jose M. Dominguez
+ | author3 = Anxo Barreiro
+ | author4 = Moncho Gomez-Gesteira
+ | author5 = Benedict D. Rogers
+ | journal = PLOS ONE
+ | volume = 6
+ | issue = 6
+ | article-number = e20685
+ | year = 2011
+ | bibcode = 2011PLoSO...620685C
+ | doi = 10.1371/journal.pone.0020685
+ | pmid = 21695185
+ | pmc = 3113801
+ | doi-access = free
+ }}</ref>
+
+* SPH can be easily extended to a wide variety of fields, and hybridized with some other models, as discussed in [[#Modelling physics|Modelling Physics]].
+* As discussed in section on [[#Weakly compressible approach|weakly compressible SPH]], the method has great conservation features.
+* The computational cost of SPH simulations per number of particles is significantly less than the cost of grid-based simulations per number of cells when the metric of interest is related to fluid [[density]] (e.g., the [[probability density function]] of density fluctuations).<ref name="price-11">{{cite journal|last=Price, D. J.|title=Smoothed Particle Hydrodynamics: Things I wish my mother taught me|journal=Advances in Computational Astrophysics: Methods|volume=453 |page=249|arxiv=1111.1259|year=2011|bibcode=2012ASPC..453..249P}}</ref>  This is the case because in SPH the resolution is put where the matter is.
+
+=== Limitations ===
+
+* Setting boundary conditions in SPH such as inlets and outlets<ref name="altair">{{Cite web|title=The Smoothed Particle Hydrodynamics Method vs. Finite Volume Numerical Methods |url=https://blog.altair.com/the-smoothed-particle-hydrodynamics-method-vs-finite-volume-numerical-methods/|access-date=2018-08-30|date=2018-03-21}}</ref> and walls<ref name="adami-12">{{cite journal |last=Adami, S. and Hu, X. Y. and Adams, N. A..|title=A generalized wall boundary condition for smoothed particle hydrodynamics|journal=Journal of Computational Physics|volume=231|issue=21|pages=7057–7075 |year=2012 |doi=10.1016/j.jcp.2012.05.005|bibcode=2012JCoPh.231.7057A}}</ref> is more difficult than with grid-based methods.  In fact, it has been stated that "the treatment of boundary conditions is certainly one of the most difficult technical points of the SPH method".<ref name="shadloo-16">{{cite journal|last=Shadloo, M. S. and Oger, G. and Touze, D. L..|title=Smoothed particle hydrodynamics method for fluid flows, towards industrial applications: Motivations, current state, and challenges|journal=Computers and Fluids|volume=136|pages=11–34|year=2016|doi=10.1016/j.compfluid.2016.05.029}}</ref>  This challenge is partly because in SPH the particles near the boundary change with time.<ref name="fraser-16">{{cite journal|last=Fraser, K.and Kiss, L. I. and St-George, L.|title=A generalized wall boundary condition for smoothed particle hydrodynamics|journal=14th International LS-DYNA Conference|year=2016}}</ref>  Nonetheless, wall boundary conditions for SPH are available.<ref name="adami-12" /><ref name="fraser-16" /><ref name="kostorz2020">{{cite journal|last=Kostorz|title=A semi-analytical boundary integral method for radial functions with application to Smoothed Particle Hydrodynamics
+|journal=Journal of Computational Physics|volume=417|year=2020|article-number=109565
+|doi=10.1016/j.jcp.2020.109565|bibcode=2020JCoPh.41709565K
+|s2cid=219438340
+}}</ref>
+* The computational cost of SPH simulations per number of particles is significantly larger than the cost of grid-based simulations per number of cells when the metric of interest is not (directly) related to density (e.g., the kinetic-energy spectrum).<ref name="price-11" />  Therefore, overlooking issues of parallel [[speedup]], the simulation of constant-density flows (e.g., external [[aerodynamics]]) is more efficient with grid-based methods than with SPH.
+
+== Examples ==
+
+=== Fluid dynamics ===
+
+[[Image:fluids sim.jpg|thumb|200px|right|Fig. SPH simulation of ocean waves using FLUIDS v.1 (Hoetzlein)]]
+
+Smoothed-particle hydrodynamics is being increasingly used to model [[fluid motion]] as well. This is due to several benefits over traditional grid-based techniques. First, SPH guarantees conservation of mass without extra computation since the particles themselves represent mass. Second, SPH computes pressure from weighted contributions of neighboring particles rather than by solving linear systems of equations. Finally, unlike grid-based techniques, which must track fluid boundaries, SPH creates a free surface for two-phase interacting fluids directly since the particles represent the denser fluid (usually water) and empty space represents the lighter fluid (usually air). For these reasons, it is possible to simulate fluid motion using SPH in real time. However, both grid-based and SPH techniques still require the generation of renderable free surface geometry using a polygonization technique such as [[metaballs]] and [[marching cubes]], [[Volume rendering#Splatting|point splatting]], or 'carpet' visualization. For gas dynamics it is more appropriate to use the kernel function itself to produce a rendering of gas column density (e.g., as done in the SPLASH visualisation package).
+
+One drawback over grid-based techniques is the need for large numbers of particles to produce simulations of equivalent resolution. In the typical implementation of both [[structured grid|uniform grids]] and SPH particle techniques, many [[voxels]] or particles will be used to fill water volumes that are never rendered. However, accuracy can be significantly higher with sophisticated grid-based techniques, especially those coupled with particle methods (such as particle level sets), since it is easier to enforce the [[incompressible flow#Difference between incompressible flow and material|incompressibility condition]] in these systems. SPH for [[fluid simulation]] is being used increasingly in real-time animation and games where accuracy is not as critical as interactivity.
+
+Recent work in SPH for fluid simulation has increased performance, accuracy, and areas of application:
+
+* B. Solenthaler, 2009, develops Predictive-Corrective SPH (PCISPH) to allow for better incompressibility constraints<ref>
+{{cite journal|last=Solenthaler|title=Predictive-Corrective Incompressible SPH|year=2009}}</ref>
+* M. Ihmsen et al., 2010, introduce boundary handling and adaptive time-stepping for PCISPH for accurate rigid body interactions<ref>{{cite journal|last=Imhsen|title=Boundary handling and adaptive time-stepping for PCISPH|year=2010|journal=Workshop on Virtual Reality Interaction and Physical Simulation VRIPHYS}}</ref>
+* K. Bodin et al., 2011, replace the standard equation of state pressure with a density constraint and apply a variational time integrator<ref>{{cite journal|last=Bodin|title=Constraint Fluids | url=http://www.physics.umu.se/english/research/statistical-physics-and-networks/complex-mechanical-systems/fluids-and-solids/ |year=2011|journal=IEEE Transactions on Visualization and Computer Graphics|volume=18 |issue=3 |pages=516–26 |doi=10.1109/TVCG.2011.29 |pmid=22241284 |s2cid=14023161 }}</ref>
+* R. Hoetzlein, 2012, develops efficient GPU-based SPH for large scenes with Fluids v.3<ref>{{citation | last=Hoetzlein, R.| title=Fluids v.3, A Large scale, Open Source Fluid Simulator |year=2012 |publisher=GPU Technology Conference | url=https://ramakarl.com/fluids3/}}</ref>
+* N. Akinci et al., 2012, introduce a versatile boundary handling and two-way SPH-rigid coupling technique that is completely based on hydrodynamic forces; the approach is applicable to different types of SPH solvers<ref>{{cite journal|last=Akinci|title=Versatile Rigid-Fluid Coupling for Incompressible SPH |year=2012|journal= ACM Transactions on Graphics|volume=31 |issue=4 |pages=1–8 |doi=10.1145/2185520.2185558 |s2cid=5669154 }}</ref>
+* M. Macklin et al., 2013 simulates incompressible flows inside the Position Based Dynamics framework, for bigger timesteps<ref>{{cite journal|last=Macklin|title=Position Based Fluids |year=2013|journal= ACM Transactions on Graphics|volume=32 |issue=4 |pages=1–12 |doi=10.1145/2461912.2461984 |s2cid=611962 }}</ref>
+* N. Akinci et al., 2013, introduce a versatile surface tension and two-way fluid-solid adhesion technique that allows simulating a variety of interesting physical effects that are observed in reality<ref>{{cite journal|last=Akinci|title=Versatile Surface Tension and Adhesion for SPH Fluids SPH |year=2013|journal= ACM Transactions on Graphics|volume=32 |issue=6 |pages=1–8 |doi=10.1145/2508363.2508395 |s2cid=12550964 }}</ref>
+* J. Kyle and E. Terrell, 2013, apply SPH to Full-Film Lubrication<ref>{{cite journal|last=[[Journal of Tribology]]|title=Application of Smoothed Particle Hydrodynamics to Full-Film Lubrication|year=2013}}</ref>
+* A. Mahdavi and N. Talebbeydokhti, 2015, propose a hybrid algorithm for implementation of solid boundary condition and simulate flow over a sharp crested weir<ref>{{cite journal|last=Mahdavi and Talebbeydokhti|journal=Scientia Iranica, Transaction A, Civil Engineering| volume= 22|number=4|pages= 1457–1469|title=A hybrid solid boundary treatment algorithm for smoothed particle hydrodynamics |url=https://www.researchgate.net/publication/282870566|year=2015}}</ref>
+* S. Tavakkol et al., 2016, develop curvSPH, which makes the horizontal and vertical size of particles independent and generates uniform mass distribution along curved boundaries<ref>{{cite journal|last=International Journal for Numerical Methods in Fluids|title=Curvilinear smoothed particle hydrodynamics|journal=International Journal for Numerical Methods in Fluids|volume=83|issue=2|pages=115–131|year=2016|bibcode=2017IJNMF..83..115T|doi=10.1002/fld.4261|s2cid=124425780 }}</ref>
+* W. Kostorz and A. Esmail-Yakas, 2020, propose a general, efficient and simple method for evaluating normalization factors near piecewise-planar boundaries<ref name="kostorz2020"/>
+* Colagrossi et al., 2019, study flow around a cylinder close to a free-surface and compare with other techniques<ref name="colagrossietal2019">{{cite journal|last=Colagrossi|title=Viscous flow past a cylinder close to a free surface: benchmarks with steady, periodic and metastable responses, solved by meshfree and mesh-based schemes|journal=Computers and Fluids|volume=181|pages=345–363|year=2019|doi=10.1016/j.compfluid.2019.01.007|s2cid=128143912}}</ref>
+
+=== Astrophysics ===
+
+Smoothed-particle hydrodynamics's adaptive resolution, numerical conservation of physically conserved quantities, and ability to simulate phenomena covering many [[order of magnitude|orders of magnitude]] make it ideal for computations in [[theoretical astrophysics]].<ref>{{Cite journal |arxiv = 0903.5075|last1 = Price|first1 = Daniel J|title = Astrophysical Smooth Particle Hydrodynamics|journal = New Astron.rev|volume = 53|issue = 4–6|pages = 78–104|year = 2009|doi = 10.1016/j.newar.2009.08.007|bibcode = 2009NewAR..53...78R|s2cid = 129246}}</ref>
+
+Simulations of [[galaxy formation]], [[star formation]], [[stellar collision]]s,<ref>{{cite journal |doi=10.1007/lrca-2015-1|title=SPH Methods in the Modelling of Compact Objects|journal=Living Rev Comput Astrophys|volume=1|issue=1|article-number=1|year=2015|last1=Rosswog|first1=Stephan|bibcode=2015LRCA....1....1R|arxiv=1406.4224|s2cid=119119783}}</ref> [[supernovae]]<ref>{{Cite journal |arxiv = astro-ph/0512532|last1 = Price|first1 = Daniel J|last2 = Rockefeller|first2 = Gabriel|last3 = Warren|first3 = Michael S|title = SNSPH: A Parallel 3-D Smoothed Particle Radiation Hydrodynamics Code|journal = Astrophys. J.|volume = 643|pages = 292–305|year = 2006|doi = 10.1086/501493|s2cid = 16733573}}</ref> and [[meteor]] impacts are some of the wide variety of astrophysical and cosmological uses of this method.
+
+SPH is used to model hydrodynamic flows, including possible effects of [[gravity]]. Incorporating other astrophysical processes which may be important, such as [[radiative transfer]] and [[Magnetohydrodynamics|magnetic fields]] is an active area of research in the astronomical community, and has had some limited success.<ref>{{Cite web | url=http://www.astro.ex.ac.uk/people/mbate/Cluster/clusterRT.html |title = Star Formation with Radiative Transfer}}</ref><ref>{{Cite journal |last=Price |first=Daniel J. |date=2012-02-01 |title=Smoothed particle hydrodynamics and magnetohydrodynamics |url=https://www.sciencedirect.com/science/article/pii/S0021999110006753 |journal=Journal of Computational Physics |series=Special Issue: Computational Plasma Physics |volume=231 |issue=3 |pages=759–794 |doi=10.1016/j.jcp.2010.12.011 |issn=0021-9991|arxiv=1012.1885 |bibcode=2012JCoPh.231..759P }}</ref>
+
+=== Solid mechanics ===
+
+Libersky and Petschek<ref name="libersky248">
+{{Cite book|last1=Libersky|first1=L.D.|last2=Petschek|first2=A.G.|chapter=Smooth particle hydrodynamics with strength of materials |title=Advances in the Free-Lagrange Method Including Contributions on Adaptive Gridding and the Smooth Particle Hydrodynamics Method|series=Lecture Notes in Physics|year=1990|volume=395|pages=248–257|doi=10.1007/3-540-54960-9_58|isbn=978-3-540-54960-4}}
+</ref><ref>
+{{cite journal|last=L.D. Libersky |author2=A.G. Petschek |author3=A.G. Carney |author4=T.C. Hipp |author5=J.R. Allahdadi |author6=F.A. High|title=Strain Lagrangian hydrodynamics: a three-dimensional SPH code for dynamic material response|journal=J. Comput. Phys.|year=1993|volume=109|issue=1 |pages=67–75|bibcode=1993JCoPh.109...67L|doi=10.1006/jcph.1993.1199}}
+</ref>
+extended SPH to Solid Mechanics. The main advantage of SPH in this application is the possibility of dealing with larger local distortion than grid-based methods.
+This feature has been exploited in many applications in Solid Mechanics: metal forming, impact, crack growth, fracture, fragmentation, etc.
+
+Another important advantage of meshfree methods in general, and of SPH in particular, is that mesh dependence problems are naturally avoided given the meshfree nature of the method. In particular, mesh alignment is related to problems involving cracks and it is avoided in SPH due to the isotropic support of the kernel functions. However, classical SPH formulations suffer from tensile instabilities<ref>
+{{cite journal|last=J.W. Swegle |author2=D.A. Hicks |author3=S.W. Attaway|title=Smooth particle hydrodynamics stability analysis|journal=J. Comput. Phys.|year=1995|volume=116|issue=1 |pages=123–134|doi=10.1006/jcph.1995.1010|bibcode = 1995JCoPh.116..123S }}
+</ref>
+and lack of consistency.<ref>
+{{cite journal|last=T. Belytschko |author2=Y. Krongauz |author3=J. Dolbow |author4=C. Gerlach|title=On the completeness of meshfree particle methods|journal=Int. J. Numer. Methods Eng.|year=1998|volume=43|issue=5 |pages=785–819|doi=10.1002/(sici)1097-0207(19981115)43:5<785::aid-nme420>3.0.co;2-9|bibcode = 1998IJNME..43..785B }}
+</ref>
+Over the past years, different corrections have been introduced to improve the accuracy of the SPH solution, leading to the [[Reproducing kernel particle method|RKPM]] by Liu et al.<ref>{{cite journal|last=W.K. Liu |author2=S. Jun |author3=Y.F. Zhang|title=Reproducing kernel particle methods|journal=Int. J. Numer. Methods Eng.|year=1995|volume=20|issue=8–9|pages=1081–1106|doi=10.1002/fld.1650200824|bibcode = 1995IJNMF..20.1081L }}
+</ref>
+Randles and Libersky<ref name="autogenerated525">{{cite journal|last=P.W. Randles|author2=L.D. Libersky |title=Recent improvements in SPH modelling of hypervelocity impact|journal=Int. J. Impact Eng.|year=1997|volume=20|issue=6–10 |pages=525–532|doi=10.1016/s0734-743x(97)87441-6 |bibcode=1997IJIE...20..525L }}
+</ref>
+and Johnson and Beissel<ref name="autogenerated2725">{{cite journal|last=G.R. Johnson|author2=S.R. Beissel |title=Normalized smoothing functions for SPH impact computations|journal=Int. J. Numer. Methods Eng.|year=1996|volume=39|issue=16 |pages=2725–2741|doi=10.1002/(sici)1097-0207(19960830)39:16<2725::aid-nme973>3.0.co;2-9|bibcode = 1996IJNME..39.2725J }}
+</ref>
+tried to solve the consistency problem in their study of impact phenomena.
+
+Dyka et al.<ref>
+{{cite journal|last=C.T. Dyka|author2=R.P. Ingel |title=An approach for tension instability in Smoothed Particle Hydrodynamics|journal=Comput. Struct.|year=1995|volume=57|issue=4 |pages=573–580|doi=10.1016/0045-7949(95)00059-p |bibcode=1995CoStr..57..573D }}</ref><ref>
+{{cite journal|last=C.T. Dyka |author2=P.W. Randles |author3=R.P. Ingel|title=Stress points for tension instability in SPH|journal=Int. J. Numer. Methods Eng.|year=1997|volume=40|issue=13 |pages=2325–2341|doi=10.1002/(sici)1097-0207(19970715)40:13<2325::aid-nme161>3.0.co;2-8|bibcode = 1997IJNME..40.2325D }}</ref>
+and Randles and Libersky<ref>{{cite journal|last=P.W. Randles|author2=L.D. Libersky |title=Normalized SPH with stress points|journal=Int. J. Numer. Methods Eng.|year=2000|volume=48|issue=10 |pages=1445–1462|doi=10.1002/1097-0207(20000810)48:10<1445::aid-nme831>3.0.co;2-9|bibcode = 2000IJNME..48.1445R }}</ref>
+introduced the stress-point integration into SPH and [[Ted Belytschko]] et al.<ref>{{cite journal|last=T. Belytschko |author2=Y. Guo |author3=W.K. Liu |author4=S.P. Xiao|title=A unified stability analysis of meshless particle methods|journal=Int. J. Numer. Methods Eng.|year=2000|volume=48|issue=9 |pages=1359–1400|doi=10.1002/1097-0207(20000730)48:9<1359::aid-nme829>3.0.co;2-u|bibcode = 2000IJNME..48.1359B }}</ref>
+showed that the stress-point technique removes the instability due to spurious singular modes, while tensile instabilities can be avoided by using a Lagrangian kernel. Many other recent studies can be found in the literature devoted to improve the convergence of the SPH method.
+
+Recent improvements in understanding the convergence and stability of SPH have allowed for more widespread applications in Solid Mechanics. Other examples of applications and developments of the method include:
+
+* Metal forming simulations.<ref>{{cite journal|last=J. Bonet|author2=S. Kulasegaram |title=Correction and stabilization of smooth particle hydrodynamics methods with applications in metal forming simulations|journal=Int. J. Numer. Methods Eng.|year=2000|volume=47|issue=6 |pages=1189–1214|doi=10.1002/(sici)1097-0207(20000228)47:6<1189::aid-nme830>3.0.co;2-i|bibcode = 2000IJNME..47.1189B }}</ref>
+* SPH-based method SPAM (Smoothed Particle [[Applied mechanics|Applied Mechanics]]) for impact fracture in solids by [[William G. Hoover]].<ref>{{cite journal|last=W. G. Hoover|author2=C. G. Hoover |journal=Computing in Science and Engineering|title = SPAM-based recipes for continuum simulations| year=2001|volume=3|issue=2|pages=78–85|doi=10.1109/5992.909007 |bibcode=2001CSE.....3b..78H |url=https://zenodo.org/record/1262149 |doi-access=free}}</ref>
+* Modified SPH (SPH/MLSPH) for fracture and fragmentation.<ref>{{cite journal|last=T. Rabczuk|author2=J. Eibl |author3=L. Stempniewski |title=Simulation of high velocity concrete fragmentation using SPH/MLSPH|journal=Int. J. Numer. Methods Eng.|year=2003|volume=56|issue=10 |pages=1421–1444|doi=10.1002/nme.617|bibcode = 2003IJNME..56.1421R |s2cid=119799557 }}</ref>
+* Taylor-SPH (TSPH) for shock wave propagation in solids.<ref>{{cite journal|last=M.I. Herreros|author2=M. Mabssout |title=A two-steps time discretization scheme using the SPH method for shock wave propagation|journal=Comput. Methods Appl. Mech. Engrg.|year=2011|volume=200|issue=21–22 |pages=1833–1845|doi=10.1016/j.cma.2011.02.006|bibcode = 2011CMAME.200.1833H }}</ref>
+* Generalized coordinate SPH (GSPH) allocates particles inhomogeneously in the [[Cartesian coordinate system]] and arranges them via mapping in a generalized coordinate system in which the particles are aligned at a uniform spacing.<ref>{{cite journal|last=S. Yashiro|author2=T. Okabe |title=Smoothed particle hydrodynamics in a generalized coordinate system with a finite-deformation constitutive model|journal=Int. J. Numer. Methods Eng.|year=2015|volume=103|issue=11|pages=781–797|doi=10.1002/nme.4906|bibcode = 2015IJNME.103..781Y|hdl=2324/4476056|s2cid=121935150 |hdl-access=free}}</ref>
+
+== Numerical tools ==
+
+=== Interpolations  ===
+
+The Smoothed-Particle Hydrodynamics (SPH) method works by dividing the fluid into a set of discrete moving elements <math> i,j </math>, referred to as particles. Their Lagrangian nature allows setting their position <math> \mathbf{r}_i </math> by integration of their velocity <math> \mathbf{v}_i </math> as:
+
+:<math>
+\frac{\mathrm{d}\boldsymbol{r}_i}{\mathrm{d}t}=\boldsymbol{v}_i.
+</math>
+
+These particles interact through a [[Kernel smoother|kernel function]] with characteristic radius known as the "smoothing length", typically represented in equations by <math> h </math>. This means that the [[physical quantity]] of any particle can be obtained by summing the relevant properties of all the particles that lie within the range of the kernel, the latter being used as a weighting function <math> W </math>. This can be understood in two steps. First an arbitrary field <math> A </math> is written as a convolution with <math> W </math>:
+
+:<math>
+A(\boldsymbol{r}) = \int A\left(\boldsymbol{r^{\prime}}\right) W(| \boldsymbol{r}-\boldsymbol{r^{\prime}} |,h) \, \mathrm{d}V \! \left(\boldsymbol{r'}\right).
+</math>
+
+The error in making the above approximation is order <math> h^2 </math>. Secondly, the integral is approximated using a Riemann summation over the particles:
+
+:<math>
+A(\boldsymbol{r}) = \sum_j V_j A_j W(| \boldsymbol{r}-\boldsymbol{r}_{j} |,h),
+</math>
+
+where the summation over <math> j </math> includes all particles in the simulation. <math> V_j </math> is the [[volume]] of particle <math> j </math>, <math> A_j </math> is the value of the quantity <math> A </math> for particle <math> j </math> and <math>\boldsymbol{r}</math> denotes position. For example, the density <math> \rho_i </math> of particle <math> i </math> can be expressed as:
+
+:<math>
+\rho_i = \rho(\boldsymbol{r}_i) = \sum_j m_j W_{ij},
+</math>
+
+where <math> m_j = \rho_j V_j </math> denotes the particle mass and <math> \rho_j </math> the particle density, while <math> W_{ij}=W_{ji} </math> is a short notation for <math> W(| \boldsymbol{r}_i-\boldsymbol{r}_j |,h) </math>. The error done in approximating the integral by a discrete sum depends on <math> h </math>, on the particle size (i.e. <math> V_j^{1/d} </math>, <math> d </math> being the space dimension), and on the particle arrangement in space. The latter effect is still poorly known.<ref>{{cite journal
+ | title = Truncation error in mesh-free particle methods
+ | author1 = N.J. Quinlan
+ | author2 = M. Basa 
+ | author3 = M. Lastiwka
+ | journal = International Journal for Numerical Methods in Engineering
+ | volume = 66
+ | issue = 13
+ | pages = 2064–2085
+ | year = 2006
+ | doi = 10.1002/nme.1617
+ | hdl = 10379/1170
+ | bibcode = 2006IJNME..66.2064Q
+ | s2cid = 53701216
+ | url = https://aran.library.nuigalway.ie/bitstream/10379/1170/3/truncationError_Quinlan2005_preprint.pdf
+ | hdl-access = free
+ }}</ref>
+
+Kernel functions commonly used include the [[Gaussian function]], the [[quintic spline]] and the Wendland <math> C^2 </math> kernel.<ref>{{cite journal
+  | title = Piecewise polynomial, positive definite and compactly supported radial functions of minimal degree
+  | author1 = H. Wendland
+  | journal = Advances in Computational Mathematics
+  | volume = 4
+  | issue = 4
+  | pages = 389–396
+  | year = 1995
+  | doi = 10.1007/BF02123482
+  | s2cid = 36452865
+ }}</ref> The latter two kernels are compactly supported (unlike the Gaussian, where there is a small contribution at any finite distance away), with support proportional to <math> h </math>. This has the advantage of saving computational effort by not including the relatively minor contributions from distant particles.
+
+Although the size of the smoothing length can be fixed in both [[space]] and [[time]], this does not take advantage of the full power of SPH. By assigning each particle its own smoothing length and allowing it to vary with time, the resolution of a simulation can be made to automatically adapt itself depending on local conditions. For example, in a very dense region where many particles are close together, the smoothing length can be made relatively short, yielding high spatial resolution. Conversely, in low-density regions where individual particles are far apart and the resolution is low, the smoothing length can be increased, optimising the computation for the regions of interest.
+
+=== Discretization of governing equations ===
+
+For particles of constant mass, differentiating the interpolated density <math> \rho_i </math> with respect to time yields
+
+:<math>
+\frac{d\rho_i}{dt} = \sum_j m_j \left(\boldsymbol{v}_i - \boldsymbol{v}_j\right) \cdot \nabla W_{ij},
+</math>
+
+where <math> \nabla W_{ij}=-\nabla W_{ji} </math> is the gradient of <math> W_{ij} </math> with respect to <math> \boldsymbol{r}_i </math>. Comparing this equation with the [[Euler equations (fluid dynamics)#Euler equations|continuity equation]] in the [[Continuum mechanics#Lagrangian description|Lagrangian]] description (using [[material derivative]]s),
+
+:<math>
+\frac{d\rho}{dt} = -\rho \nabla \cdot \boldsymbol{v} ,
+</math>
+
+it is apparent that its right-hand side is an approximation of <math> -\rho \nabla \cdot \mathbf{v} </math>; hence one defines a discrete divergence operator as follows:
+
+:<math>
+\operatorname{D}_i\left\{ \boldsymbol{v}_j \right\} = -\frac{1}{\rho_i} \sum_j m_j \left(\boldsymbol{v}_i - \boldsymbol{v}_j\right) \cdot \nabla W_{ij}.
+</math>
+
+This operator gives an SPH approximation of <math> \nabla \cdot \mathbf{v} </math> at the particle <math> i </math> for a given set of particles with given masses <math> m_j </math>, positions <math> \left\{ \mathbf{r}_j \right\} </math> and velocities <math> \left\{ \mathbf{v}_j \right\} </math>.
+
+The other important equation for a compressible inviscid fluid is the [[Euler equations (fluid dynamics)|Euler equation]] for momentum balance:
+
+:<math>
+\frac{d\boldsymbol{v}}{dt} = -\frac{1}{\rho}\nabla p + \boldsymbol{g}
+</math>
+
+Similarly to continuity, the task is to define a discrete gradient operator in order to write
+
+:<math>
+\frac{d\boldsymbol{v}_i}{dt} = -\frac{1}{\rho} \operatorname{\mathbf{G}}_i \left\{ p_j \right\} + \boldsymbol{g}
+</math>
+
+One choice is
+
+:<math>
+\operatorname{\mathbf{G}}_i\left\{ p_j \right\} = \rho_i \sum_j m_j \left(\frac{p_i}{\rho_i^2} + \frac{p_j}{\rho_j^2}\right) \nabla W_{ij},
+</math>
+
+which has the property of being skew-adjoint with the divergence operator above, in the sense that
+
+:<math>
+\sum_i V_i \boldsymbol{v}_i \cdot \operatorname{\mathbf{G}}_i \left\{ p_j \right\} = 
+- \sum_i V_i p_i \operatorname{D}_i\left\{ \boldsymbol{v}_j \right\} ,
+</math>
+
+this being a discrete version of the continuum identity
+
+:<math>
+\int \boldsymbol{v} \cdot \operatorname{grad} p = 
+- \int p \operatorname{div} \cdot \boldsymbol{v} .
+</math>
+
+This property leads to nice conservation properties.<ref>{{cite journal
+ | title = Investigation of wall bounded flows using SPH and the unified semi-analytical wall boundary conditions
+ | author1 = A. Mayrhofer
+ | author2 = B.D. Rogers
+ | author3 = D. Violeau
+ | author4 = M. Ferrand
+ | journal = Computer Physics Communications
+ | volume = 184
+ | issue = 11
+ | pages = 2515–2527
+ | year = 2013
+ | doi = 10.1016/j.cpc.2013.07.004
+ | bibcode = 2013CoPhC.184.2515M
+ | arxiv = 1304.3692
+ | s2cid = 35008128
+ }}</ref>
+
+Notice also that this choice leads to a symmetric divergence operator and antisymmetric gradient. Although there are several ways of discretizing the pressure gradient in the Euler equations, the above antisymmetric form is the most acknowledged one. It supports strict conservation of [[Linear momentum|linear]] and [[angular momentum]]. This means that a force that is exerted on particle <math>i</math> by particle <math>j</math> equals the one that is exerted on particle <math>j</math> by particle <math>i</math> including the sign change of the effective direction, thanks to the antisymmetry property <math> \nabla W_{ij}=-\nabla W_{ji} </math>.
+
+Nevertheless, other operators have been proposed, which may perform better numerically or physically.
+For instance, one drawback of these operators is that while the divergence <math> \operatorname{D} </math> is zero-order consistent (i.e. yields zero when applied to a constant [[vector field]]), it can be seen that the gradient <math> \operatorname{\mathbf{G}} </math> is not. Several techniques have been proposed to circumvent this issue, leading to renormalized operators (see e.g.<ref>{{cite journal
+  | title = Variational and momentum preservation aspects of Smoothed Particle Hydrodynamics formulations
+  | author1 = J. Bonet
+  | author2 = T.S. Lok
+  | journal = Computers Methods in Applied Mechanical Engineering
+  | volume = 180
+  | issue = 1–2
+  | pages = 97–115
+  | year = 1999
+  | doi = 10.1016/S0045-7825(99)00051-1
+  | bibcode = 1999CMAME.180...97B
+ }}</ref>).
+
+=== Variational principle ===
+
+The above SPH governing equations can be derived from a [[least action principle]], starting from the [[Lagrangian mechanics|Lagrangian]] of a [[particle system]]:
+
+:<math>
+\mathcal{L} = \sum_j m_j \left( \tfrac{1}{2}\boldsymbol{v}_j^2 -e_j +\boldsymbol{g}\cdot\boldsymbol{r}_j \right)
+</math>,
+
+where <math> e_j </math> is the particle specific [[internal energy]]. The [[Euler–Lagrange equation]] of variational mechanics reads, for each particle:
+
+:<math>
+\frac{\mathrm{d}}{\mathrm{d}t} \frac{\partial\mathcal{L}}{\partial\boldsymbol{v}_i} = \frac{\partial\mathcal{L}}{\partial\boldsymbol{r}_i}.
+</math>
+
+When applied to the above Lagrangian, it gives the following momentum equation:
+
+:<math>
+m_i \frac{\mathrm{d}\boldsymbol{v}_i}{\mathrm{d}t} =
+ -\sum_j m_j \frac{\partial e_j}{\partial\boldsymbol{r}_i} + m_i \boldsymbol{g} =
+ -\sum_j m_j \frac{\partial e_j}{\partial\rho_j}\frac{\partial\rho_j}{\partial\boldsymbol{r}_i} + m_i \boldsymbol{g}
+</math>
+
+where the chain rule has been used, since <math> e_j </math> depends on <math> \rho_j </math>, and the latter, on the position of the particles.
+Using the thermodynamic property <math> \mathrm{d}e = \left(p/\rho^2\right)\mathrm{d}\rho </math> we may write
+
+:<math>
+m_i \frac{\mathrm{d}\boldsymbol{v}_i}{\mathrm{d}t} =
+ -\sum_j m_j \frac{p_j}{\rho_j^2}\frac{\partial\rho_j}{\partial\boldsymbol{r}_i} + m_i \boldsymbol{g} ,
+</math>
+
+Plugging the SPH density interpolation and differentiating explicitly <math> \tfrac{\partial\rho_j}{\partial\boldsymbol{r}_i} </math> leads to
+
+:<math>
+\frac{\mathrm{d}\boldsymbol{v}_i}{\mathrm{d}t} = - \sum_j m_j \left(\frac{p_i}{\rho_i^2} + \frac{p_j}{\rho_j^2}\right) \nabla W_{ij} + \boldsymbol{g} ,
+</math>
+
+which is the SPH momentum equation already mentioned, where we recognize the <math> \operatorname{\mathbf{G}} </math> operator. This explains why linear momentum is conserved, and allows conservation of angular momentum and energy to be conserved as well.<ref>{{cite journal
+  | title = Smoothed particle hydrodynamics
+  | author1 = J.J. Monaghan 
+  | journal = Reports on Progress in Physics
+  | volume = 68 
+  | issue = 8
+  | pages = 1703–1759 
+  | year = 2005
+  | doi = 10.1088/0034-4885/68/8/R01 
+  | bibcode = 2005RPPh...68.1703M 
+ | s2cid = 5987481 
+ }}</ref>
+
+=== Time integration ===
+
+From the work done in the 80's and 90's on numerical integration of point-like particles in large accelerators, appropriate time integrators have been developed with accurate conservation properties on the long term; they are called [[symplectic integrator]]s. The most popular in the SPH literature is the [[Leapfrog integration|leapfrog]] scheme, which reads for each particle <math> i </math>:
+
+:<math>\begin{align}
+  \boldsymbol{v}_i^{n+1/2} &= \boldsymbol{v}_i^n + \boldsymbol{a}_i^n \frac{\Delta t}{2}, \\
+  \boldsymbol{r}_i^{n+1} &= \boldsymbol{r}_i^n + \boldsymbol{v}_i^{n+1/2}\Delta t,\\
+  \boldsymbol{v}_i^{n+1} &= \boldsymbol{v}_i^{n+1/2} + \boldsymbol{a}_i^{i+1} \frac{\Delta t}{2},
+\end{align}</math>
+
+where <math> \Delta t </math> is the time step, superscripts stand for time iterations while <math> \boldsymbol{a}_i </math> is the particle acceleration, given by the right-hand side of the momentum equation.
+
+Other symplectic integrators exist (see the reference textbook<ref>{{cite book
+  | title = Geometric Numerical Integration
+  | author1 = E. Hairer
+  | author2 = C. Lubich
+  | author3 = G. Wanner
+  | date = 2006
+  | publisher = Springer
+  | isbn = 978-3-540-30666-5
+  | url = https://www.springer.com/us/book/9783540306634
+  }}</ref>). It is recommended to use a symplectic (even low-order) scheme instead of a high order non-symplectic scheme, to avoid error accumulation after many iterations.
+
+Integration of density has not been studied extensively (see [[#Weakly compressible approach|below]] for more details).
+
+Symplectic schemes are conservative but explicit, thus their numerical stability requires stability conditions, analogous to the Courant-Friedrichs-Lewy condition (see [[#Weakly compressible approach|below]]).
+
+=== Boundary techniques ===
+
+[[Image:SPHBoundaryConvolutionSplit.svg|thumb|SPH Convolution support split close to a boundary]]
+
+In case the SPH convolution shall be practiced close to a boundary, i.e. closer than {{math|''s'' · ''h''}}, then the integral support is truncated. Indeed, when the convolution is affected by a boundary, the convolution shall be split in 2 integrals,
+
+:<math>
+A(\boldsymbol{r}) = \int_{\Omega(\boldsymbol{r})} A\left(\boldsymbol{r^{\prime}}\right) W(| \boldsymbol{r}-\boldsymbol{r^{\prime}} |,h) d\boldsymbol{r^{\prime}} + \int_{B(\boldsymbol{r}) - \Omega(\boldsymbol{r})} A\left(\boldsymbol{r^{\prime}}\right) W(| \boldsymbol{r}-\boldsymbol{r^{\prime}} |,h) d\boldsymbol{r^{\prime}},
+</math>
+
+where {{math|B('''r''')}} is the compact support ball centered at {{math|'''r'''}}, with radius {{math|''s'' · ''h''}}, and {{math|Ω('''r''')}} denotes the part of the compact support inside the computational domain, {{math|Ω ∩ B('''r''')}}. Hence, imposing boundary conditions in SPH is completely based on approximating the second integral on the right hand side. The same can be of course applied to the differential operators computation,
+
+:<math>
+\nabla A(\boldsymbol{r}) = \int_{\Omega(\boldsymbol{r})} A\left(\boldsymbol{r^{\prime}}\right) \nabla W(\boldsymbol{r}-\boldsymbol{r^{\prime}},h) d\boldsymbol{r^{\prime}} + \int_{B(\boldsymbol{r}) - \Omega(\boldsymbol{r})} A\left(\boldsymbol{r^{\prime}}\right) \nabla W(\boldsymbol{r}-\boldsymbol{r^{\prime}},h) d\boldsymbol{r^{\prime}}.
+</math>
+
+Several techniques has been introduced in the past to model boundaries in SPH.
+
+==== Integral neglect ====
+
+[[File:SPHBoundaryFreeSurface.svg|thumb|SPH free-surface model by means of integral neglect]]
+
+The most straightforward boundary model is neglecting the integral,
+
+:<math>
+\int_{B(\boldsymbol{r}) - \Omega(\boldsymbol{r})} A\left(\boldsymbol{r^{\prime}}\right) \nabla W(\boldsymbol{r}-\boldsymbol{r^{\prime}},h) d\boldsymbol{r^{\prime}} \simeq \boldsymbol{0},
+</math>
+
+such that just the bulk interactions are taken into account,
+
+:<math>
+\nabla A_i = \sum_{j \in \Omega_i} V_j A_j \nabla W_{ij}.
+</math>
+
+This is a popular approach when free-surface is considered in monophase simulations.<ref name="colagrossi2009theoretical">{{ cite journal |
+author1= Andrea Colagrossi |
+author2= Matteo Antuono |
+author3= David Le Touzè |
+title= Theoretical considerations on the free-surface role in the smoothed-particle-hydrodynamics model |
+journal= Physical Review E |
+volume= 79 |
+issue= 5 |
+article-number= 056701 |
+year=2009
+|
+bibcode= 2009PhRvE..79e6701C |
+doi= 10.1103/PhysRevE.79.056701 |
+pmid= 19518587 }}
+</ref>
+
+The main benefit of this boundary condition is its obvious simplicity. However, several consistency issues shall be considered when this boundary technique is applied.<ref name="colagrossi2009theoretical"/> That's in fact a heavy limitation on its potential applications.
+
+==== Fluid Extension ====
+
+[[File:SPHBoundaryFluidExtension.svg|thumb|SPH Fluid Extension Boundary technique]]
+
+Probably the most popular methodology, or at least the most traditional one, to impose boundary conditions in SPH, is Fluid Extension technique. Such technique is based on populating the compact support across the boundary with so-called ghost particles, conveniently imposing their field values.<ref name="bouscasse2013nonlinear">{{ cite journal |
+author1= Bejamin Bouscasse |
+author2= Andrea Colagrossi |
+author3= Salvatore Marrone |
+author4= Matteo Antuono |
+title= Nonlinear water wave interaction with floating bodies in SPH |
+journal= Journal of Fluids and Structures |
+volume= 42 |
+pages= 112–129 |
+year=2013
+|
+doi= 10.1016/j.jfluidstructs.2013.05.010 |
+bibcode= 2013JFS....42..112B }}
+</ref>
+
+Along this line, the [[#Integral neglect|integral neglect methodology]] can be considered as a particular case of fluid extensions, where the field, {{math|A}}, vanish outside the computational domain.
+
+The main benefit of this methodology is the simplicity, provided that the boundary contribution is computed as part of the bulk interactions. Also, this methodology has been deeply analyzed in the literature.<ref name="macia2011theoretical">{{ cite journal |
+author1= Fabricio Macià |
+author2= Matteo Antuono |
+author3= Leo M González |
+author4= Andrea Colagrossi |
+title= Theoretical analysis of the no-slip boundary condition enforcement in SPH methods |
+journal= Progress of Theoretical Physics |
+volume= 125 |
+issue= 6 |
+pages= 1091–1121 |
+year=2011
+|
+doi= 10.1143/PTP.125.1091 |
+bibcode= 2011PThPh.125.1091M |
+doi-access= free }}
+</ref><ref name="bouscasse2013nonlinear"/><ref name="cercos2017sph">{{ cite journal |
+author1= Jose Luis Cercos-Pita |
+author2= Matteo Antuono |
+author3= Andrea Colagrossi |
+author4= Antonio Souto |
+title= SPH energy conservation for fluid--solid interactions |
+journal= Computer Methods in Applied Mechanics and Engineering |
+volume= 317 |
+pages= 771–791 |
+year=2017
+|
+doi= 10.1016/j.cma.2016.12.037 |
+bibcode= 2017CMAME.317..771C }}
+</ref>
+
+On the other hand, deploying ghost particles in the truncated domain is not a trivial task, such that modelling complex boundary shapes becomes cumbersome. The 2 most popular approaches to populate the empty domain with ghost particles are Mirrored-Particles<ref name="campbell2000contact">{{ cite journal |
+author1= J. Campbell |
+author2= R. Vignjevic |
+author3= L. Libersky |
+title= A contact algorithm for smoothed particle hydrodynamics |
+journal= Computer Methods in Applied Mechanics and Engineering |
+volume= 184 |
+issue= 1 |
+pages= 49–65 |
+year=2000
+|
+doi= 10.1016/S0045-7825(99)00442-9 |
+bibcode= 2000CMAME.184...49C }}
+</ref> and Fixed-Particles.<ref name="bouscasse2013nonlinear"/>
+
+==== Boundary Integral ====
+
+[[File:SPHBoundaryBoundaryIntegrals.svg|thumb|SPH Boundary Integral model]]
+
+The newest Boundary technique is the Boundary Integral methodology.<ref name="ferrand2013"/> In this methodology, the empty volume integral is replaced by a [[surface integral]], and a renormalization:
+
+:<math>
+\nabla A_i = \frac{1}{\gamma_i} \left( \sum_{j \in \Omega_i} V_j A_j \nabla W_{ij} + \sum_{j \in \partial \Omega_i} S_j A_j \boldsymbol{n}_j W_{ij} \right),
+</math>
+:<math>
+\gamma_i = \sum_{j \in \Omega_i} V_j W_{ij},
+</math>
+
+with {{math|'''''n'''<sub>j</sub>''}} the normal of the generic ''j''-th boundary element. The surface term can be also solved considering a semi-analytic expression.<ref name="ferrand2013"/>
+
+== Modelling physics ==
+
+=== Hydrodynamics ===
+==== Weakly compressible approach ====
+
+Another way to determine the density is based on the SPH smoothing operator itself. Therefore, the density is estimated from the particle distribution utilizing the SPH [[#Interpolations|interpolation]]. To overcome undesired errors at the free surface through kernel truncation, the density formulation can again be integrated in time.
+<ref name="ferrand2013">{{cite journal
+| author = M. Ferrand, D.R. Laurence, B.D. Rogers, D. Violeau, C. Kassiotis 
+| title = Unified semi-analytical wall boundary conditions for inviscid, laminar or turbulent flows in the meshless SPH method
+| journal = International Journal for Numerical Methods in Fluids
+| publisher = Int. J. Numer. Meth. Fluids
+| volume = 71
+| issue = 4
+| pages = 446–472
+| year = 2013| bibcode = 2013IJNMF..71..446F
+| doi = 10.1002/fld.3666
+| s2cid = 124465492
+| url = https://hal-enpc.archives-ouvertes.fr/hal-00691603/document
+}}</ref>
+
+The weakly compressible SPH in fluid dynamics is based on the discretization of the [[Navier–Stokes equations]] or [[#Governing equations|Euler equations]] for compressible fluids. To close the system, an appropriate [[equation of state]] is utilized to link pressure <math>p</math> and density <math>\rho</math>. Generally, the so-called [[Cole equation of state|Cole equation]]
+<ref>{{cite book 
+| author = H. R. Cole 
+| title = Underwater Explosions 
+| url = https://archive.org/details/underwaterexplos00cole
+| publisher = Princeton University Press 
+| place = Princeton, New Jersey 
+| year = 1948
+}}</ref>
+(sometimes mistakenly referred to as the "[[Tait equation of state|Tait equation]]") is used in SPH. It reads
+:<math>
+p = \frac{\rho_0c^2}{\gamma}\left(\left(\frac{\rho}{\rho_0}\right)^{\gamma}-1\right) + p_0 ,
+</math>
+
+where <math>\rho_0</math> is the reference density and <math>c</math> the [[speed of sound]]. For water, <math>\gamma = 7</math> is commonly used. The background pressure <math>p_0</math> is added to avoid negative pressure values.
+
+Real nearly incompressible fluids such as water are characterized by very high speeds of sound of the order <math>10^3\mathrm{m/s}</math>. Hence, pressure information travels fast compared to the actual bulk flow, which leads to very small Mach numbers <math>M</math>. The momentum equation leads to the following relation:
+:<math>
+\frac{\delta\rho}{\rho_0}\approx\frac{|\boldsymbol{v}|^2}{c^2} = M^2
+</math>
+where <math>\rho</math> is the density change and <math>v</math> the velocity vector.
+In practice a value of c smaller than the real one is adopted to avoid time steps too small in the time integration scheme. Generally a numerical speed of sound is adopted such that density variation smaller than 1% are allowed. This is the so-called weak-compressibility assumption.
+This corresponds to a [[Mach number]] smaller than 0.1, which implies:
+:<math>
+c = 10v_\text{max}
+</math>
+where the maximum velocity <math>v_\text{max}</math> needs to be estimated, for e.g. by Torricelli's law or an educated guess. Since only small density variations occur, a linear equation of state can be adopted:<ref name="molteni2009simple">{{cite journal
+| author = D. Molteni, A. Colagrossi
+| title = A simple procedure to improve the pressure evaluation in hydrodynamic context using the SPH
+| journal=Computer Physics Communications
+| volume = 180
+| issue = 6
+| pages = 861–872
+| year = 2009| doi = 10.1016/j.cpc.2008.12.004
+| bibcode = 2009CoPhC.180..861M
+}}</ref>
+:<math>
+p = c^2\left(\rho-\rho_0\right)
+</math>
+
+Usually the weakly-compressible schemes are affected by a high-frequency spurious noise on the pressure and density fields.
+<ref name="Colagrossi2003">{{cite journal |last1=Colagrossi |first1=Andrea |last2=Landrini |first2=Maurizio |title=Numerical simulation of interfacial flows by smoothed particle hydrodynamics |journal=Journal of Computational Physics |date=2003 |volume=191 |issue=2 |pages=448–475 |doi=10.1016/S0021-9991(03)00324-3 |bibcode=2003JCoPh.191..448C }}</ref>
+This phenomenon is caused by the nonlinear interaction of acoustic waves and by fact that the scheme is explicit in time and centered in space
+.<ref name="leveque2007finite">{{cite book 
+| author = Randall J. LeVeque 
+| title = Finite difference methods for ordinary and partial differential equations: steady-state and time-dependent problems
+| publisher = Siam
+| year = 2007
+}}</ref>
+
+Through the years, several techniques have been proposed to get rid of this problem. They can be classified in three different groups: 
+# the schemes that adopt density filters,
+# the models that add a diffusive term in the continuity equation,
+# the schemes that employ Riemann solvers to model the particle interaction.
+
+===== Density filter technique =====
+
+The schemes of the first group apply a filter directly on the density field to remove the spurious numerical noise. The most used filters are the MLS (moving least squares) and the Shepard filter<ref name="Colagrossi2003" />
+which can be applied at each time step or every n time steps. The more frequent is the use of the filtering procedure, the more regular density and pressure fields are obtained. On the other hand, this leads to an increase of the computational costs. In long time simulations, the use of the filtering procedure may lead to the disruption of the hydrostatic pressure component and to an inconsistency between the global volume of fluid and the density field. Further, it does not ensure the enforcement of the dynamic free-surface boundary condition.
+
+===== Diffusive term technique =====
+
+A different way to smooth out the density and pressure field is to add a diffusive term inside the continuity equation (group 2) :
+:<math>
+{\displaystyle {\frac {d\rho _{i}}{dt}}=\sum _{j}m_{j}\left({\boldsymbol {v}}_{i}-{\boldsymbol {v}}_{j}\right)\cdot \nabla W_{ij} + \mathcal{D}_i(\rho),}
+</math>
+
+The first schemes that adopted such an approach were described in Ferrari
+<ref>{{cite journal
+| title=A new 3D parallel SPH scheme for free surface flows
+| author=A. Ferrari, M. Dumbser, E. Toro, A. Armanini
+| journal=[[Computers & Fluids]]
+| volume=38
+| number=6
+| pages=1203–1217
+| year=2009
+| publisher=Elsevier
+| doi=10.1016/j.compfluid.2008.11.012
+}}</ref>
+and in Molteni<ref name="molteni2009simple"/>
+where the diffusive term was modeled as a Laplacian of the density field. A similar approach was also used in Fatehi and Manzari
+.<ref>{{cite journal
+| title= A remedy for numerical oscillations in weakly compressible smoothed particle hydrodynamics
+| author= Fatehi, R and Manzari, MT 
+| journal= International Journal for Numerical Methods in Fluids
+| volume= 67
+| number= 9
+| pages= 1100–1114
+| year= 2011
+| publisher= Wiley Online Library 
+| doi= 10.1002/fld.2406 
+| bibcode= 2011IJNMF..67.1100F 
+| s2cid= 121381641 
+}}</ref>
+[[File:StandardSPH.png|thumb|SPH simulation: pressure distribution of a dam-break flow using standard SPH formulation]]
+[[File:DeltaSPH.png|thumb|SPH simulation: pressure distribution of a dam-break flow using standard δ-SPH formulation]]
+In Antuono et al.
+<ref>{{cite journal
+| title= Free-surface flows solved by means of SPH schemes with numerical diffusive terms
+| author= M. Antuono, A. Colagrossi, S. Marrone, D. Molteni
+| journal= Computer Physics Communications
+| volume= 181
+| number= 3
+| pages= 532–549
+| year= 2010
+| publisher= Elsevier 
+| doi= 10.1016/j.cpc.2009.11.002
+| bibcode= 2010CoPhC.181..532A
+}}</ref>
+a correction to the diffusive term of Molteni<ref name="molteni2009simple"/> was proposed to remove some inconsistencies close to the free-surface. In this case the adopted diffusive term is equivalent to a high-order differential operator on the density field.<ref name="antuono2012">{{cite journal
+| title= Numerical diffusive terms in weakly-compressible SPH schemes
+| author= M. Antuono, A. Colagrossi, S. Marrone
+| journal= Computer Physics Communications
+| volume= 183
+| number= 12
+| pages= 2570–2580
+| year= 2012
+| publisher= Elsevier 
+| doi= 10.1016/j.cpc.2012.07.006
+| bibcode= 2012CoPhC.183.2570A
+}}</ref>
+The scheme is called δ-SPH and preserves all the conservation properties of the SPH without diffusion (e.g., linear and angular momenta, total energy,
+see 
+<ref>{{cite journal
+| title= Energy balance in the δ-SPH scheme
+| author= Antuono Matteo and Marrone S and Colagrossi A and Bouscasse B
+| journal= Computer Methods in Applied Mechanics and Engineering
+| volume= 289
+| pages= 209–226
+| year= 2015
+| publisher= Elsevier 
+| doi= 10.1016/j.cma.2015.02.004 
+| bibcode= 2015CMAME.289..209A 
+}}</ref>
+) along with a smooth and regular representation of the density and pressure fields.
+
+In the third group there are those SPH schemes which employ numerical fluxes obtained through Riemann solvers to model the particle interactions.<ref>{{cite journal
+| title= On particle weighted methods and smooth particle hydrodynamics
+| author=JP. Vila
+| journal= Mathematical Models and Methods in Applied Sciences
+| volume= 9
+| number= 2
+| pages= 161–209
+| year= 1999
+| publisher= World Scientific 
+| doi=10.1142/S0218202599000117
+}}</ref><ref>{{cite journal
+| title= Free surface flows simulations in Pelton turbines using an hybrid SPH-ALE method
+| author= Marongiu Jean-Christophe and Leboeuf Francis and Caro Joëlle and Parkinson Etienne
+| journal= Journal of Hydraulic Research
+| volume= 48
+| number= S1
+| pages= 40–49
+| year= 2010
+| publisher= Taylor & Francis
+| doi= 10.1080/00221686.2010.9641244 
+| bibcode= 2010JHydR..48S..40M
+| s2cid= 121493014 
+| url= https://hal.archives-ouvertes.fr/hal-00566051/file/marongiu2010.pdf 
+}}</ref><ref>{{cite book
+| title=Modelisation d'écoulements visqueux par methode SPH en vue d'application à l'hydrodynamique navale
+| author=De Leffe, Matthieu
+| year=2011
+| publisher= PhD Thesis, Ecole centrale de Nantes
+}}</ref>
+
+===== Riemann solver technique =====
+
+[[File:Dambreak-low-dissipation-rieman.png|thumb|SPH simulation: pressure distribution of a dam-break flow using Riemann solver with the low-dissipation limiter.]]
+
+For an SPH method based on Riemann solvers, an inter-particle Riemann problem is constructed along a unit vector
+<math> \mathbf{e}_{ij} = - \mathbf{r}_{ij}/r_{ij} </math> pointing from particle <math> i </math> to particle <math> j </math>. In this Riemann problem the initial left and right states are on particles
+<math> i </math> and <math> j </math> , respectively. The <math> L </math> and <math> R </math> states are
+
+<math display="block">
+ \begin{cases}
+(\rho_L, U_L, P_L) = (\rho_i, \mathbf{v}_i \cdot \mathbf{e}_{ij},P_i) \\
+(\rho_R, U_R, P_R) = (\rho_j, \mathbf{v}_j \cdot \mathbf{e}_{ij},P_j) .
+ \end{cases}
+</math>
+
+The solution of the Riemann problem results in three waves emanating from the discontinuity. Two waves, which can be shock or rarefaction wave, traveling with the smallest or largest wave speed. The middle wave is always a contact discontinuity and separates two intermediate states, denoted by <math> (\rho_L^{\ast}, U_L^{\ast},P_L^{\ast}) </math> and <math> (\rho_R^{\ast}, U_R^{\ast},P_R^{\ast}) </math>. By assuming that the intermediate state satisfies <math> U_L^{\ast} = U_R^{\ast} =U^{\ast} </math> and <math> P_L^{\ast} = P_R^{\ast} =P^{\ast} </math>, a linearized Riemann solver for smooth flows or with only moderately strong shocks can be written as
+
+<math display="block">
+\begin{cases}
+U^{\ast} = \overline{U} + \frac{1}{2} \frac{(P_L - P_R)}{\bar{\rho} c_0}\\
+P^{\ast} = \overline{P} + \frac{1}{2} \bar{\rho} c_0 {(U_L - U_R)} ,
+\end{cases} 
+</math>
+
+where <math> \overline{U} = (U_L + U_R)/2 </math> and <math> \overline{P} = (P_L + P_R)/2 </math> are inter-particle averages. With the solution of the Riemann problem, i.e. <math> U^{\ast} </math> and <math> P^{\ast} </math>, the discretization of the SPH method is
+
+<math display="block">\frac{d \rho_i}{d t} = 2 \rho_i \sum_j \frac{m_j}{\rho_j} (\mathbf{v}_i - \mathbf{v}^{\ast})\cdot \nabla_{i} W_{ij}, </math>
+
+<math display="block">\frac{d \mathbf{v}_i}{d t} = - 2\sum_j m_j \left( \frac{ P^{\ast}}{\rho_i \rho_j} \right) \nabla_i W_{ij}.</math>
+
+where 
+<math> \mathbf{v}^{\ast} = U^{\ast} \mathbf{e}_{ij} + ( \overline{\mathbf{v}}_{ij} - \overline{U}\mathbf{e}_{ij} ) </math>. This indicates that the inter-particle average velocity and pressure are simply replaced by the solution of the Riemann problem. By comparing both it can be seen that the intermediate velocity and pressure from the inter-particle averages amount to implicit dissipation, i.e. density regularization and numerical viscosity, respectively.
+
+Since the above discretization is very dissipative a straightforward modification is to apply a dissipation coefficient to decrease the implicit numerical dissipations introduced by limiting the intermediate pressure by
+<ref>{{cite journal
+| title= A weakly compressible SPH method based on a low-dissipation Riemann solver
+| author= Chi Zhang and Xiangyu Hu and Nikolaus Adams
+| journal= Journal of Computational Physics
+| volume= 335
+| pages= 605–620
+| year= 2017
+| doi= 10.1016/j.jcp.2017.01.027
+| bibcode= 2017JCoPh.335..605Z 
+}}</ref>
+
+<math display="block">
+P^{\ast} = \overline{P} + \frac{1}{2} \beta \overline{\rho} {(U_L - U_R)},
+</math>
+
+where the dissipation coefficient<ref>{{Cite journal |last=Hafeez |first=Muhammad Ayaz |last2=Vacondio |first2=Renato |last3=English |first3=Aaron |last4=Fourtakas |first4=Georgios |last5=Rogers |first5=Benedict D. |date=2026-04-01 |title=A low dissipation formulation for Weakly Compressible Riemann-Based SPH schemes |url=https://www.sciencedirect.com/science/article/pii/S2196438626001476 |journal=Computational Particle Mechanics |volume=14 |pages=193–210 |doi=10.1016/j.cpms.2026.02.010 |issn=2196-4386}}</ref> is defined as
+
+<math display="block">\beta = 
+\begin{cases} 
+\min(1, \text{Ma}^2) &  \text{if} \qquad  U_l < U_r, \\             
+ 0                &   \qquad \quad  \text{else}
+\end{cases}
+     \quad \text{where} \quad \text{Ma}^2 = \max \left( \frac{|U_l|^2}{c^2}, \frac{|U_r|^2}{c^2} \right)</math>
+
+Note that <math> \beta </math> ensures that there is no dissipation when the fluid is under the action of an expansion wave, i.e. <math> U_L < U_R </math>, and use modulate dissipation when the fluid is under the action of a compression wave, i.e. <math> U_L \geq U_R </math>.  Also note that the dissipation introduced by the intermediate velocity is not limited.
+
+==== Viscosity modelling ====
+In general, the description of hydrodynamic flows require a convenient treatment of diffusive processes to model the [[viscosity]] in the [[Navier–Stokes equations]]. It needs special consideration because it involves the [[Laplacian]] differential operator. Since the direct computation does not provide satisfactory results, several approaches to model the diffusion have been proposed.
+
+* Artificial viscosity
+Introduced by Monaghan and Gingold
+<ref>{{cite journal
+|first1=Joseph J. |last1=Monaghan 
+|first2=Robert A. |last2=Gingold 
+| title = Shock Simulation by the Particle Method 
+| journal = Journal of Computational Physics 
+| year = 1983
+| volume = 52
+| issue = 2 
+| pages = 347–389
+| bibcode = 1983JCoPh..52..374M 
+| doi = 10.1016/0021-9991(83)90036-0 
+}}</ref>
+the artificial viscosity was used to deal with high [[Mach number]] fluid flows. It reads
+:<math>
+\Pi _{ij} = \begin{cases}
+              \dfrac{-\alpha \bar{c}_{ij} \phi_{ij} + \beta \phi^2_{ij}}{\bar{\rho}_{ij}} & \quad \boldsymbol{v}_{ij} \cdot \boldsymbol{r}_{ij} < 0\\
+              0    & \quad \boldsymbol{v}_{ij} \cdot \boldsymbol{r}_{ij} \geq 0
+            \end{cases}
+</math>
+Here, <math> \alpha</math> is controlling a volume viscosity while <math> \beta </math> acts similar to the Neumann Richtmeyr artificial viscosity. The <math> \phi_{ij} </math> is defined by 
+:<math>
+    \phi_{ij} = \frac{h\boldsymbol{v}_{ij}\cdot \boldsymbol{r}_{ij}}{\Vert \boldsymbol{r}_{ij} \Vert^2 + \eta_h^2},
+</math>
+where ''η<sub>h</sub>'' is a small fraction of ''h'' (e.g. 0.01''h'') to prevent possible numerical infinities at close distances.
+
+The artificial viscosity also has shown to improve the overall stability of general flow simulations. Therefore, it is applied to inviscid problems in the following form 
+:<math>
+    \Pi_{ij} = \alpha h c \frac{\boldsymbol{v}_{ij} \cdot \boldsymbol{r}_{ij}}{\Vert \boldsymbol{r}_{ij} \Vert^2 +\eta_h^2 }.
+</math>
+It is possible to not only stabilize inviscid simulations but also to model the physical viscosity by this approach. To do so 
+:<math>
+    \alpha h c = 2(n+2) \frac{\mu}{\rho}
+</math>
+is substituted in the equation above, where <math> n </math> is the number of spatial dimensions of the model. This approach introduces the bulk viscosity <math> \zeta = \frac{5}{3} \mu </math>.
+
+* Morris
+
+For low [[Reynolds numbers]] the viscosity model by Morris
+<ref>{{cite journal
+| author1 = J. P. Morris
+| author2 = P. J. Fox
+| author3 = Y. Zhu
+| title = Modeling Low Reynolds Number Incompressible Flows Using SPH
+| journal = Journal of Computational Physics
+| year = 1997
+| volume = 136
+| issue = 1
+| pages = 214–226
+| bibcode = 1997JCoPh.136..214M
+| doi = 10.1006/jcph.1997.5776
+}}</ref>
+was proposed. 
+:<math>
+    [\nu \Delta \boldsymbol{v}]_{ij} =
+2\nu \frac{ m_j}{\rho_j} \,\frac{\boldsymbol{r}_{ij} \cdot \nabla w_{h,ij}}{\Vert \boldsymbol{r}_{ij} \Vert ^2 +\eta_h^2} \, \boldsymbol{v}_{ij}.
+</math>
+
+* LoShao
+
+==== Additional physics ====
+* Surface tension
+* Heat transfer
+* Turbulence
+
+==== Multiphase extensions ====
+
+=== Astrophysics ===
+
+Often in astrophysics, one wishes to model self-gravity in addition to pure hydrodynamics. The particle-based nature of SPH makes it ideal to combine with a particle-based gravity solver, for instance [[Barnes–Hut simulation|tree gravity code]],<ref>{{citation
+  |title = PKDGRAV The Parallel k-D Tree Gravity Code
+  | author1 = Marios D. Dikaiakos
+  | author2 = Joachim Stadel
+  | url = http://www-hpcc.astro.washington.edu/faculty/trq/brandon/pkdgrav.html
+  | access-date = February 1, 2017
+}}</ref> [[Particle Mesh|particle mesh]], or [[P3M|particle-particle particle-mesh]].
+
+=== Solid mechanics and fluid-structure interaction (FSI) ===
+
+==== Total Lagrangian formulation for solid mechanics ====
+
+To discretize the governing equations of solid dynamics, a correction matrix <math> \mathbb{B}^0 </math> 
+<ref name="vignjevic2006sph">{{ cite journal |
+author1= Vignjevic, Rade |
+author2= Reveles, Juan R. |
+author3= Campbell, James |
+title= SPH in a total Lagrangian formalism |
+journal= Computer Modeling in Engineering and Sciences |
+volume= 44 |
+pages= 181–198 |
+year=2006 }}
+</ref>
+<ref name="han2018sph">{{ cite journal |
+author1= Han, Luhui |
+author2= Hu, Xiangyu |
+title= SPH modeling of fluid-structure interaction |
+journal= Journal of Hydrodynamics |
+volume= 30 |
+pages= 62–69 |
+year=2018 |
+issue= 1 | 
+doi = 10.1007/s42241-018-0006-9 |
+bibcode= 2018JHyDy..30...62H |
+s2cid= 125369012 |
+url= http://mediatum.ub.tum.de/node?id=1449761 }}
+</ref>
+is first introduced to reproducing rigid-body rotation as
+
+{{NumBlk|:|<math> \mathbb{B}^0_a = \left( \sum_b V_b^0 \left( \mathbf{r}_b^0 - \mathbf{r}_a^0 \right) \otimes \nabla_a^0 W_{ab} \right) ^{-1} </math>|{{EquationRef|1}}}}
+
+where
+
+<math display="block"> \nabla_a^0 W_{a} = \frac{\partial W\left( |\mathbf{r}_{ab}^0|, h \right)} {\partial |\mathbf{r}_{ab}^0|} \mathbf{e}_{ab}^0 </math>
+
+stands for the gradient of the kernel function evaluated at the initial reference configuration. 
+Note that subscripts <math> a </math> and <math> b </math> are used to denote solid particles, and smoothing length <math> h </math> is identical to that in the discretization of fluid equations.
+
+Using the initial configuration as the reference, the solid density is directly evaluated as
+
+{{NumBlk|:|<math> \rho_a = \rho_a^0 \frac{1}{J} </math>|{{EquationRef|2}}}}
+
+where <math> J = \det(\mathbb{F}) </math> is the Jacobian determinant of deformation tensor <math> \mathbb{F} </math>.
+
+We can now discretize the momentum equation in the following form
+
+{{NumBlk|:|<math> m_a \frac{\text{d} \mathbf{v}}{\text{d}t} = 2 \sum_b V_a V_b \tilde{\mathbb{P}}_{ab} \nabla_a^0 W_{ab} +\mathbf{g} + \mathbf{f}_a^{F:p} + \mathbf{f}_a^{F:v} </math>|{{EquationRef|3}}}}
+
+where inter-particle averaged first Piola-Kirchhoff stress <math> \tilde{\mathbb{P}} </math> 
+is defined as
+
+{{NumBlk|:|<math> \tilde{\mathbb{P} }_{ab} = \frac{1}{2} \left( \mathbb{P}_a \mathbb{B}_a^0 + \mathbb{P}_b \mathbb{B}_b^0 \right) .</math>|{{EquationRef|4}}}}
+
+Also <math> \mathbf{f}_a^{F:p} </math> and <math> \mathbf{f}_a^{F:v} </math> correspond to the fluid pressure and viscous forces acting on the solid particle <math> a </math>, respectively.
+
+==== Fluid-structure coupling ====
+
+In fluid-structure coupling, the surrounding solid structure is behaving as a moving boundary for fluid, and the no-slip boundary condition is imposed at the fluid-structure interface. The interaction forces <math> \mathbf{f}_i^{S:p} </math> and <math> \mathbf{f}_i^{S:v} </math> acting on a fluid particle <math> i </math>, due to the presence of the neighboring solid particle <math> a </math>, can be obtained as 
+<ref>{{cite journal
+| title= A multi-resolution SPH method for fluid-structure interactions
+| author1= Chi Zhang |author2=Massoud Rezavand |author3=Xiangyu Hu
+| journal= Journal of Computational Physics
+| article-number= 110028 
+| year= 2020
+| volume= 429
+| doi= 10.1016/j.jcp.2020.110028
+| issn=0021-9991
+| arxiv= 1911.13255| s2cid= 208513116
+}}</ref>
+{{NumBlk|:|<math> \mathbf{f}_i^{S:p} = - 2 \sum_a V_i V_a \frac{p_i \rho^d_a+ p^d_a \rho_i}{\rho_i + \rho^d_a} \nabla_i W(\mathbf{r}_{ia}, h ) </math>|{{EquationRef|5}}}}
+
+and
+
+{{NumBlk|:|<math> \mathbf{f}_i^{S:v} = 2\sum_a \eta V_i V_a \frac{\mathbf{v}_i - \mathbf{v}^d_a}{r_{ia} } \frac{\partial W(\mathbf{r}_{ia}, h )}{\partial {{r}_{ia} } } . </math>|{{EquationRef|6}}}}
+
+Here, the imaginary pressure <math> p_a^d </math> and velocity <math> \mathbf{v}_a^d </math> are defined by
+
+{{NumBlk|:|<math> \begin{cases}
+p_a^d = p_i + \rho_i \max(0, (\mathbf{g} - {\frac{\text{d}\mathbf{v}_a}{\text{d}t} }) \cdot \mathbf{n}^S) (\mathbf{r}_{ia} \cdot \mathbf{n}^S) \\
+\mathbf{v}_a^d = 2\mathbf{v}_i - \mathbf{v}_a .
+\end{cases} </math>|{{EquationRef|7}}}}
+
+where <math> \mathbf{n}^S </math> denotes the surface normal direction of the solid structure, 
+and the imaginary particle density <math> \rho_a^d </math> is calculated through the equation of state.
+
+Accordingly, the interaction forces <math> \mathbf{f}_a^{F:p} </math> and <math> \mathbf{f}_a^{F:v} </math> acting on a solid particle <math> a </math> are given by
+
+{{NumBlk|:|<math> \mathbf{f}_a^{F:p} = - 2 \sum_i V_a V_i \frac{p^d_a \rho_i +p_i \rho^d_a}{\rho_i + \rho^d_a} \nabla_a W(\mathbf{r}_{ai}, h ) </math>|{{EquationRef|8}}}}
+
+and
+
+{{NumBlk|:|<math> \mathbf{f}_a^{F:v} = 2\sum_i \eta V_a V_i \frac{\mathbf{v}^d_a - \mathbf{v}_i}{r_{ia} } \frac{\partial W(\mathbf{r}_{ia}, h )}{\partial {{r}_{ai} } } .</math>|{{EquationRef|9}}}}
+
+The anti-symmetric property of the derivative of the kernel function will ensure the momentum conservation for each pair of interacting particles <math> i </math> and <math> a </math>.
+
+=== Others ===
+The [[discrete element method]], used for simulating [[granular material]]s, is related to SPH.
+
+== Variants of the method ==
+
+{{Empty section|date=July 2018}}
+
+== References ==
+{{Reflist|30em}}
+
+== Further reading ==
+
+* Hoover, W. G. (2006); Smooth Particle Applied Mechanics: The State of the Art, World Scientific.
+* Stellingwerf, R. F.; Wingate, C. A.; [http://adsabs.harvard.edu/abs/1994MmSAI..65.1117S "Impact Modelling with SPH"], Memorie della Societa Astronomia Italiana, Vol. 65, p.&nbsp;1117 (1994).
+* Amada, T.; Imura, M.; Yasumuro, Y.; Manabe, Y.; and Chihara, K. (2004); "Particle-based fluid simulation on GPU", in ''Proceedings of ACM Workshop on General-purpose Computing on Graphics Processors'' (August, 2004, Los Angeles, California).
+* Desbrun, M.; and Cani, M.-P. (1996). "Smoothed Particles: a new paradigm for animating highly deformable bodies" in ''Proceedings of Eurographics Workshop on Computer Animation and Simulation'' (August 1996, Poitiers, France).
+* Hegeman, K.; Carr, N. A.; and Miller, G. S. P.; "Particle-based fluid simulation on the GPU", in ''Proceedings of International Conference on Computational Science'' (Reading, UK, May 2006), Lecture Notes in Computer Science v. 3994/2006 (Springer-Verlag).
+* Kelager, M. (2006) ''Lagrangian Fluid Dynamics Using Smoothed Particle Hydrodynamics'', MSc Thesis, Univ. Copenhagen.
+* Kolb, A.; and Cuntz, N. (2005); "Dynamic particle coupling for GPU-based fluid simulation", in ''Proceedings of the 18th Symposium on Simulation Techniques'' (2005) pp.&nbsp;722–727.
+* Liu, G. R.; and Liu, M. B.; ''Smoothed Particle Hydrodynamics: a meshfree particle method'', Singapore: World Scientific (2003).
+* Monaghan, Joseph J. (1992). "Smoothed Particle Hydrodynamics", ''Annual Review of Astronomy and Astrophysics'' (1992). 30 : 543–74.
+* Muller, M.; Charypar, D.; and Gross, M.; "Particle-based Fluid Simulation for Interactive Applications", in Breen, D; and Lin, M. (eds.), ''Proceedings of Eurographics/SIGGRAPH Symposium on Computer Animation'' (2003).
+* Vesterlund, M.; ''Simulation and Rendering of a Viscous Fluid Using Smoothed Particle Hydrodynamics'', MSc Thesis, Umea University, Sweden.
+* Violeau, D.; ''Fluid Mechanics and the SPH method'', Oxford University Press (2012).
+
+== External links ==
+* [http://www.ukaff.ac.uk/starcluster First large simulation of star formation using SPH]
+* [http://spheric-sph.org/ SPHERIC (SPH rEsearch and engineeRing International Community)]
+* [http://ia2.oats.inaf.it/index.php?option=com_content&view=section&id=12&Itemid=71 ITVO] is the web-site of The Italian Theoretical Virtual Observatory created to query a database of numerical simulation archive.
+* [http://www.stellingwerf.com/rfs-bin/index.cgi?action=PageView&id=33 SPHC Image Gallery] depicts a wide variety of test cases, experimental validations, and commercial applications of the SPH code SPHC.
+* [http://alumnus.caltech.edu/~heirich/resources/SmoothedParticleHydrodynamics.pdf A derivation of the SPH model starting from Navier-Stokes equations]
+
+=== Software ===
+* [http://www.algodoo.com/ Algodoo is a 2D simulation framework for education using SPH]
+* [http://canal.etsin.upm.es/aquagpusph AQUAgpusph] is the free (GPLv3) SPH of the researchers, by the researchers, for the researchers
+* [https://dive-solutions.de dive solutions] is a commercial web-based SPH engineering software for CFD purposes
+* [http://www.dual.sphysics.org DualSPHysics] is a mostly open source SPH code based on SPHysics and using GPU computing. The open source components are available under the LGPL.
+* [http://www.rchoetzlein.com/eng/ FLUIDS v.1] is a simple, open source (Zlib), real-time 3D SPH implementation in C++ for liquids for CPU and GPU.
+* [https://www.fluidix.ca Fluidix] is a GPU-based particle simulation API available from OneZero Software
+* [[GADGET]] [http://www.mpa-garching.mpg.de/galform/gadget/] is a freely available ([[General Public License|GPL]]) code for cosmological N-body/SPH simulations
+* [http://www.gpusph.org GPUSPH] SPH simulator with viscosity (GPLv3)
+* [http://www.itm.uni-stuttgart.de/research/pasimodo/pasimodo_en.php Pasimodo] is a program package for particle-based simulation methods, e.g. SPH
+* [https://www.lammps.org/ LAMMPS] is a massively parallel, open-source classical molecular dynamics code that can perform SPH simulations
+* [https://pal.sourceforge.net/ Physics Abstraction Layer] is an open source abstraction system that supports real time physics engines with SPH support
+* [https://www.fifty2.eu/preonlab/ PreonLab] is a commercial engineering software developed by [https://www.fifty2.eu/ FIFTY2 Technology] implementing an implicit SPH method
+* [https://sourceforge.net/projects/punto/ Punto] is a freely available visualisation tool for particle simulations
+* [https://github.com/pypr/pysph pysph] Open Source Framework for Smoothed Particle Hydrodynamics in Python (New BSD License)
+* [http://alejandrobll.github.io/py-sphviewer/ Py-SPHViewer] Open Source python visualisation tool for Smoothed Particle Hydrodynamics simulations.<ref>{{Citation |last=Benitez-Llambay |first=Alejandro |title=Py-Sphviewer: Py-Sphviewer V1.0.0 |journal=Zenodo |date=2015-07-28 |url=https://zenodo.org/record/21703 |doi=10.5281/zenodo.21703 |bibcode=2015zndo.....21703B |access-date=2022-03-30}}</ref> 
+* [https://realflow.com/ RealFlow] Commercial SPH solver for the cinema industry.
+* [https://rheocube.com RheoCube] is a commercial [[Software as a service|SaaS]] product by [https://lorenz.re Lorenz Research] for the study and prediction of complex-fluid rheology and stability
+* [http://www.simpartix.com SimPARTIX] is a commercial simulation package for SPH and [[Discrete element method]] (DEM) simulations from Fraunhofer IWM
+* [https://www.nextflow-software.com/sphflow/ SPH-flow]
+* [https://github.com/AndreaAmicarelliRSE/SPHERA SPHERA]
+* [http://www.sphinxsys.org SPHinXsys] is an open source multi-physics, multi-resolution SPH library. It provides C++ APIs for physical accurate simulation and aims to model coupled industrial dynamic systems including fluid, solid, multi-body dynamics and beyond.
+* [http://www.sphysics.org/ SPHysics] is an open source SPH implementation in Fortran
+* [https://web.archive.org/web/20071113233849/http://www.astro.ex.ac.uk/people/dprice/splash/ SPLASH] is an open source (GPL) visualisation tool for SPH simulations
+* [http://sympler.org SYMPLER]: A freeware SYMbolic ParticLE simulatoR from the University of Freiburg.
+* [https://bitbucket.org/nauticleproject/nauticle/src/master/ Nauticle] is a general-purpose computational tool for particle-based numerical methods.
+* [http://www.centroidlab.com/neutrinodynamics NDYNAMICS] is a commercial fluid simulation software based on implicit SPH developed by [https://www.centroidlab.com CENTROID LAB] currently used for internal/external flooding/nuclear/chemical engineering applications. 
+{{Numerical PDE}}
+
+{{Authority control}}
+
+[[Category:Numerical differential equations]]
+[[Category:Computational fluid dynamics]]

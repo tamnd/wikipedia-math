@@ -1,0 +1,79 @@
+<!-- wikipedia: en
+     page: 744589
+     title: Column generation
+     revision: 1342366775
+     timestamp: 2026-03-08T15:33:59Z
+     history: https://en.wikipedia.org/w/index.php?curid=744589&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1342366775 -->
+{{Short description|Algorithm for solving linear programs}}{{One source|date=March 2026}}{{Expand French|date=February 2026}}
+'''Column generation''' or '''delayed column generation''' is an efficient algorithm for solving large [[linear programming|linear programs]].<ref>{{Cite book |title=Column generation |date=2005 |publisher=Springer |isbn=978-0-387-25485-2 |editor-last=Desaulniers |editor-first=Guy |series=GERAD 25th anniversary series |location=New York |page=358 |editor-last2=Desrosiers |editor-first2=Jacques |editor-last3=Solomon |editor-first3=Marius M.}}</ref>
+
+The overarching idea is that many linear programs are too large to consider all the variables explicitly. The idea is thus to start by solving the considered program with only a subset of its variables.  Then iteratively, variables that have the potential to improve the [[objective function]] are added to the program. Once it is possible to demonstrate that adding new variables would no longer improve the value of the objective function, the procedure stops. The hope when applying a column generation algorithm is that only a very small fraction of the variables will be generated. This hope is supported by the fact that in the [[optimal solution]], most variables will be non-basic and assume a value of zero, so the optimal solution can be found without them.
+
+In many cases, this method allows to solve large linear programs that would otherwise be intractable. The classical example of a problem where it is successfully used is the [[cutting stock problem]]. One particular technique in linear programming which uses this kind of approach is the [[Dantzig–Wolfe decomposition]] algorithm.  Additionally, column generation has been applied to many problems such as [[crew scheduling]], [[vehicle routing]], and the [[capacitated p-median problem]].
+
+== Algorithm ==
+The algorithm considers two problems: the master problem and the subproblem.  The master problem is the original problem with only a subset of variables being considered.  The subproblem is a new problem created to identify an improving variable (''i.e.'' which can improve the [[objective function]] of the master problem). 
+
+The algorithm then proceeds as follow:
+
+# Initialise the master problem and the subproblem
+# Solve the master problem
+# Search for an improving variable with the subproblem
+# If an improving variable is found: add it to the master problem then go to step 2
+# Else: The solution of the master problem is optimal. Stop.
+
+== Finding an improving variable ==  
+
+The most difficult part of this procedure is how to find a variable that can improve the [[objective function]] of the master problem. This can be done by finding the variable with the most negative [[reduced cost]] (assuming [[without loss of generality]] that the problem is a minimization problem). If no variable has a negative reduced cost, then the current solution of the master problem is optimal.
+
+When the number of variables is very large, it is not possible to find an improving variable by calculating all the reduced cost and choosing a variable with a negative reduced cost. Thus, the idea is to compute only the variable having the minimum reduced cost. This can be done using an optimization problem called the pricing subproblem which strongly depends on the structure of the original problem. The objective function of the subproblem is the reduced cost of the searched variable with respect to the current dual variables, and the constraints require that the variable obeys the naturally occurring constraints. The column generation method is particularly efficient when this structure makes it possible to solve the sub-problem with an efficient algorithm, typically a dedicated [[Combinatorial algorithms|combinatorial algorithm]].
+
+We now detail how and why to compute the reduced cost of the variables. Consider the following linear program in standard form:
+:<math> \begin{align}
+&\min_{x}  c^T x  \\
+&\text{subject to} \\
+& A x = b \\
+& x \in \mathbb{R}^+
+\end{align} </math>
+which we will call the [[primal problem]] as well as its [[dual linear program]]:
+:<math> \begin{align}
+&\max_{u}  u^T b  \\
+&\text{subject to} \\
+& u^T A \leq c \\
+& u \in \mathbb{R}
+\end{align} </math>
+
+Moreover, let <math> x^* </math> and <math> u^* </math> be optimal solutions for these two problems which can be provided by any linear solver. These solutions verify the constraints of their linear program and, by [[Dual linear program#The duality theorems|duality]], have the same value of objective function (<math>c^T x^* = u^{*T} b</math>) which we will call <math> z^* </math>. This optimal value is a function of the different coefficients of the primal problem: <math> z^* = z^* (c, A, b) </math>. Note that there exists a dual variable <math> u_i^* </math> for each constraint of the primal linear model. It is possible to show that an optimal dual variable <math> u_i^* </math> can be interpreted as the partial derivative of the optimal value <math> z^* </math> of the objective function with respect to the coefficient <math> b_i </math> of the right-hand side of the constraints:<math>u_i^* = \frac{\partial z^*}{\partial b_i}</math> or otherwise <math>u^* = \frac{\partial z^*}{\partial b}</math>. More simply put, <math> u_i^* </math> indicates by how much increases locally the optimal value of the objective function when the coefficient <math> b_i </math> increases by one unit.
+
+Consider now that a variable <math> y </math> was not considered until then in the primal problem. Note that this is equivalent to saying that the variable <math> y </math> was present in the model but took a zero value. We will now observe the impact on the primal problem of changing the value of <math> y </math> from <math>  0 </math> to <math> \hat{y} </math>. If <math> c_y </math> and <math> A_y </math> are respectively the coefficients associated with the variable <math> y </math> in the objective function and in the constraints then the linear program is modified as follows:
+
+:<math> \begin{align}
+&\min_{x}  c^T x + c_y \hat{y}  \\
+&\text{subject to} \\
+& A x = b - A_y \hat{y}\\
+& x \in \mathbb{R}^+
+\end{align} </math>
+
+In order to know if it is interesting to add the variable <math> y </math> to the problem (''i.e'' to let it take a non-zero value), we want to know if the value <math>z_{\hat{y}}^*</math> of the objective function of this new problem decreases as the value <math> \hat{y} </math> of the variable <math> y </math> increases. In other words, we want to know <math>\frac{\partial z_{\hat{y}}^*}{\partial \hat{y}}</math>. To do this, note that <math>z_{\hat{y}}^*</math> can be expressed according to the value of the objective function of the initial primal problem: <math>z_{\hat{y}}^* = c_y \hat{y} + z^*(c, A, b-A_y \hat{y})</math>. We can then compute the derivative that interests us:
+
+:<math> \begin{align}
+\frac{\partial z_{\hat{y}}^*}{\partial \hat{y}} & ~=~ & & c_y + \frac{\partial z^*}{\partial \hat{y}} \\
+& ~=~ & & c_y + \frac{\partial z^*}{\partial c} \frac{d c}{d \hat{y}} + \frac{\partial z^*}{\partial A} \frac{d A}{d \hat{y}} + \frac{\partial z^*}{\partial b} \frac{d b}{d \hat{y}} \\
+& ~=~ & & c_y + \frac{\partial z^*}{\partial b} \frac{d b}{d \hat{y}} \\
+& ~=~ & & c_y + u^* (-A_y) \\
+& ~=~ & & c_y - u^* A_y
+\end{align} </math>
+
+In other words, the impact of changing the value <math> \hat{y} </math> on the value <math> z _ {\hat{y}}^* </math> translates into two terms. First, this change directly impacts the objective function and second, the right-hand side of the constraints is modified which has an impact on the optimal variables <math> x^* </math> whose magnitude is measured using the dual variables <math> u^* </math>. The derivative <math>\frac{\partial z_{\hat{y}}^*}{\partial \hat{y}}</math> is generally called the [[reduced cost]] of the variable <math> y </math> and will be denoted by <math> cr_y </math> in the following.
+
+==References==
+{{reflist}}
+
+{{Optimization algorithms}}
+
+[[Category:Optimization algorithms and methods]]
+
+
+{{mathapplied-stub}}

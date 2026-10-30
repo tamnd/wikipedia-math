@@ -1,0 +1,74 @@
+<!-- wikipedia: en
+     page: 13542806
+     title: Estrin's scheme
+     revision: 1373720577
+     timestamp: 2026-09-07T15:32:37Z
+     history: https://en.wikipedia.org/w/index.php?curid=13542806&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373720577 -->
+{{Short description|Parallelizable polynomial evaluation algorithm}}
+{{More citations needed|date=September 2026}}
+In [[numerical analysis]], '''Estrin's scheme''' (after [[Gerald Estrin]]), also known as '''Estrin's method''', is an [[algorithm]] for numerical [[polynomial evaluation|evaluation of polynomial]]s.
+
+[[Horner's method]] for evaluation of polynomials is one of the most commonly used algorithms for this purpose, and unlike Estrin's scheme it is optimal in the sense that it minimizes the number of multiplications and additions required to evaluate an arbitrary polynomial.  However, each operation depends on the previous one, so it cannot take advantage of modern processors' ability to perform multiple independent operations in parallel.  Estrin's scheme is one method which attempts to overcome this serialization while still being reasonably close to optimal.
+
+== Description of the algorithm ==
+Estrin's scheme operates [[Recursion (computer science)|recursively]], converting a degree-''n'' polynomial in ''x'' (for ''n''≥2) to a degree-{{floor|''n''/2}} polynomial in ''x''<sup>2</sup> using {{ceil|''n''/2}} independent operations (plus one to compute ''x''<sup>2</sup>).
+
+Given an arbitrary polynomial ''P''(''x'') = ''C''<sub>0</sub> + ''C''<sub>1</sub>''x'' + ''C''<sub>2</sub>''x''<sup>2</sup> + ''C''<sub>3</sub>''x''<sup>3</sup> + ⋯ + ''C<sub>n</sub>x<sup>n</sup>'', one can group adjacent terms into sub-expressions of the form (''A''&nbsp;+&nbsp;''Bx'') and rewrite it as a polynomial in ''x''<sup>2</sup>: ''P''(''x'') = (''C''<sub>0</sub> + ''C''<sub>1</sub>''x'') + (''C''<sub>2</sub> + ''C''<sub>3</sub>''x'')''x''<sup>2</sup> + (''C''<sub>4</sub> + ''C''<sub>5</sub>''x'')''x''<sup>4</sup> + ⋯ = ''Q''(''x''<sup>2</sup>).
+
+Each of these sub-expressions, and ''x''<sup>2</sup>, may be computed in parallel.  They may also be evaluated using a native [[multiply–accumulate]] instruction on some architectures, an advantage that is shared with Horner's method.
+
+This grouping can then be repeated to get a polynomial in ''x''<sup>4</sup>: ''P''(''x'') = ''Q''(''x''<sup>2</sup>) = ((''C''<sub>0</sub> + ''C''<sub>1</sub>''x'') + (''C''<sub>2</sub> + ''C''<sub>3</sub>''x'')''x''<sup>2</sup>) + ((''C''<sub>4</sub> + ''C''<sub>5</sub>''x'')  + (''C''<sub>6</sub> + ''C''<sub>7</sub>''x'')''x''<sup>2</sup>)''x''<sup>4</sup> + ⋯ = ''R''(''x''<sup>4</sup>).
+
+Repeating this {{floor|log<sub>2</sub>''n''}}+1 times, one arrives at Estrin's scheme for parallel evaluation of a polynomial:
+
+# Compute ''D<sub>i</sub>'' = ''C''<sub>2''i''</sub> + ''C''<sub>2''i''+1</sub>''x'' for all 0&nbsp;≤&nbsp;''i''&nbsp;≤&nbsp;{{floor|''n''/2}}.  (If ''n'' is even, then ''C''<sub>''n''+1</sub>&nbsp;=&nbsp;0 and ''D''<sub>''n''/2</sub>&nbsp;=&nbsp;''C<sub>n</sub>''.)
+# If ''n''&nbsp;≤&nbsp;1, the computation is complete and ''D''<sub>0</sub> is the final answer.
+# Otherwise, compute ''y'' = ''x''<sup>2</sup> (in parallel with the computation of ''D<sub>i</sub>'').
+# Evaluate ''Q''(''y'') = ''D''<sub>0</sub> + ''D''<sub>1</sub>''y'' + ''D''<sub>2</sub>''y''<sup>2</sup>  + ⋯ + ''D''<sub>{{floor|''n''/2}}</sub>''y''<sup>{{floor|''n''/2}}</sup> using Estrin's scheme.
+
+This performs a total of ''n'' multiply-accumulate operations (the same as Horner's method) in line 1, and an additional {{floor|log<sub>2</sub>''n''}} squarings in line 3.  In exchange for those extra squarings, all of the operations in each level of the scheme are independent and may be computed in parallel; the longest dependency path is {{floor|log<sub>2</sub>''n''}}+1 operations long. A similar idea<ref>{{cite journal |last1=Borodin |first1=Allan |author1-link=Allan Borodin |last2=Munro |first2=Ian |author2-link=Ian Munro (computer scientist) |date=1971 |title=Evaluating polynomials at many points |journal=Information Processing Letters |volume=1 |issue=2 |pages=66–68 |doi=10.1016/0020-0190(71)90009-3 |url=https://www.cs.toronto.edu/~bor/Papers/evaluating-polynomials-at-many-points.pdf}}</ref> enables a [[Computational complexity of matrix multiplication|fast matrix multiplication algorithm]] to evaluate a polynomial at a series of points.
+
+== Examples ==
+Take ''P<sub>n</sub>''(''x'') to mean the nth order polynomial of the form: ''P<sub>n</sub>''(''x'') =&nbsp;''C''<sub>0</sub> + ''C''<sub>1</sub>''x'' + ''C''<sub>2</sub>''x''<sup>2</sup> + ''C''<sub>3</sub>''x''<sup>3</sup> + ⋯ + ''C<sub>n</sub>x<sup>n</sup>''
+
+Written with Estrin's scheme we have:
+
+: ''P''<sub>3</sub>(''x'') = (''C''<sub>0</sub> + ''C''<sub>1</sub>''x'') + (''C''<sub>2</sub> + ''C''<sub>3</sub>''x'') ''x''<sup>2</sup>
+: ''P''<sub>4</sub>(''x'') = (''C''<sub>0</sub> + ''C''<sub>1</sub>''x'') + (''C''<sub>2</sub> + ''C''<sub>3</sub>''x'') ''x''<sup>2</sup> + ''C''<sub>4</sub>''x''<sup>4</sup>
+: ''P''<sub>5</sub>(''x'') = (''C''<sub>0</sub> + ''C''<sub>1</sub>''x'') + (''C''<sub>2</sub> + ''C''<sub>3</sub>''x'') ''x''<sup>2</sup> + (''C''<sub>4</sub> + ''C''<sub>5</sub>''x'') ''x''<sup>4</sup>
+: ''P''<sub>6</sub>(''x'') = (''C''<sub>0</sub> + ''C''<sub>1</sub>''x'') + (''C''<sub>2</sub> + ''C''<sub>3</sub>''x'') ''x''<sup>2</sup> + ((''C''<sub>4</sub> + ''C''<sub>5</sub>''x'') + ''C''<sub>6</sub>''x''<sup>2</sup>)''x''<sup>4</sup>
+: ''P''<sub>7</sub>(''x'') = (''C''<sub>0</sub> + ''C''<sub>1</sub>''x'') + (''C''<sub>2</sub> + ''C''<sub>3</sub>''x'') ''x''<sup>2</sup> + ((''C''<sub>4</sub> + ''C''<sub>5</sub>''x'') + (''C''<sub>6</sub> + ''C''<sub>7</sub>''x'') ''x''<sup>2</sup>)''x''<sup>4</sup>
+: ''P''<sub>8</sub>(''x'') = (''C''<sub>0</sub> + ''C''<sub>1</sub>''x'') + (''C''<sub>2</sub> + ''C''<sub>3</sub>''x'') ''x''<sup>2</sup> + ((''C''<sub>4</sub> + ''C''<sub>5</sub>''x'') + (''C''<sub>6</sub> + ''C''<sub>7</sub>''x'') ''x''<sup>2</sup>)''x''<sup>4</sup> + ''C''<sub>8</sub>''x''<sup>8</sup>
+: ''P''<sub>9</sub>(''x'') = (''C''<sub>0</sub> + ''C''<sub>1</sub>''x'') + (''C''<sub>2</sub> + ''C''<sub>3</sub>''x'') ''x''<sup>2</sup> + ((''C''<sub>4</sub> + ''C''<sub>5</sub>''x'') + (''C''<sub>6</sub> + ''C''<sub>7</sub>''x'') ''x''<sup>2</sup>)''x''<sup>4</sup> + (''C''<sub>8</sub> + ''C''<sub>9</sub>''x'') ''x''<sup>8</sup>
+: …
+
+In full detail, consider the evaluation of ''P''<sub>15</sub>(''x''):
+: '''Inputs:''' ''x'', ''C''<sub>0</sub>, ''C''<sub>1</sub>, ''C''<sub>2</sub>, ''C''<sub>3</sub>, ''C''<sub>4</sub>, ''C''<sub>5</sub> ''C''<sub>6</sub>, ''C''<sub>7</sub>, ''C''<sub>8</sub>, ''C''<sub>9</sub> ''C''<sub>10</sub>, ''C''<sub>11</sub>, ''C''<sub>12</sub>, ''C''<sub>13</sub> ''C''<sub>14</sub>, ''C''<sub>15</sub>
+: '''Step 1:''' ''x''<sup>2</sup>, ''C''<sub>0</sub>+''C''<sub>1</sub>''x'', ''C''<sub>2</sub>+''C''<sub>3</sub>''x'', ''C''<sub>4</sub>+''C''<sub>5</sub>''x'', ''C''<sub>6</sub>+''C''<sub>7</sub>''x'', ''C''<sub>8</sub>+''C''<sub>9</sub>''x'', ''C''<sub>10</sub>+''C''<sub>11</sub>''x'', ''C''<sub>12</sub>+''C''<sub>13</sub>''x'', ''C''<sub>14</sub>+''C''<sub>15</sub>''x''
+: '''Step 2:''' ''x''<sup>4</sup>, (''C''<sub>0</sub>+''C''<sub>1</sub>''x'') + (''C''<sub>2</sub>+''C''<sub>3</sub>''x'')''x''<sup>2</sup>, (''C''<sub>4</sub>+''C''<sub>5</sub>''x'') + (''C''<sub>6</sub>+''C''<sub>7</sub>''x'')''x''<sup>2</sup>, (''C''<sub>8</sub>+''C''<sub>9</sub>''x'') + (''C''<sub>10</sub>+''C''<sub>11</sub>''x'')''x''<sup>2</sup>, (''C''<sub>12</sub>+''C''<sub>13</sub>''x'') + (''C''<sub>14</sub>+''C''<sub>15</sub>''x'')''x''<sup>2</sup>
+: '''Step 3:''' ''x''<sup>8</sup>, ((''C''<sub>0</sub>+''C''<sub>1</sub>''x'') + (''C''<sub>2</sub>+''C''<sub>3</sub>''x'')''x''<sup>2</sup>) + ((''C''<sub>4</sub>+''C''<sub>5</sub>''x'') + (''C''<sub>6</sub>+''C''<sub>7</sub>''x'')''x''<sup>2</sup>)''x''<sup>4</sup>, ((''C''<sub>8</sub>+''C''<sub>9</sub>''x'') + (''C''<sub>10</sub>+''C''<sub>11</sub>''x'')''x''<sup>2</sup>) + ((''C''<sub>12</sub>+''C''<sub>13</sub>''x'') + (''C''<sub>14</sub>+''C''<sub>15</sub>''x'')''x''<sup>2</sup>)''x''<sup>4</sup>
+: '''Step 4:''' (((''C''<sub>0</sub>+''C''<sub>1</sub>''x'') + (''C''<sub>2</sub>+''C''<sub>3</sub>''x'')''x''<sup>2</sup>) + ((''C''<sub>4</sub>+''C''<sub>5</sub>''x'') + (''C''<sub>6</sub>+''C''<sub>7</sub>''x'')''x''<sup>2</sup>)''x''<sup>4</sup>) + (((''C''<sub>8</sub>+''C''<sub>9</sub>''x'') + (''C''<sub>10</sub>+''C''<sub>11</sub>''x'')''x''<sup>2</sup>) + ((''C''<sub>12</sub>+''C''<sub>13</sub>''x'') + (''C''<sub>14</sub>+''C''<sub>15</sub>''x'')''x''<sup>2</sup>)''x''<sup>4</sup>)''x''<sup>8</sup>
+
+=== In combination with Horner's method ===
+Estrin's full scheme uses a very large number of [[multiply–accumulate operation]]s in the first step.  While this is useful to fully exploit modern [[superscalar processor]]s, it will eventually exceed the available computing resources, at which point it may be useful to use Estrin's scheme to a limited depth, and then Horner's method on the residual.
+
+For example, if a computer can perform four multiply-accumulate operations before the result of the first operation is available, then two levels of Estrin's scheme will keep its [[instruction pipeline]] full.  Each iteration, it can perform the following operations in parallel:
+: '''Level 1:''' (Estrin) Compute ''D''<sub>2''i''</sub> = ''C''<sub>4''i''</sub> + ''C''<sub>4''i''+1</sub>''x'' and ''D''<sub>2''i''+1</sub> = ''C''<sub>4''i''+2</sub> + ''C''<sub>4''i''+3</sub>''x''
+: '''Level 2:''' (Estrin) Compute ''E''<sub>''i''+1</sub> = ''D''<sub>2''i''+2</sub> + ''D''<sub>2''i''+3</sub>''x''<sup>2</sup>
+: '''Level 3:''' (Horner) Compute ''F''<sub>''i''+2</sub> = ''E''<sub>''i''+2</sub> + ''F''<sub>''i''+3</sub>''x''<sup>4</sup>
+The final result is ''F''<sub>0</sub>.
+
+A more capable processor may be able to have four 4-operand [[SIMD]] operations in progress at once, in which case four levels of Estrin's scheme could be used to evaluate a sufficiently high-degree polynomial.
+
+== References ==
+{{Reflist}}
+* {{Cite conference |first=Gerald |last=Estrin |title=IRE-AIEE-ACM '60 (Western): Papers presented at the May 3-5, 1960, western joint IRE-AIEE-ACM computer conference |chapter=Organization of computer systems: The fixed plus variable structure computer |authorlink=Gerald Estrin |date=May 1960 |location=San Francisco |pages=33–40 |doi=10.1145/1460361.1460365 |s2cid=16384320 |chapter-url=https://www.computer.org/csdl/proceedings/afips/1960/5056/00/50560033.pdf}}
+* {{cite book |first=Jean-Michel |last=Muller |author-link=Jean-Michel Muller |title=Elementary Functions: Algorithms and Implementation |edition=2nd |publisher=Birkhäuser |page=58 |year=2005 |isbn=0-8176-4372-9}}
+
+== Further reading ==
+* {{cite tech report |title=Fast polynomial evaluation and composition
+|first=Guillaume |last=Moroz |version=v3 |url=https://hal.science/hal-00846961 |publisher=[[INRIA]] |id=RT-0453 |date=July 2013 |arxiv=1307.5655}}  The scheme described is implemented for [[SageMath]] at {{webarchive |url=https://web.archive.org/web/20230207045925/https://trac.sagemath.org/ticket/13358 |title=package for fast polynomial evaluation}}.
+
+[[Category:Numerical analysis]]

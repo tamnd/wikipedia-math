@@ -1,0 +1,169 @@
+<!-- wikipedia: en
+     page: 7020660
+     title: Clenshaw–Curtis quadrature
+     revision: 1369246409
+     timestamp: 2026-08-13T19:58:15Z
+     history: https://en.wikipedia.org/w/index.php?curid=7020660&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1369246409 -->
+{{Short description|Numerical integration method}}
+{{Use American English|date = March 2019}}
+'''Clenshaw–Curtis quadrature''' and '''Fejér quadrature''' are methods for [[numerical integration]], or "quadrature", that are based on an expansion of the [[Integrand#Terminology and notation|integrand]] in terms of [[Chebyshev polynomials]]. Equivalently, they employ a [[change of variables]] <math>x = \cos \theta</math> and use a [[discrete cosine transform]] (DCT) approximation for the [[cosine series]].  Besides having fast-converging accuracy comparable to [[Gaussian quadrature]] rules, Clenshaw–Curtis quadrature naturally leads to nested [[quadrature rule]]s (where different accuracy orders share points), which is important for both [[adaptive quadrature]] and multidimensional quadrature ([[cubature]]).
+
+Briefly, the [[function (mathematics)|function]] <math>f(x)</math> to be integrated is evaluated at the <math>N</math> extrema or roots of a Chebyshev polynomial and these values are used to construct a polynomial approximation for the function.  This polynomial is then integrated exactly.  In practice, the integration weights for the value of the function at each node are precomputed, and this computation can be performed in <math>O(N \log N)</math> time by means of [[fast Fourier transform]]-related algorithms for the DCT.<ref name=Gentleman72>W. Morven Gentleman, "Implementing Clenshaw-Curtis quadrature I: Methodology and experience," ''Communications of the ACM'' '''15'''(5), p. 337-342 (1972).</ref><ref name=Waldvogel04>Jörg Waldvogel, "[http://www.sam.math.ethz.ch/~waldvoge/Papers/fejer.html Fast construction of the Fejér and Clenshaw-Curtis quadrature rules]," ''BIT Numerical Mathematics'' '''46''' (1), p. 195-202 (2006).</ref>
+
+==General method==
+
+A simple way of understanding the algorithm is to realize that Clenshaw–Curtis quadrature (proposed by those authors in 1960)<ref name=Clenshaw60>C. W. Clenshaw and A. R. Curtis "[https://doi.org/10.1007/BF01386223 A method for numerical integration on an automatic computer] ''Numerische Mathematik'' '''2''', 197 (1960).</ref> amounts to integrating via a [[change of variables|change of variable]] {{math|1=''x'' = cos(''θ'')}}.  The algorithm is normally expressed for integration of a function {{math|''f''(''x'')}} over the interval [−1,1] (any other interval can be obtained by appropriate  rescaling).  For this integral, we can write:
+
+<math display="block">\int_{-1}^1 f(x)\,dx = \int_0^\pi f(\cos \theta) \sin(\theta)\, d\theta . </math>
+
+That is, we have transformed the problem from integrating <math>f(x)</math> to one of integrating <math>f(\cos \theta) \sin \theta</math>.  This can be performed if we know the [[cosine series]] for <math>f(\cos \theta)</math>:
+
+<math display="block">f(\cos \theta) = \frac{a_0}{2} + \sum_{k=1}^\infty a_k \cos (k\theta)</math>
+
+in which case the integral becomes:
+
+<math display="block">\int_0^\pi f(\cos \theta) \sin(\theta)\, d\theta = a_0 + \sum_{k=1}^\infty \frac{2 a_{2k}}{1 - (2k)^2} .</math>
+
+Of course, in order to calculate the cosine series coefficients
+
+<math display="block">a_k = \frac{2}{\pi} \int_0^\pi f(\cos \theta) \cos(k \theta)\, d\theta,\quad k=0,1,2,\dots,</math>
+
+one must again perform a numeric integration, so at first this may not seem to have simplified the problem.  Unlike computation of arbitrary integrals, however, Fourier-series integrations for [[periodic functions]] (like <math>f(\cos\theta)</math>, by construction), up to the [[Nyquist frequency]] <math>k=N</math>, are accurately computed by the <math>N+1</math> equally spaced and equally weighted points <math>\theta_n = n \pi / N</math> for <math>n = 0,\ldots,N</math> (except the endpoints are weighted by 1/2, to avoid double-counting, equivalent to the [[trapezoidal rule]] or the [[Euler–Maclaurin formula]]).<ref>J. P. Boyd, ''Chebychev and Fourier Spectral Methods'', 2nd ed. (Dover, New York, 2001).</ref><ref>See, for example, S. G. Johnson, "[http://math.mit.edu/~stevenj/trapezoidal.pdf Notes on the convergence of trapezoidal-rule quadrature]," online MIT course notes (2008).</ref>  That is, we approximate the cosine-series integral by the type-I [[discrete cosine transform]] (DCT):
+
+<math display="block">a_k \approx \frac{2}{N} \left[ \frac{f(1)}{2} + \frac{f(-1)}{2} (-1)^k +  \sum_{n=1}^{N-1} f(\cos[n\pi/N]) \cos(n k \pi/N) \right]</math>
+
+for <math>k = 0,\ldots,N</math> and then use the formula above for the integral in terms of these <math>a_k</math>.  Because only <math>a_{2k}</math> is needed, the formula simplifies further into a type-I DCT of order {{math|''N''/2}}, assuming ''N'' is an [[even number]]:
+
+<math display="block">a_{2k} \approx \frac{2}{N} \left[ \frac{f(1) + f(-1)}{2} +  f(0) (-1)^k + \sum_{n=1}^{N/2-1} \left\{ f(\cos[n\pi/N]) + f(-\cos[n\pi/N]) \right\} \cos\left(\frac{n k \pi}{N/2}\right) \right]</math>
+
+From this formula, it is clear that the Clenshaw–Curtis quadrature rule is symmetric, in that it weights ''f''(''x'') and ''f''(−''x'') equally.
+
+Because of [[aliasing]], one only computes the coefficients <math>a_{2k}</math> up to {{math|1=''k'' = ''N''/2}}, since discrete sampling of the function makes the frequency of {{math|2''k''}} indistinguishable from that of ''N''–2''k''.  Equivalently, the <math>a_{2k}</math> are the amplitudes of the unique [[bandlimited]] [[trigonometric interpolation polynomial]] passing through the {{math|''N''+1}} points where {{math|''f''(cos ''θ'')}} is evaluated, and we approximate the integral by the integral of this interpolation polynomial. There is some subtlety in how one treats the <math>a_{N}</math> coefficient in the integral, however—to avoid double-counting with its alias it is included with weight 1/2 in the final approximate integral (as can also be seen by examining the interpolating polynomial):
+
+<math display="block">\int_0^\pi f(\cos \theta) \sin(\theta)\, d\theta \approx a_0 + \sum_{k=1}^{N/2-1} \frac{2 a_{2k}}{1 - (2k)^2} + \frac{a_{N}}{1 - N^2}.</math>
+
+==Connection to Chebyshev polynomials==
+
+The reason that this is connected to the Chebyshev polynomials <math>T_k(x)</math> is that, by definition, <math>T_k(\cos\theta) = \cos(k\theta)</math>, and so the cosine series above is really an approximation of <math>f(x)</math> by Chebyshev polynomials:
+
+<math display="block">f(x) = \frac{a_0}{2} T_0(x) + \sum_{k=1}^\infty a_k T_k(x),</math>
+
+and thus we are "really" integrating <math>f(x)</math> by integrating its approximate expansion in terms of Chebyshev polynomials.  The evaluation points <math>x_n = \cos(n\pi/N)</math> correspond to the [[Maxima and minima|extrema]] of the Chebyshev polynomial <math>T_N(x)</math>.
+
+The fact that such [[Chebyshev approximation]] is just a cosine series under a change of variables is responsible for the rapid convergence of the approximation as more terms <math>T_k (x)</math> are included.  A cosine series converges very rapidly for functions that are [[even and odd functions|even]], periodic, and sufficiently smooth.  This is true here, since <math>f(\cos\theta)</math> is even and periodic in <math>\theta</math> by construction, and is ''k''-times differentiable everywhere if <math>f(x)</math> is ''k''-times differentiable on <math>[-1,1]</math>.  (In contrast, directly applying a cosine-series expansion to <math>f(x)</math> instead of <math>f(\cos \theta)</math> will usually ''not'' converge rapidly because the slope of the even-periodic extension would generally be discontinuous.)
+
+==Fejér quadrature==
+
+[[Lipót Fejér|Fejér]] proposed two quadrature rules very similar to Clenshaw–Curtis quadrature, but much earlier (in 1933).<ref name=Fejer33>Leopold Fejér, "[http://projecteuclid.org/euclid.bams/1183496842 On the infinite sequences arising in the theories of harmonic analysis, of interpolation, and of mechanical quadratures]", ''Bulletin of the American Mathematical Society'' '''39''' (1933), pp. 521–534.  Leopold Fejér, "[http://www.digizeitschriften.de/resolveppn/GDZPPN002374498 Mechanische Quadraturen mit positiven Cotesschen Zahlen], ''Mathematische Zeitschrift'' '''37''', 287 (1933).</ref>
+
+Of these two, Fejér's "second" quadrature rule is nearly identical to Clenshaw–Curtis.  The only difference is that the endpoints <math>f(-1)</math> and <math>f(1)</math> are set to zero.  That is, Fejér only used the ''interior'' extrema of the Chebyshev polynomials, i.e. the true stationary points.
+
+Fejér's "first" quadrature rule evaluates the <math>a_k</math> by evaluating <math>f(\cos\theta)</math> at a different set of equally spaced points, halfway between the extrema: <math>\theta_n = \bigl(n + \tfrac12\bigr) \pi \big/ N</math> for <math>0 \leq n < N</math>.  These are the ''roots'' of <math>T_N(\cos\theta)</math>, and are known as the [[Chebyshev nodes]].  (These equally spaced midpoints are the only other choice of quadrature points that preserve both the [[even and odd functions|even symmetry]] of the cosine transform and the [[translational symmetry]] of the periodic Fourier series.)  This leads to a formula:
+
+<math display="block">a_k \approx \frac{2}{N} \sum_{n=0}^{N-1} f{\left(\cos \frac{\bigl(n+\tfrac12\bigr)\pi}{N}\right) \cos\frac{\bigl(n+\tfrac12\bigr) k \pi}{N}} </math>
+
+which is precisely the type-II DCT.  However, Fejér's first quadrature rule is not nested: the evaluation points for {{math|2''N''}} do not coincide with any of the evaluation points for {{math|''N''}}, unlike Clenshaw–Curtis quadrature or Fejér's second rule.
+
+Despite the fact that Fejér discovered these techniques before [[Charles William Clenshaw|Clenshaw]] and Curtis, the name "Clenshaw–Curtis quadrature" has become standard.
+
+==Comparison to Gaussian quadrature==
+
+The classic method of [[Gaussian quadrature]] evaluates the integrand at <math>N+1</math> points and is constructed to ''exactly'' integrate polynomials up to [[degree of a polynomial|degree]] <math>2N+1</math>. In contrast, Clenshaw–Curtis quadrature, above, evaluates the integrand at <math>N+1</math> points and exactly integrates polynomials only up to degree <math>N+1</math> (assuming <math>N</math> is an even number).  It may seem, therefore, that Clenshaw–Curtis is intrinsically worse than Gaussian quadrature, but in reality this does not seem to be the case.
+
+In practice, several authors have observed that Clenshaw–Curtis can have accuracy comparable to that of Gaussian quadrature for the same number of points.  This is possible because most numeric integrands are not polynomials (especially since polynomials can be integrated analytically), and approximation of many functions in terms of Chebyshev polynomials converges rapidly (see [[Chebyshev approximation]]).  In fact, recent theoretical results<ref name=Trefethen08>{{cite journal | first = Lloyd N. | last = Trefethen | title = Is Gauss quadrature better than Clenshaw-Curtis? | journal = SIAM Review | volume = 50 | issue = 1 | pages = 67–87 | date = 2008 | doi=10.1137/060659831| bibcode = 2008SIAMR..50...67T }}</ref> argue that both Gaussian and Clenshaw–Curtis quadrature have error bounded by <math>O([2N]^{-k}/k)</math> for a ''k''-times differentiable integrand.
+
+One often cited advantage of Clenshaw–Curtis quadrature is that the quadrature weights can be evaluated in <math>O(N \log N)</math> time by [[fast Fourier transform]] algorithms (or their analogues for the DCT), whereas most algorithms for Gaussian quadrature weights required <math>O(N^2)</math> time to compute. However, recent algorithms have attained <math>O(N)</math> complexity for [[Gauss–Legendre quadrature]].<ref>Ignace Bogaert, ''Iteration-Free Computation of Gauss--Legendre Quadrature Nodes and Weights,'' SIAM Journal on Scientific Computing vol. '''36''', pp. A1008–A1026 (2014)</ref> As a practical matter, high-order numeric integration is rarely performed by simply evaluating a quadrature formula for very large <math>N</math>.  Instead, one usually employs an [[adaptive quadrature]] scheme that first evaluates the integral to low order, and then successively refines the accuracy by increasing the number of sample points, possibly only in regions where the integral is inaccurate.  To evaluate the accuracy of the quadrature, one compares the answer with that of a quadrature rule of even lower order.  Ideally, this lower-order quadrature rule evaluates the integrand at a ''subset'' of the original ''N'' points, to minimize the integrand evaluations.  This is called a [[nested quadrature rule]], and here Clenshaw–Curtis has the advantage that the rule for order ''N'' uses a subset of the points from order 2''N''.  In contrast, Gaussian quadrature rules are not naturally nested, and so one must employ [[Gauss–Kronrod quadrature formula]]s or similar methods. Nested rules are also important for [[sparse grid]]s in multidimensional quadrature, and Clenshaw–Curtis quadrature is a popular method in this context.<ref>Erich Novak and Klaus Ritter, "High dimensional integration of smooth functions over cubes," ''Numerische Mathematik'' vol. '''75''', pp. 79–97 (1996).</ref>
+
+==Integration with weight functions==
+
+More generally, one can pose the problem of integrating an arbitrary <math>f(x)</math> against a fixed ''weight function'' <math>w(x)</math> that is known ahead of time:
+
+<math display="block">\int_{-1}^1 f(x) w(x)\,dx = \int_0^\pi f(\cos \theta) w(\cos\theta) \sin(\theta)\, d\theta . </math>
+
+The most common case is <math>w(x) = 1</math>, as above, but in certain applications a different [[weight function]] is desirable.  The basic reason is that, since <math>w(x)</math> can be taken into account ''a priori'', the integration error can be made to depend only on the accuracy in approximating <math>f(x)</math>, regardless of how badly behaved the weight function might be.
+
+Clenshaw–Curtis quadrature can be generalized to this case as follows.  As before, it works by finding the cosine-series expansion of <math>f(\cos \theta)</math> via a DCT, and then integrating each term in the cosine series.  Now, however, these integrals are of the form
+
+<math display="block">W_k = \int_0^\pi w(\cos \theta) \cos(k \theta) \sin(\theta)\, d\theta . </math>
+
+For most <math>w(x)</math>, this integral cannot be computed analytically, unlike before.  Since the same weight function is generally used for many integrands <math>f(x)</math>, however, one can afford to compute these <math>W_k</math> numerically to high accuracy beforehand.  Moreover, since <math>w(x)</math> is generally specified analytically, one can sometimes employ specialized methods to compute <math>W_k</math>.
+
+For example, special methods have been developed to apply Clenshaw–Curtis quadrature to integrands of the form <math>f(x) w(x)</math> with a weight function <math>w(x)</math> that is highly oscillatory, e.g. a [[Sine wave|sinusoid]] or [[Bessel function]] (see, e.g., Evans & Webster, 1999<ref name=Evans99>G. A. Evans and J. R. Webster, "A comparison of some methods for the evaluation of highly oscillatory integrals," ''Journal of Computational and Applied Mathematics'', vol. '''112''', p. 55-69 (1999).</ref>).  This is useful for high-accuracy [[Fourier series]] and [[Fourier–Bessel series]] computation, where simple <math>w(x) = 1</math> quadrature methods are problematic because of the high accuracy required to resolve the contribution of rapid oscillations. Here, the rapid-oscillation part of the integrand is taken into account via specialized methods for <math>W_k</math>, whereas the unknown function <math>f(x)</math> is usually better behaved.
+
+Another case where weight functions are especially useful is if the integrand is unknown but has a known singularity of some form, e.g. a known discontinuity or integrable divergence (such as {{math|1/{{radic|''x''}}}}) at some point.  In this case the singularity can be pulled into the weight function <math>w(x)</math> and its analytical properties can be used to compute <math>W_k</math> accurately beforehand.
+
+Note that [[Gaussian quadrature]] can also be adapted for various weight functions, but the technique is somewhat different.  In Clenshaw–Curtis quadrature, the integrand is always evaluated at the same set of points regardless of <math>w(x)</math>, corresponding to the extrema or roots of a Chebyshev polynomial.  In Gaussian quadrature, different weight functions lead to different [[orthogonal polynomials]], and thus different roots where the integrand is evaluated.
+
+==Integration on infinite and semi-infinite intervals==
+
+It is also possible to use Clenshaw–Curtis quadrature to compute integrals of the form <math display="inline">\int_0^\infty f(x)\,dx</math> and <math display="inline">\int_{-\infty}^\infty f(x)\,dx</math>, using a coordinate-remapping technique.<ref name=Boyd87>John P. Boyd, "Exponentially convergent Fourier–Chebshev <nowiki>[</nowiki>''sic''<nowiki>]</nowiki> quadrature schemes on bounded and infinite intervals," ''J. Scientific Computing'' '''2''' (2), p. 99-109 (1987).</ref> High accuracy, even exponential convergence for smooth integrands, can be retained as long as <math>f(x)</math> decays sufficiently quickly as |''x''| approaches infinity.
+
+One possibility is to use a generic coordinate transformation such as {{math|1=''x'' = ''t''/(1−''t''<sup>2</sup>)}}
+
+<math display="block">
+\int_{-\infty}^{\infty}f(x)\,dx = \int_{-1}^{1} f{\left(\frac{t}{1-t^2}\right)} \frac{1+t^2}{(1-t^2)^2}\,dt,
+</math>
+
+to transform an infinite or semi-infinite interval into a finite one, as described in [[Numerical integration#Integrals over infinite intervals|Numerical integration]].  There are also additional techniques that have been developed specifically for Clenshaw–Curtis quadrature.
+
+For example, one can use the coordinate remapping <math>x = L \cot^2(\theta/2)</math>, where ''L'' is a user-specified constant (one could simply use ''L''=1; an optimal choice of ''L'' can speed convergence, but is problem-dependent<ref name=Boyd87/>), to transform the semi-infinite integral into:
+
+<math display="block">\int_0^\infty f(x)\,dx = 2L \int_0^\pi \frac{f[L \cot^2(\theta/2)]}{[1 - \cos(\theta)]^2} \sin(\theta)\,d\theta .</math>
+
+The factor multiplying sin(''θ''), ''f''(...)/(...)<sup>2</sup>, can then be expanded in a cosine series (approximately, using the discrete cosine transform) and integrated term-by-term, exactly as was done for ''f''(cos&nbsp;''θ'') above.  To eliminate the singularity at ''θ''=0 in this integrand, one merely requires that ''f''(''x'') go to zero sufficiently fast as ''x'' approaches infinity, and in particular ''f''(''x'') must decay at least as fast as 1/''x''<sup>3/2</sup>.<ref name=Boyd87/>
+
+For a doubly infinite interval of integration, one can use the coordinate remapping <math>x = L\cot(\theta)</math> (where ''L'' is a user-specified constant as above) to transform the integral into:<ref name=Boyd87/>
+
+<math display="block">\int_{-\infty}^\infty f(x)\,dx = L \int_0^\pi \frac{f[L \cot(\theta)]}{\sin^2(\theta)}\,d\theta
+\approx \frac{L\pi}{N} \sum_{n=1}^{N-1} \frac{f[L \cot(n\pi/N)]}{\sin^2(n\pi/N)}.</math>
+
+In this case, we have used the fact that the remapped integrand {{math|''f''(''L'' cot ''θ'')/sin<sup>2</sup>(''θ'')}} is already periodic and so can be directly integrated with high (even exponential) accuracy using the trapezoidal rule (assuming ''f'' is sufficiently smooth and rapidly decaying); there is no need to compute the cosine series as an intermediate step.  Note that the quadrature rule does not include the endpoints, where we have assumed that the integrand goes to zero.  The formula above requires that ''f''(''x'') decay faster than 1/''x''<sup>2</sup> as ''x'' goes to ±∞. (If ''f'' decays exactly as 1/''x''<sup>2</sup>, then the integrand goes to a finite value at the endpoints and these limits must be included as endpoint terms in the trapezoidal rule.<ref name=Boyd87/>).  However, if ''f'' decays only polynomially quickly, then it may be necessary to use a further step of Clenshaw–Curtis quadrature to obtain exponential accuracy of the remapped integral instead of the trapezoidal rule, depending on more details of the limiting properties of ''f'': the problem is that, although {{math|''f''(''L''&nbsp;cot''θ'')/sin<sup>2</sup>(''θ'')}} is indeed periodic with period π, it is not necessarily smooth at the endpoints if all the derivatives do not vanish there [e.g. the function ''f''(''x'') = tanh(''x''<sup>3</sup>)/''x''<sup>3</sup> decays as 1/''x''<sup>3</sup> but has a jump discontinuity in the slope of the remapped function at θ=0 and π].<!-- the Boyd paper makes broader claims of exponential convergence that do not seem to be correct; e.g. try the function f(x) = tanh(x^3)/x^3 -->
+
+Another coordinate-remapping approach was suggested for integrals of the form <math display="inline">\int_0^\infty e^{-x} g(x)\,dx</math>, in which case one can use the transformation <math>x = -\ln[(1 + \cos\theta)/2]</math> to transform the integral into the form <math display="inline">\int_0^\pi f(\cos\theta)\sin\theta \,d\theta</math> where <math>f(u) = g(-\ln[(1+u)/2])/2</math>, at which point one can proceed identically to Clenshaw–Curtis quadrature for ''f'' as above.<ref name=Basu77>Nirmal Kumar Basu and Madhav Chandra Kundu, "Some methods of numerical integration over a semi-infinite interval," ''Applications of Mathematics'' '''22''' (4), p. 237-243 (1977).</ref> Because of the endpoint singularities in this coordinate remapping, however, one uses Fejér's first quadrature rule [which does not evaluate ''f''(&minus;1)] unless ''g''(∞) is finite.
+
+==Precomputing the quadrature weights==
+
+In practice, it is inconvenient to perform a DCT of the sampled function values {{tmath|f(\cos \theta)}} for each new integrand.  Instead, one normally precomputes quadrature weights <math>w_n</math> (for {{tmath|n}} from {{tmath|0}} to {{tmath|\tfrac12N}}, assuming that {{tmath|N}} is even) so that
+
+<math display="block">\int_{-1}^1 f(x)\,dx \approx \sum_{n=0}^{N/2} w_n {\biggl( f{\left(\cos\frac{n\pi}{N}\right)} + f{\left(-\cos\frac{n\pi}{N}\right)} \biggr)} .</math>
+
+These weights <math>w_n</math> are also computed by a DCT, as is easily seen by expressing the computation in terms of [[matrix (mathematics)|matrix]] [[linear algebra|algebra]].  In particular, we computed the cosine series coefficients <math>a_{2k}</math> via an expression of the form:
+
+<math display="block">c = \begin{pmatrix} a_0 \\ a_2 \\ a_4 \\ \vdots \\ a_N \end{pmatrix} = D \begin{pmatrix} y_0 \\ y_1 \\ y_2 \\ \vdots \\ y_{N/2} \end{pmatrix} = Dy, </math>
+where ''D'' is the matrix form of the {{tmath|\bigl(\tfrac12N + 1\bigr)}}-point [[Discrete cosine transform#DCT-I|type-I DCT]] from above, with entries (for [[Zero-based numbering|zero-based]] indices):
+
+<math display="block">D_{kn} = \frac{2}{N} \cos\left(\frac{nk\pi}{\tfrac12N}\right) \times \begin{cases} \tfrac12 & n=0,\, \tfrac12N \\[5mu] 1 & \mathrm{otherwise}, \end{cases}</math>
+
+and <math>y_n</math> is
+
+<math display="block">y_n = f{\left(\cos\frac{n\pi}{N}\right)} + f{\left(-\cos\frac{n\pi}{N}\right)} . </math>
+
+As discussed above, because of [[aliasing]], there is no point in computing coefficients beyond <math>a_N</math>, so ''D'' is an <math>\bigl(\tfrac12N + 1\bigr)\times\bigl(\tfrac12N+1\bigr)</math> matrix.  In terms of these coefficients {{tmath|c}}, the integral is approximately:
+
+<math display="block">\int_{-1}^1 f(x)\,dx \approx a_0 + \sum_{k=1}^{N/2-1} \frac{2 a_{2k}}{1 - (2k)^2} + \frac{a_{N}}{1 - N^2} = d^T c,</math>
+
+from above, where {{tmath|c}} is the vector of coefficients <math>a_{2k}</math> above and {{tmath|d}} is the vector of integrals for each Fourier coefficient:
+
+<math display="block">d = \begin{pmatrix} 1 \\ 2/(1-4) \\ 2/(1-16) \\ \vdots \\ 2 / (1-[N-2]^2) \\ 1 / (1-N^2) \end{pmatrix}.</math>
+
+(These weight factors are altered if one changes the DCT matrix {{tmath|D}} to use a different normalization convention.  For example, it is common to define the type-I DCT with additional factors of {{tmath|2}} or {{tmath|\sqrt2}} factors in the first and last rows or columns, which leads to corresponding alterations in the {{tmath|d}} entries.) The <math>d^T c</math> summation can be re-arranged to:
+
+<math display="block">\int_{-1}^1 f(x)\,dx \approx d^T c = d^T D y = (D^T d)^T y = w^T y</math>
+
+where {{math|''w''}} is the vector of the desired weights <math>w_n</math> above, with:<math display="block">w = D^T d. </math>
+
+Since the [[transpose]]d matrix <math>\textstyle D^T</math> is also a DCT (e.g., the transpose of a type-I DCT is a type-I DCT, possibly with a slightly different normalization depending on the conventions that are employed), the quadrature weights ''w'' can be precomputed in {{tmath|O(N\log N)}} time for a given {{tmath|N}} using fast DCT algorithms.
+
+The weights <math>w_n</math> are positive and their sum is equal to one.<ref>J. P. Imhof, "On the Method for Numerical Integration of Clenshaw and Curtis", ''Numerische Mathematik'' '''5''', p. 138-141 (1963).</ref>
+
+==See also==
+*[[Euler–Maclaurin formula]]
+*[[Gauss–Kronrod quadrature formula]]
+
+==References==
+<references />
+{{Numerical integration}}
+{{DEFAULTSORT:Clenshaw-Curtis Quadrature}}
+[[Category:Numerical integration]]

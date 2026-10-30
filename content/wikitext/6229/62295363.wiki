@@ -1,0 +1,96 @@
+<!-- wikipedia: en
+     page: 62295363
+     title: Knowledge distillation
+     revision: 1371817564
+     timestamp: 2026-08-28T17:05:53Z
+     history: https://en.wikipedia.org/w/index.php?curid=62295363&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1371817564 -->
+{{Short description|Machine learning method to transfer knowledge from a large model to a smaller one}}
+In [[machine learning]], '''knowledge distillation''' or '''model distillation''' is the process of transferring knowledge from a large [[statistical model|model]] to a smaller one. While large models (such as very [[deep neural network]]s or [[Ensemble learning|ensemble]]s of many models <ref>{{cite conference|last1=You|first1=Shan|first2=Chang|last2=Xu|first3=Chao|last3=Xu|first4=Dacheng|last4=Tao|title=Learning from multiple teacher networks|conference=Proceedings of the 23rd ACM SIGKDD international conference on knowledge discovery and data mining|pages=1285-1294|year=2017}}</ref>) have more knowledge capacity than small models, this capacity might not be fully utilized.  It can be just as computationally expensive to evaluate a model even if it utilizes little of its knowledge capacity.  Knowledge distillation transfers knowledge from a large model to a smaller one without loss of [[Statistical model validation|validity]].  As smaller models are less expensive to evaluate, they can be deployed on less powerful hardware (such as a [[mobile device]]).<ref name="Hinton15">{{cite arXiv|title=Distilling the knowledge in a neural network|year=2015|eprint=1503.02531|last1=Hinton|first1=Geoffrey|last2=Vinyals|first2=Oriol|last3=Dean|first3=Jeff|class=stat.ML}}</ref>
+
+There is also a less common technique called ''Reverse Knowledge Distillation'', where knowledge is transferred from a smaller model to a larger one.<ref>{{cite arXiv |title=RestGPT: Connecting Large Language Models with Real-World RESTful APIs |author=Yifan Xu and Yuxiang Wu and Zhiqiang Hu and Hang Xu and Zhongwei Wan and Yongfeng Zhang and Yu Qiao and Zhen Wang |eprint=2307.10698 |year=2023 |class=cs.CV }}</ref>
+
+Model distillation is not to be confused with [[model compression]], which describes methods to decrease the size of a large model itself, without training a new model. Model compression generally preserves the architecture and the nominal parameter count of the model, while decreasing the bits-per-parameter.
+
+Knowledge distillation has been successfully used in several applications of machine learning such as [[object detection]],<ref>{{cite journal|last1=Chen|first1=Guobin|first2=Wongun|last2=Choi|first3=Xiang|last3=Yu|first4=Tony|last4=Han|first5=Manmohan|last5=Chandraker|title=Learning efficient object detection models with knowledge distillation|journal=Advances in Neural Information Processing Systems|pages=742–751|year=2017}}</ref> [[acoustic model]]s,<ref>{{cite conference|last1=Asami|first1=Taichi|first2=Ryo|last2=Masumura|first3=Yoshikazu|last3=Yamaguchi|first4=Hirokazu|last4=Masataki|first5=Yushi|last5=Aono|title=Domain adaptation of DNN acoustic models using knowledge distillation|conference=IEEE International Conference on Acoustics, Speech and Signal Processing|pages=5185–5189|year=2017}}</ref> and [[natural language processing]].<ref>{{cite conference|last1=Cui|first1=Jia|first2=Brian|last2=Kingsbury|first3=Bhuvana|last3=Ramabhadran|author3-link=Bhuvana Ramabhadran|first4=George|last4=Saon|first5=Tom|last5=Sercu|first6=Kartik|last6=Audhkhasi|first7=Abhinav|last7=Sethy|first8=Markus|last8=Nussbaum-Thom|first9=Andrew|last9=Rosenberg|title=Knowledge distillation across ensembles of multilingual models for low-resource languages|conference=IEEE International Conference on Acoustics, Speech and Signal Processing|pages=4825–4829|year=2017}}</ref>
+Recently, it has also been introduced to [[graph neural network]]s applicable to non-grid data.<ref>{{cite journal|last1=Yang|first1=Yiding|first2=Qiu|last2=Jiayan|first3=Song|last3=Mingli|first4=Tao|last4=Dacheng|first5=Wang|last5=Xinchao|title=Distilling Knowledge from Graph Convolutional Networks|journal=Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition|pages=7072–7081|year=2020|arxiv=2003.10477|bibcode=2020arXiv200310477Y|url=https://openaccess.thecvf.com/content_CVPR_2020/papers/Yang_Distilling_Knowledge_From_Graph_Convolutional_Networks_CVPR_2020_paper.pdf}}</ref>
+
+== Methods ==
+Knowledge transfer from a large model to a small one somehow needs to teach the latter without loss of validity. If both models are trained on the same data, the smaller model may have insufficient capacity to learn a [[concision|concise knowledge representation]] compared to the large model.  However, some information about a concise knowledge representation is encoded in the [[pseudolikelihood]]s assigned to its output: when a model correctly predicts a class, it assigns a large value to the output variable corresponding to such class, and smaller values to the other output variables. The distribution of values among the outputs for a record provides information on how the large model represents knowledge.  Therefore, the goal of economical deployment of a valid model can be achieved by training only the large model on the data, exploiting its better ability to learn concise knowledge representations, and then distilling such knowledge into the smaller model, by training it to learn the [[Soft-in soft-out decoder|soft output]] of the large model.<ref name="Hinton15" />
+
+=== Mathematical formulation ===
+Given a large model as a function of the vector variable <math>\mathbf{x}</math>, trained for a specific [[statistical classification|classification]] task, typically the final layer of classification networks is a [[softmax function|softmax]] in the form
+:<math>
+y_i(\mathbf{x}|t) = \frac{e^{\frac{z_i(\mathbf{x})}{t}}}{\sum_j e^{\frac{z_j(\mathbf{x})}{t}}}
+</math>
+where <math>t</math> is the ''temperature'', a parameter which is set to 1 for a standard softmax. The softmax operator converts the [[logit]] values <math>z_i(\mathbf{x})</math> to pseudo-probabilities: higher temperature values generate softer distributions of pseudo-probabilities among the output classes. Knowledge distillation consists of training a smaller network, called the ''distilled model'', on a [[data set]] called the ''transfer set'' which could correspond to the original training set or consist of new, possibly unlabeled data. A [[cross-entropy]] [[loss function]] is typically used, computed between the output of the distilled model <math>\mathbf{y}(\mathbf{x}|t)</math> and the output of the large model <math>\hat{\mathbf{y}}(\mathbf{x}|t)</math> on the same record (or the average of the individual outputs, if the large model is an ensemble), using a high value of softmax temperature <math>t</math> for both models:<ref name="Hinton15" />
+:<math>E(\mathbf{x}|t) = -\sum_i \hat{y}_i(\mathbf{x}|t) \log y_i(\mathbf{x}|t) .</math>
+In this context, a high temperature increases the [[Entropy (information theory)|entropy]] of the output, therefore providing more information to learn for the distilled model compared to hard targets, and at the same time reducing the [[variance]] of the [[gradient]] between different records, thus allowing a higher [[learning rate]].<ref name="Hinton15" />
+
+If [[ground truth]] is available for the transfer set, the process can be strengthened by adding to the loss the cross-entropy between the output <math>y_i(\mathbf{x}|1)</math> of the distilled model computed with <math>t = 1</math>, and the known label <math>\bar{y}_i</math>
+:<math>
+E(\mathbf{x}|t) = -t^2 \sum_i \hat{y}_i(\mathbf{x}|t) \log y_i(\mathbf{x}|t) - \sum_i \bar{y}_i \log y_i(\mathbf{x}|1)
+</math>
+where the component of the loss with respect to the large model is weighted by a factor of <math>t^2</math> since, as the temperature increases, the gradient of the loss with respect to the model weights scales by a factor of <math>\frac{1}{t^2}</math>.<ref name="Hinton15" />
+
+=== Relationship with model compression ===
+Under the assumption that the logits have zero [[mean]], it is possible to show that model compression is a special case of knowledge distillation. The gradient of the knowledge distillation loss <math>E</math> with respect to the logit of the distilled model <math>z_i</math> is given by
+:<math>
+\begin{align}
+    \frac{\partial}{\partial z_i} E
+        &= -\frac{\partial}{\partial z_i} \sum_j \hat{y}_j \log y_j \\
+        &= -\frac{\partial}{\partial z_i} \hat{y}_i \log y_i + \left( -\frac{\partial}{\partial z_i} \sum_{k\neq i} \hat{y}_k \log y_k \right)\\
+        &= -\hat{y}_i \frac{1}{y_i} \frac{\partial}{\partial z_i} y_i + \sum_{k\neq i} \left( -\hat{y}_k \cdot \frac{1}{y_k} \cdot e^{\frac{z_k}{t}} \cdot \left( -\frac{1}{\left(\sum_j e^{\frac{z_j}{t}} \right)^2 }\right) \cdot e^{\frac{z_i}{t}} \cdot \frac{1}{t} \right)\\
+        &= -\hat{y}_i \frac{1}{y_i} \frac{\partial}{\partial z_i} \frac{e^{\frac{z_i}{t}}}{\sum_j e^{\frac{z_j}{t}}} + \sum_{k\neq i} \left( \hat{y}_k \cdot \frac{1}{y_k} \cdot y_k \cdot y_i \cdot \frac{1}{t} \right)\\
+        &= -\hat{y}_i \frac{1}{y_i}
+        \left(
+            \frac{\frac{1}{t} e^{\frac{z_i}{t}} \sum_j e^{\frac{z_j}{t}} - \frac{1}{t} \left( e^{\frac{z_i}{t}} \right)^2}
+                 {\left( \sum_j e^{\frac{z_j}{t}} \right)^2}
+        \right) + \frac{y_i\sum_{k\neq i}\hat{y}_k}{t}\\
+        &= -\hat{y}_i \frac{1}{y_i} \left( \frac{y_i}{t} - \frac{y_i^2}{t} \right) + \frac{y_i(1-\hat{y}_i)}{t}\\
+        &= \frac{1}{t} \left( y_i - \hat{y}_i \right) \\
+        &= \frac{1}{t} \left( \frac{e^{\frac{z_i}{t}}}{\sum_j e^{\frac{z_j}{t}}} - \frac{e^{\frac{\hat{z}_i}{t}}}{\sum_j e^{\frac{\hat{z}_j}{t}}} \right) \\
+\end{align}
+</math>
+where <math>\hat{z}_i</math> are the logits of the large model. For large values of <math>t</math> this can be approximated as
+:<math>
+\frac{1}{t}
+\left(
+    \frac{1 + \frac{z_i}{t}}{N + \sum_j \frac{z_j}{t}} -
+    \frac{1 + \frac{\hat{z}_i}{t}}{N + \sum_j \frac{\hat{z}_j}{t}}
+\right)
+</math>
+and under the zero-mean hypothesis <math>\sum_j z_j = \sum_j \hat{z}_j = 0</math> it becomes <math> \frac{z_i - \hat{z}_i}{NT^2} </math>, which is the derivative of <math>\frac{1}{2} \left( z_i - \hat{z}_i \right)^2</math>, i.e. the loss is equivalent to matching the logits of the two models, as done in model compression.<ref name="Hinton15" />
+
+=== "Optimal Brain Damage" algorithm ===
+{{Anchor|Optimal Brain Damage}}The Optimal Brain Damage (OBD) algorithm is as follows:<ref name=":0" />
+
+:Do until a desired level of sparsity or performance is reached:
+::Train the network (by methods such as backpropagation) until a reasonable solution is obtained
+::Compute the saliencies for each parameter
+::Delete some lowest-saliency parameters
+
+Deleting a parameter means fixing the parameter to zero. The "saliency" of a parameter <math>\theta</math> is defined as <math>\frac 12 (\partial_\theta^2 L)\theta^2</math>, where <math>L</math> is the loss function. The second-derivative <math>\partial_\theta^2 L</math> can be computed by [[Backpropagation#Hessian|second-order backpropagation]].
+
+The idea for optimal brain damage is to approximate the loss function in a neighborhood of optimal parameter <math>\theta^*</math> by [[Taylor expansion]]:<math display="block">L(\theta) \approx L(\theta^*) + \frac 12 \sum_i (\partial_{\theta_i}^2L(\theta^*)) (\theta_i - \theta_i^*)^2</math>where <math>\nabla L(\theta^*) \approx 0</math>, since <math>\theta^*</math> is optimal, and the cross-derivatives <math>\partial_{\theta_i}\partial_{\theta_j}L</math> are neglected to save compute. Thus, the saliency of a parameter approximates the increase in loss if that parameter is deleted.
+
+== History ==
+
+A related methodology was ''model compression'' or ''pruning'', where a trained network is reduced in size. This was first done in 1965 by [[Alexey Ivakhnenko]] and Valentin Lapa in the [[USSR]] (1965).<ref name="ivak1965">{{cite book |last1=Ivakhnenko |first1=A. G. |url={{google books |plainurl=y |id=rGFgAAAAMAAJ}} |title=Cybernetics and Forecasting Techniques |last2=Lapa |first2=V. G. |publisher=American Elsevier Publishing Co. |year=1967 |isbn=978-0-444-00020-0}}</ref><ref>{{Cite journal |last=Ivakhnenko |first=A.G. |date=March 1970 |title=Heuristic self-organization in problems of engineering cybernetics |url=https://linkinghub.elsevier.com/retrieve/pii/0005109870900920 |journal=Automatica |language=en |volume=6 |issue=2 |pages=207–219 |doi=10.1016/0005-1098(70)90092-0|url-access=subscription }}</ref><ref name="ivak1971">{{Cite journal |last=Ivakhnenko |first=Alexey |date=1971 |title=Polynomial theory of complex systems |url=http://gmdh.net/articles/history/polynomial.pdf |url-status=live |journal=IEEE Transactions on Systems, Man, and Cybernetics |volume=SMC-1 |issue=4 |pages=364–378 |doi=10.1109/TSMC.1971.4308320 |archive-url=https://web.archive.org/web/20170829230621/http://www.gmdh.net/articles/history/polynomial.pdf |archive-date=2017-08-29 |access-date=2019-11-05}}</ref> Their deep networks were trained layer by layer through [[regression analysis]]. Superfluous hidden units were pruned using a separate validation set.<ref name="DLhistory">{{cite arXiv |eprint=2212.11279 |class=cs.NE |first=Jürgen |last=Schmidhuber |author-link=Jürgen Schmidhuber |title=Annotated History of Modern AI and Deep Learning |date=2022}}</ref> Other neural network compression methods include Biased Weight Decay<ref>{{Cite journal |last1=Hanson |first1=Stephen |last2=Pratt |first2=Lorien |date=1988 |title=Comparing Biases for Minimal Network Construction with Back-Propagation |url=https://proceedings.neurips.cc/paper/1988/hash/1c9ac0159c94d8d0cbedc973445af2da-Abstract.html |journal=Advances in Neural Information Processing Systems |publisher=Morgan-Kaufmann |volume=1}}</ref> and Optimal Brain Damage.<ref name=":0">{{Cite journal |last1=LeCun |first1=Yann |last2=Denker |first2=John |last3=Solla |first3=Sara |date=1989 |title=Optimal Brain Damage |url=https://proceedings.neurips.cc/paper/1989/hash/6c9882bbac1c7093bd25041881277658-Abstract.html |journal=Advances in Neural Information Processing Systems |publisher=Morgan-Kaufmann |volume=2}}</ref>
+
+An early example of neural network distillation was published by [[Jürgen Schmidhuber]] in 1991, in the field of [[recurrent neural network]]s (RNNs). The problem was sequence prediction for long sequences, i.e., [[deep learning]]. Their approach was to use two RNNs. One of them (the ''automatizer'') predicted the sequence, and another (the ''chunker'') predicted the errors of the automatizer. Simultaneously, the automatizer predicted the internal states of the chunker. After the automatizer manages to predict the chunker's internal states well, it would start fixing the errors, and soon the chunker is obsoleted, leaving just one RNN in the end.<ref name="chunker1991">{{cite journal |last1=Schmidhuber |first1=Jürgen |author-link=Jürgen Schmidhuber |date=April 1991 |title=Neural Sequence Chunkers |url=https://people.idsia.ch/~juergen/FKI-148-91ocr.pdf |journal=TR FKI-148, TU Munich}}</ref><ref name="schmidhuber1992">{{cite journal |last1=Schmidhuber |first1=Jürgen |year=1992 |title=Learning complex, extended sequences using the principle of history compression |url=ftp://ftp.idsia.ch/pub/juergen/chunker.pdf |journal=Neural Computation |volume=4 |issue=2 |pages=234–242 |doi=10.1162/neco.1992.4.2.234 |archive-url=https://web.archive.org/web/20170706014739/ftp://ftp.idsia.ch/pub/juergen/chunker.pdf |archive-date=2017-07-06 |url-status=dead |s2cid=18271205}}</ref>
+
+The idea of using the output of one neural network to train another neural network was also studied as the teacher-student network configuration.<ref>{{Cite journal |last1=Watkin |first1=Timothy L. H. |last2=Rau |first2=Albrecht |last3=Biehl |first3=Michael |date=1993-04-01 |title=The statistical mechanics of learning a rule |url=https://link.aps.org/doi/10.1103/RevModPhys.65.499 |journal=Reviews of Modern Physics |volume=65 |issue=2 |pages=499–556 |bibcode=1993RvMP...65..499W |doi=10.1103/RevModPhys.65.499|hdl=11370/02b0cd15-dfc5-4acb-9566-4ab937ee0d13 |hdl-access=free }}</ref> In 1992, several papers studied the [[statistical mechanics]] of teacher-student  configurations with committee machines<ref>{{Cite journal |last1=Schwarze |first1=H |last2=Hertz |first2=J |date=1992-10-15 |title=Generalization in a Large Committee Machine |url=https://iopscience.iop.org/article/10.1209/0295-5075/20/4/015 |journal=Europhysics Letters |volume=20 |issue=4 |pages=375–380 |bibcode=1992EL.....20..375S |doi=10.1209/0295-5075/20/4/015 |issn=0295-5075|url-access=subscription }}</ref><ref>{{Cite journal |last1=Mato |first1=G |last2=Parga |first2=N |date=1992-10-07 |title=Generalization properties of multilayered neural networks |url=https://iopscience.iop.org/article/10.1088/0305-4470/25/19/017 |journal=Journal of Physics A: Mathematical and General |volume=25 |issue=19 |pages=5047–5054 |bibcode=1992JPhA...25.5047M |doi=10.1088/0305-4470/25/19/017 |issn=0305-4470|url-access=subscription }}</ref> or parity machines.<ref>{{Cite journal |last1=Hansel |first1=D |last2=Mato |first2=G |last3=Meunier |first3=C |date=1992-11-01 |title=Memorization Without Generalization in a Multilayered Neural Network |url=https://iopscience.iop.org/article/10.1209/0295-5075/20/5/015 |journal=Europhysics Letters |volume=20 |issue=5 |pages=471–476 |bibcode=1992EL.....20..471H |doi=10.1209/0295-5075/20/5/015 |issn=0295-5075|url-access=subscription }}</ref>
+
+Compressing the knowledge of multiple models into a single [[neural network]] was called ''model compression'' in 2006: compression was achieved by training a smaller model on large amounts of pseudo-data labelled by a higher-performing ensemble, optimizing to match the [[logit]] of the compressed model to the logit of the ensemble.<ref>{{cite conference |last1=Buciluǎ |first1=Cristian |last2=Caruana |first2=Rich |last3=Niculescu-Mizil |first3=Alexandru |year=2006 |title=Model compression |book-title=Proceedings of the 12th ACM SIGKDD international conference on Knowledge discovery and data mining}}</ref> The knowledge distillation [[preprint]] of [[Geoffrey Hinton]] et al. (2015)<ref name="Hinton15" /> formulated the concept and showed some results achieved in the task of [[image classification]].
+
+Knowledge distillation is also related to the concept of ''behavioral cloning'' discussed by Faraz Torabi et al.<ref>{{cite arXiv |eprint=1805.01954 |class=cs.AI |first1=Faraz |last1=Torabi |first2=Garrett |last2=Warnell |title=Behavioral Cloning from Observation |last3=Stone |first3=Peter |year=2018}}</ref>
+
+== References ==
+<references />
+
+== External links ==
+* [https://research.google/pubs/distilling-the-knowledge-in-a-neural-network/ Distilling the knowledge in a neural network – Google AI]
+
+[[Category:Deep learning]]

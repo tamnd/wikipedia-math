@@ -1,0 +1,385 @@
+<!-- wikipedia: en
+     page: 65332236
+     title: CEK Machine
+     revision: 1340505274
+     timestamp: 2026-02-26T02:41:13Z
+     history: https://en.wikipedia.org/w/index.php?curid=65332236&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1340505274 -->
+{{Short description|Theoretical computer model}}
+A '''CEK Machine''' is an [[abstract machine]] invented by [[Matthias Felleisen]] and [[Daniel P. Friedman]] that implements left-to-right [[call by value]].<ref name="AccattoliBarenbaumMazza2014">{{citation | last1 = Accattoli | first1 = Beniamino | last2 = Barenbaum | first2 = Pablo | last3 = Mazza | first3 = Damiano | title = Proceedings of the 19th ACM SIGPLAN international conference on Functional programming | chapter = Distilling abstract machines | date = 19 August 2014 | pages = 363–376 | publisher = ACM | doi = 10.1145/2628136.2628154 | isbn = 9781450328739 | quote = They differ on how they behave with respect to applications: the CEK implements left-to-right call-by-value, i.e. it first evaluates the function part, the LAM gives instead precedence to arguments, realizing right-to-left call-by-value.}}</ref> It is generally implemented as an interpreter for [[Functional programming|functional programming languages]], but can also be used to implement simple [[Imperative programming|imperative programming languages]]. A state in a CEK machine includes a control statement, environment and [[continuation]]. The control statement is the term being evaluated at that moment, the environment is (usually) a map from variable names to values, and the continuation stores another state, or a special halt case. It is a simplified form of another abstract machine called the [[SECD machine]].<ref name="Palsberg2009">{{cite book|author=Jens Palsberg|title=Semantics and Algebraic Specification: Essays Dedicated to Peter D. Mosses on the Occasion of His 60th Birthday|url=https://books.google.com/books?id=EMiBsbiYA-kC&pg=PA162|date=28 August 2009|publisher=Springer Science & Business Media|isbn=978-3-642-04163-1|pages=162–}}</ref><ref name="FelleisenFindler2009">{{cite book|last1=Felleisen|first1=Matthias|author2-link=Robert Bruce Findler |last2=Findler|first2=Robert Bruce|author3-link=Matthew Flatt |last3=Flatt|first3=Matthew|title=Semantics Engineering with PLT Redex|url=https://books.google.com/books?id=kb_xCwAAQBAJ&pg=PA113|date=10 July 2009|publisher=MIT Press|isbn=978-0-262-25817-3|pages=113–|author1-link=Matthias Felleisen }}</ref><ref name=":1">{{Cite web|last=Thielecke|first=Hayo|date=December 9, 2015|title=Implementing functional languages with abstract machines|url=https://www.cs.bham.ac.uk/~hxt/2015/compilers/compiling-functional.pdf|url-status=dead|archive-url=https://web.archive.org/web/20210717021537/https://www.cs.bham.ac.uk/~hxt/2015/compilers/compiling-functional.pdf|archive-date=2021-07-17|access-date=September 9, 2020|website=}}</ref>
+
+The CEK machine builds on the SECD machine by replacing the dump ([[call stack]]) with the more advanced continuation, and putting parameters directly into the environment, rather than pushing them on to the parameter stack first. Other modifications can be made which creates a whole family of related machines. For example, the [[#CESK_machine|CESK machine]] has the environment map variables to a pointer on the store, which is effectively a heap. This allows it to model mutable state better than the ordinary CEK machine. The CK machine has no environment, and can be used for simple calculi without variables.<ref name=":0">{{Cite web|last1=Felleisen|first1=Matthias|author2-link=Daniel P. Friedman |last2=Friedman|first2=Daniel P.|date=October 1986|title=A Calculus for Assignments in Higher-Order Languages|url=https://legacy.cs.indiana.edu/ftp/techreports/TR202.pdf|archive-url=|archive-date=|access-date=|website=|author1-link=Matthias Felleisen }}</ref>
+
+== Description ==
+A CEK machine can be created for any programming language so the term is often used vaguely. For example, a CEK machine could be created to interpret the [[lambda calculus]]. Its environment maps variables to closures and the continuations are either a halt, a continuation to evaluate an argument (ar), or a continuation to evaluate an application after evaluating a function (ap):<ref name=":1" /><ref>{{Cite web|title=A refresher on the CEK machine|url=https://cs.umd.edu/class/summer2015/cmsc330/material/cek|access-date=2020-09-19|website=CMSC 330, Summer 2015|archive-date=2021-01-21|archive-url=https://web.archive.org/web/20210121170406/https://www.cs.umd.edu/class/summer2015/cmsc330/material/cek/|url-status=dead}}</ref>
+{| class="wikitable"
+|+
+!Transition
+!From
+!To
+|-
+|Variable
+|''x'', E, K
+|''t'', E', K where closure(t,E') = E[x]
+|-
+|Application
+|''(f e)'', E, K
+|''f'', E, ar(e, E, K)
+|-
+|Abstraction while evaluating function
+|Abs, E, ar(t, E', K)
+|t, E', ap(Abs, E, K)
+|-
+|Abstraction while evaluating argument
+|Abs, E, ap(λx.Exp, E', K)
+|Exp, E'[x=closure(Abs,E)], K
+|}
+
+== On the untyped lambda calculus ==
+
+In the original paper<ref name="felleisen friedman 87" />, the authors describe the CEK machine using [[small-step operational semantics]] over the untyped lambda calculus:
+
+<math>
+
+\begin{align}
+\langle x, \text{E}, \text{K} \rangle &\mapsto \langle \epsilon, \emptyset, \text{ret}(E[x]) \gg \text{K} \rangle \\
+\langle \lambda x . M, \text{E}, \text{K} \rangle &\mapsto \langle \epsilon, \emptyset, \text{ret}((\lambda x . M, \text{E})) \gg \text{K} \rangle \\
+\langle M \, N, \text{E}, \text{K} \rangle &\mapsto \langle M, \text{E}, \text{arg}(N, \text{E}) \gg \text{K} \rangle \\
+\langle \epsilon, \emptyset, \text{ret}(F) \gg \text{arg}(N, \text{E}) \gg \text{K} \rangle &\mapsto \langle N, \text{E}, \text{app}(F) \gg K \rangle \quad &F = \lambda x . M \\
+\langle \epsilon, \emptyset, \text{ret}(V) \gg \text{app}(F) \gg \text{K} \rangle &\mapsto \langle M, \text{E}[x \mapsto V], K \rangle \quad &F = \lambda x . M\\
+\end{align}
+
+</math>
+
+where <math>\gg</math> is a monadic bind on the continuations, <math>\text{E}[x \mapsto V]</math> is an environment extended with a new binding.
+
+For example, the term <math>(\lambda x . x + 1) \, 5</math> is evaluated using the following steps:
+
+<math>
+\begin{align}
+              &\langle (\lambda x . x + 1) \, 5, \text{E}, \text{K} \rangle  \\
+\mapsto \quad &\langle (\lambda x . x + 1), \text{E}, \text{arg}(5, \text{E}) \gg \text{K} \rangle \\
+\mapsto \quad &\langle \epsilon, \emptyset, \text{ret}((\lambda x . x + 1, \text{E})) \gg \text{arg}(5, \text{E}) \gg \text{K} \rangle \\
+\mapsto \quad &\langle 5, \text{E}, \text{app}((\lambda x . x + 1, \text{E})) \gg \text{K} \rangle \\
+\mapsto \quad &\langle \epsilon, \emptyset, \text{ret}(5) \gg \text{app}((\lambda x . x + 1, \text{E})) \gg \text{K} \rangle \\
+\mapsto \quad &\langle x + 1, \text{E}[x \mapsto 5], K \rangle \\
+\vdots \\
+\mapsto \quad &\langle \epsilon, \emptyset, \text{ret}(6) \gg K \rangle \\
+\end{align}
+</math>
+
+where the calculus is extended to numbers and addition (even though both numbers and addition can be [[Church encoding|encoded]] entirely in the lambda calculus).
+
+== Representation of components ==
+Each component of the CEK machine has various representations. The control string is usually a term being evaluated, or sometimes, a line number. For example, a CEK machine evaluating the lambda calculus would use a lambda expression as a control string. The environment is almost always a map from variables to values, or in the case of CESK machines, variables to addresses in the store. The representation of the continuation varies. It often contains another environment as well as a continuation type, for example ''argument'' or ''application''. It is sometimes a call stack, where each frame is the rest of the state, i.e. a control statement and an environment.
+
+== Related machines ==
+There are some other machines closely linked to the CEK machine.
+
+=== CESK machine ===
+The CESK machine is another machine closely related to the CEK machine. The environment in a CESK machine maps variables to ''pointers'', on a "store" (heap) hence the name "CESK". It can be used to model mutable state, for example the Λ<sub>σ</sub> calculus described in the [https://legacy.cs.indiana.edu/ftp/techreports/TR202.pdf original paper]. This makes it much more useful for interpreting imperative programming languages, rather than functional ones.<ref name=":0" />
+
+=== CS machine ===
+The CS machine contains just a control statement and a store. It is also described by the original paper. In an application, instead of putting variables into an environment it substitutes them with an address on the store and putting the value of the variable in that address. The continuation is not needed because it is [[Lazy evaluation|lazily evaluated]]; it does not need to remember to evaluate an argument.<ref name=":0" />
+
+=== SECD machine ===
+{{Main|SECD machine}}
+The SECD machine was the machine that CEK machine was based on. It has a stack, environment, control statement and dump. The dump is a call stack, and is used instead of a continuation. The stack is used for passing parameters to functions. The control statement was written in [[postfix notation]], and the machine had its own "programming language". A lambda calculus statement like this:
+
+''(M N)''
+
+would be written like this:
+
+''N:M:ap''
+
+where ''ap'' is a function that applies two abstractions together.<ref>{{Cite web|last=|first=|date=|title=The SECD Virtual Machine|url=http://ecee.colorado.edu/~siek/ecen5013/spring10/lecture5.pdf#page=3|archive-url=https://web.archive.org/web/20210717124646/http://ecee.colorado.edu/~siek/ecen5013/spring10/lecture5.pdf#page=3|archive-date=2021-07-17|access-date=|website=|url-status=dead}}</ref><ref>{{Cite web|title=secd|url=http://www.cs.bath.ac.uk/~jap/QC5a/secd.html|access-date=2020-09-23|website=www.cs.bath.ac.uk|archive-date=2019-09-05|archive-url=https://web.archive.org/web/20190905100946/http://www.cs.bath.ac.uk/~jap/QC5a/secd.html|url-status=dead}}</ref>
+
+== Origins ==
+On page 196 of "Control Operators, the SECD Machine, and the <math>\lambda</math>-Calculus",
+<ref name="felleisen friedman fdpc3">
+{{cite conference
+|last1=Felleisen
+|first1=Matthias
+|author2-link=Daniel P. Friedman
+|last2=Friedman
+|first2=Daniel
+|title=Control Operators, the SECD Machine, and the <math>\lambda</math>-Calculus
+|date=1986
+|institution=Formal Description of Programming Concepts III, Elsevier Science Publishers B.V. (North-Holland)
+|pages=193–217
+|doi=10.1007/978-3-319-14125-1_13
+|url=https://doi.org/10.1007/978-3-319-14125-1_13|author1-link=Matthias Felleisen
+|url-access=subscription
+}}
+</ref>
+and on page 4 of the technical report with the same name,
+<ref name="felleisen friedman 87">
+{{cite tech report
+|last1=[[Matthias Felleisen|Felleisen]]
+|first1=Matthias
+|last2=[[Daniel P. Friedman|Friedman]]
+|first2=Daniel P.
+|title=Control Operators, the SECD Machine, and the <math>\lambda</math>-Calculus
+|date=1986
+|institution=Department of Computer Science, Indiana University
+|number=197
+|url=https://cs.indiana.edu/ftp/techreports/TR197.pdf}}
+</ref>
+[[Matthias Felleisen]] and [[Daniel P. Friedman]] wrote "The [CEK]
+machine is derived from Reynolds' extended interpreter IV.",
+referring to [[John C. Reynolds|John Reynolds]]'s
+Interpreter III in "Definitional Interpreters for Higher-Order Programming Languages".
+<ref name="reynolds 72">
+{{cite conference
+|last1=Reynolds
+|first1=John C.
+|title=Proceedings of the ACM annual conference on - ACM '72
+|chapter=Definitional Interpreters for Higher-Order Programming Languages
+|date=1972
+|volume=2
+|institution=Proceedings of 25th ACM National Conference
+|pages=717–740
+|doi=10.1145/800194.805852|author1-link=John C. Reynolds
+}}
+</ref>
+<ref name="reynolds 98">
+{{cite journal
+|last1=Reynolds
+|first1=John C.
+|date=1998
+|title=Definitional Interpreters Revisited
+|journal=Higher-Order and Symbolic Computation
+|volume=11
+|issue=4
+|pages=355–361
+|doi=10.1023/A:1010075320153|s2cid=34126862
+|author1-link=John C. Reynolds
+}}
+</ref>
+
+To wit, here is an implementation of the CEK machine in [[OCaml]],
+representing lambda terms with de Bruijn indices:
+
+<syntaxhighlight lang="ocaml">
+type term = IND of int    (* de Bruijn index *)
+          | ABS of term
+          | APP of term * term
+</syntaxhighlight>
+
+Values are [[Closure (computer programming)|closures]], as [[Invention|invented]] by [[Peter Landin]]:
+
+<syntaxhighlight lang="ocaml">
+type value = CLO of term * value list
+
+type cont = C2 of term * value list * cont
+          | C1 of value * cont
+          | C0
+
+let rec continue (c : cont) (v : value) : value =
+  match c, v with
+    C2 (t1, e, k), v0 ->
+     eval t1 e (C1 (v0, k))
+  | C1 (v0, k), v1 ->
+     apply v0 v1 k
+  | C0, v ->
+     v
+and eval (t : term) (e : value list) (k : cont) : value =
+  match t with
+    IND n ->
+     continue k (List.nth e n)
+  | ABS t' ->
+     continue k (CLO (t', e))
+  | APP (t0, t1) ->
+     eval t0 e (C2 (t1, e, k))
+and apply (v0 : value) (v1 : value) (k : cont) =
+  let (CLO (t, e)) = v0
+  in eval t (v1 :: e) k
+
+let main (t : term) : value =
+  eval t [] C0
+</syntaxhighlight>
+
+This implementation is in [[Defunctionalization|defunctionalized form]],
+with <code>cont</code> and <code>continue</code>
+as the first-order representation of a continuation.
+Here is its refunctionalized counterpart:
+
+<syntaxhighlight lang="ocaml">
+let rec eval (t : term) (e : value list) (k : value -> 'a) : 'a =
+  match t with
+    IND n ->
+     k (List.nth e n)
+  | ABS t' ->
+     k (CLO (t', e))
+  | APP (t0, t1) ->
+     eval t0 e (fun v0 ->
+                  eval t1 e (fun v1 ->
+                               apply v0 v1 k))
+and apply (v0 : value) (v1 : value) (k : value -> 'a) : 'a =
+  let (CLO (t, e)) = v0
+  in eval t (v1 :: e) k
+
+let main (t : term) : value =
+  eval t [] (fun v -> v)
+</syntaxhighlight>
+
+This implementation is in left-to-right [[continuation-passing style]],
+where the domain of answers is polymorphic,
+i.e., is implemented with a [[type variable]].<ref name="thielecke esop04">
+{{cite conference
+|last1=Thielecke
+|first1=Hayo
+|title=Programming Languages and Systems
+|date=2004
+|chapter=Answer Type Polymorphism in Call-by-Name Continuation Passing
+|series=Lecture Notes in Computer Science
+|volume=2986
+|institution=Programming Languages and Systems, 13th European Symposium on Programming, ESOP 2004, LNCS 2986, Springer
+|pages=279–293
+|doi=10.1007/978-3-540-24725-8_20|isbn=978-3-540-21313-0
+|doi-access=free
+}}
+</ref>
+This continuation-passing implementation is mapped back to direct style as follows:
+
+<syntaxhighlight lang="ocaml">
+let rec eval (t : term) (e : value list) : value =
+  match t with
+    IND n ->
+     List.nth e n
+  | ABS t' ->
+     CLO (t', e)
+  | APP (t0, t1) ->
+     let v0 = eval t0 e
+     and v1 = eval t1 e
+     in apply v0 v1
+and apply (v0 : value) (v1 : value) : value =
+  let (CLO (t, e)) = v0
+  in eval t (v1 :: e)
+
+let main (t : term) : value =
+  eval t []
+</syntaxhighlight>
+
+This direct-style implementation is also in defunctionalized form,
+or more precisely in closure-converted form.
+Here is the result of closure-unconverting it:
+
+<syntaxhighlight lang="ocaml">
+type value = FUN of (value -> value)
+
+let rec eval (t : term) (e : value list) : value =
+  match t with
+    IND n ->
+     List.nth e n
+  | ABS t' ->
+     FUN (fun v -> eval t' (v :: e))
+  | APP (t0, t1) ->
+     let v0 = eval t0 e
+     and v1 = eval t1 e
+     in apply v0 v1
+and apply (v0 : value) (v1 : value) : value =
+  let (FUN f) = v0
+  in f v1
+
+let main (t : term) : value =
+  eval t []
+</syntaxhighlight>
+
+The resulting implementation is [[Principle of compositionality|compositional]].
+It is the usual Scott-Tarski [[Meta-circular evaluator|definitional self-interpreter]] where the domain of values is reflexive ([[Dana Scott|Scott]])
+and where syntactic functions are defined as semantic functions and
+syntactic applications are defined as semantic applications ([[Alfred Tarski|Tarski]]).
+
+This derivation mimics [[Olivier Danvy|Danvy]]'s rational deconstruction of [[Peter Landin|Landin]]'s [[SECD machine]].<ref name="danvy ifl-04">
+{{cite conference
+|last=[[Olivier Danvy|Danvy]]
+|first=Olivier
+|date=2004
+|title=A Rational Deconstruction of Landin's SECD Machine
+|institution=Implementation and Application of Functional Languages, 16th International Workshop, IFL 2004, Revised Selected Papers, Lecture Notes in Computer Science 3474, Springer
+|pages=52–71
+|url=https://www.brics.dk/RS/03/33/BRICS-RS-03-33.pdf
+|issn=0909-0878}}
+</ref>
+The converse derivation (closure conversion, CPS transformation, and defunctionalization) 
+is documented in John Reynolds's article "Definitional Interpreters for Higher-Order Programming Languages",
+which is the origin of the CEK machine and was subsequently identified as a blueprint for transforming compositional evaluators into abstract machines as well as vice versa.<ref name="reynolds 72"/><ref name="ager et al 03"/>
+  
+== Modern times ==
+The CEK machine, like the [[Krivine machine]], not only corresponds functionally to a [[meta-circular evaluator]] (via a left-to-right call-by-value CPS transformation),
+<ref name="ager et al 03">
+{{cite journal
+|last1=Ager
+|first1=Mads Sig
+|last2=Biernacki
+|first2=Dariusz
+|author3-link=Olivier Danvy
+|last3=Danvy
+|first3=Olivier
+|last4=Midtgaard
+|first4=Jan
+|date=2003
+|title=A Functional Correspondence between Evaluators and Abstract Machines
+|journal=BRICS Report Series
+|volume=10
+|issue=13
+|institution=5th International ACM SIGPLAN Conference on Principles and Practice of Declarative Programming (PPDP'03)
+|pages=8–19
+|doi=10.7146/brics.v10i13.21783|doi-access=free
+}}
+</ref>
+it also corresponds syntactically to the <math>\lambda\widehat{\rho}</math> calculus — a calculus that uses [[explicit substitution]] — with a left-to-right applicative-order reduction strategy,
+<ref name="1biernacka danvy brics-07">
+{{cite journal
+|last1=Biernacka
+|first1=Małgorzata
+|author2-link=Olivier Danvy
+|last2=Danvy
+|first2=Olivier
+|date=2007
+|title=A Concrete Framework for Environment Machines
+|journal=ACM Transactions on Computational Logic
+|volume=9
+|issue=1
+|page=6
+|doi=10.1145/1297658.1297664
+|doi-access=free
+}}
+</ref>
+<ref name="rozowski thesis 21">
+{{cite thesis
+|last1=Rozowski
+|first1=Wojciech
+|date=2021
+|title=Formally verified derivation of an executable and terminating CEK machine from call-by-value lambda-p-hat-calculus
+|institution=University of Southampton
+|url=https://wkrozowski.github.io/files/report.pdf}}
+</ref>
+and likewise for the [[SECD machine]] (via a right-to-left call-by-value CPS transformation).
+<ref name="danvy millikin lmcs-08">
+{{cite journal
+|last1=Danvy
+|first1=Olivier
+|last2=Millikin
+|first2=Kevin
+|date=2008
+|title=A rational deconstruction of Landin's SECD machine with the J operator
+|journal=Logical Methods in Computer Science
+|volume=4
+|issue=4
+|pages=1–67
+|article-number=1112
+|doi=10.2168/LMCS-4(4:12)2008
+|arxiv=0811.3231
+|s2cid=7926360
+|author1-link=Olivier Danvy
+}}
+</ref>
+
+== References ==
+{{notelist}}
+{{reflist}}
+
+[[Category:Abstract machines]]

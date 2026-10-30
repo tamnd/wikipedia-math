@@ -1,0 +1,393 @@
+<!-- wikipedia: en
+     page: 13408203
+     title: FRACTRAN
+     revision: 1374406127
+     timestamp: 2026-09-11T21:48:16Z
+     history: https://en.wikipedia.org/w/index.php?curid=13408203&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374406127 -->
+{{short description|Turing-complete esoteric programming language invented by John Conway}}
+
+'''FRACTRAN''' is a [[Turing-complete]] [[esoteric programming language]] invented by the mathematician [[John Horton Conway|John Conway]]. A FRACTRAN program is an [[sequence|ordered list]] of positive [[fraction (mathematics)|fractions]] together with an initial positive [[integer]] input ''n''. The program is run by updating the integer ''n'' as follows:
+#for the first fraction ''f'' in the list for which ''nf'' is an integer, replace ''n'' by ''nf''
+#repeat this rule until no fraction in the list produces an integer when multiplied by ''n'', then halt.
+
+{{harvnb|Conway|1987}} gives the following FRACTRAN program, called PRIMEGAME, which finds successive [[prime number]]s:
+
+<math display="block">\left( \frac{17}{91}, \frac{78}{85}, \frac{19}{51}, \frac{23}{38}, \frac{29}{33}, \frac{77}{29}, \frac{95}{23}, \frac{77}{19}, \frac{1}{17}, \frac{11}{13}, \frac{13}{11}, \frac{15}{2}, \frac{1}{7}, \frac{55}{1} \right)</math>
+
+Starting with ''n''=2, this FRACTRAN program generates the following sequence of integers:
+
+* 2, 15, 825, 725, 1925, 2275, 425, 390, 330, 290, 770, ... {{OEIS|id=A007542}}, i.e. the sequence of PRIMEGAME numbers  
+
+After 2, this sequence contains the following powers of 2:
+
+<math display="block">2^2=4,\, 2^3=8,\, 2^5=32,\, 2^7=128,\, 2^{11}=2048,\, 2^{13}=8192,\, 2^{17}=131072,\, 2^{19}=524288,\,  \dots</math> {{OEIS|id=A034785}}
+
+The exponent part of these powers of two are primes, 2, 3, 5, etc.
+
+== Understanding a FRACTRAN program ==
+A FRACTRAN program can be seen as a type of [[register machine]] where the registers are stored in prime exponents in the argument <math>n</math>.
+
+Using [[Gödel numbering]], a positive integer <math>n</math> can encode an arbitrary number of arbitrarily large positive integer variables.<ref group=note>[[Gödel numbering]] cannot be directly used for negative integers, floating point numbers or text strings, although conventions could be adopted to represent these data types indirectly. Proposed extensions to FRACTRAN include [http://www.esolangs.org/wiki/Fractran_plus_plus FRACTRAN++] and [http://home.nvg.org/~oerjan/esoteric/bag/ Bag].</ref> The value of each variable is encoded as the exponent of a prime number in the [[Integer factorization|prime factorization]] of the integer. For example, the integer
+
+<math display="block">60 = 2^2 \times 3^1 \times 5^1</math>
+
+represents a register state in which one variable (which we will call <math>v_2</math>) holds the value 2 and two other variables (<math>v_3</math> and <math>v_5</math>) hold the value 1. All other variables hold the value 0.
+
+A FRACTRAN program is an ordered list of positive fractions. Each fraction represents an instruction that tests one or more variables, represented by the prime factors of its [[denominator]]. For example:
+
+<math display="block">f_1 = \frac{21}{20} = \frac{3 \times 7}{2^2 \times 5^1}</math>
+
+tests <math>v_2</math> and <math>v_5</math>. If <math>v_2 \ge 2</math> and <math>v_5 \ge 1</math>, then it subtracts 2 from <math>v_2</math> and 1 from <math>v_5</math> and adds 1 to <math>v_3</math> and 1 to <math>v_7</math>. For example:
+
+<math display="block">60 \cdot f_1 = 2^2 \times 3^1 \times 5^1 \cdot \frac{3 \times 7}{2^2 \times 5^1} = 3^2 \times 7^1</math>
+
+Since the FRACTRAN program is just a list of fractions, these test-decrement-increment instructions are the only allowed instructions in the FRACTRAN language. In addition the following restrictions apply:
+
+*Each time an instruction is executed, the variables that are tested are also decremented.
+*The same variable cannot be both decremented and incremented in a single instruction (otherwise the fraction representing that instruction would not be in its [[lowest terms]]). Therefore each FRACTRAN instruction consumes variables as it tests them.
+*It is not possible for a FRACTRAN instruction to directly test if a variable is 0 (However, an indirect test can be implemented by creating a default instruction that is placed after other instructions that test a particular variable.).
+
+== Creating simple programs ==
+=== Addition ===
+The simplest FRACTRAN program is a single instruction such as
+
+<math display="block">\left( \frac{3}{2} \right)</math>
+
+This program can be represented as a (very simple) algorithm as follows:
+
+{| class="wikitable"
+|-
+! FRACTRAN<br>instruction
+! Condition
+! Action
+|-
+| align="center" | <math>\frac{3}{2}</math>
+| <math>v_2</math> > 0
+| Subtract 1 from <math>v_2</math> <br>Add 1 to <math>v_3</math>
+|-
+|
+| <math>v_2</math> = 0
+| Stop
+|}
+
+Given an initial input of the form <math>2^a 3^b</math>, this program will compute the sequence <math>2^{a-1} 3^{b+1}</math>, <math>2^{a-2} 3^{b+2}</math>, etc., until eventually, after <math>a</math> steps, no factors of 2 remain and the product with <math>\frac{3}{2}</math> no longer yields an integer; the program then stops with a final output of <math>3^{a + b}</math>. It therefore adds two integers together.
+
+=== Multiplication ===
+We can create a "multiplier" by "looping" through the "adder". In order to do this we need to introduce [[State (computer science)|states]] into our algorithm. This algorithm will take a number <math>2^a 3^b</math> and produce <math>5^{ab}</math>:
+
+{| class="wikitable"
+|-
+! Current state
+! Condition
+! Action
+! Next state
+|-
+| rowspan="4" align="center" | A
+| <math>v_7</math> > 0
+| Subtract 1 from <math>v_7</math> <br>Add 1 to <math>v_3</math>
+| align="center" | A
+|-
+| <math>v_7</math> = 0 and<br><math>v_2</math> > 0
+| Subtract 1 from <math>v_2</math>
+| align="center" | B
+|-
+| <math>v_7</math> = 0 and<br><math>v_2</math> = 0 and<br> <math>v_3</math> > 0
+| Subtract 1 from <math>v_3</math>
+| align="center" | A
+|-
+| <math>v_7</math> = 0 and<br><math>v_2</math> = 0 and<br> <math>v_3</math> = 0
+| Stop
+|
+|-
+| rowspan="2" align="center" | B
+| <math>v_3</math> > 0
+| Subtract 1 from  <math>v_3</math> <br>Add 1 to <math>v_5</math> <br>Add 1 to <math>v_7</math>
+| align="center" | B
+|-
+| <math>v_3</math> = 0
+| None
+| align="center" | A
+|}
+
+State B is a loop that adds <math>v_3</math> to <math>v_5</math> and also moves <math>v_3</math> to <math>v_7</math>, and state A is an outer [[control loop]] that repeats the loop in state B <math>v_2</math> times. State A also restores the value of <math>v_3</math> from <math>v_7</math> after the loop in state B has completed.
+
+We can implement states using new variables as state indicators. The state indicators for state B will be <math>v_{11}</math> and <math>v_{13}</math>. Note that we require two state control indicators for one loop; a primary flag (<math>v_{11}</math>) and a secondary flag (<math>v_{13}</math>). Because each indicator is consumed whenever it is tested, we need a secondary indicator to say "continue in the current state"; this secondary indicator is swapped back to the primary indicator in the next instruction, and the loop continues.
+
+Adding FRACTRAN state indicators and instructions to the [[multiplication algorithm]] table, we have:
+
+{| class="wikitable"
+|-
+! FRACTRAN<br>instruction
+! Current state
+! State<br>indicators
+! Condition
+! Action
+! Next state
+|-
+| align="center" | <math>\frac{3}{7}</math>
+| rowspan="4" align="center" | A
+| rowspan="4" | None
+| <math>v_7</math> > 0
+| Subtract 1 from <math>v_7</math><br>Add 1 to <math>v_3</math>
+| align="center" | A
+|-
+| align="center" | <math>\frac{11}{2}</math>
+| <math>v_7</math> = 0 and<br><math>v_2</math> > 0
+| Subtract 1 from <math>v_2</math>
+| align="center" | B
+|-
+| align="center" | <math>\frac{1}{3}</math>
+| <math>v_7</math> = 0 and<br> <math>v_2</math> = 0 and<br> <math>v_3</math> > 0
+| Subtract 1 from <math>v_3</math>
+| align="center" | A
+|-
+|
+| <math>v_7</math> = 0 and<br> <math>v_2</math> = 0 and<br> <math>v_3</math> = 0
+| Stop
+|
+|-
+| align="center" | <math>\frac{5 \cdot 7 \cdot 13}{3 \cdot 11}, \frac{11}{13}</math>
+| rowspan="2" align="center" | B
+| rowspan="2" | <math>v_{11}</math>, <math>v_{13}</math>
+| <math>v_3</math> > 0
+| Subtract 1 from <math>v_3</math> <br>Add 1 to <math>v_5</math> <br>Add 1 to <math>v_7</math>
+| align="center" | B
+|-
+| align="center" | <math>\frac{1}{11}</math>
+| <math>v_3</math> = 0
+| None
+| align="center" | A
+|}
+
+When we write out the FRACTRAN instructions, we must put the state A instructions last, because state A has no state indicators - it is the default state if no state indicators are set. So as a FRACTRAN program, the multiplier becomes:
+
+<math display="block">\left( \frac{455}{33}, \frac{11}{13}, \frac{1}{11}, \frac{3}{7}, \frac{11}{2}, \frac{1}{3} \right)</math>
+
+With input 2<sup>''a''</sup>3<sup>''b''</sup> this program produces output 5<sup>''ab''</sup>. <ref group=note>A similar multiplier algorithm is described at the [http://www.esolangs.org/wiki/Fractran Esolang FRACTRAN page].</ref>
+
+[[File:FRACTRANmult0.gif|thumb|544px|center|The above FRACTRAN program, computing 3 times 2 (so that its input is <math>2^3\times 3^2=72</math> and its output should be <math>5^6</math> because 3 times 2 equals 6.]]
+
+=== Subtraction and division ===
+In a similar way, we can create a FRACTRAN "subtractor", and repeated subtractions allow us to create a "quotient and remainder" algorithm as follows:
+
+{| class="wikitable"
+|-
+! FRACTRAN<br>instruction
+! Current state
+! State<br>indicators
+! Condition
+! Action
+! Next state
+|-
+| align="center" | <math>\frac{7 \cdot 13}{2 \cdot 3 \cdot 11}, \frac{11}{13}</math>
+| rowspan="3" align="center" | A
+| rowspan="3" | <math>v_{11}</math>, <math>v_{13}</math>
+| <math>v_2 > 0 </math> and<br> <math>v_3 > 0 </math>
+| Subtract 1 from <math>v_2</math> <br>Subtract 1 from <math>v_3</math><br>Add 1 to <math>v_7</math>
+| align="center" | A
+|-
+| align="center" | <math>\frac{1}{3 \cdot 11}</math>
+| <math>v_2</math> = 0 and<br> <math>v_3</math> > 0
+| Subtract 1 from <math>v_3</math>
+| align="center" | X
+|-
+| align="center" | <math>\frac{5 \cdot 17}{11}</math>
+| <math>v_3</math> = 0
+| Add 1 to <math>v_5</math>
+| align="center" | B
+|-
+| align="center" | <math>\frac{3 \cdot 19}{7 \cdot 17}, \frac{17}{19}</math>
+| rowspan="2" align="center" | B
+| rowspan="2" | <math>v_{17}</math>, <math>v_{19}</math>
+| <math>v_7</math> > 0
+| Subtract 1 from <math>v_7</math> <br>Add 1 to <math>v_3</math>
+| align="center" | B
+|-
+| align="center" | <math>\frac{11}{17}</math>
+| <math>v_7</math> = 0
+| None
+| align="center" | A
+|-
+| align="center" | <math>\frac{1}{3}</math>
+| rowspan="2" align="center" | X
+| rowspan="2" |
+| <math>v_3</math> > 0
+| Subtract 1 from <math>v_3</math>
+| align="center" | X
+|-
+|
+| <math>v_3</math> = 0
+| Stop
+|
+|}
+
+Writing out the FRACTRAN program, we have:
+
+<math display="block">\left( \frac{91}{66}, \frac{11}{13}, \frac{1}{33}, \frac{85}{11}, \frac{57}{119}, \frac{17}{19}, \frac{11}{17}, \frac{1}{3} \right)</math>
+
+and input 2<sup>''n''</sup>3<sup>''d''</sup>11 produces output 5<sup>''q''</sup>7<sup>''r''</sup> where ''n'' = ''qd'' + ''r'' and 0 ≤ ''r''  < ''d''.
+
+== Conway's prime algorithm ==
+Conway's prime generating algorithm above is essentially a quotient and remainder algorithm within two loops. Given input of the form <math>2^n 7^m</math> where 0 ≤ ''m''  < ''n'', the algorithm tries to divide ''n''+1 by each number from ''n'' down to 1, until it finds the largest number ''k'' that is a divisor of ''n''+1. It then returns 2<sup>''n''+1</sup> 7<sup>''k''-1</sup> and repeats. The only times that the sequence of state numbers generated by the algorithm produces a power of 2 is when ''k'' is 1 (so that the exponent of 7 is 0), which only occurs if the exponent of 2 is a prime. A step-by-step explanation of Conway's algorithm can be found in Havil (2007).
+
+For this program, reaching the prime number 2, 3, 5, 7... requires respectively 19, 69, 281, 710,... steps {{OEIS|id=A007547}}. 
+
+A variant of Conway's program also exists,<ref>{{harvnb|Guy|1983|p=26}}; {{harvnb|Conway|Guy|1996|p=147}}</ref> which differs from the above version by two fractions:
+<math display="block">\left( \frac{17}{91}, \frac{78}{85}, \frac{19}{51}, \frac{23}{38}, \frac{29}{33}, \frac{77}{29}, \frac{95}{23}, \frac{77}{19}, \frac{1}{17}, \frac{11}{13}, \frac{13}{11}, \frac{15}{14}, \frac{15}{2}, \frac{55}{1} \right)</math>
+
+This variant is a little faster: reaching 2, 3, 5, 7... takes it 19, 69, 280, 707... steps {{OEIS|id=A007546}}. A single iteration of this program, checking a particular number ''N'' for primeness, takes the following number of steps:
+<math display="block">N - 1 + (6N+2)(N-b) + 2 \sum\limits^{N-1}_{d=b} \left\lfloor \frac{N}{d} \right\rfloor,</math>
+where <math>b < N</math> is the largest integer divisor of ''N'' and <math>\lfloor x \rfloor</math> is the [[floor function]].<ref>{{harvnb|Guy|1983|p=33}}</ref>
+
+In 1999, Devin Kilminster demonstrated a shorter, ten-instruction program:<ref>{{harvnb|Havil|2007|p=176}}</ref> 
+<math display="block">\left( \frac{7}{3}, \frac{99}{98}, \frac{13}{49}, \frac{39}{35}, \frac{36}{91}, \frac{10}{143}, \frac{49}{13}, \frac{7}{11}, \frac{1}{2}, \frac{91}{1} \right).</math>
+For the initial input ''n = 10'' successive primes are generated by subsequent powers of 10.
+<!-- It would be nice if someone could check this program, on the off-chance there is a typo in Havil. -->
+
+== Other examples ==
+The following FRACTRAN program:
+
+<math display="block">\left( \frac{3 \cdot 11}{2^2 \cdot 5} , \frac{5}{11}, \frac{13}{2 \cdot 5}, \frac{1}{5}, \frac{2}{3}, \frac{2 \cdot 5}{7}, \frac{7}{2} \right)</math>
+
+calculates the [[Hamming weight]] H(''a'') of the binary expansion of ''a'' i.e. the number of 1s in the binary expansion of ''a''.<ref>John Baez, [http://golem.ph.utexas.edu/category/2006/10/puzzle_4.html Puzzle #4], The ''n''-Category Café</ref> Given input 2<sup>''a''</sup>, its output is 13<sup>H(''a'')</sup>. The program can be analysed as follows:
+
+{| class="wikitable"
+|-
+! FRACTRAN<br>instruction
+! Current state
+! State<br>indicators
+! Condition
+! Action
+! Next state
+|-
+| align="center" | <math>\frac{3 \cdot 11}{2^2 \cdot 5}, \frac{5}{11}</math>
+| rowspan="3" align="center" | A
+| rowspan="3" |  <math>v_5</math>, <math>v_{11}</math>
+| <math>v_2</math> > 1
+| Subtract 2 from <math>v_2</math> <br>Add 1 to <math>v_3</math>
+| align="center" | A
+|-
+| align="center" | <math>\frac{13}{2 \cdot 5}</math>
+| <math>v_2</math> = 1
+| Subtract 1 from <math>v_2</math> <br>Add 1 to <math>v_{13}</math>
+| align="center" | B
+|-
+| align="center" | <math>\frac{1}{5}</math>
+| <math>v_2</math> = 0
+| None
+| align="center" | B
+|-
+| align="center" | <math>\frac{2}{3}</math>
+| rowspan="4" align="center" | B
+| rowspan="4" | None
+|  <math>v_3</math> > 0
+| Subtract 1 from  <math>v_3</math> <br>Add 1 to <math>v_2</math>
+| align="center" | B
+|-
+| align="center" | <math>\frac{2 \cdot 5}{7}</math>
+|  <math>v_3</math> = 0 and<br>  <math>v_7</math> > 0
+| Subtract 1 from <math>v_7</math> <br>Add 1 to <math>v_2</math>
+| align="center" | A
+|-
+| align="center" | <math>\frac{7}{2}</math>
+|  <math>v_3</math> = 0 and<br> <math>v_7</math> = 0 and<br> <math>v_2</math> > 0
+| Subtract 1 from <math>v_2</math> <br>add 1 to <math>v_7</math>
+| align="center" | B
+|-
+|
+| <math>v_2</math> = 0 and<br>  <math>v_3</math> = 0 and<br> <math>v_7</math> = 0
+| Stop
+|
+|}
+
+===PIGAME===
+In Conways original article from 1987, he also gave PIGAME (Theorem 2, page 5), a FRACTRAN program consisting of 40 fractions,
+:PIGAME = <math>\left(\frac{365}{46},  \frac{29}{161},  \frac{79}{575},  \frac{679}{451},  \frac{3159}{413},
+  \frac{83}{407},  \frac{473}{371},  \frac{638}{355},  \frac{434}{335},  \frac{89}{235}, 
+  \frac{17}{209},  \frac{79}{122},  \frac{31}{183},  \frac{41}{115},  \frac{517}{89},
+  \frac{111}{83},  \frac{305}{79},  \right.</math>
+:<math>\qquad\left.
+  \frac{23}{73}, \frac{73}{71},  \frac{61}{67},
+  \frac{37}{61},  \frac{19}{59},  \frac{89}{57},  \frac{41}{53},  \frac{833}{47},
+  \frac{53}{43},  \frac{86}{41},  \frac{13}{38},  \frac{23}{37},  \frac{67}{31},
+  \frac{71}{29},  \frac{83}{19},  \frac{475}{17},  \frac{59}{13},  \frac{41}{291}, 
+  \frac{1}{7},  \frac{1}{11},  \frac{1}{1024},  \frac{1}{97},  \frac{89}{1} \right)~,</math>
+which can compute any decimal digit of [[Pi|the constant {{pi}}]]: To get {{pi}}{{math|(''n'')}}, the {{math|''n''}}-th decimal digit of {{pi}}, where by convention the initial digit 3 corresponds to {{math|''n'' {{=}} 0}}, the PIGAME must be played starting with <math>2^n\cdot89</math> (not <math>2^n</math> as incorrectly written in the paper). 
+Then, the first power of two appearing in the trajectory will be <math>2^{\pi(n)}</math>. Indeed, when started with 89 (''i.e.'', {{math|''n'' {{=}} 0}}), the first power of two to appear, at the 775-th iteration, is 8 = 2^3, corresponding to the initial digit 3 of {{pi}}.
+
+== Notes ==
+{{reflist|group=note|}}
+
+== See also ==
+* [[One-instruction set computer]]
+* [[Collatz conjecture]]
+
+== References ==
+{{Reflist}}
+{{refbegin}}
+*{{cite journal 
+  | last = Guy
+  | first = Richard K.
+  | author-link = Richard Kenneth Guy
+  | title = Conway's Prime Producing Machine 
+  | url = https://www.tandfonline.com/doi/abs/10.1080/0025570X.1983.11977011 
+  | journal = [[Mathematics Magazine]] 
+  | volume = 56 
+  | issue = 1 
+  | pages = 26–33 
+  | year = 1983
+  | publisher = [[Taylor & Francis]]
+  | doi = 10.1080/0025570X.1983.11977011| url-access = subscription}}
+*{{cite book
+  | last = Conway
+  | first = John H.
+  | title = Open Problems in Communication and Computation
+ | chapter = FRACTRAN: A Simple Universal Programming Language for Arithmetic
+ | pages = 4–26
+  | doi = 10.1007/978-1-4612-4808-8_2
+  | publisher = Springer-Verlag New York, Inc.
+  | year = 1987
+  | isbn = 978-1-4612-9162-6
+  }}
+* {{cite book
+  | last1 = Conway
+  | first1 = John H.
+  | last2 = Guy |first2=Richard K.
+  | title = The Book of Numbers
+  | publisher = Springer-Verlag New York, Inc.
+  | year = 1996
+  | isbn = 0-387-97993-X
+  | url-access = registration
+  | url = https://archive.org/details/bookofnumbers0000conw
+  }}
+*{{cite book
+  | last = Havil
+  | first = Julian
+  | title = Nonplussed!
+  | publisher = Princeton University Press
+  | year = 2007
+  | isbn = 978-0-691-12056-0
+  | url-access = registration
+  | url = https://archive.org/details/nonplussedmathem00havi
+  }}
+*{{cite book | title=Genius At Play - The Curious Mind of John Horton Conway | last=Roberts | first=Siobhan|author-link=Siobhan Roberts | chapter=Criteria of virtue | pages=115–119 | publisher=Bloomsbury | year=2015 | isbn=978-1-62040-593-2 }}
+{{refend}}
+
+== External links ==
+{{commons category|Fractran (programming language)}}
+*[https://www.uctv.tv/shows/Fractran-A-Ridiculous-Logical-Language-with-John-Conway-23320 Lecture from John Conway: "Fractran: A Ridiculous Logical Language"]
+*[http://scienceblogs.com/goodmath/2006/10/27/prime-number-pathology-fractra/ "Prime Number Pathology: Fractran"]
+* {{MathWorld |urlname=FRACTRAN |title=FRACTRAN}}
+*[http://brainwagon.org/?p=2207 ''Prime Number Pathology'']
+*[http://www.esolangs.org/wiki/Fractran FRACTRAN] - (Esolang wiki)
+*[https://web.archive.org/web/20130125232746/http://www.dev.gd/20130121-fun-with-john-conways-fractran.html Ruby implementation and example programs]
+*[https://projecteuler.net/problem=308 Project Euler Problem 308]
+*[http://malisper.me/2016/06/11/building-fizzbuzz-fractran-bottom/ "Building Fizzbuzz in Fractran from the Bottom Up"]
+*[https://web.archive.org/web/20180104084828/http://clomont.com/a-universal-fractran-interpreter-in-fractran/ Chris Lomont, "A Universal FRACTRAN Interpreter in FRACTRAN"]
+
+[[Category:Models of computation]]
+[[Category:Esoteric programming languages]]
+[[Category:Recreational mathematics]]
+{{Esoteric programming languages}}

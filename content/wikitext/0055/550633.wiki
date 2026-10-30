@@ -1,0 +1,191 @@
+<!-- wikipedia: en
+     page: 550633
+     title: Spline interpolation
+     revision: 1325889537
+     timestamp: 2025-12-05T20:15:05Z
+     history: https://en.wikipedia.org/w/index.php?curid=550633&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1325889537 -->
+{{short description|Mathematical method}}
+{{broader|Spline (mathematics)}}
+{{more footnotes|date=July 2021}}
+In the [[mathematics|mathematical]] field of [[numerical analysis]], '''spline interpolation''' is a form of [[interpolation]] where the interpolant is a special type of [[piecewise]] [[polynomial]] called a [[spline (mathematics)|spline]]. That is, instead of fitting a single, high-degree polynomial to all of the values at once, spline interpolation fits low-degree polynomials to small subsets of the values, for example, fitting nine cubic polynomials between each of the pairs of ten points,{{clarify|reason=How do you fit cubic polynomials through the first and last pairs, respectively? What are the constraints for each polynomial?|date=November 2025}} instead of fitting a single degree-nine polynomial to all of them. Spline interpolation is often preferred over [[polynomial interpolation]] because the [[interpolation error]] can be made small even when using low-degree polynomials for the spline.<ref>{{cite journal |last1=Hall |first1=Charles A. |last2=Meyer |first2=Weston W. |title=Optimal Error Bounds for Cubic Spline Interpolation |journal=Journal of Approximation Theory |date=1976 |volume=16 |issue=2 |pages=105–122 |doi=10.1016/0021-9045(76)90040-X |doi-access=free}}</ref> Spline interpolation also avoids the problem of [[Runge's phenomenon]], in which oscillation can occur between points when interpolating using high-degree polynomials.
+
+==Introduction==
+[[Image:Cubic spline.svg|thumb|right|Interpolation with cubic splines between eight points. Hand-drawn technical drawings for shipbuilding are a historical example of spline interpolation; drawings were constructed using flexible rulers that were bent to follow pre-defined points.]]
+Originally, ''[[Flat spline|spline]]'' was a term for elastic rulers that were bent to pass through a number of predefined points, or ''knots''. These were used to make [[technical drawing]]s for [[shipbuilding]] and construction by hand, as illustrated in the figure.
+
+We wish to model similar kinds of curves using a set of mathematical equations. Assume we have a sequence of <math>n + 1</math> knots, <math>(x_0, y_0)</math> through <math>(x_n, y_n)</math>. There will be a cubic polynomial <math>q_i(x)=y</math> between each successive pair of knots <math>(x_{i-1}, y_{i-1})</math> and <math>(x_i, y_i)</math> connecting to both of them, where <math>i = 1, 2, \dots, n</math>. So there will be <math>n</math> polynomials, with the first polynomial starting at <math>(x_0, y_0)</math>, and the last polynomial ending at <math>(x_n, y_n)</math>.
+
+The [[curvature]] of any curve <math>y = y(x)</math> is defined as
+
+:<math>\kappa = \frac{y''}{(1 + y'^2)^{3/2}},</math>
+
+where <math>y'</math> and <math>y''</math> are the first and second derivatives of <math>y(x)</math> with respect to <math>x</math>.
+To make the spline take a shape that minimizes the bending (under the constraint of passing through all knots), we will define both <math>y'</math> and <math>y''</math> to be continuous everywhere, including at the knots. Each successive polynomial must have equal values (which are equal to the y-value of the corresponding datapoint), derivatives, and second derivatives at their joining knots, which is to say that
+
+:<math>\begin{cases}
+ q_i(x_i) = q_{i+1}(x_i) = y_i \\
+ q'_i(x_i) = q'_{i+1}(x_i) \\
+ q''_i(x_i) = q''_{i+1}(x_i)
+\end{cases}
+\qquad
+1 \le i \le n - 1.</math>
+
+This can only be achieved if polynomials of degree 3 (cubic polynomials) or higher are used. The classical approach is to use polynomials of exactly degree 3 — [[cubic spline]]s.
+
+In addition to the three conditions above, a ''natural cubic spline'' has the condition that <math>q''_1(x_0) = q''_n(x_n) = 0</math>.
+
+In addition to the three main conditions above, a ''clamped cubic spline'' has the conditions that <math>q'_1(x_0) = f'(x_0)</math> and <math>q'_n(x_n) = f'(x_n)</math> where <math>f'(x)</math> is the derivative of the interpolated function.
+
+In addition to the three main conditions above, a ''not-a-knot spline'' has the conditions that <math>q'''_1(x_1) = q'''_2(x_1)</math> and <math>q'''_{n-1}(x_{n-1}) = q'''_{n}(x_{n-1})</math>.<ref>{{Cite book |last=Burden |first=Richard |title=Numerical Analysis |last2=Faires |first2=Douglas |publisher=Cengage Learning |year=2015 |isbn=9781305253667 |edition=10th |pages=142–157}}</ref>
+
+==Algorithm to find the interpolating cubic spline==
+We wish to find each polynomial <math>q_i(x)</math> given the points <math>(x_0, y_0)</math> through <math>(x_n, y_n)</math>. To do this, we will consider just a single piece of the curve, <math>q(x)</math>, which will interpolate from <math>(x_1, y_1)</math> to <math>(x_2, y_2)</math>. This piece will have slopes <math>k_1</math> and <math>k_2</math> at its endpoints. Or, more precisely,
+
+:<math>q(x_1)  = y_1,</math>
+:<math>q(x_2)  = y_2,</math>
+:<math>q'(x_1) = k_1,</math>
+:<math>q'(x_2) = k_2.</math>
+
+The full equation <math>q(x)</math> can be written in the symmetrical form
+{{NumBlk|:|<math>q(x) = \big(1 - t(x)\big)\,y_1 + t(x)\,y_2 + t(x)\big(1 - t(x)\big)\Big(\big(1 - t(x)\big)\,a + t(x)\,b\Big),</math>|{{EquationRef|1}}}}
+where
+{{NumBlk|:|<math>t(x) = \frac{x - x_1}{x_2 - x_1},</math>|{{EquationRef|2}}}}
+{{NumBlk|:|<math>a = k_1 (x_2 - x_1) - (y_2 - y_1),</math>|{{EquationRef|3}}}}
+{{NumBlk|:|<math>b = -k_2 (x_2 - x_1) + (y_2 - y_1).</math>|{{EquationRef|4}}}}
+
+But what are <math>k_1</math> and <math>k_2</math>? To derive these critical values, we must consider that
+
+:<math>q' = \frac{dq}{dx} = \frac{dq}{dt} \frac{dt}{dx} = \frac{dq}{dt} \frac{1}{x_2 - x_1}.</math>
+It then follows that
+{{NumBlk|:|<math>q' = \frac{y_2 - y_1}{x_2 - x_1} + (1 - 2t) \frac {a(1 - t) + bt}{x_2 - x_1} + t(1 - t) \frac{b - a}{x_2 - x_1},</math>|{{EquationRef|5}}}}
+{{NumBlk|:|<math>q'' = 2 \frac{b - 2a + (a - b)3t}{{(x_2 - x_1)}^2}.</math>|{{EquationRef|6}}}}
+
+Setting {{math|''t'' {{=}} ''0''}} and {{math|''t'' {{=}} ''1''}} respectively in equations ({{EquationNote|5}}) and ({{EquationNote|6}}), one gets from ({{EquationNote|2}}) that indeed first derivatives {{math|''q′''(''x''<sub>1</sub>) {{=}} ''k''<sub>1</sub>}} and {{math|''q′''(''x''<sub>2</sub>) {{=}} ''k''<sub>2</sub>}}, and also second derivatives
+
+{{NumBlk|:|<math>q''(x_1) = 2 \frac{b - 2a}{{(x_2 - x_1)}^2},</math>|{{EquationRef|7}}}}
+{{NumBlk|:|<math>q''(x_2) = 2 \frac{a - 2b}{{(x_2 - x_1)}^2}.</math>|{{EquationRef|8}}}}
+
+If now {{math|(''x<sub>i</sub>'', ''y<sub>i</sub>''), ''i'' {{=}} 0, 1, ..., ''n''}} are {{math|''n'' + 1}} points, and
+
+{{NumBlk|:|<math>q_i = (1 - t)\,y_{i-1} + t\,y_i + t(1 - t)\big((1 - t)\,a_i + t\,b_i\big),</math>|{{EquationRef|9}}}}
+
+where ''i'' = 1, 2, ..., ''n'', and <math>t = \tfrac{x - x_{i-1}}{x_i - x_{i-1}}</math> are ''n'' third-degree polynomials interpolating {{mvar|y}} in the interval {{math|''x''<sub>''i''−1</sub> ≤ ''x'' ≤ ''x<sub>i</sub>''}} for ''i'' = 1, ..., ''n'' such that {{math|''q′<sub>i</sub>'' (''x<sub>i</sub>'') {{=}} ''q′''<sub>''i''+1</sub>(''x<sub>i</sub>'')}} for ''i'' = 1, ..., ''n''&nbsp;−&nbsp;1, then the ''n'' polynomials together define a [[differentiable function]] in the interval {{math|''x''<sub>0</sub> ≤ ''x'' ≤ ''x<sub>n</sub>''}}, and
+
+{{NumBlk|:|<math>a_i = k_{i-1}(x_i - x_{i-1}) - (y_i - y_{i-1}),</math>|{{EquationRef|10}}}}
+{{NumBlk|:|<math>b_i = -k_i(x_i - x_{i-1}) + (y_i - y_{i-1})</math>|{{EquationRef|11}}}}
+for ''i'' = 1, ..., ''n'', where
+{{NumBlk|:|<math>k_0 = q_1'(x_0),</math>|{{EquationRef|12}}}}
+{{NumBlk|:|<math>k_i = q_i'(x_i) = q_{i+1}'(x_i), \qquad i = 1, \dots, n - 1,</math>|{{EquationRef|13}}}}
+{{NumBlk|:|<math>k_n = q_n'(x_n).</math>|{{EquationRef|14}}}}
+
+If the sequence {{math|''k''<sub>0</sub>, ''k''<sub>1</sub>, ..., ''k<sub>n</sub>''}} is such that, in addition, {{math|''q′′<sub>i</sub>''(''x<sub>i</sub>'') {{=}} ''q′′''<sub>''i''+1</sub>(''x<sub>i</sub>'')}} holds for ''i'' = 1, ..., ''n''&nbsp;−&nbsp;1, then the resulting function will even have a continuous second derivative.
+
+From ({{EquationNote|7}}), ({{EquationNote|8}}), ({{EquationNote|10}}) and ({{EquationNote|11}}) follows that this is the case if and only if
+
+{{NumBlk|:|<math>\frac{k_{i-1}}{x_i - x_{i-1}} + \left(\frac{1}{x_i - x_{i-1}} + \frac{1}{{x_{i+1} - x_i}}\right) 2k_i + \frac{k_{i+1}}{{x_{i+1} - x_i}} = 3 \left(\frac{y_i - y_{i-1}}{{(x_i - x_{i-1})}^2} + \frac{y_{i+1} - y_i}{{(x_{i+1} - x_i)}^2}\right)</math>|{{EquationRef|15}}}}
+
+for ''i'' = 1, ..., ''n''&nbsp;−&nbsp;1. The relations ({{EquationNote|15}}) are {{math|''n'' − 1}} linear equations for the {{math|''n'' + 1}} values {{math|''k''<sub>0</sub>, ''k''<sub>1</sub>, ..., ''k<sub>n</sub>''}}.
+
+For the elastic rulers being the model for the spline interpolation, one has that to the left of the left-most "knot" and to the right of the right-most "knot" the ruler can move freely and will therefore take the form of a straight line with {{math|''q′′'' {{=}} 0}}. As {{mvar|q′′}} should be a [[continuous function]] of {{mvar|x}}, "natural splines" in addition to the {{math|''n'' − 1}} linear equations ({{EquationNote|15}}) should have
+:<math>q''_1(x_0) = 2 \frac {3(y_1 - y_0) - (k_1 + 2k_0)(x_1 - x_0)}{{(x_1 - x_0)}^2} = 0,</math>
+:<math>q''_n(x_n) = -2 \frac {3(y_n - y_{n-1}) - (2k_n + k_{n-1})(x_n - x_{n-1})}{{(x_n - x_{n-1})}^2} = 0,</math>
+i.e. that
+{{NumBlk|:|<math>\frac{2}{x_1 - x_0} k_0 + \frac{1}{x_1 - x_0} k_1 = 3 \frac{y_1 - y_0}{(x_1 - x_0)^2},</math>|{{EquationRef|16}}}}
+{{NumBlk|:|<math>\frac{1}{x_n - x_{n-1}}k_{n-1} + \frac{2}{x_n - x_{n-1}} k_n = 3 \frac{y_n - y_{n-1}}{(x_n - x_{n-1})^2}.</math>|{{EquationRef|17}}}}
+
+Eventually, ({{EquationNote|15}}) together with ({{EquationNote|16}}) and ({{EquationNote|17}}) constitute {{math|''n'' + 1}} linear equations that uniquely define the {{math|''n'' + 1}} parameters {{math|''k''<sub>0</sub>, ''k''<sub>1</sub>, ..., ''k<sub>n</sub>''}}.
+
+There exist other end conditions, "clamped spline", which specifies the slope at the ends of the spline, and the popular "not-a-knot spline", which requires that the [[third derivative]] is also continuous at the {{math|''x''<sub>1</sub>}} and {{math|''x''<sub>''n''−1</sub>}} points.
+For the "not-a-knot" spline, the additional equations will read:
+
+:<math>q'''_1(x_1) = q'''_2(x_1) \Rightarrow \frac{1}{\Delta x_1^2} k_0 + \left( \frac{1}{\Delta x_1^2} - \frac{1}{\Delta x_2^2} \right) k_1 - \frac{1}{\Delta x_2^2} k_2 = 2 \left( \frac{\Delta y_1}{\Delta x_1^3} - \frac{\Delta y_2}{\Delta x_2^3} \right),</math>
+:<math>q'''_{n-1}(x_{n-1}) = q'''_n(x_{n-1}) \Rightarrow \frac{1}{\Delta x_{n-1}^2} k_{n-2} + \left( \frac{1}{\Delta x_{n-1}^2} - \frac{1}{\Delta x_n^2} \right) k_{n-1} - \frac{1}{\Delta x_n^2} k_n = 2\left( \frac{\Delta y_{n-1} }{\Delta x_{n-1}^3 }- \frac{ \Delta y_n}{ \Delta x_n^3 } \right),</math>
+
+where <math>\Delta x_i = x_i - x_{i-1},\ \Delta y_i = y_i - y_{i-1}</math>.
+
+==Example==
+[[Image:Cubic splines three points.svg|frame|right|Interpolation with cubic "natural" splines between three points]]
+In case of three points the values for <math>k_0, k_1, k_2</math> are found by solving the [[Tridiagonal matrix|tridiagonal linear equation system]]
+:<math>
+\begin{bmatrix}
+ a_{11} & a_{12} & 0       \\
+ a_{21} & a_{22} & a_{23}  \\
+ 0      & a_{32} & a_{33}  \\
+\end{bmatrix}
+\begin{bmatrix}
+ k_0 \\
+ k_1 \\
+ k_2 \\
+\end{bmatrix}
+=
+\begin{bmatrix}
+ b_1 \\
+ b_2 \\
+ b_3 \\
+\end{bmatrix}
+</math>
+with
+:<math>a_{11} = \frac{2}{x_1 - x_0},</math>
+:<math>a_{12} = \frac{1}{x_1 - x_0},</math>
+:<math>a_{21} = \frac{1}{x_1 - x_0},</math>
+:<math>a_{22} = 2 \left(\frac{1}{x_1 - x_0} + \frac{1}{{x_2 - x_1}}\right),</math>
+:<math>a_{23} = \frac{1}{{x_2 - x_1}},</math>
+:<math>a_{32} = \frac{1}{x_2 - x_1},</math>
+:<math>a_{33} = \frac{2}{x_2 - x_1},</math>
+:<math>b_1 = 3 \frac{y_1 - y_0}{(x_1 - x_0)^2},</math>
+:<math>b_2 = 3 \left(\frac{y_1 - y_0}{{(x_1 - x_0)}^2} + \frac{y_2 - y_1}{{(x_2 - x_1)}^2}\right),</math>
+:<math>b_3 = 3 \frac{y_2 - y_1}{(x_2 - x_1)^2}.</math>
+
+For the three points
+:<math>(-1,0.5),\ (0,0),\ (3,3),</math>
+one gets that
+:<math>k_0 = -0.6875,\ k_1 = -0.1250,\ k_2 = 1.5625,</math>
+and from ({{EquationNote|10}}) and ({{EquationNote|11}}) that
+:<math>a_1 =  k_0(x_1 - x_0) - (y_1 - y_0) = -0.1875,</math>
+:<math>b_1 = -k_1(x_1 - x_0) + (y_1 - y_0) = -0.3750,</math>
+:<math>a_2 =  k_1(x_2 - x_1) - (y_2 - y_1) = -3.3750,</math>
+:<math>b_2 = -k_2(x_2 - x_1) + (y_2 - y_1) = -1.6875.</math>
+
+In the figure, the spline function consisting of the two cubic polynomials <math>q_1(x)</math> and <math>q_2(x)</math> given by ({{EquationNote|9}}) is displayed.
+
+==See also==
+*[[Akima spline]]
+*[[Circular interpolation]]
+*[[Cubic Hermite spline]]
+*[[Centripetal Catmull–Rom spline]]
+*[[Discrete spline interpolation]]
+*[[Monotone cubic interpolation]]
+*[[Non-uniform rational B-spline]]
+*[[Multivariate interpolation]]
+*[[Polynomial interpolation]]
+*[[Smoothing spline]]
+*[[Spline wavelet]]
+*[[Thin plate spline]]
+*[[Polyharmonic spline]]
+
+==References==
+{{Reflist}}
+
+==Further reading==
+*{{cite journal |last=Schoenberg |first=Isaac J. |title=Contributions to the Problem of Approximation of Equidistant Data by Analytic Functions:Part A.—On the Problem of Smoothing or Graduation. A First Class of Analytic Approximation Formulae |journal=Quarterly of Applied Mathematics |volume=4 |issue=2 |pages=45–99 |year=1946 |doi=10.1090/qam/15914 |doi-access=free }}
+*{{cite journal |last=Schoenberg |first=Isaac J. |title=Contributions to the Problem of Approximation of Equidistant Data by Analytic Functions:Part B.—On the Problem of Osculatory Interpolation. A Second Class of Analytic Approximation Formulae |journal=Quarterly of Applied Mathematics |volume=4 |issue=2 |pages=112–141 |year=1946 |doi=10.1090/qam/16705 |doi-access=free }}
+
+==External links==
+*[http://tools.timodenk.com/?p=cubic-spline-interpolation Cubic Spline Interpolation Online Calculation and Visualization Tool (with JavaScript source code)]
+*{{springer|title=Spline interpolation|id=p/s086820}}
+*[http://jsxgraph.uni-bayreuth.de/wiki/index.php/Cubic_spline_interpolation Dynamic cubic splines with JSXGraph]
+*[https://www.youtube.com/view_play_list?p=DAB608CD1A9A0D55 Lectures on the theory and practice of spline interpolation]
+*[https://web.archive.org/web/20090408054627/http://online.redwoods.cc.ca.us/instruct/darnold/laproj/Fall98/SkyMeg/Proj.PDF Paper which explains step by step how cubic spline interpolation is done, but only for equidistant knots.]
+*[https://s3.amazonaws.com/nrbook.com/book_C210.html Numerical Recipes in C, Go to Chapter 3 Section 3-3]
+*[http://www.cs.tau.ac.il/~turkel/notes/numeng/spline_note.pdf A note on cubic splines]
+*[https://websites.pmc.ucsc.edu/~fnimmo/eart290c_17/NumericalRecipesinF77.pdf Information about spline interpolation (including code in Fortran 77)]
+*[https://github.com/msteinbeck/tinyspline TinySpline:Open source C-library for splines which implements cubic spline interpolation]
+*[https://docs.scipy.org/doc/scipy/tutorial/interpolate.html SciPy Spline Interpolation:a Python package that implements interpolation]
+*[https://github.com/ValexCorp/Cubic-Interpolation Cubic Interpolation:Open source C#-library for cubic spline interpolation]
+
+{{authority control}}
+
+[[Category:Splines (mathematics)]]
+[[Category:Interpolation]]

@@ -1,0 +1,88 @@
+<!-- wikipedia: en
+     page: 64322620
+     title: Gaussian process approximations
+     revision: 1375203020
+     timestamp: 2026-09-16T12:09:58Z
+     history: https://en.wikipedia.org/w/index.php?curid=64322620&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375203020 -->
+{{more footnotes needed|date=November 2024}}
+
+In statistics and machine learning, '''Gaussian process approximation''' is a [[computational science|computational method]] that accelerates inference tasks in the context of a [[Gaussian process]] model, most commonly [[likelihood]] evaluation and prediction. Like approximations of other models, they can often be expressed as additional assumptions imposed on the model, which do not correspond to any actual feature, but which retain its key properties while simplifying calculations. Many of these approximation methods can be expressed in purely [[linear algebra]]ic or [[functional analysis|functional analytic]] terms as matrix or function approximations. Others are purely algorithmic and cannot easily be rephrased as a modification of a statistical model.
+
+== Basic ideas ==
+
+In [[statistical modeling]], it is often convenient to assume that <math>y \in \mathcal{Y}</math>, the phenomenon under investigation is a [[Gaussian process]] indexed by <math>X \in \mathcal{X} = \mathcal{X}_1 \times \mathcal{X}_2 \dots \mathcal{X}_d</math> which has mean function <math>\mu: \mathcal{X} \rightarrow \mathcal{Y}</math> and covariance function <math>K: \mathcal{X} \times \mathcal{X} \rightarrow \mathbb{R}</math>. 
+One can also assume that data <math>\mathbf{y} = (y_1, \dots, y_n)</math> are values of a particular realization of this process for indices <math>\mathbf{X} = X_1, \dots, X_n</math>.
+
+Consequently, the joint distribution of the data can be expressed as
+
+:<math>
+\mathbf{y} \sim \mathcal{N}(\mathbf{\mu}, \mathbf{\Sigma})</math>,
+
+where <math>\mathbf{\Sigma} = \left[ K(X_i, X_j) \right]_{i,j=1}^n</math> and <math>\mathbf{\mu} = \left(\mu(X_1), \mu(X_2), \dots, \mu(X_d)\right)^{\top}</math>, i.e. respectively a matrix with the [[covariance function]] values and a vector with the mean function values at corresponding (pairs of) indices.
+The negative log-likelihood of the data then takes the form
+
+:<math>
+-\log\ell(\mathbf{y}) = \frac{d}{2\pi} + \frac{1}{2}\log\det(\mathbf{\Sigma}) + \left(\mathbf{y}-\mathbf{\mu}\right)^\top\mathbf{\Sigma}^{-1}\left(\mathbf{y}-\mathbf{\mu}\right)</math>
+
+Similarly, the best predictor of <math>\mathbf{y}^*</math>, the values of <math>y</math> for indices <math>\mathbf{X}^* = \left(X_1^*, X_2^*, \dots, X_d^*\right)</math>, given data <math>\mathbf{y}</math> has the form
+
+:<math>
+\mathbf{\mu}^*_\mathbf{y} = \mathbb{E}\left[\mathbf{y}^*|\mathbf{y}\right] = \mathbf{\mu}^* - \mathbf{\Sigma}_{\mathbf{y}^*\mathbf{y}} \mathbf{\Sigma}^{-1}\left(\mathbf{y} - \mathbf{\mu}\right)</math>
+
+In the context of Gaussian models, especially in [[geostatistics]], prediction using the best predictor, i.e. mean conditional on the data, is also known as [[kriging]].
+
+The most computationally expensive component of the best predictor formula is [[invertible matrix|inverting]] the [[covariance matrix]] <math>\mathbf{\Sigma}</math>, which has cubic [[computational complexity|complexity]] <math>\mathcal{O}(n^3)</math>. Similarly, evaluating likelihood involves both calculating <math>\mathbf{\Sigma}^{-1}</math> and the [[determinant]] <math>\det(\mathbf{\Sigma})</math> which has the same cubic complexity.
+
+Gaussian process approximations can often be expressed in terms of assumptions on <math>y</math> under which <math>\log\ell(\mathbf{y})</math> and <math>\mathbf{\mu}^*_\mathbf{y}</math> can be calculated with much lower complexity. Since these assumptions are generally not believed to reflect reality, the likelihood and the best predictor obtained in this way are not exact, but they are meant to be close to their original values.
+
+== Model-based methods ==
+This class of approximations is expressed through a set of assumptions which are imposed on the original process and which, typically, imply some special structure of the covariance matrix. Although most of these methods were developed independently, most of them can be expressed as special cases of the sparse general [[Vecchia approximation]].
+
+=== Sparse covariance methods ===
+
+These methods approximate the true model in a way the covariance matrix is sparse. Typically, each method proposes its own algorithm that takes the full advantage of the sparsity pattern in the covariance matrix. Two prominent members of this class of approaches are covariance tapering and domain partitioning. The first method generally requires a metric <math>d</math> over <math>\mathcal{X}</math> and assumes that for <math>X, \tilde{X} \in \mathcal{X}</math> we have <math>Cov(y(X), y(\tilde{X}))\neq 0</math> only if <math>d(X, \tilde{X})<r</math> for some radius <math>r</math>. The second method assumes that there exist <math>\mathcal{X}^{(1)}, \dots, \mathcal{X}^{(K)}</math> such that <math>\bigcup_{k=1}^K\mathcal{X}^{(k)}</math>. Then with appropriate distribution of indices among partition elements and ordering of elements of <math>X</math> the covariance matrix is block diagonal.
+
+=== Sparse precision methods ===
+
+This family of methods assumes that the precision matrix <math>\mathbf{\Lambda} = \mathbf{\Sigma}^{-1}</math> is sparse and generally specifies which of its elements are non-zero. This leads to fast inversion because only those elements need to be calculated. Some of the prominent approximations in this category include the approach based on the equivalence between Gaussian processes with Matern covariance function and stochastic PDEs, periodic embedding, and Nearest Neighbour Gaussian processes. The first method applies to the case of <math>d=2</math> and when <math>\mathcal{X}</math> has a defined metric and takes advantage of the fact, that the [[Markov property]] holds which makes <math>\mathbf{\Lambda}</math> very sparse. The second extends the domain and uses Discrete Fourier Transform to decorrelate the data, which results in a diagonal precision matrix. The third one requires a metric on <math>\mathcal{X}</math> and takes advantage of the so-called screening effect assuming that <math>\mathbf{\Lambda}_{i,j} \neq 0</math> only if <math>d(x_i, x_j) < r</math>, for some <math>r>0</math>.
+
+=== Sparse Cholesky factor methods ===
+
+In many practical applications, calculating <math>\mathbf{\Lambda}</math> is replaced with computing first <math>\mathbf{L}</math>, the Cholesky factor of <math>\mathbf{\Sigma}</math>, and second its inverse <math>\mathbf{L}^{-1}</math>. This is known to be more stable than a plain inversion. For this reason, some authors focus on constructing a [[sparse approximation]] of the Cholesky factor of the precision or covariance matrices. One of the most established methods in this class is the [[Vecchia approximation]] and its generalization. These approaches determine the optimal ordering of indices and, consequently, the elements of <math>\mathbf{x}</math> and then assume a dependency structure which minimizes in-fill in the Cholesky factor. Several other methods can be expressed in this framework, the Multi-resolution Approximation (MRA) and Nearest Neighbour Gaussian Process.
+
+=== Low-rank methods ===
+While this approach encompasses many methods, the common assumption underlying them all is the assumption, that <math>y</math>, the Gaussian process of interest, is effectively low-rank. More precisely, it is assumed, that there exists a set of indices <math>\bar{X} = \{\bar{x}_1, \dots, \bar{x}_p\}</math> such that every other set of indices <math>X = \{x_1, \dots, x_n\}</math>
+
+<math>y(X) \sim \mathcal{N}\left(\mathbf{A}_X\bar{\mathbf{\mu}}, \mathbf{A}_X^{\top}\bar{\mathbf{\Sigma}}\mathbf{A}_X + \mathbf{D}\right)</math>
+
+where <math>\mathbf{A}_X</math> is an <math>p \times k</math> matrix, <math>\bar{\mathbf{\mu}} = \mu\left(y\left(\bar{X}\right)\right)</math> and <math>\bar{\mathbf{\Sigma}} = K\left(\bar{X}, \bar{X}\right)</math> and <math>\mathbf{D}</math> is a [[diagonal matrix]]. Depending on the method and application various ways of selecting <math>\bar{X}</math> have been proposed. Typically, <math>p</math> is selected to be much smaller than <math>n</math> which means that the computational cost of inverting <math>\bar{\mathbf{\Sigma}}</math> is manageable (<math>\mathcal{O}(p^3)</math> instead of <math>\mathcal{O}(n^3)</math>).
+
+More generally, on top of selecting <math>\bar{X}</math>, one may also find an <math>n \times p</math> matrix <math>\mathbf{A}</math> and assume that <math>X = \mathbf{A}\mathbf{\eta}</math>, where <math>\mathbf{\eta}</math> are <math>p</math> values of a Gaussian process possibly independent of <math>x</math>. Many machine learning methods fall into this category, such as subset-of-regressors (SoR), [[relevance vector machine]], sparse spectrum Gaussian Process and others and they generally differ in the way they derive <math>\mathbf{A}</math> and <math>\mathbf{\eta}</math>.
+
+=== Full-scale approximations ===
+
+A full-scale approximation combines a low-rank approximation, typically based on inducing points, with an approximation of the residual process. The low-rank component captures global or large-scale dependence, while the residual approximation recovers local and fine-scale dependence that is not adequately represented by the low-rank component. Different variants obtain computational sparsity by applying methods such as covariance tapering to the residual covariance matrix or a [[Vecchia approximation]] to the residual process.<ref>{{cite journal |last1=Sang |first1=Huiyan |last2=Huang |first2=Jianhua Z. |title=A full scale approximation of covariance functions for large spatial data sets |journal=Journal of the Royal Statistical Society: Series B (Statistical Methodology) |year=2012 |volume=74 |issue=1 |pages=111–132 |doi=10.1111/j.1467-9868.2011.01007.x}}</ref><ref>{{cite journal |last1=Gyger |first1=Tim |last2=Furrer |first2=Reinhard |last3=Sigrist |first3=Fabio |title=Vecchia-Inducing-Points Full-Scale Approximations for Gaussian Processes |journal=Journal of Machine Learning Research |year=2026 |volume=27 |issue=115 |pages=1–60 |url=https://www.jmlr.org/papers/v27/25-1549.html}}</ref>
+
+=== Hierarchical methods ===
+
+The general principle of hierarchical approximations consists of a repeated application of some other method, such that each consecutive application refines the quality of the approximation. Even though they can be expressed as a set of statistical assumptions, they are often described in terms of a hierarchical matrix approximation (HODLR) or [[basis function]] expansion (LatticeKrig, MRA, wavelets). The hierarchical matrix approach can often be represented as a repeated application of a [[low-rank approximation]] to successively smaller subsets of the index set <math>X</math>. Basis function expansion relies on using functions with compact support. These features can then be exploited by an algorithm who steps through consecutive layers of the approximation. In the most favourable settings some of these methods can achieve quasi-linear (<math>\mathcal{O}(n\log n)</math>) complexity.
+
+=== Unified framework ===
+
+[[Graphical model|Probabilistic graphical models]] provide a convenient framework for comparing model-based approximations. In this context, value of the process at index <math>x_k \in X</math>  can then be represented by a vertex in a [[directed graph]] and edges correspond to the terms in the factorization of the joint density of <math>y(X)</math>. In general, when no independent relations are assumed, the [[joint probability distribution]] can be represented by an arbitrary directed acyclic graph. Using a particular approximation can then be expressed as a certain way of ordering the vertices and adding or removing specific edges.
+
+== Methods without a statistical model ==
+
+This class of methods does not specify a statistical model or impose assumptions on an existing one. Three major members of this group are the meta-kriging algorithm, the gapfill algorithm and Local Approximate Gaussian Process approach. The first one partitions the set of indices into <math>K</math> components <math>\mathcal{X}^{(1)}, \dots, \mathcal{X}^{(k)}</math>, calculates the conditional distribution for each those components separately and then uses geometric median of the conditional [[Probability density function|PDFs]] to combine them. The second is based on [[quantile regression]] using values of the process which are close to the value one is trying to predict, where distance is measured in terms of a metric on the set of indices. Local Approximate Gaussian Process uses a similar logic but constructs a valid [[stochastic process]] based on these neighboring values.
+
+== References ==
+{{reflist}}
+* {{cite journal|arxiv=1807.01065|last1=Liu|first1=Haitao|last2=Ong|first2=Yew-Soon|last3=Shen|first3=Xiaobo|last4=Cai|first4=Jianfei|title=When Gaussian Process Meets Big Data: A Review of Scalable GPS|journal=IEEE Transactions on Neural Networks and Learning Systems|year=2020|volume=PP|issue=11 |pages=1–19|doi=10.1109/TNNLS.2019.2957109|pmid=31944966}}
+* {{cite journal|last1=Heaton|first1=Matthew J.|last2=Datta|first2=Abhirup and Pavan s/o Leosesuraja|last3=Finley|first3=Andrew O.|last4=Furrer|first4=Reinhard|last5=Guinness|first5=Joseph|last6=Guhaniyogi|first6=Rajarshi|last7=Gerber|first7=Florian|last8=Gramacy|first8=Robert B.|last9=Hammerling|first9=Dorit|author9-link=Dorit Hammerling|last10=Katzfuss|first10=Matthias|last11=Lindgren|first11=Finn|last12=Nychka|first12=Douglas W.|last13=Sun|first13=Furong|last14=Zammit-Mangion|first14=Andrew|title=A Case Study Competition Among Methods for Analyzing Large Spatial Data|journal=Journal of Agricultural, Biological and Environmental Statistics|volume=24|issue=3|year=2018|pages=398–425|issn=1085-7117|doi=10.1007/s13253-018-00348-w|doi-access=free|pmid=31496633 |pmc=6709111}}
+* {{cite journal|last1=Banerjee|first1=Sudipto|title=High-Dimensional Bayesian Geostatistics|journal=Bayesian Analysis|volume=12|issue=2|year=2017|pages=583–614|doi=10.1214/17-BA1056R|pmid=29391920|doi-access=free|pmc=5790125}}
+
+[[Category:Geostatistics]]
+[[Category:Computational science]]
+[[Category:Computational statistics]]

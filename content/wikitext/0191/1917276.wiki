@@ -1,0 +1,165 @@
+<!-- wikipedia: en
+     page: 1917276
+     title: Circular shift
+     revision: 1356598930
+     timestamp: 2026-05-28T19:13:06Z
+     history: https://en.wikipedia.org/w/index.php?curid=1917276&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1356598930 -->
+{{Short description|Mathematical concept and applications in software development}}
+{{Refimprove|date=December 2009}}
+{{multiple image
+ | align = right
+ | total_width = 400
+ | image1 = Example permutation matrix; circular shift, left.svg
+ | width1 = 169 | height1 = 148
+ | image2 = Example permutation matrix; circular shift, right.svg
+ | width2 = 169 | height2 = 148
+ | footer = [[Permutation matrix|Matrices]] of 8-element circular shifts to the left and right
+}}
+[[File:Uppercase basic Latin alphabet forming a circle clockwise.svg|thumb|Enciphering a letter of the latin alphabet with a key of value <math>26k</math>, where <math>k</math> is a relative integer, leads to a circular shift of <math>|k|</math> full turns.]]
+
+In [[combinatorics|combinatorial]] [[mathematics]], a '''circular shift''' is the operation of rearranging the entries in a [[tuple]], either by moving the final entry to the first position, while shifting all other entries to the next position, or by performing the inverse operation. A circular shift is a special kind of [[cyclic permutation]], which in turn is a special kind of [[permutation]]. Formally, a circular shift is a [[permutation]] σ of the ''n'' entries in the tuple such that either 
+:<math>\sigma(i)\equiv (i+1)</math> [[modular arithmetic|modulo]] ''n'', for all entries ''i'' = 1, ..., ''n''
+or
+:<math>\sigma(i)\equiv (i-1)</math> [[modular arithmetic|modulo]] ''n'', for all entries ''i'' = 1, ..., ''n''.
+
+The result of repeatedly applying circular shifts to a given tuple are also called the '''circular shifts''' of the tuple.
+
+For example, repeatedly applying circular shifts to the four-tuple (''a'', ''b'', ''c'', ''d'') successively gives
+* (''d'', ''a'', ''b'', ''c''),
+* (''c'', ''d'', ''a'', ''b''),
+* (''b'', ''c'', ''d'', ''a''),
+* (''a'', ''b'', ''c'', ''d'') (the original four-tuple),
+and then the sequence repeats; this four-tuple therefore has four distinct circular shifts. However, not all ''n''-tuples have ''n'' distinct circular shifts. For instance, the 4-tuple (''a'', ''b'', ''a'', ''b'') only has 2 distinct circular shifts. The number of distinct circular shifts of an ''n''-tuple is <math>\frac{n}{k}</math>, where {{mvar|k}} is a [[divisor]] of {{mvar|n}}, indicating the maximal number of repeats over all subpatterns.
+
+In [[computer programming]], a '''bitwise rotation''', also known as a circular shift, is a bitwise operation that shifts all bits of its operand. Unlike an [[arithmetic shift]], a circular shift does not preserve a number's sign bit or distinguish a [[floating-point number]]'s [[exponent]] from its [[significand]]. Unlike a [[logical shift]], the vacant bit positions are not filled in with zeros but are filled in with the bits that are shifted out of the sequence.
+
+== Implementing circular shifts ==
+<!-- Courtesy note per [[MOS:LINK2SECT]]: [[Bitwise operation]] links here -->
+Circular shifts are used often in [[cryptography]] in order to permute bit sequences. Unfortunately, many programming languages, including [[C (programming language)|C]], do not have operators or standard functions for circular shifting, even though virtually all [[Processor (computing)|processors]] have [[bitwise operation]] instructions for it (e.g. [[Intel x86]] has ROL (Rotate Left) and ROR (Rotate Right)).
+However, some compilers may provide access to the processor instructions by means of [[intrinsic function]]s. In addition, some constructs in standard [[ANSI C]] code may be optimized by a [[compiler]] to the "rotate" [[assembly language]] instruction on [[CPU]]s that have such an instruction. Most C compilers recognize the following idiom, and compile it to a single 32-bit rotate instruction.<ref>
+[https://gcc.gnu.org/ml/gcc-patches/2007-11/msg01112.html GCC: "Optimize common rotate constructs"]
+</ref><ref>
+[http://www.mail-archive.com/llvm-commits@cs.uiuc.edu/msg17216.html "Cleanups in ROTL/ROTR DAG combiner code"] mentions that this code supports the "rotate" instruction in the CellSPU
+</ref>
+
+<syntaxhighlight lang="C">
+/*
+ * Shift operations in C are only defined for shift values which are
+ * not negative and smaller than sizeof(value) * CHAR_BIT.
+ * The mask, used with bitwise-and (&), prevents undefined behaviour
+ * when the shift count is 0 or >= the width of unsigned int.
+ */
+
+#include <stdint.h>  // for uint32_t, to get 32-bit-wide rotates, regardless of the size of int.
+#include <limits.h>  // for CHAR_BIT
+
+uint32_t rotl32 (uint32_t value, unsigned int count) {
+    const unsigned int mask = CHAR_BIT * sizeof(value) - 1;
+    count &= mask;
+    return (value << count) | (value >> (-count & mask));
+}
+
+uint32_t rotr32 (uint32_t value, unsigned int count) {
+    const unsigned int mask = CHAR_BIT * sizeof(value) - 1;
+    count &= mask;
+    return (value >> count) | (value << (-count & mask));
+}
+</syntaxhighlight>
+
+This safe and compiler-friendly implementation was developed by [[John Regehr]],<ref>[http://blog.regehr.org/archives/1063 Safe, Efficient, and Portable Rotate in C/C++]</ref> and further polished by Peter Cordes.<ref>[https://stackoverflow.com/a/776523/224132 Stackoverflow: Best practices for rotates in C/C++]</ref><ref>[https://stackoverflow.com/a/31488147/224132 Near constant time rotate that does not violate the standards]</ref>
+
+A simpler version is often seen when the <code>count</code> is limited to the range of 1 to 31 bits:
+<syntaxhighlight lang="C">
+uint32_t rotl32 (uint32_t value, unsigned int count) {
+    return (value << count) | (value >> (32 - count));
+}
+</syntaxhighlight>
+This version is dangerous because if the <code>count</code> is 0 or 32, it asks for a 32-bit shift, which is [[undefined behaviour]] in the C language standard.  However, it tends to work anyway, because most [[microprocessor]]s implement <code>value >> 32</code> as either a 32-bit shift (producing 0) or a 0-bit shift (producing the original <code>value</code>), and either one produces the correct result in this application.
+
+==Example==
+If the bit sequence {{Mono|0001 0111}} were subjected to a circular shift of one bit position... (see images below)
+{|
+|
+* to the left would yield: {{Mono|0010 1110}}
+[[Image:Rotate left.svg|thumb|left|300px|Left circular shift.]]
+|
+* to the right would yield: {{Mono|1000 1011}}.
+[[Image:Rotate right.svg|thumb|left|300px|Right circular shift.]]
+|}
+If the bit sequence {{Mono|1001 0110}} were subjected to the following operations:
+{| style="float:left;"
+|- 
+| left circular shift by 1 position:
+| {{Mono|0010 1101}} &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;
+|- 
+| left circular shift by 2 positions:
+| {{Mono|0101 1010}}
+|- 
+| left circular shift by 3 positions:
+| {{Mono|1011 0100}}
+|- 
+| left circular shift by 4 positions:
+| {{Mono|0110 1001}}
+|- 
+| left circular shift by 5 positions:
+| {{Mono|1101 0010}}
+|- 
+| left circular shift by 6 positions:
+| {{Mono|1010 0101}}
+|- 
+| left circular shift by 7 positions:
+| {{Mono|0100 1011}}
+|- 
+| left circular shift by 8 positions:
+| {{Mono|1001 0110}}
+|}
+
+{| style="float:left;"
+|- 
+| right circular shift by 1 position:
+| {{Mono|0100 1011}}
+|- 
+| right circular shift by 2 positions:
+| {{Mono|1010 0101}}
+|- 
+| right circular shift by 3 positions:
+| {{Mono|1101 0010}}
+|- 
+| right circular shift by 4 positions:
+| {{Mono|0110 1001}}
+|- 
+| right circular shift by 5 positions:
+| {{Mono|1011 0100}}
+|- 
+| right circular shift by 6 positions:
+| {{Mono|0101 1010}}
+|- 
+| right circular shift by 7 positions:
+| {{Mono|0010 1101}}
+|- 
+| right circular shift by 8 positions:
+| {{Mono|1001 0110}}
+|}
+
+{{clear}}
+
+== Applications ==
+
+[[Cyclic code]]s are a kind of [[block code]] with the property that the circular shift of a codeword will always yield another codeword. This motivates the following general definition: For a [[string (computer science)|string]] ''s'' over an alphabet ''Σ'', let ''shift''(''s'') denote the [[set (mathematics)|set]] of circular shifts of ''s'',
+and for a set ''L'' of strings, let ''shift''(''L'') denote the set of all circular shifts of strings in ''L''. If ''L'' is a cyclic code, then ''shift''(''L'') ⊆ ''L''; this is a necessary condition for ''L'' being a [[cyclic language]]. The operation ''shift''(''L'') has been studied in [[formal language theory]]. For instance, if ''L'' is a [[context-free language]], then ''shift''(''L'') is again context-free.<ref>T. Oshiba, "Closure property of the family of context-free languages under the cyclic shift operation", Transactions of IECE, '''55D''':119–122, 1972.
+</ref><ref>A. N. Maslov, "Cyclic shift operation for languages", Problems of Information Transmission '''9''':333–338, 1973.</ref> Also, if ''L'' is described by a [[regular expression]] of length ''n'', there is a regular expression of length [[Big O notation|O]](''n''<sup>3</sup>) describing ''shift''(''L'').<ref>{{cite journal | zbl=1176.68105 | last1=Gruber | first1=Hermann | last2=Holzer | first2=Markus | title=Language operations with regular expressions of polynomial size | journal=Theoretical Computer Science | volume=410 | number=35 | pages=3281–3289 | year=2009 | doi=10.1016/j.tcs.2009.04.009 | doi-access=free }}.</ref>
+
+==See also==
+*[[Barrel shifter]]
+*[[Circulant]]
+*[[Lyndon word]]
+*[[Necklace (combinatorics)|Necklace]] — an object like a [[tuple]] but for which circular shifts are considered equivalent.
+
+==References==
+{{reflist}}
+
+{{DEFAULTSORT:Circular Shift}}
+[[Category:Elementary mathematics]]
+[[Category:Computer arithmetic]]

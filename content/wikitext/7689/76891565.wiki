@@ -1,0 +1,105 @@
+<!-- wikipedia: en
+     page: 76891565
+     title: Rao–Sandelius shuffle
+     revision: 1375968688
+     timestamp: 2026-09-21T04:43:48Z
+     history: https://en.wikipedia.org/w/index.php?curid=76891565&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375968688 -->
+{{Short description|Divide-and-conquer algorithm for generating a random permutation of a finite set}}
+{{Orphan|date=July 2026}}
+
+The '''Rao–Sandelius shuffle''' is a [[divide-and-conquer algorithm]] for [[shuffling]] a finite [[sequence]]. The algorithm takes a list of all the elements of the sequence, and for each element draws a uniform random value from 0 to k-1. The list is broken up into k subsequences by the random value chosen, which are further shuffled.<ref>{{cite journal |last1=Bacher |first1=Axel |last2=Bodini |first2=Olivier |last3=Hwang |first3=Hsien-Kuei |last4=Tsai |first4=Tsung-Hsi |title=Generating Random Permutations by Coin Tossing: Classical Algorithms, New Analysis, and Modern Implementation |journal=ACM Transactions on Algorithms |date=February 2017 |volume=13 |issue=2 |page=24:4 |doi=10.1145/3009909 |url=https://dl.acm.org/doi/pdf/10.1145/3009909 |access-date=12 May 2024 |language=English|doi-access=free }}</ref>
+
+For an array with <math>n</math> entries, the algorithm consumes <math>O(n \log n)</math> random digits and performs <math>O(n \log n)</math> swaps. This appears worse than the [[Fisher-Yates Shuffle]], which consumes
+<math>O(n \log n)</math> random digits and performs <math>O(n)</math> swaps. However, because of the random access pattern of the Fisher-Yates shuffle, the Rao-Sandelius Shuffle can be faster for large <math>n</math> due to its cache friendliness.<ref name="VarPhilox">{{cite journal |last1=Mitchell |first1=Rory |last2=Stokes |first2=Daniel |last3=Frank |first3=Eibe |last4=Holmes |first4=Geoffrey |title=Bandwidth-Optimal Random Shuffling for GPUs |journal=ACM Transactions on Parallel Computing |date=February 2022 |volume=9 |issue=1 |page=17 |doi=10.1145/3505287 |arxiv=2106.06161 }}</ref>
+
+== Original method using random digit table ==
+
+Rao described an algorithm for shuffling the numbers 1 through n using a table of random decimal digits.<ref>{{cite journal |last1=Rao |first1=C. Radhakrishna |title=Generation of random permutations of given number of elements using random sampling numbers |journal=The Indian Journal of Statistics |date=August 1961 |volume=23 |issue=3 |pages=305–307 |url=https://gwern.net/doc/cs/algorithm/1961-rao.pdf |access-date=12 May 2024}}</ref>
+Sandelius described a procedure for shuffling a deck with n cards using random decimal digits.<ref name="Sandelius">{{cite journal |last1=Sandelius |first1=Martin |title=A Simple Randomization Procedure |journal=Journal of the Royal Statistical Society |date=July 1962 |volume=24 |issue=2 |pages=472–481 |doi=10.1111/j.2517-6161.1962.tb00474.x |language=English}}</ref>
+Sandelius includes the optimization that for a subdeck of length 2, you only need a single random digit. In the original, the order is kept for an odd random digit, and swapped for an even random digit. In either case the algorithm is as follows:
+
+# For each element to be shuffled, select a random digit 0 through 9.
+# Group elements that selected the same random digit into sub-lists.
+# Place the sub-lists in numerical order based on the digit selected.
+# Repeat on any sub-lists of size 2 or greater.
+
+=== Length 2 optimization ===
+Sandelius included the following optimization:<ref name="Sandelius" />
+If the sub-list is of length 2, draw a single random digit. Swap the order if the digit is even,
+and leave it unchanged if the digit is odd.
+
+== Implementation with random bits ==
+
+It is straightforward to adapt a version of this algorithm to a computer using k=2.
+
+# For each element to be shuffled, select a random bit.
+# Place all the elements that selected 0 ahead of all elements that selected 1.
+# Repeat on the 2 sub-lists. This step can be parallelized.
+
+The Size-2 speedup can also be applied in this case. Preserving the order if 1 is chosen, and swapping if 0 is chosen.
+
+Here is pseudocode for an [[In-place algorithm|in-place]] version of the algorithm (for a [[Zero-based numbering|zero-based]] [[Array data structure|array]]):
+
+ '''function''' rs_shuffle(''A'', ''n''):
+   '''if''' ''n'' < 2 '''then''' '''return'''
+   '''if''' ''n'' = 2 '''then''':
+     ''b'' ← uniform random bit
+     '''if''' ''b'' = 0 then
+        exchange ''A''[0] and ''A''[1]
+        '''return'''
+   rs_shuffle_large(''A'', ''n'')
+
+ '''function''' rs_shuffle_large(''A'', ''n''):
+   ''front'' ← 0
+   // Invariant 1: ''front'' is the index of the first
+   // non-shuffled element
+   ''back'' ← ''n'' - 1
+   // Invariant 2: ''back'' is the index of the last
+   // non-shuffled element
+   ''outer:'' '''while''' ''true'':
+     ''b'' ← uniform random bit
+     '''while''' ''b'' ≠ 1
+       ''front'' ← ''front'' + 1
+       '''if''' ''front'' > ''back'' '''then''' '''break''' ''outer''
+     // (*) ''front'' is now the index of an element
+     // that belongs at the back.
+     ''b'' ← uniform random bit
+     '''while''' ''b'' ≠ 0
+       ''back'' ← ''back'' - 1
+       // Different due to (*) above
+       '''if''' ''front'' ≥ ''back'' '''then''' '''break''' ''outer''
+     exchange ''A''[''front''] and ''A''[''back'']
+     // Restore Invariant 1
+     ''front'' ← ''front'' + 1
+     // Restore Invariant 2
+     ''back'' ← ''back'' - 1
+     '''if''' ''front'' > ''back'' '''then''' '''break''' ''outer''
+   // Because the two halves are disjoint, these
+   // two calls could be done in parallel
+   ''rs_shuffle''(''A'', ''front'')
+   ''rs_shuffle''(''A'' + ''front'', ''n'' - ''front'')
+The above uses a variation on the [[Quicksort#Hoare partition scheme|Hoare partition scheme]] to reduce the average number of swaps.
+
+Each algorithm pass is effectively an 
+[[Gilbert–Shannon–Reeds model#Inverse|Inverse-GSR]] 2-shuffle.
+
+== Performance ==
+
+For large (e.g. <math>10^9</math> items) data sets, the RS shuffle outperforms the more common [[Fisher-Yates Shuffle]]. It does this for two reasons:
+
+# It exhibits much better cache locality.
+# It is parallelizable. The Fisher-Yates shuffle is not.
+
+Performance vs Fisher-Yates was measured by the authors of the [[MergeShuffle]] algorithm<ref name="MergeShuffle">{{cite journal |last1=Bacher |first1=Axel |last2=Bodini |first2=Olivier |last3=Hollender |first3=Alexandros |last4=Lumbros |first4=Jérémie |title=MERGESHUFFLE: A Very Fast, Parallel Random Permutation Algorithm |journal=CEUR Workshop Proceedings |date=June 2018 |volume=2113 |pages=43–52 |url=https://ceur-ws.org/Vol-2113/paper3.pdf |access-date=22 Dec 2025}}</ref>
+and by the authors of the [[VarPhilox Shuffle|VarPhilox GPU Shuffle]]<ref name="VarPhilox" />
+
+== References ==
+
+{{reflist}}
+
+[[Category:Divide-and-conquer algorithms]]
+[[Category:Combinatorial algorithms]]
+[[Category:Randomized algorithms]]
+[[Category:2024 in computing]]

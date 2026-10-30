@@ -1,0 +1,134 @@
+<!-- wikipedia: en
+     page: 56891926
+     title: Evidence lower bound
+     revision: 1360656798
+     timestamp: 2026-06-22T20:24:47Z
+     history: https://en.wikipedia.org/w/index.php?curid=56891926&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1360656798 -->
+{{Short description|Lower bound on the log-likelihood of some observed data}}
+{{Bayesian statistics}}
+In [[variational Bayesian methods]], the '''evidence lower bound''' (often abbreviated '''ELBO''', also sometimes called the '''variational lower bound'''<ref name=":0">{{cite arXiv|last1=Kingma|first1=Diederik P.|last2=Welling|first2=Max|date=2014-05-01|title=Auto-Encoding Variational Bayes|class=stat.ML|eprint=1312.6114}}</ref> or '''negative variational free energy''') is a useful lower bound on the log-likelihood of some observed data.
+
+The ELBO is useful because it provides a guarantee on the worst-case for the log-likelihood of some distribution (e.g. <math>p(X)</math>) which models a set of data.  The actual log-likelihood may be higher (indicating an even better fit to the distribution) because the ELBO includes a [[Kullback–Leibler divergence|Kullback-Leibler divergence]] (KL divergence) term which decreases the ELBO due to an internal part of the model being inaccurate despite good fit of the model overall.  Thus improving the ELBO score indicates either improving the likelihood of the model <math>p(X)</math> or the fit of a component internal to the model, or both, and the ELBO score makes a good [[loss function]], e.g., for training a [[deep neural network]] to improve both the model overall and the internal component.  (The internal component is <math>q_\phi(\cdot | x)</math>, defined in detail later in this article.)
+
+== Definition ==
+
+Let <math> X</math> and <math> Z</math> be [[multivariate random variable|random variable]]s, [[Joint distribution|jointly distributed]] with distribution <math>p_\theta</math>. For example, <math>p_\theta( X)</math> is the [[marginal distribution]] of <math> X</math>, and <math>p_\theta( Z \mid  X)</math> is the [[conditional distribution]] of <math> Z</math> given <math> X</math>. Then, for a sample <math>x\sim p_\text{data}</math>, and any distribution <math>
+q_\phi
+</math>, the ELBO is defined as<math display="block">L(\phi, \theta; x) := \mathbb E_{z\sim q_\phi(\cdot | x)} \left[ \ln\frac{p_\theta(x,  z)}{q_\phi(z|x)} \right] . 
+</math>The ELBO can equivalently be written as<ref>{{Cite book |last1=Goodfellow |first1=Ian |title=Deep learning |last2=Bengio |first2=Yoshua |last3=Courville |first3=Aaron |date=2016 |publisher=The MIT press |isbn=978-0-262-03561-3 |series=Adaptive computation and machine learning |location=Cambridge, Mass |chapter=Chapter 19}}</ref>
+
+<math display="block">\begin{align}
+L(\phi, \theta; x) = & \mathbb E_{z\sim q_\phi(\cdot | x)}\left[ \ln{} p_\theta(x, z) \right] + H[ q_\phi(z|x) ] \\
+= & \mathbb \ln{} \,p_\theta(x) - D_{KL}( q_\phi(z|x) || p_\theta(z|x) ) . \\
+\end{align}</math>
+
+In the first line, <math> H[ q_\phi(z|x) ] </math> is the [[Entropy (information theory)|entropy]] of <math> q_\phi</math>, which relates the ELBO to the [[Helmholtz free energy]].<ref>{{Cite journal |last1=Hinton |first1=Geoffrey E |last2=Zemel |first2=Richard |date=1993 |title=Autoencoders, Minimum Description Length and Helmholtz Free Energy |url=https://proceedings.neurips.cc/paper/1993/hash/9e3cfc48eccf81a0d57663e129aef3cb-Abstract.html |journal=Advances in Neural Information Processing Systems |publisher=Morgan-Kaufmann |volume=6}}</ref> In the second line, <math>\ln p_\theta(x)</math> is called the ''evidence'' for <math>x</math>, and <math>D_{KL}( q_\phi(z|x) || p_\theta(z|x) ) </math> is the [[Kullback–Leibler divergence|Kullback-Leibler divergence]] between <math> q_\phi</math> and <math>p_\theta</math>. Since the Kullback-Leibler divergence is non-negative, <math>L(\phi, \theta; x)</math> forms a lower bound on the evidence (''ELBO inequality'')<math display="block">\ln p_\theta(x) \ge \mathbb \mathbb E_{z\sim q_\phi(\cdot|x)}\left[ \ln\frac{p_\theta(x,  z)}{q_\phi(z\vert x)} \right].</math>
+
+== Motivation ==
+
+=== Variational Bayesian inference ===
+{{further|Variational Bayesian methods}}
+Suppose we have an observable random variable <math>X</math>, and we want to find its true distribution <math>p^*</math>. This would allow us to generate data by sampling, and estimate probabilities of future events. In general, it is impossible to find <math>p^*</math> exactly, forcing us to search for a good '''approximation''.'''''
+
+That is, we define a sufficiently large parametric family <math>\{p_\theta\}_{\theta\in\Theta}</math> of distributions, then solve for <math>\min_\theta L(p_\theta, p^*)</math> for some loss function <math>L</math>. One possible way to solve this is by considering small variation from <math>p_\theta</math> to <math>p_{\theta + \delta \theta}</math>, and solve for <math>L(p_\theta, p^*) - L(p_{\theta+\delta \theta}, p^*) =0</math>. This is a problem in the [[calculus of variations]], thus it is called the '''variational method'''.
+
+Since there are not many explicitly parametrized distribution families (all the classical distribution families, such as the normal distribution, the [[Gumbel distribution]], etc, are far too simplistic to model the true distribution), we consider ''implicitly parametrized'' probability distributions:
+
+* First, define a simple distribution <math>p(z)</math> over a latent random variable <math>Z</math>. Usually a normal distribution or a uniform distribution suffices.
+* Next, define a family of complicated functions <math>f_\theta</math> (such as a [[deep neural network]]) parametrized by <math>\theta</math>.
+* Finally, define a way to convert any <math>f_\theta(z)</math> into a distribution (in general simple too, but unrelated to <math>p(z)</math>) over the observable random variable <math>X</math>. For example, let <math>f_\theta(z) = (f_1(z), f_2(z))</math> have two outputs, then we can define the corresponding distribution over <math>X</math> to be the normal distribution <math>\mathcal N(f_1(z), e^{f_2(z)})</math>.
+
+This defines a family of joint distributions <math>p_\theta</math> over <math>(X, Z)</math>. It is very easy to sample <math>(x, z) \sim p_\theta</math>: simply sample <math>z\sim p</math>, then compute <math>f_\theta(z)</math>, and finally sample <math>x \sim p_\theta(\cdot | z)</math> using <math>f_\theta(z)</math>.
+
+In other words, we have a '''generative model''' for both the observable and the latent.
+Now, we consider a distribution <math>p_\theta</math> good, if it is a close approximation of <math>p^*</math>:<math display="block">p_\theta(X) \approx p^*(X)</math>since the distribution on the right side is over <math>X</math> only, the distribution on the left side must marginalize the latent variable <math>Z</math> away.<br />
+In general, it's impossible to perform the integral <math>p_\theta(x) = \int p_\theta(x|z)p(z)dz</math>, forcing us to perform another approximation.
+
+Since <math>p_\theta(x) = \frac{p_\theta(x|z)p(z)}{p_\theta(z|x)}</math> ([[Bayes' rule]]), it suffices to find a good approximation of <math>p_\theta(z|x)</math>. So define another distribution family <math>q_\phi(z|x)</math> and use it to approximate <math>p_\theta(z|x)</math>. This is a '''discriminative model''' for the latent.
+
+The entire situation is summarized in the following table:
+{| class="wikitable"
+|+
+!<math>X</math>: observable
+!<math>X, Z</math>
+!<math>Z</math>: latent
+|-
+|<math>p^*(x)\approx p_\theta(x) \approx \frac{p_\theta(x|z)p(z)}{q_\phi(z|x)}</math> approximable 
+|
+|<math>p(z)</math>, easy
+|-
+|
+|<math>p_\theta(x|z)p(z)</math>, easy
+|
+|-
+|<math>p_\theta(z|x) \approx q_\phi(z|x)</math> approximable
+|
+|<math>p_\theta(x|z)</math>, easy
+|}
+In '''Bayesian''' language, <math>X</math> is the observed evidence, and <math>Z</math> is the latent/unobserved. The distribution <math>p</math> over <math>Z</math> is the ''prior distribution'' over <math>Z</math>, <math>p_\theta(x|z)</math> is the [[likelihood function]], and <math>p_\theta(z|x)</math> is the ''posterior'' ''distribution'' over <math>Z</math>.
+
+Given an observation <math>x</math>, we can ''infer'' what <math>z</math> likely gave rise to <math>x</math> by computing <math>p_\theta(z|x)</math>. The usual Bayesian method is to estimate the integral <math>p_\theta(x) = \int p_\theta(x|z)p(z)dz</math>, then compute by [[Bayes' theorem|Bayes' rule]] <math>p_\theta(z|x) = \frac{p_\theta(x|z)p(z)}{p_\theta(x)}</math>. This is expensive to perform in general, but if we can simply find a good approximation <math>q_\phi(z|x) \approx p_\theta(z|x)</math> for most <math>x, z</math>, then we can infer <math>z</math> from <math>x</math> cheaply. Thus, the search for a good <math>q_\phi</math> is also called '''amortized inference'''.
+
+All in all, we have found a problem of '''variational Bayesian inference'''.
+
+=== Deriving the ELBO ===
+A basic result in variational inference is that minimizing the [[Kullback–Leibler divergence]] (KL-divergence) is equivalent to maximizing the log-likelihood:<math display="block">\mathbb{E}_{x\sim p^*(x)}[\ln p_\theta (x)] = -H(p^*)  - D_{\mathit{KL}}(p^*(x) \| p_\theta(x))</math>where <math>H(p^*) = -\mathbb \mathbb E_{x\sim p^*}[\ln p^*(x)]</math> is the [[Entropy (information theory)|entropy]] of the true distribution. So if we can maximize <math>\mathbb{E}_{x\sim p^*(x)}[\ln p_\theta (x)]</math>, we can minimize <math>D_{\mathit{KL}}(p^*(x) \| p_\theta(x))</math>, and consequently find an accurate approximation <math>p_\theta \approx p^*</math>.
+
+To maximize <math>\mathbb{E}_{x\sim p^*(x)}[\ln p_\theta (x)]</math>, we simply sample many <math>x_i\sim p^*(x)</math>, i.e. use [[importance sampling]]<math display="block">N\max_\theta \mathbb{E}_{x\sim p^*(x)}[\ln p_\theta (x)]\approx \max_\theta \sum_i \ln p_\theta (x_i)</math>where <math>N</math> is the number of samples drawn from the true distribution.  This approximation can be seen as [[overfitting]].{{NoteTag|note=In fact, by [[Jensen's inequality]],
+<math>\mathbb E_{x\sim p^{*}(x)}\left[\max _{\theta }\sum _{i}\ln p_{\theta }(x_{i})\right]\geq \max _{\theta }\mathbb E_{x\sim p^{*}(x)}\left[\sum _{i}\ln p_{\theta }(x_{i})\right]=N\max _{\theta }\mathbb {E} _{x\sim p^{*}(x)}[\ln p_{\theta }(x)]</math>
+The estimator is biased upwards. This can be seen as overfitting: for some finite set of sampled data 
+<math>x_{i}</math>
+, there is usually some 
+<math>\theta</math>
+ that fits them better than the entire 
+<math>p^{*}</math>
+ distribution.|name=in fact}}
+
+In order to maximize <math>\sum_i \ln p_\theta (x_i)</math>, it's necessary to find <math>\ln p_\theta(x)</math>:<math display="block">\ln p_\theta(x) = \ln \int p_\theta(x|z) p(z)dz</math>This usually has no closed form and must be estimated. The usual way to estimate integrals is [[Monte Carlo integration]] with [[importance sampling]]:<math display="block">\int p_\theta(x|z) p(z)dz = \mathbb E_{z\sim q_\phi(\cdot|x)}\left[\frac{p_\theta (x, z)}{q_\phi(z|x)}\right]</math>where <math>q_\phi(z|x)</math> is a [[sampling distribution]] over <math>z</math> that we use to perform the Monte Carlo integration.
+
+So we see that if we sample <math>z\sim q_\phi(\cdot|x)</math>, then <math>\frac{p_\theta (x, z)}{q_\phi(z|x)}</math> is an unbiased estimator of <math>p_\theta(x)</math>. Unfortunately, this does not give us an unbiased estimator of <math>\ln p_\theta(x)</math>, because <math>\ln</math> is nonlinear. Indeed, we have by [[Jensen's inequality]], <math display="block">\ln p_\theta(x)= \ln \mathbb E_{z\sim q_\phi(\cdot|x)}\left[\frac{p_\theta (x, z)}{q_\phi(z|x)}\right] \geq \mathbb E_{z\sim q_\phi(\cdot|x)}\left[\ln\frac{p_\theta (x, z)}{q_\phi(z|x)}\right]</math>In fact, all the obvious estimators of <math>\ln p_\theta(x)</math> are biased downwards, because no matter how many samples of <math>z_i\sim q_\phi(\cdot | x)</math> we take, we have by Jensen's inequality:<math display="block">\mathbb E_{z_i \sim q_\phi(\cdot|x)}\left[
+		  \ln \left(\frac 1N \sum_i  \frac{p_\theta (x, z_i)}{q_\phi(z_i|x)}\right)
+		  \right] \leq \ln \mathbb E_{z_i \sim q_\phi(\cdot|x)}\left[
+		  \frac 1N \sum_i  \frac{p_\theta (x, z_i)}{q_\phi(z_i|x)}
+		  \right] = \ln p_\theta(x) </math>Subtracting the right side, we see that the problem comes down to a biased estimator of zero:<math display="block">\mathbb E_{z_i \sim q_\phi(\cdot|x)}\left[
+		  \ln \left(\frac 1N \sum_i  \frac{p_\theta (z_i|x)}{q_\phi(z_i|x)}\right)
+		  \right] \leq 0</math>At this point, we could branch off towards the development of an importance-weighted autoencoder{{NoteTag|note=By the [[delta method]], we have<math display="block">\mathbb E_{z_i \sim q_\phi(\cdot|x)}\left[
+		  \ln \left(\frac 1N \sum_i  \frac{p_\theta (z_i|x)}{q_\phi(z_i|x)}\right)
+		  \right] \approx -\frac{1}{2N} \mathbb V_{z \sim q_\phi(\cdot|x)}\left[\frac{p_\theta (z|x)}{q_\phi(z|x)}\right] = O(N^{-1})</math>If we continue with this, we would obtain the importance-weighted autoencoder.<ref>{{Cite arXiv |last1=Burda |first1=Yuri |last2=Grosse |first2=Roger |last3=Salakhutdinov |first3=Ruslan |date=2015-09-01 |title=Importance Weighted Autoencoders | class=stat.ML | eprint=1509.00519}}</ref>|name=importance-weighted}}, but we will instead continue with the simplest case with <math>N=1</math>:<math display="block">\ln p_\theta(x)= \ln \mathbb E_{z\sim q_\phi(\cdot|x)}\left[\frac{p_\theta (x, z)}{q_\phi(z|x)}\right] \geq \mathbb E_{z\sim q_\phi(\cdot|x)}\left[\ln\frac{p_\theta (x, z)}{q_\phi(z|x)}\right]</math>The tightness of the inequality has a closed form:<math display="block">\ln p_\theta(x)- \mathbb E_{z\sim q_\phi(\cdot|x)}\left[\ln\frac{p_\theta (x, z)}{q_\phi(z|x)}\right] = D_{\mathit{KL}}(q_\phi(\cdot | x)\| p_\theta(\cdot | x))\geq 0</math>We have thus obtained the ELBO function:<math display="block">L(\phi, \theta; x) := \ln p_\theta(x) - D_{\mathit{KL}}(q_\phi(\cdot | x)\| p_\theta(\cdot | x))</math>
+
+=== Maximizing the ELBO ===
+For fixed <math>x</math>, the optimization <math>\max_{\theta, \phi} L(\phi, \theta; x)</math> simultaneously attempts to maximize <math>\ln p_\theta(x)</math> and minimize <math>D_{\mathit{KL}}(q_\phi(\cdot | x)\| p_\theta(\cdot | x))</math>. If the parametrization for <math>p_\theta</math> and <math>q_\phi</math> are flexible enough, we would obtain some <math>\hat\phi, \hat \theta</math>, such that we have simultaneously
+
+<math display="block">\ln p_{\hat \theta}(x) \approx \max_\theta \ln p_\theta(x); \quad q_{\hat\phi}(\cdot | x)\approx p_{\hat\theta}(\cdot | x)</math>Since<math display="block">\mathbb{E}_{x\sim p^*(x)}[\ln p_\theta (x)] = -H(p^*)  - D_{\mathit{KL}}(p^*(x) \| p_\theta(x))</math>we have<math display="block">\ln p_{\hat \theta}(x) \approx \max_\theta -H(p^*)  - D_{\mathit{KL}}(p^*(x) \| p_\theta(x))</math>and so<math display="block">\hat\theta \approx \arg\min  D_{\mathit{KL}}(p^*(x) \| p_\theta(x))</math>In other words, maximizing the ELBO would simultaneously allow us to obtain an accurate generative model <math>p_{\hat\theta} \approx p^*</math> and an accurate discriminative model <math>q_{\hat\phi}(\cdot | x)\approx p_{\hat\theta}(\cdot | x)</math>.<ref>{{Citation |last1=Neal |first1=Radford M. |chapter=A View of the Em Algorithm that Justifies Incremental, Sparse, and other Variants |date=1998 |chapter-url=http://dx.doi.org/10.1007/978-94-011-5014-9_12 |title=Learning in Graphical Models |pages=355–368 |access-date= |place=Dordrecht |publisher=Springer Netherlands |isbn=978-94-010-6104-9 |last2=Hinton |first2=Geoffrey E.|doi=10.1007/978-94-011-5014-9_12 |s2cid=17947141 |chapter-url-access=subscription }}</ref>
+
+== Main forms ==
+The ELBO has many possible expressions, each with some different emphasis.
+
+:<math display="block">\mathbb{E}_{z\sim q_\phi(\cdot | x)}\left[\ln\frac{p_\theta(x, z)}{q_\phi(z|x)}\right] = \int q_\phi(z|x)\ln\frac{p_\theta(x, z)}{q_\phi(z|x)}dz</math>
+
+The above form shows that if we sample <math>z\sim q_\phi(\cdot | x)</math>, then <math>\ln\frac{p_\theta(x, z)}{q_\phi(z|x)}</math> is an [[unbiased estimator]] of the ELBO.
+
+:<math display="block">\ln\ p_\theta(x) - D_{\mathit{KL}}(q_\phi(\cdot | x) \;\|\; p_\theta(\cdot | x))</math>
+
+The above form shows that the ELBO is a lower bound on the evidence <math>\ln\ p_\theta(x)</math>, and that maximizing the ELBO with respect to <math>\phi</math> is equivalent to minimizing the KL-divergence from  <math>p_\theta(\cdot | x)</math> to <math>q_\phi(\cdot | x)</math>.
+
+:<math display="block">\mathbb{E}_{z\sim q_\phi(\cdot | x)}[\ln\ p_\theta(x|z)] - D_{\mathit{KL}}(q_\phi(\cdot | x) \;\|\; p(\cdot))</math>
+
+where again, <math>\cdot</math> ranges over values of <math>z</math>.  The above form shows that maximizing the ELBO attempts to concentrate <math>q_\phi(\cdot | x)</math> on those <math>z</math> that achieve high <math>\ln\ p_\theta (x|z)</math> (in other words, high-likelihood explanations of the observed <math>x</math>) but also to keep <math>q_\phi(\cdot | x)</math> close to the prior <math>p(\cdot)</math>.  In practice, this form provides a lower-variance unbiased estimator of the ELBO in the special case when the approximate posterior and the prior are both parameterized as Gaussians, since then the KL term (though it is itself an expectation) has a [[closed-form expression]], so only the first expectation term needs to be estimated by sampling <math>z</math>.
+
+=== Data-processing inequality ===
+Suppose we take <math>N</math> independent samples from <math>p^*</math>, and collect them in the dataset <math>D = \{x_1, ..., x_N\}</math>, then we have [[Empirical measure|empirical distribution]] <math>q_D(x) = \frac 1N \sum_i \delta_{x_i}</math>.
+
+Fitting <math>p_\theta(x)</math> to <math>q_D(x)</math> can be done, as usual, by maximizing the loglikelihood <math>\ln\ p_\theta(D)</math>:<math display="block">D_{\mathit{KL}}(q_D(x) \|  p_\theta(x)) = -\frac 1N \sum_i \ln\ p_\theta(x_i) - H(q_D)=  -\frac 1N \ln\ p_\theta(D) - H(q_D) </math>Now, by the ELBO inequality, we can bound <math>\ln\ p_\theta(D)</math>, and thus<math display="block">D_{\mathit{KL}}(q_D(x) \|  p_\theta(x)) \leq -\frac 1N  L(\phi, \theta; D) - H(q_D)</math>The right-hand-side simplifies to a KL-divergence, and so we get:<math display="block">D_{\mathit{KL}}(q_D(x) \|  p_\theta(x)) \leq -\frac 1N \sum_i L(\phi, \theta; x_i) - H(q_D)=  D_{\mathit{KL}}(q_{D, \phi}(x, z); p_\theta(x, z))</math>This result can be interpreted as a special case of the [[data processing inequality]].
+
+In this interpretation, maximizing <math>L(\phi, \theta; D)= \sum_i L(\phi, \theta; x_i)</math> is minimizing <math>D_{\mathit{KL}}(q_{D, \phi}(x, z); p_\theta(x, z))</math>, which upper-bounds the real quantity of interest <math>D_{\mathit{KL}}(q_{D}(x); p_\theta(x))</math> via the data-processing inequality. That is, we append a latent space to the observable space, paying the price of a weaker inequality for the sake of more computationally efficient minimization of the KL-divergence.<ref>{{Cite journal |last1=Kingma |first1=Diederik P. |last2=Welling |first2=Max |date=2019-11-27 |title=An Introduction to Variational Autoencoders |url=https://www.nowpublishers.com/article/Details/MAL-056 |journal=Foundations and Trends in Machine Learning |language=English |volume=12 |issue=4 |at=Section 2.7 |doi=10.1561/2200000056 |issn=1935-8237|arxiv=1906.02691 |s2cid=174802445 }}</ref>
+
+==References==
+<references />
+
+== Notes ==
+{{reflist|group=note}}
+
+[[Category:Theory of probability distributions]]

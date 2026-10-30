@@ -1,0 +1,570 @@
+<!-- wikipedia: en
+     page: 2701329
+     title: Salsa20
+     revision: 1373727427
+     timestamp: 2026-09-07T16:19:55Z
+     history: https://en.wikipedia.org/w/index.php?curid=2701329&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373727427 -->
+{{Short description|Stream ciphers}}
+{{Infobox encryption method
+|name           = Salsa20
+|image          = [[File:Salsa round function.svg|250px]]
+|caption        = The Salsa quarter-round function. Four parallel copies make a round.
+|designers      = [[Daniel J. Bernstein]]
+|publish date   = 2007 (designed 2005)<ref name="sn-20071225"/>
+|series         = 
+|derived from   =[[Snuffle]] 
+|derived to     = ChaCha
+|related to     = Rumba20
+|certification  = [[eSTREAM]] portfolio
+|key size       = 128 or 256 bits
+|security claim = 
+|state size     = 512 bits
+|structure      = ARX
+|rounds         = 20
+|speed          = 3.91 [[cycles per byte|cpb]] on an Intel Core 2 Duo<ref>{{cite web
+ | url=https://cr.yp.to/snuffle.html#speed
+ | title=Salsa 20 speed; Salsa20 software
+ | author=Daniel J. Bernstein
+ | date=2013-05-16}}</ref>
+|cryptanalysis  = 2008 cryptanalysis breaks 8 out of 20 rounds to recover the 256-bit secret key in 2<sup>251</sup> operations, using 2<sup>31</sup> keystream pairs.<ref name="latin">{{cite web
+ | title=New Features of Latin Dances
+|website=International Association for Cryptologic Research
+ |author=Jean-Philippe Aumasson |author2=Simon Fischer |author3=Shahram Khazaei |author4=Willi Meier |author5=Christian Rechberger
+ | url=https://eprint.iacr.org/2007/472.pdf
+ | date=2008-03-14}}</ref>
+}}
+
+'''Salsa20''' (formerly known as '''Snuffle 2005'''<ref>{{Cite web |last=Bernstein |first=Daniel J. |date=2005-04-27 |title=Salsa20 design |url=https://cr.yp.to/snuffle/design.pdf |access-date=2026-02-27}}</ref>) and the closely related '''ChaCha''' are [[stream cipher]]s developed by [[Daniel J. Bernstein]]. Salsa20, the original cipher, was designed in 2005, then later submitted to the [[eSTREAM]] European Union cryptographic validation process by Bernstein. ChaCha is a modification of Salsa20 published in 2008. It uses a new round function that increases diffusion and increases performance on some architectures.<ref name=ChaCha>{{Citation
+| title=ChaCha, a variant of Salsa20
+| date=28 January 2008
+| url=https://cr.yp.to/chacha/chacha-20080128.pdf
+| first=Daniel
+| last=Bernstein
+| author-link=Daniel J. Bernstein
+| access-date=2018-06-03}}</ref>
+
+Both ciphers are built on a [[pseudorandom function]] based on [[block cipher#Operations|add–rotate–XOR]] (ARX) operations — 32-bit addition, bitwise addition (XOR) and [[bit rotation|rotation]] operations. The core function maps a [[256-bit]] [[key size|key]], a 64-bit [[cryptographic nonce|nonce]], and a 64-bit counter to a 512-bit block of the key stream (a Salsa version with a 128-bit key also exists). This gives Salsa20 and ChaCha the unusual advantage that the user can efficiently seek to any position in the key stream in constant time. Salsa20 offers speeds of around 4–14 [[cycles per byte]] in software on modern [[x86]] processors,<ref>{{cite web
+| url=https://cr.yp.to/snuffle.html
+| title=Snuffle 2005: the Salsa20 encryption function
+| author=Daniel J. Bernstein
+| date=2013-05-16}}</ref> and reasonable hardware performance. It is not patented, and Bernstein has written several [[public domain]] implementations optimized for common architectures.<ref>{{cite web
+| url=https://cr.yp.to/salsa20/speed.html
+| title=Salsa20: Software speed
+| date=2007-05-11}}</ref>
+
+== Structure ==
+Internally, the cipher uses bitwise addition ⊕ ([[exclusive OR]]), 32-bit addition [[modular arithmetic|mod]] 2<sup>32</sup> ⊞, and constant-distance rotation operations <<< on an internal state of sixteen 32-bit words. Using only [[block cipher#ARX (add–rotate–XOR)|add-rotate-xor operations]] avoids the possibility of [[timing attack]]s in software implementations. The internal state is made of sixteen 32-bit words arranged as a 4×4 matrix.
+
+{| class="wikitable" style="text-align: right"
+|-
+|  0 ||  1 ||  2 ||  3
+|-
+|  4 ||  5 ||  6 ||  7
+|-
+|  8 ||  9 || 10 || 11
+|-
+| 12 || 13 || 14 || 15
+|}
+
+The initial state is made up of eight words of key ({{colorbox|#0099ff}}), two words of stream position ({{colorbox|#ff7474}}), two words of nonce (essentially additional stream position bits) ({{colorbox|#93db83}}), and four fixed words ({{colorbox|#ececec}}):
+
+{| class="wikitable"
+|+ Initial state of Salsa20
+|-
+| {{n/a|"expa"}}
+|style="background:#0099ff"| Key
+|style="background:#0099ff"| Key
+|style="background:#0099ff"| Key
+|-
+|style="background:#0099ff"| Key
+| {{n/a|"nd 3"}}
+|style="background:#93db83"| Nonce
+|style="background:#93db83"| Nonce
+|-
+|style="background:#ff7474"| {{abbr|Pos.|Position}}
+|style="background:#ff7474"| {{abbr|Pos.|Position}}
+| {{n/a|"2-by"}}
+|style="background:#0099ff"| Key
+|-
+|style="background:#0099ff"| Key
+|style="background:#0099ff"| Key
+|style="background:#0099ff"| Key
+| {{n/a|"te k"}}
+|}
+
+The constant words spell "expand 32-byte k" in ASCII (i.e. the 4 words are "expa", "nd 3", "2-by", and "te k") as a [[nothing-up-my-sleeve number]]. The core operation in Salsa20 is the quarter-round <code>QR(a, b, c, d)</code> that takes a four-word input and produces a four-word output:
+
+ b ^= (a + d) <<<  7;
+ c ^= (b + a) <<<  9;
+ d ^= (c + b) <<< 13;
+ a ^= (d + c) <<< 18;
+
+Odd-numbered rounds apply <code>QR(a, b, c, d)</code> to each of the four columns in the 4×4 matrix, and even-numbered rounds apply it to each of the four rows. Two consecutive rounds (column-round and row-round) together are called a double-round:
+
+ // Odd round
+ QR( 0,  4,  8, 12) // column 1
+ QR( 5,  9, 13,  1) // column 2
+ QR(10, 14,  2,  6) // column 3
+ QR(15,  3,  7, 11) // column 4
+ // Even round
+ QR( 0,  1,  2,  3) // row 1
+ QR( 5,  6,  7,  4) // row 2
+ QR(10, 11,  8,  9) // row 3
+ QR(15, 12, 13, 14) // row 4
+
+An implementation in C/C++ appears below.
+
+<syntaxhighlight lang="c">
+#include <stdint.h>
+#define ROTL(a,b) (((a) << (b)) | ((a) >> (32 - (b))))
+#define QR(a, b, c, d)(  \
+	b ^= ROTL(a + d, 7), \
+	c ^= ROTL(b + a, 9), \
+	d ^= ROTL(c + b,13), \
+	a ^= ROTL(d + c,18))
+#define ROUNDS 20
+
+void salsa20_block(uint32_t out[16], uint32_t const in[16])
+{
+	int i;
+	uint32_t x[16];
+
+	for (i = 0; i < 16; ++i)
+		x[i] = in[i];
+	// 10 loops × 2 rounds/loop = 20 rounds
+	for (i = 0; i < ROUNDS; i += 2) {
+		// Odd round
+		QR(x[ 0], x[ 4], x[ 8], x[12]); // column 1
+		QR(x[ 5], x[ 9], x[13], x[ 1]); // column 2
+		QR(x[10], x[14], x[ 2], x[ 6]); // column 3
+		QR(x[15], x[ 3], x[ 7], x[11]); // column 4
+		// Even round
+		QR(x[ 0], x[ 1], x[ 2], x[ 3]); // row 1
+		QR(x[ 5], x[ 6], x[ 7], x[ 4]); // row 2
+		QR(x[10], x[11], x[ 8], x[ 9]); // row 3
+		QR(x[15], x[12], x[13], x[14]); // row 4
+	}
+	for (i = 0; i < 16; ++i)
+		out[i] = x[i] + in[i];
+}
+</syntaxhighlight>
+
+In the last line, the mixed array is added, word by word, to the original array to obtain its 64-byte key stream block. This is important because the mixing rounds on their own are ''invertible''. In other words, applying the reverse operations would produce the original 4×4 matrix, including the key. Adding the mixed array to the original makes it impossible to recover the input. (This same technique is widely used in hash functions from [[MD4]] through [[SHA-2]].)
+
+Salsa20 performs 20 rounds of mixing on its input.<ref name="sn-20071225">{{cite web
+| title=The Salsa20 family of stream ciphers
+|website=cr.yp.to
+| author=Daniel J. Bernstein
+| url=https://cr.yp.to/snuffle/salsafamily-20071225.pdf
+| date=2007-12-24
+}}</ref> However, reduced-round variants Salsa20/8 and Salsa20/12 using 8 and 12 rounds respectively have also been introduced. These variants were introduced to complement the original Salsa20, not to replace it, and perform better<ref group=note>Since the majority of the work consists of performing the repeated rounds, the number of rounds is inversely proportional to the performance. That is, halving the number of rounds roughly doubles the performance. Reduced-round variants are thus appreciably faster.</ref> in the eSTREAM benchmarks than Salsa20, though with a correspondingly lower security margin.
+
+=== XSalsa20 with 192-bit nonce ===
+<!-- The redirect [[XSalsa20]] links here. -->
+In 2008, Bernstein proposed a variant of Salsa20 with 192-bit nonces called XSalsa20.<ref>{{cite web
+| title=Extending the Salsa20 nonce (updated in 2011)
+|website=cr.yp.to
+| author=Daniel J. Bernstein
+| url=https://cr.yp.to/snuffle/xsalsa-20110204.pdf
+| access-date=2022-08-18}}</ref><ref>{{cite web
+| title=Extending the Salsa20 nonce (original version)
+|website=cr.yp.to
+| author=Daniel J. Bernstein
+| url=https://cr.yp.to/snuffle/xsalsa-20081128.pdf
+| access-date=2022-08-18}}</ref><ref>{{cite web
+| url=http://www.ecrypt.eu.org/stream/e2-salsa20.html
+| title=Salsa20/12
+| website=ECRYPT II
+| access-date=2017-08-22
+| archive-date=2018-02-26
+| archive-url=https://web.archive.org/web/20180226011754/http://www.ecrypt.eu.org/stream/e2-salsa20.html
+}}</ref> XSalsa20 is [[provably secure]] if Salsa20 is secure, but is more suitable for applications where longer nonces are desired. XSalsa20 feeds the key and the first 128 bits of the nonce into one block of Salsa20 (without the final addition, which may either be omitted, or subtracted after a standard Salsa20 block), and uses 256 bits of the output as the key for standard Salsa20 using the last 64 bits of the nonce and the stream position. Specifically, the 256 bits of output used are those corresponding to the non-secret portions of the input: indexes 0, 5, 10, 15, 6, 7, 8 and 9.
+
+== eSTREAM selection of Salsa20 ==
+Salsa20/12 has been selected as a Phase 3 design for Profile 1 (software) by the [[eSTREAM]] project, receiving the highest weighted voting score of any Profile 1 algorithm at the end of Phase 2.<ref>{{cite web
+| url=http://www.ecrypt.eu.org/stream/endofphase2.html
+| title=The eSTREAM Project: End of Phase 2
+| publisher=[[eSTREAM]]
+| date=2008-04-29
+| access-date=2007-04-19
+| archive-date=2016-07-09
+| archive-url=https://web.archive.org/web/20160709061231/http://www.ecrypt.eu.org/stream/endofphase2.html
+}}</ref> Salsa20 had previously been selected as a Phase 2 Focus design for Profile 1 (software) and as a Phase 2 design for Profile 2 (hardware) by the eSTREAM project,<ref>{{cite web
+| url=http://www.ecrypt.eu.org/stream/endofphase1.html
+| title=eSTREAM PHASE 3: End of Phase 1
+| author=Hongjun Wu
+| publisher=eSTREAM
+| date=2007-03-30
+| access-date=2006-03-30
+| archive-date=2016-03-03
+| archive-url=https://web.archive.org/web/20160303185106/http://www.ecrypt.eu.org/stream/endofphase1.html
+}}</ref> but was not advanced to Phase 3 for Profile 2 because eSTREAM felt that it was probably not a good candidate for extremely resource-constrained hardware environments.<ref>{{cite web
+| url=http://www.ecrypt.eu.org/stream/PhaseIIreport.pdf
+| title=eSTREAM: Short Report on the End of the Second Phase
+| publisher=eSTREAM
+| date=2007-03-26
+| access-date=2007-04-19
+| archive-date=2016-04-09
+| archive-url=https://web.archive.org/web/20160409120900/http://www.ecrypt.eu.org/stream/PhaseIIreport.pdf
+}}</ref>
+
+The eSTREAM committee recommends the use of Salsa20/12, the 12-round variant, for "combining very good performance with a comfortable margin of security."<ref>{{cite web |title=Salsa20/12, The eSTREAM portfolio page |url=https://www.ecrypt.eu.org/stream/e2-salsa20.html |website=www.ecrypt.eu.org}}</ref>
+
+== Cryptanalysis of Salsa20 ==
+{{As of|2015}}, there are no published attacks on Salsa20/12 or the full Salsa20/20; the best attack known<ref name="latin"/> breaks 8 of the 12 or 20 rounds.
+
+In 2005, Paul Crowley reported an attack on Salsa20/5 with an estimated time complexity of 2<sup>165</sup> and won Bernstein's US$1000 prize for "most interesting Salsa20 cryptanalysis".<ref>{{cite web
+| url=http://www.ciphergoth.org/crypto/salsa20/
+| title=Truncated differential cryptanalysis of five rounds of Salsa20
+| author=Paul Crowley
+| date=2006-02-09
+}}</ref> This attack and all subsequent attacks are based on [[truncated differential cryptanalysis]]. In 2006, Fischer, Meier, Berbain, Biasse, and Robshaw reported an attack on Salsa20/6 with estimated time complexity of 2<sup>177</sup>, and a related-key attack on Salsa20/7 with estimated time complexity of 2<sup>217</sup>.<ref>{{cite conference
+|title=Non-randomness in eSTREAM Candidates Salsa20 and TSC-4
+|author=Simon Fischer |author2=Willi Meier |author3=Côme Berbain |author4=Jean-François Biasse |author5=[[Matt Robshaw|M. J. B. Robshaw]]
+|book-title=Progress in Cryptology - INDOCRYPT 2006: 7th International Conference on Cryptology in India, Kolkata, India, December 11-13, 2006, Proceeding
+| date=2006
+| volume= 4329
+| pages= 2–16
+| doi=10.1007/11941378_2| series= Lecture Notes in Computer Science
+| isbn= 978-3-540-49767-7
+}}</ref>
+
+In 2007, Tsunoo ''et al.'' announced a cryptanalysis of Salsa20 which breaks 8 out of 20 rounds to recover the 256-bit secret key in 2<sup>255</sup> operations, using 2<sup>11.37</sup> keystream pairs.<ref>{{cite web |title=Differential Cryptanalysis of Salsa20/8 |website=ECRYPT |author=Yukiyasu Tsunoo |author2=Teruo Saito |author3=Hiroyasu Kubo |author4=Tomoyasu Suzaki |author5=Hiroki Nakashima |url=http://www.ecrypt.eu.org/stream/papersdir/2007/010.pdf |date=2007-01-02 |access-date=2010-01-11 |archive-date=2021-02-25 |archive-url=https://web.archive.org/web/20210225155509/https://www.ecrypt.eu.org/stream/papersdir/2007/010.pdf }}</ref> However, this attack does not seem to be competitive with the brute force attack.
+
+In 2008, Aumasson, Fischer, Khazaei, Meier, and Rechberger reported a cryptanalytic attack against Salsa20/7 with a time complexity of 2<sup>151</sup>, and they reported an attack against Salsa20/8 with an estimated time complexity of 2<sup>251</sup>. This attack makes use of the new concept of probabilistic neutral key bits for probabilistic detection of a truncated differential. The attack can be adapted to break Salsa20/7 with a 128-bit key.<ref name="latin"/>
+
+In 2012, the attack by Aumasson et al. was improved by Shi et al. against Salsa20/7 (128-bit key) to a time complexity of 2<sup>109</sup> and Salsa20/8 (256-bit key) to 2<sup>250</sup>.<ref>{{cite book
+| chapter=Improved Key Recovery Attacks on Reduced-Round Salsa20 and ChaCha
+|author=Zhenqing Shi |author2=Bin Zhang |author3=Dengguo Feng |author4=Wenling Wu
+| title=Information Security and Cryptology – ICISC 2012
+| date=2012
+| volume=7839
+| pages=337–351
+| isbn=978-3-642-37681-8
+| doi=10.1007/978-3-642-37682-5_24| series=Lecture Notes in Computer Science
+}}</ref>
+
+In 2013, Mouha and Preneel published a proof<ref>{{cite web
+| title=Towards Finding Optimal Differential Characteristics for ARX: Application to Salsa20
+|website=International Association for Cryptologic Research
+| author1=Nicky Mouha
+| author2=Bart Preneel
+| date=2013
+| url=https://eprint.iacr.org/2013/328.pdf
+}}</ref> that 15 rounds of Salsa20 was 128-bit secure against [[differential cryptanalysis]]. (Specifically, it has no differential characteristic with higher probability than 2<sup>−130</sup>, so differential cryptanalysis would be more difficult than 128-bit key exhaustion.)
+
+In 2025, Dey et al. reported a cryptanalytic attack against Salsa20/8 with a time complexity of 2<sup>245.84</sup> and data amounting to 2<sup>99.47</sup>.<ref>{{cite journal |last1=Dey |first1=Sabyasachi |last2=Maitra |first2=Subhamoy |last3=Sarkar |first3=Santanu |last4=Sharma |first4=Nitin Kumar |title=Significantly Improved Cryptanalysis of Salsa20 With Two-Round Criteria |journal=Cryptology ePrint Archive |date=2025 |url=https://eprint.iacr.org/2025/289}}</ref>
+
+== ChaCha variant ==
+{{Infobox encryption method
+|name           = ChaCha
+|image          = [[File:ChaCha Cipher Quarter Round Function.svg|250px]]
+|caption        = The ChaCha quarter-round function. Four parallel copies make a round.
+|designers      = [[Daniel J. Bernstein]]
+|publish date   = 2008
+|series         =
+|derived from   = Salsa20
+|derived to     =
+|related to     = Rumba20
+|certification  =
+|key size       = 128 or 256 bits
+|security claim =
+|state size     = 512 bits
+|structure      = ARX
+|rounds         = 20
+|speed          = 3.95 [[cycles per byte|cpb]] on an Intel Core 2 Duo{{r|ChaCha|p=2}}
+|cryptanalysis  =
+}}
+In 2008, Bernstein published the closely related '''ChaCha''' family of ciphers, which aim to increase the diffusion per round while achieving the same or slightly better performance.<ref name="chachapaper">{{cite web
+| url=https://cr.yp.to/chacha.html
+| title=The ChaCha family of stream ciphers
+| author=Daniel J. Bernstein
+| date=2008-04-25
+}}</ref> The Aumasson et al. paper also attacks ChaCha, achieving one round fewer (for 256-bit ChaCha6 with complexity 2<sup>139</sup>, ChaCha7 with complexity 2<sup>248</sup>, and 128-bit ChaCha6 within 2<sup>107</sup>) but claims that the attack fails to break 128-bit ChaCha7.<ref name="latin"/>
+
+Like Salsa20, ChaCha's initial state includes a 128-bit constant, a 256-bit key, a 64-bit counter, and a 64-bit nonce (in the original version; as described later, a version of ChaCha from {{IETF RFC|7539}} is slightly different), arranged as a 4×4 matrix of 32-bit words.<ref name="chachapaper"/> But ChaCha re-arranges some of the words in the initial state:
+
+{| class="wikitable"
+|+ Initial state of ChaCha
+|-
+| {{n/a|"expa"}}
+| {{n/a|"nd 3"}}
+| {{n/a|"2-by"}}
+| {{n/a|"te k"}}
+|-
+|style="background:#0099ff"| Key
+|style="background:#0099ff"| Key
+|style="background:#0099ff"| Key
+|style="background:#0099ff"| Key
+|-
+|style="background:#0099ff"| Key
+|style="background:#0099ff"| Key
+|style="background:#0099ff"| Key
+|style="background:#0099ff"| Key
+|-
+|style="background:#ff7474"|Counter
+|style="background:#ff7474"|Counter
+|style="background:#93db83"| Nonce
+|style="background:#93db83"| Nonce
+|}
+
+The constant is the same as Salsa20 ("expand 32-byte k"). ChaCha replaces the Salsa20 quarter-round <code>QR(a, b, c, d)</code> with:
+
+ a += b; d ^= a; d <<<= 16;
+ c += d; b ^= c; b <<<= 12;
+ a += b; d ^= a; d <<<=  8;
+ c += d; b ^= c; b <<<=  7;
+
+Notice that this version updates each word twice, while Salsa20's quarter round updates each word only once. In addition, the ChaCha quarter-round diffuses changes more quickly. On average, after changing 1 input bit the Salsa20 quarter-round will change 8 output bits while ChaCha will change 12.5 output bits.{{r|ChaCha}}
+
+The ChaCha quarter round has the same number of adds, xors, and bit rotates as the Salsa20 quarter-round, but the fact that two of the rotates are multiples of 8 allows for a small optimization on some architectures including x86.<ref>{{Citation
+| title=Faster ChaCha implementations for Intel processors
+| url=https://eden.dei.uc.pt/~sneves/chacha/chacha.html
+| first=Samuel
+| last=Neves
+| date=2009-10-07
+| quote=two of these constants are multiples of 8; this allows for a 1 instruction rotation in Core2 and later Intel CPUs using the '''pshufb''' instruction
+| access-date=2016-09-07
+| archive-date=2017-03-28
+| archive-url=https://web.archive.org/web/20170328105321/https://eden.dei.uc.pt/~sneves/chacha/chacha.html
+
+}}</ref> Additionally, the input formatting has been rearranged to support an efficient [[Streaming SIMD Extensions|SSE]] implementation optimization discovered for Salsa20. Rather than alternating rounds down columns and across rows, they are performed down columns and along diagonals.{{r|ChaCha|p=4}} Like Salsa20, ChaCha arranges the sixteen 32-bit words in a 4×4 matrix. If we index the matrix elements from 0 to 15
+
+{| class="wikitable" style="text-align:right;"
+|-
+|  0 ||  1 ||  2 ||  3
+|-
+|  4 ||  5 ||  6 ||  7
+|-
+|  8 ||  9 || 10 || 11
+|-
+| 12 || 13 || 14 || 15
+|}
+
+then a double round in ChaCha is:
+
+ // Odd round
+ QR(0, 4,  8, 12) // column 1
+ QR(1, 5,  9, 13) // column 2
+ QR(2, 6, 10, 14) // column 3
+ QR(3, 7, 11, 15) // column 4
+ // Even round
+ QR(0, 5, 10, 15) // diagonal 1 (main diagonal)
+ QR(1, 6, 11, 12) // diagonal 2
+ QR(2, 7,  8, 13) // diagonal 3
+ QR(3, 4,  9, 14) // diagonal 4
+
+ChaCha20 uses 10 iterations of the double round.<ref>{{cite web
+| url=https://datatracker.ietf.org/doc/rfc7539/
+| title=ChaCha20 and Poly1305 for IETF Protocols: RFC 7539
+|author=Y. Nir |author2=A. Langley
+| date=May 2015
+}}</ref> An implementation in C/C++ appears below.
+<syntaxhighlight lang="c">
+#include <stdint.h>
+#define ROTL(a,b) (((a) << (b)) | ((a) >> (32 - (b))))
+#define QR(a, b, c, d) (             \
+	a += b, d ^= a, d = ROTL(d, 16), \
+	c += d, b ^= c, b = ROTL(b, 12), \
+	a += b, d ^= a, d = ROTL(d,  8), \
+	c += d, b ^= c, b = ROTL(b,  7))
+#define ROUNDS 20
+
+void chacha_block(uint32_t out[16], uint32_t const in[16])
+{
+	int i;
+	uint32_t x[16];
+
+	for (i = 0; i < 16; ++i)
+		x[i] = in[i];
+	// 10 loops × 2 rounds/loop = 20 rounds
+	for (i = 0; i < ROUNDS; i += 2) {
+		// Odd round
+		QR(x[0], x[4], x[ 8], x[12]); // column 1
+		QR(x[1], x[5], x[ 9], x[13]); // column 2
+		QR(x[2], x[6], x[10], x[14]); // column 3
+		QR(x[3], x[7], x[11], x[15]); // column 4
+		// Even round
+		QR(x[0], x[5], x[10], x[15]); // diagonal 1 (main diagonal)
+		QR(x[1], x[6], x[11], x[12]); // diagonal 2
+		QR(x[2], x[7], x[ 8], x[13]); // diagonal 3
+		QR(x[3], x[4], x[ 9], x[14]); // diagonal 4
+	}
+	for (i = 0; i < 16; ++i)
+		out[i] = x[i] + in[i];
+}
+</syntaxhighlight>
+
+ChaCha is the basis of the [[BLAKE (hash function)|BLAKE hash function]], a finalist in the [[NIST hash function competition]], and its faster successors BLAKE2 and BLAKE3. It also defines a variant using sixteen 64-bit words (1024 bits of state), with correspondingly adjusted rotation constants.
+
+=== XChaCha ===
+Although not announced by Bernstein, the security proof of XSalsa20 extends straightforwardly to an analogous ''XChaCha'' cipher. Use the key and the first 128 bits of the nonce (in input words 12 through 15) to form a ChaCha input block, then perform the block operation (omitting the final addition). Output words 0–3 and 12–15 (those words corresponding to non-key words of the input) then form the key used for ordinary ChaCha (with the last 64 bits of nonce and 64 bits of block counter).<ref>{{cite journal |last1=Arciszewski |first1=Scott |title=XChaCha: eXtended-nonce ChaCha and AEAD_XChaCha20_Poly1305 (Expired Internet-Draft)|url=https://tools.ietf.org/html/draft-irtf-cfrg-xchacha-03 |newspaper=Ietf Datatracker |date=10 January 2020 |language=en}}</ref>
+
+===Reduced-round ChaCha===
+Aumasson argues in 2020 that 8 rounds of ChaCha (ChaCha8) probably provides enough resistance to future cryptanalysis for the same [[security level]], yielding a 2.5× speedup.<ref>{{cite conference |last1=Aumasson |first1=Jean-Philippe |title=Too Much Crypto |url=https://eprint.iacr.org/2019/1492.pdf |date=2020 |conference=Real World Crypto Symposium}}</ref> A compromise ChaCha12 (based on the eSTREAM recommendation of a 12-round Salsa)<ref name=rustrandom>{{cite web |title=rand_chacha: consider ChaCha12 (or possibly ChaCha8) over ChaCha20 · Issue #932 · rust-random/rand |url=https://github.com/rust-random/rand/issues/932 |website=GitHub |language=en}}</ref> also sees some use.<ref>{{cite web |title=ChaCha |url=https://www.cryptography-primer.info/algorithms/chacha/ |website=Cryptography Primer}}</ref> The eSTREAM benchmarking suite includes ChaCha8 and ChaCha12.<ref name="chachapaper"/>
+
+=== ChaCha20 adoption ===
+[[Google]] had selected ChaCha20 along with Bernstein's [[Poly1305]] message authentication code in [[SPDY]], which was intended as a replacement for [[Transport Layer Security|TLS]] over [[Transmission Control Protocol|TCP]].<ref>{{Cite web|date=2015-02-23|title=Do the ChaCha: better mobile performance with cryptography|url=https://blog.cloudflare.com/do-the-chacha-better-mobile-performance-with-cryptography/|access-date=2021-07-13|website=The Cloudflare Blog|language=en}}</ref> In the process, they proposed a new [[authenticated encryption]] construction combining both algorithms, which is called [[ChaCha20-Poly1305]]. ChaCha20 and Poly1305 are now used in the [[QUIC]] protocol, which replaces [[SPDY]] and is used by [[HTTP/3]].<ref>{{Cite journal|title=RFC 9001|url=https://datatracker.ietf.org/doc/html/rfc9001|access-date=2021-07-13|website=datatracker.ietf.org|date=May 2021|language=en|last1=Thomson|first1=Martin|last2=Turner|first2=Sean}}</ref><ref>{{Cite journal|title=draft: IETF QUIC HTTP|url=https://datatracker.ietf.org/doc/html/draft-ietf-quic-http|access-date=2021-07-13|website=datatracker.ietf.org|date=2 February 2021|language=en|last1=Bishop|first1=Mike}}</ref>
+
+Shortly after Google's adoption for TLS, both the ChaCha20 and Poly1305 algorithms were also used for a new <code>chacha20-poly1305@openssh.com</code> cipher in [[OpenSSH]].<ref>{{cite web
+| url=http://bxr.su/OpenBSD/usr.bin/ssh/PROTOCOL.chacha20poly1305
+| title=ssh/PROTOCOL.chacha20poly1305
+| first=Damien
+| last=Miller
+| website=Super User's BSD Cross Reference: PROTOCOL.chacha20poly1305
+| date=2016-05-03
+| access-date=2016-09-07
+}}</ref><ref>{{cite web
+| url=https://it.slashdot.org/story/13/12/11/173213/openssh-has-a-new-cipher-chacha20-poly1305-from-dj-bernstein
+| title=OpenSSH Has a New Cipher — Chacha20-poly1305 — from D.J. Bernstein
+| first=Constantine A.
+| last=Murenin
+| editor=Unknown Lamer
+| date=2013-12-11
+| publisher=[[Slashdot]]
+| access-date=2016-09-07
+}}</ref> Subsequently, this made it possible for OpenSSH to avoid any dependency on [[OpenSSL]], via a compile-time option.<ref>{{cite web
+| url=https://it.slashdot.org/story/14/04/30/1822209/openssh-no-longer-has-to-depend-on-openssl
+| title=OpenSSH No Longer Has To Depend On OpenSSL
+| first=Constantine A.
+| last=Murenin
+| editor=Soulskill
+| date=2014-04-30
+| publisher=Slashdot
+| access-date=2016-09-07
+}}</ref>
+
+ChaCha20 is also used for the <code>arc4random</code> random number generator in [[FreeBSD]],<ref>{{cite web
+| url=https://svnweb.freebsd.org/base?view=revision&revision=r317015
+| title=Revision 317015
+| date=2017-04-16
+| quote=Replace the RC4 algorithm for generating in-kernel secure random numbers with Chacha20
+| access-date=2018-03-16
+}}</ref> [[OpenBSD]],<ref>{{cite web
+| url=http://bxr.su/OpenBSD/lib/libc/crypt/arc4random.c
+| title=libc/crypt/arc4random.c
+| website=Super User's BSD Cross Reference: arc4random.c
+| editor=guenther (Philip Guenther)
+| date=2015-09-13
+| quote=ChaCha based random number generator for OpenBSD.
+| access-date=2016-09-07
+}}</ref> and [[NetBSD]]<ref>{{cite web
+| url=http://bxr.su/NetBSD/lib/libc/gen/arc4random.c
+| title=libc/gen/arc4random.c
+| website=Super User's BSD Cross Reference: arc4random.c
+| editor=riastradh (Taylor Campbell)
+| date=2016-03-25
+| quote=Legacy arc4random(3) API from OpenBSD reimplemented using the ChaCha20 PRF, with per-thread state.
+| access-date=2016-09-07
+}}</ref> operating systems, instead of the broken [[RC4]], and in [[DragonFly BSD]]<ref>{{cite web
+| url=http://bxr.su/DragonFly/sys/kern/subr_csprng.c
+| title=kern/subr_csprng.c
+| website=Super User's BSD Cross Reference: subr_csprng.c
+| date=2015-11-04
+| quote=<code>chacha_encrypt_bytes</code>
+| access-date=2016-09-07
+}}</ref> for the [[CSPRNG]] subroutine of the kernel.<ref>{{cite web
+| url=https://ianix.com/pub/chacha-deployment.html
+| title=ChaCha Usage & Deployment
+| date=2016-09-07
+| access-date=2016-09-07
+}}</ref><ref>{{cite web
+| url=https://netbsd.gw.com/cgi-bin/man-cgi?arc4random++NetBSD-current
+| title=arc4random(3)
+| work=NetBSD Manual Pages
+| date=2014-11-16
+| access-date=2016-09-07
+| archive-date=2020-07-06
+| archive-url=https://web.archive.org/web/20200706210612/https://netbsd.gw.com/cgi-bin/man-cgi?arc4random++NetBSD-current
+}}</ref> Starting from version 4.8, the Linux kernel uses the ChaCha20 algorithm to generate data for the nonblocking [[/dev/random|/dev/urandom]] device.<ref>{{cite web
+| url=https://lwn.net/Articles/686033/
+| title=Replacing /dev/urandom
+| website=Linux Weekly News
+| author=Corbet, Jonathan
+| access-date=2016-09-20
+}}</ref><ref>{{cite web
+| url=https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=818e607b57c94ade9824dad63a96c2ea6b21baf3
+| title=Merge tag 'random_for_linus' of git.kernel.org/pub/scm/linux/kernel/git/tytso/random
+| website=Linux kernel source tree
+| quote=random: replace non-blocking pool with a Chacha20-based CRNG
+| access-date=2016-09-20
+}}</ref><ref>{{cite web
+| url=https://www.phoronix.com/scan.php?page=news_item&px=Linux-4.8-dev-random
+| title=/dev/random Seeing Improvements For Linux 4.8
+| date=2016-07-25
+| author=Michael Larabel
+| author-link=Michael Larabel
+| publisher=[[Phoronix]]
+| access-date=2016-10-03
+}}</ref> ChaCha8 is used for the default PRNG in [[Golang]].<ref>{{cite web |last1=Cox |first1=Russ |last2=Valsorda |first2=Filippo |title=Secure Randomness in Go 1.22 - The Go Programming Language |url=https://go.dev/blog/chacha8rand |website=go.dev |language=en}}</ref> Rust's CSPRNG uses ChaCha12.<ref name=rustrandom/>
+
+ChaCha20 usually offers better performance than the more prevalent [[Advanced Encryption Standard]] (AES) algorithm on systems where the CPU does not feature AES acceleration (such as the [[AES instruction set]] for x86 processors). As a result, ChaCha20 is sometimes preferred over AES in certain use cases involving [[mobile device]]s, which mostly use [[ARM architecture|ARM]]-based CPUs.<ref>{{cite web |url=https://crypto.stackexchange.com/questions/34455/whats-the-appeal-of-using-chacha20-instead-of-aes |title=What's the appeal of using ChaCha20 instead of AES? |website=Cryptography [[Stack Exchange]] |date=2016-04-12}}</ref><ref>{{Cite web|title=AES-NI SSL Performance Study @ Calomel.org|url=https://calomel.org/aesni_ssl_performance.html}}</ref> Specialized hardware accelerators for ChaCha20 are also less complex compared to AES accelerators.<ref>{{cite book |last1=Pfau |first1=Johannes |last2=Reuter |first2=Maximilian |last3=Harbaum |first3=Tanja |last4=Hofmann |first4=Klaus |last5=Becker |first5=Jurgen |title=2019 32nd IEEE International System-on-Chip Conference (SOCC) |chapter=A Hardware Perspective on the ChaCha Ciphers: Scalable Chacha8/12/20 Implementations Ranging from 476 Slices to Bitrates of 175 Gbit/s |date=September 2019 |pages=294–299 |doi=10.1109/SOCC46988.2019.1570548289|isbn=978-1-7281-3483-3 |url=https://publikationen.bibliothek.kit.edu/1000123496 }}</ref>
+
+ChaCha20-Poly1305 (IETF version; see below) is the exclusive algorithm used by the [[WireGuard]] VPN system, as of protocol version 1.<ref>{{cite web |title=Protocol and Cryptography |url=https://www.wireguard.com/protocol/ |website=WireGuard |publisher=Jason A. Donenfeld |access-date=4 July 2018}}</ref>
+
+[[Adiantum (cipher)]] uses XChaCha12.<ref>{{cite web |last1=Edge |first1=Jake |title=Adiantum: encryption for the low end |url=https://lwn.net/Articles/776721/ |website=LWN.net |date=16 January 2019}}</ref>
+
+=== Internet standards ===
+An implementation reference for ChaCha20 has been published in {{IETF RFC|7539}}. The [[IETF]]'s implementation modified Bernstein's published algorithm by changing the 64-bit nonce and 64-bit block counter to a 96-bit nonce and 32-bit block counter.<ref name=r7539>{{cite web
+| url=https://www.ietf.org/proceedings/89/slides/slides-89-cfrg-1.pdf
+| title=ChaCha20 and Poly1305 for IETF protocols
+| quote=Changes from regular ChaCha. The nonce: block sequence number split was changed from 64:64 to 96:32 [...] The ChaCha20 state is initialized as follows:
+| access-date=2017-08-07
+}}</ref> The name was not changed when the algorithm was modified, as it is cryptographically insignificant (both form what a cryptographer would recognize as a 128-bit nonce), but the interface change could be a source of confusion for developers. Because of the reduced block counter, the maximum message length that can be safely encrypted by the IETF's variant is 2<sup>32</sup> blocks of 64 bytes (256&nbsp;[[Gibibyte|GiB]]). For applications where this is not enough, such as file or disk encryption, {{IETF RFC|7539}} proposes using the original algorithm with 64-bit nonce.
+
+{| class="wikitable"
+|+ Initial state of ChaCha20 (RFC 7539)<ref name=r7539/>
+|-
+| {{n/a|"expa"}}
+| {{n/a|"nd 3"}}
+| {{n/a|"2-by"}}
+| {{n/a|"te k"}}
+|-
+|style="background:#0099ff"| Key
+|style="background:#0099ff"| Key
+|style="background:#0099ff"| Key
+|style="background:#0099ff"| Key
+|-
+|style="background:#0099ff"| Key
+|style="background:#0099ff"| Key
+|style="background:#0099ff"| Key
+|style="background:#0099ff"| Key
+|-
+|style="background:#ff7474"|Counter
+|style="background:#93db83"| Nonce
+|style="background:#93db83"| Nonce
+|style="background:#93db83"| Nonce
+|}
+
+Use of ChaCha20 in [[Internet Key Exchange|IKE]] and [[IPsec]] has been standardized in {{IETF RFC|7634}}. Standardization of its use in TLS is published in {{IETF RFC|7905}}.
+
+In 2018, RFC 7539 was obsoleted by {{IETF RFC|8439}}. RFC 8439 merges in some errata and adds additional security considerations.<ref>Header of RFC 7539.</ref>
+
+== See also ==
+* [[Speck (cipher)|Speck]] — an add-rotate-xor cipher developed by the NSA
+* [[ChaCha20-Poly1305]] — an AEAD scheme combining ChaCha20 with the Poly1305 MAC
+
+== Notes ==
+{{Reflist|group=note}}
+
+== References ==
+{{Reflist|30em}}
+
+== External links ==
+* [https://cr.yp.to/snuffle.html Snuffle 2005: the Salsa20 encryption function]
+* [https://cr.yp.to/snuffle/spec.pdf Salsa20 specification] ([[PDF]])
+* [https://cr.yp.to/snuffle/812.pdf Salsa20/8 and Salsa20/12] (PDF)
+* [https://www.ecrypt.eu.org/stream/salsa20pf.html The eSTREAM Project: Salsa20] {{Webarchive|url=https://web.archive.org/web/20220818053950/https://www.ecrypt.eu.org/stream/salsa20pf.html |date=2022-08-18 }}
+* [https://cr.yp.to/chacha.html The ChaCha family of stream ciphers]
+* [https://ianix.com/pub/salsa20-deployment.html Salsa20 Usage & Deployment]
+* [https://www.cryptool.org/assets/ctp/documents/BA_Gill.pdf Implementation and Didactical Visualization of the ChaCha Cipher Family in CrypTool 2]
+* [https://infsec.de/chacha20-in-excel-eng/ ChaCha20 Demo in Excel] Example implementation and demonstration in Excel (without macros) by Tim Wambach
+
+{{Cryptography navbox|stream}}
+
+[[Category:Cryptographically secure pseudorandom number generators]]
+[[Category:Internet Standards]]
+[[Category:Stream ciphers]]
+[[Category:Public-domain software with source code]]

@@ -1,0 +1,113 @@
+<!-- wikipedia: en
+     page: 400296
+     title: Additive Schwarz method
+     revision: 1371449386
+     timestamp: 2026-08-26T14:21:22Z
+     history: https://en.wikipedia.org/w/index.php?curid=400296&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1371449386 -->
+{{No footnotes|date=December 2024}}
+In [[mathematics]], the '''additive Schwarz method''', named after [[Hermann Schwarz]], solves a [[boundary value problem]] for a [[partial differential equation]] approximately by splitting it into boundary value problems on smaller domains and adding the results.
+
+== Overview ==
+
+Partial differential equations (PDEs) are used in all [[science]]s to [[mathematical modelling|model]] phenomena. For the purpose of exposition, we give an example physical problem and the accompanying boundary value problem (BVP). Even if the reader is unfamiliar with the notation, the purpose is merely to show what a BVP looks like when written down.
+
+{{block indent | em = 1.5 | text =
+'''(Model problem)''' The heat distribution in a square metal plate such that the left edge is kept at 1 degree, and the other edges are kept at 0 degree, after letting it sit for a long period of time satisfies the following boundary value problem:
+
+<math display="block">\begin{align}
+&f_{xx}(x,y) + f_{yy}(x,y) = 0 \\
+&f(0,y) = 1; \; f(x,0) = f(x,1) = f(1,y) = 0
+\end{align}</math>
+
+where {{math|''f''}} is the unknown [[function (mathematics)|function]], {{math|''f''<sub>''xx''</sub>}} and {{math|''f''<sub>''yy''</sub>}} denote the second [[partial derivative]]s with respect to {{math|''x''}} and {{math|''y''}}, respectively.
+}}
+
+Here, the [[domain (mathematical analysis)|domain]] is the square {{math|[0,1] × [0,1]}}.
+
+This particular problem can be solved exactly on paper, so there is no need for a computer. However, this is an exceptional case, and most BVPs cannot be solved exactly. The only possibility is to use a computer to find an approximate solution.
+
+=== Solving on a computer ===
+
+A typical way of doing this is to ''sample'' {{math|''f''}} at regular [[interval (mathematics)|intervals]] in the [[Square (geometry)|square]] {{math|[0,1] × [0,1]}}. For instance, we could take 8 samples in the {{math|''x''}} direction at {{math|1=''x'' = 0.1, 0.2, ..., 0.8, 0.9}}, and 8 samples in the {{math|''y''}} direction at similar [[coordinate system|coordinates]]. We would then have 64 samples of the square, at places like (0.2,0.8) and (0.6,0.6). The goal of the [[computer program]] would be to calculate the value of {{math|''f''}} at those 64 points, which seems easier than finding an abstract function of the square.
+
+There are some difficulties, for instance it is not possible to calculate {{math|''f''<sub>''xx''</sub>(0.5,0.5)}} knowing ''f'' at only 64 points in the square. To overcome this, one uses some sort of numerical approximation of the derivatives, see for instance the [[finite element method]] or [[finite difference]]s. We ignore these difficulties and concentrate on another aspect of the problem.
+
+=== Solving linear problems ===
+
+Whichever method we choose to solve this problem, we will need to solve a large [[linear system of equations]]. The reader may recall linear systems of equations from high school, they look like this:
+{{NumBlk||<math display="block">2a + 5b = 12</math>|{{EquationRef|<nowiki>*</nowiki>}}}}
+<math display="block">6a - 3b = -3</math>
+
+This is a system of 2 equations in 2 unknowns ({{mvar|a}} and {{mvar|b}}). If we solve the BVP above in the manner suggested, we will need to solve a system of 64 equations in 64 unknowns. This is not a hard problem for modern computers, but if we use a larger number of samples, even modern computers cannot solve the BVP very efficiently.
+
+=== Domain decomposition ===
+
+Which brings us to domain decomposition methods. If we split the domain {{math|[0,1] × [0,1]}} into two ''subdomains'' {{math|[0,0.5] × [0,1]}} and {{math|[0.5,1] × [0,1]}}, each has only half of the sample points. So we can try to solve a version of our model problem on each subdomain, but this time each subdomain has only 32 sample points. Finally, given the solutions on each subdomain, we can attempt to reconcile them to obtain a solution of the original problem on {{math|[0,1] × [0,1]}}.
+
+==== Size of the problems ====
+
+In terms of the linear systems, we're trying to split the system of 64 equations in 64 unknowns into two systems of 32 equations in 32 unknowns. This would be a clear gain, for the following reason. Looking back at system {{EquationNote|*|(*)}}, we see that there are 6 important pieces of information. They are the coefficients of ''a'' and ''b'' (2,5 on the first line and 6,−3 on the second line), and the right hand side (which we write as 12,−3). On the other hand, if we take two "systems" of 1 equation in 1 unknown, it might look like this:
+
+<math display="block">2a = 12</math>
+<math display="block">-3b = -3</math>
+
+We see that this system has only 4 important pieces of information. This means that a computer program will have an easier time solving two 1×1 systems than solving a single 2×2 system, because the pair of 1×1 systems are simpler than the single 2×2 system. While the 64×64 and 32×32 systems are too large to illustrate here, we could say by analogy that the 64×64 system has 4160 pieces of information, while the 32×32 systems each have 1056, or roughly a quarter of the 64×64 system.
+
+==== Domain decomposition algorithm ====
+
+Unfortunately, for technical reasons it is usually not possible to split our grid of 64 points (a 64×64 system of linear equations) into two grids of 32 points (two 32×32 systems of linear equations) and obtain an answer to the 64×64 system. Instead, the following algorithm is what actually happens:
+
+# Begin with an approximate solution of the 64×64 system.
+# From the 64×64 system, create two 32×32 systems to improve the approximate solution.
+# Solve the two 32×32 systems.
+# Put the two 32×32 solutions "together" to improve the approximate solution to the 64×64 system.
+# If the solution isn't very good yet, repeat from 2.
+
+There are two ways in which this can be better than solving the base 64×64 system. First, if the number of repetitions of the algorithm is small, solving two 32×32 systems may be more efficient than solving a 64×64 system. Second, the two 32×32 systems need not be solved on the same computer, so this algorithm can be run in ''parallel'' to use the power of multiple computers.
+
+In fact, solving two 32×32 systems instead of a 64×64 system on a single computer (without using parallelism) is unlikely to be efficient. However, if we use more than two subdomains, the picture can change. For instance, we could use four 16×16 problems, and there's a chance that solving these will be better than solving a single 64×64 problem even if the domain decomposition algorithm needs to iterate a few times.
+
+== A technical example ==
+
+Here we assume that the reader is familiar with partial differential equations.
+
+We will be solving the partial differential equation
+
+{{NumBlk||<math display="block">u_{xx} + u_{yy} = f</math>|{{EquationRef|<nowiki>**</nowiki>}}}}
+
+We impose boundedness at infinity.
+
+We decompose the domain {{math|'''R'''<sup>2</sup>}} into two overlapping subdomains {{math|1=H<sub>1</sub> = {{open-closed|−∞, 1}} × '''R'''}} and {{math|1=H<sub>2</sub> = {{closed-open|0, +∞}} × '''R'''}}. In each subdomain, we will be solving a BVP of the form:
+
+<math display="block"> \begin{align}
+u_{xx}^{(j)} + u_{yy}^{(j)} &= f \;\; \text{ in } H_j \\
+u^{(j)}(x_j, y) &= g(y)
+\end{align}</math>
+
+where {{math|1=''x''<sub>1</sub> = 1}} and {{math|1=''x''<sub>2</sub> = 0}} and taking boundedness at infinity as the other boundary condition. We denote the solution {{math|''u''<sup>( ''j'' )</sup>}} of the above problem by {{math|S(''f'',''g'')}}. Note that {{math|S}} is bilinear.
+
+The Schwarz algorithm proceeds as follows:
+
+#Start with approximate solutions {{math|''u''<sup>(1)</sup><sub>0</sub>}} and {{math|''u''<sup>(2)</sup><sub>0</sub>}} of the PDE in subdomains {{math|H<sub>1</sub>}} and {{math|H<sub>2</sub>}} respectively. Initialize {{mvar|k}} to 0.
+#Calculate {{math|1=''u''<sup>(''j'')</sup><sub>''k'' + 1</sub> = S(''f'',''u''<sup>(3 − ''j'')</sup><sub>''k''</sub>(''x''<sub>''j''</sub>))}} with {{math|1=''j'' = 1, 2}}.
+#Increase {{mvar|k}} by one and repeat 2 until sufficient precision is achieved.
+
+==See also==
+*[[Domain decomposition method]]
+*[[Schwarz alternating method]]
+
+== References ==
+
+{{refbegin}}
+* {{cite book | first1 = Barry | last1 = Smith | first2 = Petter | last2 = Bjørstad | first3 = William | last3 = Gropp | title = Domain Decomposition, Parallel Multilevel Methods for Elliptic Partial Differential Equations | publisher = Cambridge University Press | year = 1996 | isbn = 0-521-49589-X }}
+* {{cite book | first1 = Andrea | last1 = Toselli | first2 = Olof B. | last2 = Widlund | title = Domain Decomposition Methods - Algorithms and Theory | series = Springer Series in Computational Mathematics, Vol. 34 | year = 2004 | isbn = 978-3-540-20696-5 }}
+{{refend}}
+
+== External links ==
+* [https://www.ddm.org The official Domain Decomposition Methods page]
+
+{{Numerical PDE}}
+
+[[Category:Domain decomposition methods]]

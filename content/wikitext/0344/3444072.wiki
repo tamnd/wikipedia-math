@@ -1,0 +1,533 @@
+<!-- wikipedia: en
+     page: 3444072
+     title: Push–relabel maximum flow algorithm
+     revision: 1374819458
+     timestamp: 2026-09-14T07:07:34Z
+     history: https://en.wikipedia.org/w/index.php?curid=3444072&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1374819458 -->
+{{Short description|Algorithm in mathematical optimization}}
+{{MOS|article|date=July 2025| [[MOS:FORMULA]] - avoid mixing {{tag|math}} and {{tl|math}} in the same expression}}
+In [[mathematical optimization]], the '''push–relabel algorithm''' (alternatively, '''preflow–push algorithm''') is an algorithm for computing [[maximum flow]]s in a [[flow network]]. The name "push–relabel" comes from the two basic operations used in the algorithm. Throughout its execution, the algorithm maintains a "preflow" and gradually converts it into a maximum flow by moving flow locally between neighboring nodes using ''push'' operations under the guidance of an admissible network maintained by ''relabel'' operations. In comparison, the [[Ford–Fulkerson algorithm]] performs global augmentations that send flow following paths from the source all the way to the sink.<ref name="clrs26"/>
+
+The push–relabel algorithm is considered one of the most efficient maximum flow algorithms. The generic algorithm has a [[strongly polynomial]] {{math|''O''(''V''<sup>&nbsp;2</sup>''E'')}} time complexity, which is asymptotically more efficient than the {{math|''O''(''VE''<sup>&nbsp;2</sup>)}} [[Edmonds–Karp algorithm]].<ref name="goldberg86"/> Specific variants of the algorithms achieve even lower time complexities. The variant based on the highest label node selection rule has {{math|''O''(''V''<sup>&nbsp;2</sup>{{sqrt|''E''}})}} time complexity and is generally regarded as the benchmark for maximum flow algorithms.<ref name="ahuja97"/><ref name="goldberg08"/> Subcubic {{math|''O''(''VE''log(''V''<sup>&nbsp;2</sup>/''E''))}} time complexity can be achieved using [[Link-cut tree|dynamic trees]],<ref name="goldberg86"/> although in practice it is less efficient.{{reference needed|date=December 2024}}
+
+The push–relabel algorithm has been extended to compute [[minimum cost flow]]s.<ref name="goldberg97"/> The idea of distance labels has led to a more efficient augmenting path algorithm, which in turn can be incorporated back into the push–relabel algorithm to create a variant with even higher empirical performance.<ref name="goldberg08"/><ref name="ahuja91"/>
+
+==History==
+
+A preflow is a flow in which the total amount flowing into a vertex may be greater than the total amount flowing out of it, allowing an algorithm to change the flow on a single arc.<ref name="goldberg88"/> This idea was originally conceived by [[Alexander V. Karzanov]] and was published in 1974 in Soviet Mathematical Dokladi 15. This pre-flow algorithm also used a push operation; however, it used distances in the auxiliary network to determine where to push the flow instead of a labeling system.<ref name="goldberg86"/><ref name="goldberg2014"/>
+
+The push-relabel algorithm was designed by [[Andrew V. Goldberg]] and [[Robert Tarjan]]. The algorithm was initially presented in November 1986 in STOC '86: Proceedings of the eighteenth annual ACM symposium on Theory of computing, and then officially in October 1988 as an article in the ''[[Journal of the ACM]]''. Both papers detail a generic form of the algorithm terminating in {{math|''O''(''V''<sup>&nbsp;2</sup>''E'')}} along with a {{math|''O''(''V''<sup>&nbsp;3</sup>)}} sequential implementation, a {{math|''O''(''VE''&nbsp;log(''V''<sup>&nbsp;2</sup>/''E''))}} implementation using dynamic trees, and parallel/distributed implementation.<ref name="goldberg86"/><ref name="goldberg88"/> As explained in,<ref name="amo93"/> Goldberg–Tarjan introduced distance labels by incorporating them into the parallel maximum flow algorithm of Yossi Shiloach and [[Uzi Vishkin]].<ref name="sv82"/>
+
+==Concepts==
+
+===Definitions and notations===
+{{main|Flow network}}
+
+Let:
+*{{math|''G'' {{=}} (''V'', ''E'')}} be a ''network'' with ''capacity function'' {{math|''c'': ''V'' × ''V'' → {{mathbb|R}}<sub>∞</sub>}},
+*{{math|''F'' {{=}} (''G'', ''c'', ''s'', ''t'')}} a ''flow network'', where {{math|''s'' ∈ ''V''}} and {{math|''t'' ∈ ''V''}} (with s ≠ t) are chosen ''source'' and ''sink'' vertices respectively,
+*{{math|''f'' : ''V'' × ''V'' → {{mathbb|R}}}} denote a [[Flow network#Flows|''pre-flow'']] in {{mvar|F}},
+*{{math|''x''<sub>''f''</sub> : ''V'' → {{mathbb|R}}}} denote the ''excess'' function with respect to the flow {{mvar|f}}, defined by {{math|''x''<sub>''f''</sub> (''u'') {{=}} Σ<sub>''v'' ∈ ''V''</sub> ''f'' (''v'', ''u'') − Σ<sub>''v'' ∈ ''V''</sub> ''f'' (''u'', ''v'')}},
+*{{math|''c''<sub>''f''</sub> : ''V'' × ''V'' → {{mathbb|R}}<sub>∞</sub>}} denote the ''residual capacity function'' with respect to the flow {{mvar|f}}, defined by {{math|''c''<sub>''f''</sub>&nbsp;(''e'') {{=}} ''c''(''e'') − ''f''&nbsp;(''e'')}},
+*{{math|''E''<sub>''f''</sub> ⊂ ''E''}} being the edges where {{math|''f'' < ''c''}},
+and
+*{{math|''G''<sub>''f''</sub> (''V'', ''E''<sub>''f''&nbsp;</sub>)}} denote the [[Flow network#Residuals|''residual network'']] of {{mvar|G}} with respect to the flow {{mvar|f}}.
+
+The push–relabel algorithm uses a nonnegative integer valid '''labeling function''' which makes use of ''distance labels'', or ''heights'', on nodes to determine which arcs should be selected for the push operation. This labeling function is denoted by {{math|𝓁 : ''V'' → {{mathbb|N}}}}. This function must satisfy the following conditions in order to be considered valid:
+
+:'''Valid labeling''':
+::{{math|𝓁(''u'') ≤ 𝓁(''v'') + 1}} for all {{math|(''u'', ''v'') ∈ ''E''<sub>''f''</sub>}}
+:'''Source condition''':
+::{{math|𝓁(''s'') {{=}} {{!}}&nbsp;''V''&nbsp;{{!}}}}
+:'''Sink conservation''':
+::{{math|𝓁(''t'') {{=}} 0}}
+
+In the algorithm, the label values of {{mvar|s}} and {{mvar|t}} are fixed. {{math|𝓁(''u'')}} is a lower bound of the unweighted distance from {{mvar|u}} to {{mvar|t}} in {{math|''G''<sub>''f''</sub>}}&nbsp; if {{mvar|t}} is reachable from {{mvar|u}}. If {{mvar|u}} has been disconnected from {{mvar|t}}, then {{math|𝓁(''u'') − {{!}}&nbsp;''V''&nbsp;{{!}}}} is a lower bound of the unweighted distance from {{mvar|u}} to {{mvar|s}}. As a result, if a valid labeling function exists, there are no {{math|''s''-''t''}} paths in {{math|''G''<sub>''f''</sub>}}&nbsp; because no such paths can be longer than {{math|{{!}}&nbsp;''V''&nbsp;{{!}} − 1}}.
+
+An arc {{math|(''u'', ''v'') ∈ ''E''<sub>''f''</sub>}}&nbsp; is called '''admissible''' if {{math|𝓁(''u'') {{=}} 𝓁(''v'') + 1}}. The '''admissible network''' {{math|''G̃''<sub>''f''</sub> (''V'', ''Ẽ''<sub>''f''</sub>&nbsp;)}} is composed of the set of arcs {{math|''e'' ∈ ''E''<sub>''f''</sub>}}&nbsp;  that are admissible. The admissible network is acyclic.
+
+For a fixed flow {{math|''f''}}, a vertex {{math|''v ∉ ''{''s, t''} }} is called '''active''' if it has positive excess with respect to {{math|''f''}}, i.e., {{math|''x''<sub>''f''</sub> (''u'') > 0}}.
+
+===Operations===
+
+====Initialization====
+
+The algorithm starts by creating a residual graph, initializing the preflow values to zero and performing a set of saturating push operations on residual arcs {{math|(''s'', ''v'')}} exiting the source, where {{math|''v'' ∈ ''V'' \ {{(}}''s''{{)}}}}. Similarly, the labels are initialized such that the label at the source is the number of nodes in the graph, {{math|𝓁(''s'') {{=}} {{!}}&nbsp;''V''&nbsp;{{!}}}}, and all other nodes are given a label of zero. Once the initialization is complete the algorithm repeatedly performs either the push or relabel operations against active nodes until no applicable operation can be performed.
+
+====Push====
+The push operation applies on an admissible out-arc {{math|(''u'', ''v'')}} of an active node {{mvar|u}} in {{math|''G''<sub>''f''</sub>}}. It moves {{math|min{{(}}''x''<sub>''f''</sub> (''u''), ''c''<sub>''f''</sub> (''u'',''v''){{)}}}} units of flow from {{mvar|u}} to {{mvar|v}}.
+
+ push(u, v):
+     '''assert''' x<sub>f</sub>[u] > 0 and 𝓁[u] == 𝓁[v] + 1
+     Δ = min(x<sub>f</sub>[u], c[u][v] - f[u][v])
+     f[u][v] += Δ
+     f[v][u] -= Δ
+     x<sub>f</sub>[u] -= Δ
+     x<sub>f</sub>[v] += Δ
+
+A push operation that causes {{math|''f''&nbsp;(''u'', ''v'')}} to reach {{math|''c''(''u'', ''v'')}} is called a '''saturating push''' since it uses up all the available capacity of the residual arc. Otherwise, all of the excess at the node is pushed across the residual arc. This is called an '''unsaturating''' or '''non-saturating push'''.
+
+====Relabel====
+The relabel operation applies on an active node {{mvar|u}} which is neither the source nor the sink without any admissible out-arcs in {{math|''G<sub>f</sub>''}}. It modifies {{math|𝓁(''u'')}} to be the minimum value such that an admissible out-arc is created. Note that this always increases {{math|𝓁(''u'')}} and never creates a steep arc, which is an arc {{math|(''u'', ''v'')}} such that {{math|''c''<sub>''f''</sub>&nbsp;(''u'', ''v'') > 0}}, and {{math|𝓁(''u'') > 𝓁(''v'') + 1}}.
+
+ relabel(u):
+     '''assert''' x<sub>f</sub>[u] > 0 and 𝓁[u] <= 𝓁[v] for all v such that c<sub>f</sub>[u][v] > 0
+     𝓁[u] = 1 + min(𝓁[v] for all v such that c<sub>f</sub>[u][v] > 0)
+
+====Effects of push and relabel====
+After a push or relabel operation, {{math|𝓁}} remains a valid labeling function with respect to {{mvar|f}}.
+
+For a push operation on an admissible arc {{math|(''u'', ''v'')}}, it may add an arc {{math|(''v'', ''u'')}} to {{math|''E<sub>f</sub>''}}, where {{math|𝓁(''v'') {{=}} 𝓁(''u'') − 1 ≤ 𝓁(''u'') + 1}}; it may also remove the arc {{math|(''u'', ''v'')}} from {{math|''E''<sub>''f''</sub>}}, where it effectively removes the constraint {{math|𝓁(''u'') ≤ 𝓁(''v'') + 1}}.
+
+To see that a relabel operation on node {{mvar|u}} preserves the validity of {{math|𝓁(''u'')}}, notice that this is trivially guaranteed by definition for the out-arcs of ''u'' in {{math|''G''<sub>''f''</sub>}}. For the in-arcs of {{mvar|u}} in {{math|''G''<sub>''f''</sub>}}, the increased {{math|𝓁(''u'')}} can only satisfy the constraints less tightly, not violate them.
+
+==The generic push–relabel algorithm==
+
+The generic push–relabel algorithm is used as a proof of concept only and does not contain implementation details on how to select an active node for the push and relabel operations. This generic version of the algorithm will terminate in {{math|''O''(''V''<sup>2</sup>''E'')}}.
+
+Since {{math|𝓁(''s'') {{=}} {{!}}&nbsp;''V''&nbsp;{{!}}}}, {{math|𝓁(''t'') {{=}} 0}}, and there are no paths longer than {{math|{{!}}&nbsp;''V''&nbsp;{{!}} − 1}} in {{math|''G''<sub>''f''</sub>}}, in order for {{math|𝓁(''s'')}} to satisfy the valid labeling condition {{mvar|s}} must be disconnected from {{mvar|t}}. At initialisation, the algorithm fulfills this requirement by creating a pre-flow {{mvar|f}} that saturates all out-arcs of {{mvar|s}}, after which {{math|𝓁(''v'') {{=}} 0}} is trivially valid for all {{math|''v'' ∈ ''V'' \ {{(}}''s'', ''t''{{)}}}}. After initialisation, the algorithm repeatedly executes an applicable push or relabel operation until no such operations apply, at which point the pre-flow has been converted into a maximum flow.
+
+ generic-push-relabel(G, c, s, t):
+     create a pre-flow f that saturates all out-arcs of s
+     '''let''' 𝓁[s] = |V|
+     '''let''' 𝓁[v] = 0 for all v ∈ V \ {s}
+     '''while''' there is an applicable push or relabel operation '''do'''
+         execute the operation
+
+===Correctness===
+The algorithm maintains the condition that {{math|𝓁}} is a valid labeling during its execution. This can be proven true by examining the effects of the push and relabel operations on the label function {{math|𝓁}}. The relabel operation increases the label value by the associated minimum plus one which will always satisfy the {{math|𝓁(''u'') ≤ 𝓁(''v'') + 1}} constraint. The push operation can send flow from {{mvar|u}} to {{mvar|v}} if {{math|𝓁(''u'') {{=}} 𝓁(''v'') + 1}}. This may add {{math|(''v'', ''u'')}} to {{math|''G''<sub>''f''</sub>&nbsp;}} and may delete {{math|(''u'', ''v'')}} from {{math|''G''<sub>''f''</sub>&nbsp;}}. The addition of {{math|(''v'', ''u'')}} to {{math|''G''<sub>''f''</sub>&nbsp;}} will not affect the valid labeling since {{math|𝓁(''v'') {{=}} 𝓁(''u'') − 1}}.  The deletion of {{math|(''u'', ''v'')}} from {{math|''G''<sub>''f''</sub>&nbsp;}} removes the corresponding constraint since the valid labeling property {{math|𝓁(''u'') ≤ 𝓁(''v'') + 1}} only applies to residual arcs in {{math|''G''<sub>''f''</sub>&nbsp;}}.<ref name="goldberg88"/>
+
+If a preflow {{mvar|f}} and a valid labeling {{math|𝓁}} for {{mvar|f}} exists then there is no augmenting path from {{mvar|s}} to {{mvar|t}} in the residual graph {{math|''G''<sub>''f''</sub>&nbsp;}}. This can be proven by contradiction based on inequalities which arise in the labeling function when supposing that an augmenting path does exist. If the algorithm terminates, then all nodes in {{math|''V'' \ {{(}}''s'', ''t''{{)}}}} are not active. This means all {{math|''v'' ∈ ''V'' \ {{(}}''s'', ''t''{{)}}}} have no excess flow, and with no excess the preflow {{mvar|f}} obeys the flow conservation constraint and can be considered a normal flow. This flow is the maximum flow according to the [[max-flow min-cut theorem]] since there is no augmenting path from {{mvar|s}} to {{mvar|t}}.<ref name="goldberg88"/>
+
+Therefore, the algorithm will return the maximum flow upon termination.
+
+===Time complexity===
+In order to bound the time complexity of the algorithm, we must analyze the number of push and relabel operations which occur within the main loop. The numbers of relabel, saturating push and nonsaturating push operations are analyzed separately.
+
+In the algorithm, the relabel operation can be performed at most {{math|(2{{!}}&nbsp;''V''&nbsp;{{!}} − 1)({{!}}&nbsp;''V''&nbsp;{{!}} − 2) < 2{{!}}&nbsp;''V''&nbsp;{{!}}<sup>2</sup>}} times. This is because the labeling {{math|𝓁(''u'')}} value for any node ''u'' can never decrease, and the maximum label value is at most {{math|2{{!}}&nbsp;''V''&nbsp;{{!}} − 1}} for all nodes. This means the relabel operation could potentially be performed {{math|2{{!}}&nbsp;''V''&nbsp;{{!}} − 1 }} times for all nodes {{math|''V'' \ {{(}}''s'', ''t''{{)}}}} (i.e.  {{math|{{!}}&nbsp;''V''&nbsp;{{!}} − 2}}). This results in a bound of {{math|''O''(''V''<sup>&nbsp;2</sup>)}} for the relabel operation.
+
+Each saturating push on an admissible arc {{math|(''u'', ''v'')}} removes the arc from {{math|''G''<sub>''f''</sub>&nbsp;}}. For the arc to be reinserted into {{math|''G''<sub>''f''</sub>&nbsp;}} for another saturating push, {{mvar|v}} must first be relabeled, followed by a push on the arc {{math|(''v'', ''u'')}}, then {{mvar|u}} must be relabeled. In the process, {{math|𝓁(''u'')}} increases by at least two. Therefore, there are {{math|''O''(''V'')}} saturating pushes on {{math|(''u'', ''v'')}}, and the total number of saturating pushes is at most {{math|2{{!}}&nbsp;''V''&nbsp;{{!}}{{!}}&nbsp;''E''&nbsp;{{!}}}}. This results in a time bound of {{math|''O''(''VE'')}} for the saturating push operations.
+
+Bounding the number of nonsaturating pushes can be achieved via a [[Potential method|potential argument]]. We use the potential function {{math|Φ {{=}} Σ<sub>[''u'' ∈ ''V'' ∧ ''x''<sub>''f''</sub>&nbsp;(''u'') > 0]</sub> 𝓁(''u'')}} (i.e. {{math|Φ}} is the sum of the labels of all active nodes). It is obvious that {{math|Φ}} is {{math|0}} initially and stays nonnegative throughout the execution of the algorithm. Both relabels and saturating pushes can increase {{math|Φ}}. However, the value of {{math|Φ}} must be equal to 0 at termination since there cannot be any remaining active nodes at the end of the algorithm's execution. This means that over the execution of the algorithm, the nonsaturating pushes must make up the difference of the relabel and saturating push operations in order for {{math|Φ}} to terminate with a value of 0.
+The relabel operation can increase {{math|Φ}} by at most {{math|(2{{!}}&nbsp;''V''&nbsp;{{!}} − 1)({{!}}&nbsp;''V''&nbsp;{{!}} − 2)}}. A saturating push on {{math|(''u'', ''v'')}} activates {{mvar|v}} if it was inactive before the push, increasing {{math|Φ}} by at most {{math|2{{!}}&nbsp;''V''&nbsp;{{!}} − 1}}. Hence, the total contribution of all saturating pushes operations to {{math|Φ}} is at most {{math|(2{{!}}&nbsp;''V''&nbsp;{{!}} − 1)(2{{!}}&nbsp;''V''&nbsp;{{!}}{{!}}&nbsp;''E''&nbsp;{{!}})}}. A nonsaturating push on {{math|(''u'', ''v'')}} always deactivates {{mvar|u}}, but it can also activate {{mvar|v}} as in a saturating push. As a result, it decreases {{math|Φ}} by at least {{math|𝓁(''u'') − 𝓁(''v'') {{=}} 1}}. Since relabels and saturating pushes increase {{math|Φ}}, the total number of nonsaturating pushes must make up the difference of {{math|(2{{!}}&nbsp;''V''&nbsp;{{!}} − 1)({{!}}&nbsp;''V''&nbsp;{{!}} − 2) + (2{{!}}&nbsp;''V''&nbsp;{{!}} − 1)(2{{!}}&nbsp;''V''&nbsp;{{!}}{{!}}&nbsp;''E''&nbsp;{{!}}) ≤ 4{{!}}&nbsp;''V''&nbsp;{{!}}<sup>2</sup>{{!}}&nbsp;''E''&nbsp;{{!}}}}. This results in a time bound of {{math|''O''(''V''<sup>&nbsp;2</sup>''E'')}} for the nonsaturating push operations.
+
+In sum, the algorithm executes {{math|''O''(''V''<sup>&nbsp;2</sup>)}} relabels, {{math|''O''(''VE'')}} saturating pushes and {{math|''O''(''V''<sup>&nbsp;2</sup>''E'')}} nonsaturating pushes. Data structures can be designed to pick and execute an applicable operation in {{math|''O''(1)}} time. Therefore, the time complexity of the algorithm is {{math|''O''(''V''<sup>&nbsp;2</sup>''E'')}}.<ref name="clrs26"/><ref name="goldberg88"/>
+
+===Example===
+The following is a sample execution of the generic push-relabel algorithm, as defined above, on the following simple network flow graph diagram.
+
+{{multiple image
+ | align = center
+ | width = 350
+ | image1 = Push Relabel Algoritm Example - Initial Graph.svg
+ | alt1 = Initial flow network graph
+ | caption1 = Initial flow network graph
+ | image2 = Push-Relabel Algorithm Example - Final Network Graph.svg
+ | alt2 = Final maximum flow network graph
+ | caption2 = Final maximum flow network graph
+ }}
+
+{{clear}}
+ 
+In the example, the {{nowrap|''h''}} and {{nowrap|''e''}} values denote the label {{math|𝓁}} and excess {{math|''x''<sub>''f''</sub>&nbsp;}}, respectively, of the node during the execution of the algorithm. Each residual graph in the example only contains the residual arcs with a capacity larger than zero. Each residual graph may contain multiple iterations of the {{nowrap|''perform operation''}} loop.
+ 
+{{clear}}
+
+{| class="wikitable"
+|-
+! Algorithm Operation(s) !! Residual Graph
+|-
+| Initialise the residual graph by setting the preflow to values 0 and initialising the labeling. || [[File:Push-Relabel Algorithm Example - Step 1.svg|Step 1|350px]]
+|-
+| Initial saturating push is performed across all preflow arcs out of the source, {{mvar|s}}. || [[File:Push-Relabel Algorithm Example - Step 2.svg|Step 2|350px]]
+|-
+|rowspan="2"| Node {{mvar|a}} is relabeled in order to push its excess flow towards the sink, {{mvar|t}}.
+The excess at {{mvar|a}} is then pushed to {{mvar|b}} then {{mvar|d}} in two subsequent saturating pushes; which still leaves {{mvar|a}} with some excess.
+|-
+| [[File:Push-Relabel Algorithm Example - Step 3.svg|Step 3|350px]] 
+|-
+|rowspan="2"| Once again, {{mvar|a}} is relabeled in order to push its excess along its last remaining positive residual (i.e. push the excess back to {{mvar|s}}).
+The node {{mvar|a}} is then removed from the set of active nodes. 
+|-
+| [[File:Push-Relabel Algorithm Example - Step 4.svg|Step 4|350px]] 
+|-
+| Relabel {{mvar|b}} and then push its excess to {{mvar|t}} and {{mvar|c}}. || [[File:Push-Relabel Algorithm Example - Step 5.svg|Step 5|350px]] 
+|-
+| Relabel {{mvar|c}} and then push its excess to {{mvar|d}}. || [[File:Push-Relabel Algorithm Example - Step 6.svg|Step 6|350px]] 
+|-
+| Relabel {{mvar|d}} and then push its excess to {{mvar|t}}. || [[File:Push-Relabel Algorithm Example - Step 7.svg|Step 7|350px]] 
+|-
+|rowspan="2"| This leaves the node {{mvar|b}} as the only remaining active node, but it cannot push its excess flow towards the sink.
+Relabel {{mvar|b}} and then push its excess towards the source, {{mvar|s}}, via the node {{mvar|a}}.
+|-
+| [[File:Push-Relabel Algorithm Example - Step 8.svg|Step 8|350px]] 
+|-
+|rowspan="2"| Push the last bit of excess at {{mvar|a}} back to the source, {{mvar|s}}.
+There are no remaining active nodes. The algorithm terminates and returns the maximum flow of the graph (as seen above). 
+|-
+| [[File:Push-Relabel Algorithm Example - Step 9.svg|Step 9|350px]] 
+|}
+
+The example (but with initial flow of 0) can be run [http://www.adrian-haarbach.de/idp-graph-algorithms/implementation/maxflow-push-relabel/index_en.html here] interactively.
+
+==Practical implementations==
+While the generic push–relabel algorithm has {{math|''O''(''V''<sup>&nbsp;2</sup>''E'')}} time complexity, efficient implementations achieve {{math|''O''(''V''<sup>&nbsp;3</sup>)}} or lower time complexity by enforcing appropriate rules in selecting applicable push and relabel operations. The empirical performance can be further improved by heuristics.
+
+==="Current-arc" data structure and discharge operation===
+The "current-arc" [[data structure]] is a mechanism for visiting the in- and out-neighbors of a node in the flow network in a static circular order. If a singly [[linked list]] of neighbors is created for a node, the data structure can be as simple as a pointer into the list that steps through the list and rewinds to the head when it runs off the end.
+
+Based on the "current-arc" data structure, the discharge operation can be defined. A discharge operation applies on an active node and repeatedly pushes flow from the node until it becomes inactive, relabeling it as necessary to create admissible arcs in the process.
+
+ discharge(u):
+     '''while''' x<sub>f</sub>[u] > 0 '''do'''
+         '''if''' current-arc[u] has run off the end of neighbors[u] '''then'''
+             relabel(u)
+             rewind current-arc[u]
+         '''else'''
+             '''let''' (u, v) = current-arc[u]
+             '''if''' (u, v) is admissible '''then'''
+                 push(u, v)
+             '''let''' current-arc[u] point to the next neighbor of u
+Finding the next admissible edge to push on has <math>O(1)</math> [[amortized complexity]]. The current-arc pointer only moves to the next neighbor when the edge to the current neighbor is saturated or non-admissible, and neither of these two properties can change until the active node <math>u</math> is relabelled. Therefore, when the pointer runs off, there are no admissible unsaturated edges and we have to relabel the active node <math>u</math>, so having moved the pointer <math>O(V)</math> times is paid for by the <math>O(V)</math> relabel operation.<ref name="goldberg88" />
+
+===Active node selection rules===
+Definition of the discharge operation reduces the push–relabel algorithm to repeatedly selecting an active node to discharge. Depending on the selection rule, the algorithm exhibits different time complexities. For the sake of brevity, we ignore {{mvar|s}} and {{mvar|t}} when referring to the nodes in the following discussion.
+
+====FIFO selection rule====
+The [[FIFO (computing and electronics)|FIFO]] push–relabel algorithm<ref name="goldberg86"/> organizes the active nodes into a queue. The initial active nodes can be inserted in arbitrary order. The algorithm always removes the node at the front of the queue for discharging. Whenever an inactive node becomes active, it is appended to the back of the queue.
+
+The algorithm has {{math|''O''(''V''<sup>&nbsp;3</sup>)}} time complexity.
+
+====Relabel-to-front selection rule====
+The relabel-to-front push–relabel algorithm<ref name="clrs26"/> organizes all nodes into a linked list and maintains the invariant that the list is [[Topological sorting|topologically sorted]] with respect to the admissible network. The algorithm scans the list from front to back and performs a discharge operation on the current node if it is active. If the node is relabeled, it is moved to the front of the list, and the scan is restarted from the front.
+
+The algorithm also has {{math|''O''(''V''<sup>&nbsp;3</sup>)}} time complexity.
+
+====Highest label selection rule====
+The highest-label push–relabel algorithm<ref name="cheriyan88"/> organizes all nodes into buckets indexed by their labels. The algorithm always selects an active node with the largest label to discharge.
+
+The algorithm has <math>O(V^2\sqrt{E})</math> time complexity. If the lowest-label selection rule is used instead, the time complexity becomes {{math|''O''(''V''<sup>&nbsp;2</sup>''E'')}}.<ref name="ahuja97"/>
+
+===Implementation techniques===
+Although in the description of the generic push–relabel algorithm above, {{math|𝓁(''u'')}} is set to zero for each node ''u'' other than {{mvar|s}} and {{mvar|t}} at the beginning, it is preferable to perform a backward [[breadth-first search]] from {{mvar|t}} to compute exact labels.<ref name="goldberg86"/>
+
+The algorithm is typically separated into two phases. Phase one computes a maximum pre-flow by discharging only active nodes whose labels are below {{mvar|n}}. Phase two converts the maximum preflow into a maximum flow by returning excess flow that cannot reach {{mvar|t}} to {{mvar|s}}. It can be shown that phase two has {{math|''O''(''VE'')}} time complexity regardless of the order of push and relabel operations and is therefore dominated by phase one. Alternatively, it can be implemented using flow decomposition.<ref name="amo93"/>
+
+Heuristics are crucial to improving the empirical performance of the algorithm.<ref name="cherkassky95"/> Two commonly used heuristics are the gap heuristic and the global relabeling heuristic.<ref name="goldberg86"/><ref name="derigs89"/> The gap heuristic detects gaps in the labeling function. If there is a label {{nowrap|0 < 𝓁''{{'}}'' < {{!}}&nbsp;''V''&nbsp;{{!}}}} for which there is no node {{mvar|u}} such that {{math|𝓁(''u'') {{=}} 𝓁''{{'}}''}}, then any node {{mvar|u}} with {{math|𝓁''{{'}}'' < 𝓁(''u'') < {{!}}&nbsp;''V''&nbsp;{{!}}}} has been disconnected from {{mvar|t}} and can be relabeled to {{math|({{!}}&nbsp;''V''&nbsp;{{!}} + 1)}} immediately. The global relabeling heuristic periodically performs backward breadth-first search from {{mvar|t}} in {{math|''G''<sub>''f''</sub>&nbsp;}} to compute the exact labels of the nodes. Both heuristics skip unhelpful relabel operations, which are a bottleneck of the algorithm and contribute to the ineffectiveness of dynamic trees.<ref name="goldberg08"/>
+
+==Sample implementations==
+{{hidden begin|border=1px #aaa solid|titlestyle=text-align:center|title=[[C (programming language)|C]] implementation}}
+<syntaxhighlight lang="c">
+#include <stdlib.h>
+#include <stdio.h>
+
+#define NODES 6
+#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
+#define INFINITE 10000000
+
+void push(const int * const * C, int ** F, int *excess, int u, int v) {
+  int send = MIN(excess[u], C[u][v] - F[u][v]);
+  F[u][v] += send;
+  F[v][u] -= send;
+  excess[u] -= send;
+  excess[v] += send;
+}
+
+void relabel(const int * const * C, const int * const * F, int *height, int u) {
+  int v;
+  int min_height = INFINITE;
+  for (v = 0; v < NODES; v++) {
+    if (C[u][v] - F[u][v] > 0) {
+      min_height = MIN(min_height, height[v]);
+      height[u] = min_height + 1;
+    }
+  }
+};
+
+void discharge(const int * const * C, int ** F, int *excess, int *height, int *seen, int u) {
+  while (excess[u] > 0) {
+    if (seen[u] < NODES) {
+      int v = seen[u];
+      if ((C[u][v] - F[u][v] > 0) && (height[u] > height[v])) {
+        push(C, F, excess, u, v);
+      } else {
+        seen[u] += 1;
+      }
+    } else {
+      relabel(C, F, height, u);
+      seen[u] = 0;
+    }
+  }
+}
+
+void moveToFront(int i, int *A) {
+  int temp = A[i];
+  int n;
+  for (n = i; n > 0; n--) {
+    A[n] = A[n-1];
+  }
+  A[0] = temp;
+}
+
+int pushRelabel(const int * const * C, int ** F, int source, int sink) {
+  int *excess, *height, *list, *seen, i, p;
+
+  excess = (int *) calloc(NODES, sizeof(int));
+  height = (int *) calloc(NODES, sizeof(int));
+  seen = (int *) calloc(NODES, sizeof(int));
+
+  list = (int *) calloc((NODES-2), sizeof(int));
+
+  for (i = 0, p = 0; i < NODES; i++){
+    if ((i != source) && (i != sink)) {
+      list[p] = i;
+      p++;
+    }
+  }
+
+  height[source] = NODES;
+  excess[source] = INFINITE;
+  for (i = 0; i < NODES; i++)
+    push(C, F, excess, source, i);
+
+  p = 0;
+  while (p < NODES - 2) {
+    int u = list[p];
+    int old_height = height[u];
+    discharge(C, F, excess, height, seen, u);
+    if (height[u] > old_height) {
+      moveToFront(p, list);
+      p = 0;
+    } else {
+      p += 1;
+    }
+  }
+  int maxflow = 0;
+  for (i = 0; i < NODES; i++)
+    maxflow += F[source][i];
+
+  free(list);
+
+  free(seen);
+  free(height);
+  free(excess);
+
+  return maxflow;
+}
+
+void printMatrix(const int * const * M) {
+  int i, j;
+  for (i = 0; i < NODES; i++) {
+    for (j = 0; j < NODES; j++)
+      printf("%d\t",M[i][j]);
+    printf("\n");
+  }
+}
+
+int main(void) {
+  int **flow, **capacities, i;
+  flow = (int **) calloc(NODES, sizeof(int*));
+  capacities = (int **) calloc(NODES, sizeof(int*));
+  for (i = 0; i < NODES; i++) {
+    flow[i] = (int *) calloc(NODES, sizeof(int));
+    capacities[i] = (int *) calloc(NODES, sizeof(int));
+  }
+
+  // Sample graph
+  capacities[0][1] = 2;
+  capacities[0][2] = 9;
+  capacities[1][2] = 1;
+  capacities[1][3] = 0;
+  capacities[1][4] = 0;
+  capacities[2][4] = 7;
+  capacities[3][5] = 7;
+  capacities[4][5] = 4;
+
+  printf("Capacity:\n");
+  printMatrix(capacities);
+
+  printf("Max Flow:\n%d\n", pushRelabel(capacities, flow, 0, 5));
+
+  printf("Flows:\n");
+  printMatrix(flow);
+
+  return 0;
+}
+</syntaxhighlight>
+{{hidden end}}
+
+{{hidden begin|border=1px #aaa solid|titlestyle=text-align:center|title=[[Python (programming language)|Python]] implementation}}
+<syntaxhighlight lang="python">
+def relabel_to_front(C, source: int, sink: int) -> int:
+    """Push–relabel maximum flow algorithm."""
+    n = len(C)  # C is the capacity matrix
+    F = [[0] * n for _ in range(n)]
+    # residual capacity from u to v is C[u][v] - F[u][v]
+
+    height = [0] * n  # height of node
+    excess = [0] * n  # flow into node minus flow from node
+    seen = [0] * n  # neighbours seen since last relabel
+    # node "queue"
+    nodelist = [i for i in range(n) if i != source and i != sink]
+
+    def push(u, v):
+        send = min(excess[u], C[u][v] - F[u][v])
+        F[u][v] += send
+        F[v][u] -= send
+        excess[u] -= send
+        excess[v] += send
+
+    def relabel(u):
+        # Find smallest new height making a push possible,
+        # if such a push is possible at all.
+        min_height = ∞
+        for v in range(n):
+            if C[u][v] - F[u][v] > 0:
+                min_height = min(min_height, height[v])
+                height[u] = min_height + 1
+
+    def discharge(u):
+        while excess[u] > 0:
+            if seen[u] < n:  # check next neighbour
+                v = seen[u]
+                if C[u][v] - F[u][v] > 0 and height[u] > height[v]:
+                    push(u, v)
+                else:
+                    seen[u] += 1
+            else:  # we have checked all neighbours. must relabel
+                relabel(u)
+                seen[u] = 0
+
+    height[source] = n  # longest path from source to sink is less than n long
+    excess[source] = ∞  # send as much flow as possible to neighbours of source
+    for v in range(n):
+        push(source, v)
+
+    p = 0
+    while p < len(nodelist):
+        u = nodelist[p]
+        old_height = height[u]
+        discharge(u)
+        if height[u] > old_height:
+            nodelist.insert(0, nodelist.pop(p))  # move to front of list
+            p = 0  # start from front of list
+        else:
+            p += 1
+
+    return sum(F[source])
+</syntaxhighlight>
+{{hidden end}}
+
+{{hidden begin|border=1px #aaa solid|titlestyle=text-align:center|title=[[R (programming language)|R {base}]] implementation}}
+<syntaxhighlight lang="R">
+# (HL) Push-relabel maximum flow algorithm.
+# Active node selection rule: highest label.
+# R {base}.
+
+push <- function(u, v) {
+  d <- min(excess[u], rGraph[u, v])
+  rGraph[u, v] <<- rGraph[u, v] - d   # Forward edge, no flow.
+  rGraph[v, u] <<- rGraph[v, u] + d   # Backward edge, previous routed flow,
+  excess[u]    <<- excess[u]    - d   # that can be undone.
+  excess[v]    <<- excess[v]    + d
+  pushCtr      <<- pushCtr + 1L
+  stopifnot(pushCtr <= nV^2 * sqrt(nE))
+}
+
+relabel <- function(u) {
+  height[u] <<- height[u] + 1L
+  relabCtr  <<- relabCtr  + 1L
+}
+
+# Discharge vertex u ≠ {s, t} via the residual network graph.
+# An edge (u, v) is called admissible if height[u] == height[v] + 1.
+discharge <- function(u) {
+  neighbours <- which(rGraph[u, ] > 0)
+  admisible  <- neighbours[which(height[u] == height[neighbours] + 1L)]
+  for (v in admisible) {
+    push(u, v)
+    if (excess[u] == 0) break
+  }
+  if (excess[u] > 0) relabel(u)
+}
+
+# Preflow: flow with conservation constraints relaxed: inflow ≥ outflow.
+# Move excess flow over admissible edges toward the sink.
+# Global data eCap, rGraph, excess, height. Indexed by 1-based vertex id.
+pushRelabel <- function(source, sink) {
+  rGraph <<- eCap                     # Residual network graph.
+  excess <<-                          # Inflow minus outflow (≥ 0).
+    height <<- rep(0L, nV)            # Label (𝓁) value.
+
+  height[source] <<- nV
+  excess[source] <<- Inf
+  relabCtr <<- pushCtr <<- 0L         # Count relabel, push.
+
+  # Push excess from source.
+  sourceOut <- which(rGraph[source, ] > 0)
+  for (i in sourceOut) push(source, i)
+
+  # Main Loop. Select highest label with positive excess,
+  # from all nodes except source and sink, then discharge.
+  nlist  <- setdiff(seq(from = 1, to = nV, by = 1), c(source, sink))
+  while ((active <- nlist[which(excess[nlist] > 0)]) |> length() > 0) {
+    u <- active[which(height[active] == max(height[active]))][1]
+    discharge(u)
+  }
+  # All excess flow has been sent to the sink.
+  return(sum((eCap - rGraph)[source, ]))
+}
+
+# Tournament graph, n = 4, max flow = n - 1.
+eCap <- matrix(1L, 4, 4); diag(eCap) <- 0L
+colnames(eCap) <-
+  c("s", seq(2, length.out = ncol(eCap) - 2), "t") # Source is 1, sink is n.
+print(list("Capacity matrix" = eCap), max = 1600)
+
+# Calculate the maximum flow between source and sink.
+nV <- ncol(eCap)                      # Vertices.
+nE <- sum(eCap > 0)                   # Edges.
+system.time(maxFlow <- pushRelabel(source = 1L, sink = nV))
+print(paste("V E =", nV, nE, "maxFlow =", maxFlow))
+print(paste("Relabel =", relabCtr, "Push =", pushCtr))
+
+# Check, flow matrix is skew-symmetric.
+# Check, flow exiting source (=1) equals flow entering sink (=nV).
+flow <- eCap - rGraph
+stopifnot((((flow) == -t(flow)) |> all()))
+stopifnot(rowSums(flow)[1] == colSums(flow)[nV])
+
+# Weighted adjacency matrix of the final maximum flow network graph.
+mxFlow <- pmax(flow, 0)
+print(list("Residual network graph" = rGraph))
+print(list("Maximum flow" = mxFlow))
+</syntaxhighlight>
+{{hidden end}}
+
+==See also==
+Lecture Notes [[Tim Roughgarden]], ''A Second Course in Algorithms (CS261, winter 2016)'', Columbia University, New York.
+== References ==
+{{reflist|2|refs=
+<ref name="clrs26">{{Cite book | isbn = 978-0-262-03293-3 | title = Introduction to Algorithms | edition = 2nd | last1 = Cormen | first1 = T. H. | author-link1 = Thomas H. Cormen | year = 2001 | publisher = The MIT Press | last2 = Leiserson | first2 = C. E. | author-link2 = Charles E. Leiserson | last3 = Rivest | first3 = R. L. | author-link3 = Ron Rivest | last4 = Stein | first4 = C. | author-link4 = Clifford Stein | chapter = §26 Maximum flow | pages = [https://archive.org/details/introductiontoal00corm_691/page/n665 643]–698| title-link = Introduction to Algorithms }}</ref>
+<ref name="goldberg86">{{cite book|doi=10.1145/12130.12144|chapter=A new approach to the maximum flow problem|title=Proceedings of the eighteenth annual ACM symposium on Theory of computing – STOC '86|page=136|year=1986|last1=Goldberg|first1=A V|last2=Tarjan|first2=R E|isbn=978-0-89791-193-1|s2cid=14492800}}</ref>
+<ref name="goldberg88">{{cite journal|doi=10.1145/48014.61051|title=A new approach to the maximum-flow problem|journal=Journal of the ACM|volume=35|issue=4|page=921|year=1988|last1=Goldberg|first1=Andrew V.|last2=Tarjan|first2=Robert E.|s2cid=52152408|doi-access=free}}</ref>
+<ref name="sv82">{{cite journal|doi=10.1016/0196-6774(82)90013-X|title=An O(n2log n) parallel max-flow algorithm|journal=Journal of Algorithms|volume=3|issue=2|pages=128–146|year=1982|last1=Shiloach|first1=Yossi|last2=Vishkin|first2=Uzi}}</ref>
+<ref name="cheriyan88">{{cite book|doi=10.1007/3-540-50517-2_69|chapter=Analysis of preflow push algorithms for maximum network flow|title=Foundations of Software Technology and Theoretical Computer Science|volume=338|page=30|series=Lecture Notes in Computer Science|year=1988|last1=Cheriyan|first1=J.|last2=Maheshwari|first2=S. N.|isbn=978-3-540-50517-4}}</ref>
+<ref name="derigs89">{{cite journal|doi=10.1007/BF01415937|title=Implementing Goldberg's max-flow-algorithm ? A computational investigation|journal=Zeitschrift für Operations Research |volume=33|issue=6|page=383|year=1989|last1=Derigs|first1=U.|last2=Meier|first2=W.|s2cid=39730584}}</ref>
+<ref name="ahuja91">{{cite journal|doi=10.1002/1520-6750(199106)38:3<413::AID-NAV3220380310>3.0.CO;2-J|title=Distance-directed augmenting path algorithms for maximum flow and parametric maximum flow problems|journal=Naval Research Logistics|volume=38|issue=3|page=413|year=1991|last1=Ahuja|first1=Ravindra K.|last2=Orlin|first2=James B.}}</ref>
+<ref name="amo93">{{Cite book | isbn = 978-0-13-617549-0 | title = Network Flows: Theory, Algorithms, and Applications | edition = 1st | last1 = Ahuja | first1 = R. K. | year = 1993 | publisher = Prentice Hall | last2 = Magnanti | first2 = T. L. | last3 = Orlin | first3 = J. B. }}</ref>
+<ref name="cherkassky95">{{cite book|doi=10.1007/3-540-59408-6_49|chapter=On implementing push-relabel method for the maximum flow problem|title=Integer Programming and Combinatorial Optimization|volume=920|page=157|series=Lecture Notes in Computer Science|year=1995|last1=Cherkassky|first1=Boris V.|last2=Goldberg|first2=Andrew V.|isbn=978-3-540-59408-6}}</ref>
+<ref name="ahuja97">{{cite journal|doi=10.1016/S0377-2217(96)00269-X|title=Computational investigations of maximum flow algorithms|journal=European Journal of Operational Research|volume=97|issue=3|page=509|year=1997|last1=Ahuja|first1=Ravindra K.|last2=Kodialam|first2=Murali|last3=Mishra|first3=Ajay K.|last4=Orlin|first4=James B.}}</ref>
+<ref name="goldberg97">{{cite journal|doi=10.1006/jagm.1995.0805|title=An Efficient Implementation of a Scaling Minimum-Cost Flow Algorithm|journal=Journal of Algorithms|volume=22|pages=1–29|year=1997|last1=Goldberg|first1=Andrew V}}</ref>
+<ref name="goldberg08">{{cite book|doi=10.1007/978-3-540-87744-8_39|chapter=The Partial Augment–Relabel Algorithm for the Maximum Flow Problem|title=Algorithms – ESA 2008|volume=5193|pages=466–477|series=Lecture Notes in Computer Science|year=2008|last1=Goldberg|first1=Andrew V.|isbn=978-3-540-87743-1}}</ref>
+<ref name="goldberg2014">{{cite journal|doi=10.1145/2628036|title=Efficient maximum flow algorithms|journal=Communications of the ACM|volume=57|issue=8|page=82|year=2014|last1=Goldberg|first1=Andrew V.|last2=Tarjan|first2=Robert E.|s2cid=17014879}}</ref>
+}}
+
+{{optimization algorithms|combinatorial|state=expanded}}
+
+[[Category:Network flow problem]]
+[[Category:Graph algorithms]]
+[[Category:Articles with example C code]]
+[[Category:Articles with example Python (programming language) code]]

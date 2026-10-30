@@ -1,0 +1,192 @@
+<!-- wikipedia: en
+     page: 70174520
+     title: Quaternion estimator algorithm
+     revision: 1320687508
+     timestamp: 2025-11-06T04:45:32Z
+     history: https://en.wikipedia.org/w/index.php?curid=70174520&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1320687508 -->
+{{Short description|Algorithm to solve Wahba's problem}}
+The '''quaternion estimator algorithm''' ('''QUEST''') is an [[algorithm]] designed to solve [[Wahba's problem]], that consists of finding a [[rotation matrix]] between two coordinate systems from two sets of observations sampled in each system respectively. The key idea behind the algorithm is to find an expression of the [[loss function]] for the Wahba's problem as a [[quadratic form]], using the [[Cayley–Hamilton theorem]] and the [[Newton's method|Newton–Raphson method]] to efficiently solve the eigenvalue problem and construct a [[numerical stability|numerically stable]] representation of the solution.
+
+The algorithm was introduced by [[Malcolm D. Shuster]] in 1981, while working at [[Computer Sciences Corporation]].<ref name="shuster">Shuster and Oh (1981)</ref> While being in principle less robust than other methods such as Davenport's q method or [[singular value decomposition]], the algorithm is significantly faster and reliable in practical applications,<ref name="markley_and_mortari">Markley and Mortari (2000)</ref><ref>Crassidis (2007)</ref> and it is used for [[flight dynamics|attitude determination]] problem in fields such as [[robotics]] and [[avionics]].<ref>Psiaki (2000)</ref><ref>Wu et al. (2017)</ref><ref>Xiaoping et al. (2008)</ref>
+
+== Formulation of the problem ==
+
+[[Wahba's problem]] consists of finding a [[rotation matrix]] <math>\mathbf{A}^*</math> that minimises the loss function
+
+:<math> l \left( \mathbf{A} \right) = \frac{1}{2} \sum_{i=1}^{n} a_i \left\| \mathbf{w}_i - \mathbf{A} \mathbf{v}_i \right\|^2 </math>
+
+where <math>\mathbf{w}_i</math> are the vector observations in the reference frame, <math>\mathbf{v}_i</math> are the vector observations in the body frame, <math>\mathbf{A}</math> is a rotation matrix between the two frames, and <math>a_i</math> are a set of weights such that <math>\textstyle \sum_i a_i = 1</math>. It is possible to rewrite this as a maximisation problem of a gain function <math>g</math>
+
+:<math>g \left( \mathbf{A} \right) = 1 - l \left( \mathbf{A} \right) = \sum_i a_i \mathbf{w}_i^\top \mathbf{A} \mathbf{v}_i </math>
+
+defined in such a way that the loss <math>l</math> attains a minimum when <math>g</math> is maximised. The gain <math>g</math> can in turn be rewritten as
+
+:<math> g \left( \mathbf{A} \right) = \operatorname{tr} \left( \mathbf{A} \mathbf{B}^\top \right) </math>
+
+where <math>\mathbf{B} = \textstyle \sum_i a_i \mathbf{w}_i \mathbf{v}_i^\top</math> is known as the attitude profile matrix.
+
+In order to reduce the number of variables, the problem can be reformulated by parametrising the rotation as a unit [[quaternion]] <math>\mathbf{q} = \left( v_1, v_2, v_3, q\right)</math> with vector part <math>\mathbf{v} = \left( v_1, v_2, v_3 \right)</math> and scalar part <math>q</math>, representing the rotation of angle <math>\theta = 2 \cos^{-1} q</math> around an axis whose direction is described by the vector <math>\textstyle \frac{1}{\sin \frac{\theta}{2}} \mathbf{v}</math>, subject to the unity constraint <math>\mathbf{q}^\top \mathbf{q} = 1</math>. It is now possible to express <math>\mathbf{A}</math> in terms of the quaternion parametrisation as
+
+:<math> \mathbf{A} = \left( q^2 - \mathbf{v} \cdot \mathbf{v} \right) \mathbf{I} + 2 \mathbf{v}\mathbf{v}^\top + 2 q \mathbf{V}_\times </math>
+
+where <math>\mathbf{V}_\times</math> is the [[skew-symmetric matrix]]
+
+:<math> \mathbf{V}_\times =
+\begin{pmatrix}
+ 0   &  v_3 & -v_2 \\
+-v_3 &  0   &  v_1 \\
+ v_2 & -v_1 &  0   \\
+\end{pmatrix}
+</math>.
+
+Substituting <math>\mathbf{A}</math> with the quaternion representation and simplifying the resulting expression, the gain function can be written as a [[quadratic form]] in <math>\mathbf{q}</math>
+
+:<math> g(\mathbf{q}) = \mathbf{q}^\top \mathbf{K} \mathbf{q} </math>
+
+where the <math>4 \times 4</math> matrix
+
+:<math> \mathbf{K} =
+\begin{pmatrix}
+\mathbf{S} - \sigma \mathbf{I} & \mathbf{z} \\
+\mathbf{z}^\top                & \sigma
+\end{pmatrix}
+</math>
+
+is defined from the quantities
+
+:<math>
+\begin{align}
+\mathbf{S} &= \mathbf{B} + \mathbf{B}^\top \\
+\mathbf{z} &= \sum_i a_i \left( \mathbf{w}_i \times \mathbf{v}_i \right) \\
+\sigma &= \operatorname{tr} \mathbf{B} .
+\end{align}
+</math>
+
+This quadratic form can be optimised under the unity constraint by adding a [[Lagrange multiplier]] <math>-\lambda \mathbf{q}^\top \mathbf{q}</math>, obtaining an unconstrained gain function
+
+:<math> \hat{g} \left( \mathbf{q} \right) = \mathbf{q}^\top \mathbf{K} \mathbf{q} - \lambda \mathbf{q}^\top \mathbf{q} </math>
+
+that attains a maximum when
+
+:<math>\mathbf{K} \mathbf{q} = \lambda \mathbf{q}</math>.
+
+This implies that the optimal rotation is parametrised by the quaternion <math>\mathbf{q}^*</math> that is the [[eigenvector]] associated to the largest [[eigenvalue]] <math>\lambda_{\text{max}}</math> of <math>\mathbf{K}</math>.<ref name="shuster"/><ref name="markley_and_mortari"/>
+
+== Solution of the characteristic equation ==
+
+The optimal quaternion can be determined by solving the [[characteristic polynomial|characteristic equation]] of <math>\mathbf{K}</math> and constructing the eigenvector for the largest eigenvalue. From the definition of <math>\mathbf{K}</math>, it is possible to rewrite
+
+:<math>\mathbf{K} \mathbf{q} = \lambda \mathbf{q}</math>
+
+as a system of two equations
+
+:<math>
+\begin{align}
+\mathbf{y} &= \left( (\lambda + \sigma) \mathbf{I} - \mathbf{S} \right)^{-1} \mathbf{z} \\
+\lambda &= \sigma + \mathbf{z} \mathbf{y}
+\end{align}
+</math>
+
+where <math>\mathbf{y} = \textstyle \frac{1}{q} \mathbf{v}</math> is the [[Rodrigues' rotation formula|Rodrigues vector]]. Substituting <math>\mathbf{y}</math> in the second equation with the first, it is possible to derive an expression of the [[characteristic polynomial|characteristic equation]]
+
+:<math> \lambda = \sigma + \mathbf{z}^\top \left( (\lambda + \sigma) \mathbf{I} - \mathbf{S} \right)^{-1} \mathbf{z} </math>.
+
+Since <math>\lambda_{\text{max}} = \max g\left(\mathbf{A}\right)</math>, it follows that <math>\lambda_{\text{max}} = 1 - \min l\left(\mathbf{A}\right)</math> and therefore <math>\lambda_{\text{max}} \approx 1</math> for an optimal solution (when the loss <math>l</math> is small). This permits to construct the optimal quaternion <math>\mathbf{q}^*</math> by replacing <math>\lambda_{\text{max}}</math> in the Rodrigues vector <math>\mathbf{y}</math>
+
+:<math> \mathbf{q}^* = \frac{1}{\sqrt{1 + \left| \mathbf{y}_{\lambda_{\text{max}}} \right|^2}} (\mathbf{y}, 1)^\top </math>.
+
+The <math>\mathbf{y}</math> vector is however singular for <math>\theta = \pi</math>. An alternative expression of the solution that does not involve the Rodrigues vector can be constructed using the [[Cayley–Hamilton theorem]]. The characteristic equation of a <math>3\times3</math> matrix <math>\mathbf{S}</math> is
+
+:<math> \det \left[ \mathbf{S} - \xi \mathbf{I} \right] = -\xi^3 + 2 \sigma \xi^2 - k \xi + \Delta = 0 </math>
+
+where
+
+:<math>
+\begin{align}
+\sigma &= \frac{1}{2} \operatorname{tr}{\mathbf{S}} \\
+k &= \operatorname{tr} \left( \operatorname{adj} \mathbf{S} \right) \\
+\Delta &= \det \mathbf{S}
+\end{align}
+</math>
+
+The Cayley–Hamilton theorem states that any [[square matrix]] over a [[commutative ring]] satisfies its own characteristic equation, therefore
+
+:<math> -\mathbf{S}^3 + 2 \sigma \mathbf{S}^2 - k \mathbf{S} + \Delta = 0 </math>
+
+allowing to write
+
+:<math> \left( (\omega + \sigma) \mathbf{I} - \mathbf{S} \right)^{-1} = \frac{\alpha \mathbf{I} + \beta \mathbf{S} + \mathbf{S}^2}{\gamma} </math>
+
+where
+
+:<math>
+\begin{align}
+\alpha &= \omega^2 - \sigma^2 + k \\
+\beta &= \omega - \sigma \\
+\gamma &= (\omega + \sigma) \alpha - \Delta
+\end{align}
+</math>
+
+and for <math>\omega = \lambda_{\text{max}}</math> this provides a new construction of the optimal vector
+
+:<math>
+\begin{align}
+\mathbf{y}^* &= \left( (\lambda + \sigma) \mathbf{I} - \mathbf{S} \right)^{-1} \mathbf{z} \\
+             &= \frac{\alpha \mathbf{I} + \beta \mathbf{S} + \mathbf{S}^2}{\gamma} \mathbf{z}
+\end{align}
+</math>
+
+that gives the conjugate quaternion representation of the optimal rotation as
+
+:<math> \mathbf{q}^* = \frac{1}{\sqrt{\gamma^2 + \left| \mathbf{x} \right|^2}} (\mathbf{x}, \gamma)^\top </math>
+
+where
+
+:<math> \mathbf{x} = \left( \alpha \mathbf{I} + \beta \mathbf{S} + \mathbf{S}^2 \right) \mathbf{z} </math>.
+
+The value of <math>\lambda_{\text{max}}</math> can be determined as a numerical solution of the characteristic equation. Replacing <math>\left( (\omega + \sigma) \mathbf{I} - \mathbf{S} \right)^{-1}</math> inside the previously obtained characteristic equation
+
+:<math> \lambda = \sigma + \mathbf{z}^\top \left( (\lambda + \sigma) \mathbf{I} - \mathbf{S} \right)^{-1} \mathbf{z} </math>.
+
+gives
+
+:<math> \lambda^4 - (a + b) \lambda^2 - c \lambda + (ab + c \sigma - d) = 0 </math>
+
+where
+
+:<math>
+\begin{align}
+a &= \sigma^2 - k \\
+b &= \sigma^2 + \mathbf{z}^\top \mathbf{z} \\
+c &= \Delta + \mathbf{z}^\top \mathbf{S} \mathbf{z} \\
+d &= \mathbf{z}^\top \mathbf{S}^2 \mathbf{z}
+\end{align}
+</math>
+
+whose root can be efficiently approximated with the [[Newton–Raphson method]], taking 1 as initial guess of the solution in order to converge to the highest eigenvalue (using the fact, shown above, that <math>\lambda_{\text{max}} \approx 1</math> when the quaternion is close to the optimal solution).<ref name="shuster"/><ref name="markley_and_mortari"/>
+
+== See also ==
+* [[Triad method]]
+* [[Wahba's problem]]
+
+== References ==
+<references />
+
+== Sources ==
+* {{cite journal|title=Survey of nonlinear attitude estimation methods|year=2007|journal=Journal of Guidance, Control, and Dynamics|volume=30|pages=12–28|issue=1|last1=Crassidis|first1=John L|last2=Markley|first2=F Landis|last3=Cheng|first3=Yang|doi=10.2514/1.22452|bibcode=2007JGCD...30...12C}}
+* {{cite journal|title=Quaternion attitude estimation using vector observations|year=2000|journal=The Journal of the Astronautical Sciences|volume=48|pages=359–380|issue=2|publisher=Springer|last1=Markley|first1=F Landis|last2=Mortari|first2=Daniele|doi=10.1007/BF03546284|bibcode=2000JAnSc..48..359M}}
+* {{cite journal|title=Attitude-determination filtering via extended quaternion estimation|year=2000|journal=Journal of Guidance, Control, and Dynamics|volume=23|pages=206–214|issue=2|last1=Psiaki|first1=Mark L|doi=10.2514/2.4540|bibcode=2000JGCD...23..206P}}
+* {{cite journal|title=Three-axis attitude determination from vector observations|year=1981|journal=Journal of Guidance and Control|volume=4|pages=70–77|issue=1|last1=Shuster|first1=M.D.|last2=Oh|first2=S.D.|doi=10.2514/3.19717|bibcode=1981JGCD....4...70S}}
+* {{cite journal|title=Fast linear quaternion attitude estimator using vector observations|year=2017|journal=IEEE Transactions on Automation Science and Engineering|volume=15|pages=307–319|issue=1|publisher=IEEE|last1=Wu|first1=Jin|last2=Zhou|first2=Zebo|last3=Gao|first3=Bin|last4=Li|first4=Rui|last5=Cheng|first5=Yuhua|last6=Fourati|first6=Hassen|doi=10.1109/TASE.2017.2699221|s2cid=3455346|url=https://hal.inria.fr/hal-01513263/file/bare_jrnl.pdf}}
+* {{cite journal|title=A simplified quaternion-based algorithm for orientation estimation from earth gravity and magnetic field measurements|year=2008|journal=IEEE Transactions on Instrumentation and Measurement|volume=57|pages=638–650|issue=3|publisher=IEEE|last1=Yun|first1=Xiaoping|last2=Bachmann|first2=Eric R|last3=McGhee|first3=Robert B|doi=10.1109/TIM.2007.911646|s2cid=15571138|hdl=10945/46081|hdl-access=free}}
+
+== External links ==
+* {{cite web|url=https://ahrs.readthedocs.io/en/latest/filters/quest.html|title=QUEST — AHRS documentation}}
+* {{cite web|url=https://www.coursera.org/lecture/spacecraft-dynamics-kinematics/5-quest-AQZKX|title=QUEST|series=Kinematics: Describing the Motions of Spacecraft|author=University of Colorado Boulder|publisher=Coursera}}
+
+{{DEFAULTSORT:QUEST algorithm}}
+
+[[Category:Rotation in three dimensions]]
+[[Category:Spacecraft attitude control]]

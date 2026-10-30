@@ -1,0 +1,254 @@
+<!-- wikipedia: en
+     page: 735452
+     title: McEliece cryptosystem
+     revision: 1373998324
+     timestamp: 2026-09-09T05:10:40Z
+     history: https://en.wikipedia.org/w/index.php?curid=735452&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373998324 -->
+{{Short description|Asymmetric encryption algorithm developed by Robert McEliece}}
+{{Use dmy dates|date=October 2020}}
+
+In [[cryptography]], the '''McEliece cryptosystem''' is an [[asymmetric encryption]] algorithm developed in 1978 by [[Robert McEliece]].<ref name="McEliece">
+{{cite journal
+ |url=https://ipnpr.jpl.nasa.gov/progress_report2/42-44/44N.PDF
+ |last=McEliece |first=Robert J.
+ |bibcode=1978DSNPR..44..114M
+ |title=A Public-Key Cryptosystem Based on Algebraic Coding Theory
+ |journal=DSN Progress Report
+ |volume=44
+ |pages=114–116
+ |year=1978
+}}</ref> It was the first such scheme to use [[randomized algorithm|randomization]] in the encryption process. The algorithm has never gained much acceptance in the cryptographic community, but is a candidate for "[[post-quantum cryptography]]", as it is immune to attacks using [[Shor's algorithm]] and – more generally – measuring coset states using Fourier sampling.<ref name="quantum-fourier">
+{{cite conference
+ |year=2011
+ |title=McEliece and Niederreiter cryptosystems that resist quantum Fourier sampling attacks
+ | last1=Dinh | first1=Hang
+ | last2=Moore | first2=Cristopher
+ | last3=Russell | first3=Alexander
+ |pages=761–779
+ |location=Heidelberg
+ |publisher=Springer
+ |mr=2874885
+ |doi=10.1007/978-3-642-22792-9_43
+ |editor1-first=Philip | editor1-last=Rogaway
+ |series=Lecture Notes in Computer Science
+ |volume=6841
+ |isbn=978-3-642-22791-2
+ |conference=Advances in cryptology—CRYPTO 2011
+ |doi-access=free
+}}</ref>
+
+The algorithm is based on the hardness of [[decoding methods#Syndrome decoding|decoding]] a general [[linear code]] (which is known to be [[NP-hard]]<ref name="intractability">
+{{cite journal
+ |last1=Berlekamp |first1= Elwyn R.
+ |last2=McEliece |first2=Robert J.
+ |last3=Van Tilborg |first3=Henk C.A.
+ |year=1978
+ |title=On the Inherent Intractability of Certain Coding Problems
+ |journal=IEEE Transactions on Information Theory
+ |volume=IT-24
+ |issue= 3
+ |pages=384–386
+ | doi = 10.1109/TIT.1978.1055873
+ | mr = 0495180
+ |url= https://authors.library.caltech.edu/5607/
+}}</ref>). For a description of the private key, an [[error-correcting code]] is selected for which an efficient decoding algorithm is known, and that is able to correct <math>t</math> errors. The original algorithm uses [[binary Goppa code]]s (subfield codes of [[Algebraic geometry code|algebraic geometry codes]] of a genus-0 curve over finite fields of characteristic 2); these codes can be efficiently decoded, thanks to an algorithm due to Patterson.<ref name="Patterson">
+{{cite journal
+ |author=N. J. Patterson
+ |year=1975
+ |title=The algebraic decoding of Goppa codes
+ |journal=IEEE Transactions on Information Theory
+ |volume=IT-21
+ |issue=2
+ |pages=203–207 
+ |doi=10.1109/TIT.1975.1055350
+}}</ref> The public key is derived from the private key by disguising the selected code as a general linear code. For this, the code's [[generator matrix]] <math>G</math> is perturbated by two randomly selected invertible matrices <math>S</math> and <math>P</math> (see below).
+
+Variants of this cryptosystem exist, using different types of codes. Most of them were proven less secure; they were broken by [[structural decoding]].
+
+McEliece with Goppa codes has resisted cryptanalysis so far. The most effective attacks known use [[decoding methods#Information set decoding|information-set decoding]] algorithms. A 2008 paper describes both an attack and a fix.<ref name="fix">
+{{cite book
+ |last1=Bernstein |first1=Daniel J.
+ |last2=Lange |first2=Tanja|author2-link=Tanja Lange
+ |last3=Peters |first3=Christiane
+ |title=Post-Quantum Cryptography
+ |chapter=Attacking and Defending the McEliece Cryptosystem
+ |date=8 August 2008
+ |series=Lecture Notes in Computer Science
+ |volume=5299 |pages=31–46
+ |doi=10.1007/978-3-540-88403-3_3
+ |url=https://eprint.iacr.org/2008/318
+ |isbn=978-3-540-88402-6
+ |citeseerx=10.1.1.139.3548
+}}</ref> Another paper shows that for [[quantum computing]], key sizes must be increased by a factor of four due to improvements in information set decoding.<ref>
+{{cite conference
+ |first=Daniel J. | last=Bernstein
+ |year=2010
+ |title=Grover vs. McEliece
+ |url=https://cr.yp.to/codes/grovercode-20091123.pdf
+ |publisher=Springer
+ |location=Berlin
+ |series=Lecture Notes in Computer Science
+ |volume=6061
+ |conference=Post-quantum cryptography 2010
+ |mr=2776312
+ |pages=73–80
+ |doi=10.1007/978-3-642-12929-2_6
+ |editor1-first=Nicolas | editor1-last=Sendrier
+ |isbn=978-3-642-12928-5
+}}</ref>
+
+The McEliece cryptosystem has some advantages over, for example, [[RSA (algorithm)|RSA]]. The encryption and decryption are faster.<ref>
+{{cite web
+ | url=https://bench.cr.yp.to/ebats.html
+ | title=eBATS: ECRYPT Benchmarking of Asymmetric Systems
+ | date=2018-08-25
+ | website=bench.cr.yp.to
+ | access-date=2020-05-01
+}}</ref> For a long time, it was thought that McEliece could not be used to produce [[Digital signature|signatures]]. However, a signature scheme can be constructed based on the [[Niederreiter cryptosystem|Niederreiter]] scheme, the dual variant of the McEliece scheme. One of the main disadvantages of McEliece is that the private and public keys are large matrices. For a standard selection of parameters, the public key is 512 kilobits long.
+
+== Scheme definition ==
+McEliece consists of three algorithms: a probabilistic key generation algorithm that produces a public and a private key, a [[probabilistic encryption]] algorithm, and a deterministic decryption algorithm.
+
+All users in a McEliece deployment share a set of common security parameters: <math>n, k, t</math>.
+
+=== Key generation ===
+
+The principle is that Alice chooses a linear code <math>C</math> from some family of codes for which she knows an efficient decoding algorithm, and to make <math>C</math> public knowledge but keep the decoding algorithm secret. Such a decoding algorithm requires not just knowing <math>C</math>, in the sense of knowing an arbitrary generator matrix, but requires one to know the parameters used when specifying <math>C</math> in the chosen family of codes. For instance, for binary Goppa codes, this information would be the Goppa polynomial and the code locators. Therefore, Alice may publish a suitably obfuscated generator matrix of <math>C</math>.
+
+More specifically, the steps are as follows:
+# Alice selects a binary <math>(n, k)</math>-linear code <math>C</math> capable of (efficiently) correcting <math>t</math> errors from some large family of codes, e.g. binary Goppa codes. This choice should give rise to an efficient decoding algorithm <math>A</math>. Let also <math>G</math> be any generator matrix for <math>C</math>. Any linear code has many generator matrices, but often there is a natural choice for this family of codes. Knowing this would reveal <math>A</math> so it should be kept secret.
+# Alice selects a random <math>k \times k</math> binary [[Invertible matrix|non-singular matrix]] <math>S</math>.
+# Alice selects a random <math>n \times n</math> [[permutation matrix]] <math>P</math>.
+# Alice computes the <math>k \times n</math> matrix <math>{\hat G} = SGP</math>.
+# Alice's public key is <math>({\hat G}, t)</math>; her private key is <math>(S, P, A)</math>. Note that <math>A</math> could be encoded and stored as the parameters used for selecting <math>C</math>.
+
+=== Message encryption ===
+
+Suppose Bob wishes to send a message <math>m</math> to Alice whose public key is <math>({\hat G}, t)</math>:
+# Bob encodes the message <math>m</math> as a binary string of length <math>k</math>.
+# Bob computes the vector <math>c^{\prime} = m{\hat G}</math>.
+# Bob generates a random <math>n</math>-bit vector <math>z</math> containing exactly <math>t</math> ones (a vector of length <math>n</math> and weight <math>t</math>)<ref name="McEliece"/>
+# Bob sends Alice the ciphertext computed as <math>c = c^{\prime} + z</math>.
+
+=== Message decryption ===
+Upon receipt of <math>c</math>, Alice performs the following steps to decrypt the message:
+# Alice computes the inverse of <math>P</math> (i.e. <math>P^{-1}</math>).
+# Alice computes <math>{\hat c} = cP^{-1}</math>.
+# Alice uses the decoding algorithm <math>A</math> to decode <math>{\hat c}</math> to <math>{\hat m}</math>.
+# Alice computes <math>m = {\hat m}S^{-1}</math>.
+
+== Proof of message decryption ==
+Note that <math>{\hat c} = cP^{-1} = m{\hat G}P^{-1} + zP^{-1} = mSG + zP^{-1}</math>,
+and that <math>P</math> is a permutation matrix, thus <math>zP^{-1}</math> has weight <math>t</math>.
+
+The Goppa code <math>G</math> can correct up to <math>t</math> errors, and the word <math>mSG</math> is at distance at most <math>t</math> from <math>cP^{-1}</math>. Therefore, the correct code word <math>{\hat m} = mS</math> is obtained.
+
+Multiplying with the inverse of '''<math>S</math>''' gives <math>m = {\hat m}S^{-1}= mSS^{-1}</math>, which is the plain text message.
+
+== Key sizes ==
+Because there is a free choice in the matrix <math>S</math>, it is common to express <math>{\hat G}</math> in "systematic form" so that the last <math>k</math> columns correspond to the identity matrix <math>{\hat G} = ({\tilde G}|I)</math>. This reduces the key size to <math>(n-k) \times k</math>.<ref name="NIST-Submission-Overview">
+{{cite web
+ | url=https://classic.mceliece.org/mceliece-spec-20221023.pdf
+ | title=Classic McEliece: conservative code-based cryptography: cryptosystem specification
+ | author=Classic McEliece Team
+ | date=2022-10-23
+ | work=Round 4 NIST Submission Overview}}</ref><ref name="Code-Based-Cryptography-Lecture">{{cite web
+ | url=https://www.youtube.com/watch?v=qisORKNShvo
+ | title=Code-based cryptography III - Goppa codes: definition and usage
+ | author=Tanja Lange
+ | website=[[YouTube]]
+ | date=2021-02-23
+}}</ref> McEliece originally suggested security parameter sizes of <math>n=1024, k=524, t=50</math>,<ref name="McEliece"/> resulting in a public key size of {{nowrap|1=524 × (1024 − 524) = {{val|262,000|u=bits}}}}. Recent analysis suggests parameter sizes of <math>n=2048, k=1751, t=27</math> for 80 [[bits of security]] when using standard algebraic decoding, or <math>n=1632, k=1269, t=34</math> when using list decoding for the Goppa code, giving rise to public key sizes of {{val|520,047}} and {{val|460,647|u=bits}} respectively.<ref name="fix"/> For resiliency against quantum computers, sizes of <math>n=6960, k=5413, t=119</math> with Goppa code were proposed, giving the size of public key of {{val|8,373,911|u=bits}}.<ref name="PQcrypto-initial">
+{{cite web
+ | url=https://pqcrypto.eu.org/docs/initial-recommendations.pdf
+ | title=Initial recommendations of long-term secure post-quantum systems
+ | author=Daniel Augot
+ | date=2015-09-07
+ | work=PQCRYPTO: Post-Quantum Cryptography for Long-Term Security
+ | display-authors=etal
+}}</ref> In its round 3 submission to the NIST post quantum standardization the highest level of security, level 5 is given for parameter sets 6688128, 6960119, and 8192128. The parameters are <math>n=6688, k=5024, t= 128 </math>, <math>n= 6960, k = 5413, t = 119 </math>, <math>n=8192, k =6528, t = 128 </math> respectively.
+
+== Attacks ==
+An attack consists of an adversary, who knows the public key <math>({\hat G}, t)</math> but not the private key, deducing the plaintext from some intercepted ciphertext <math>y \in \mathbb{F}_2^n</math>. Such attempts should be infeasible.
+
+There are two main branches of attacks for McEliece:
+
+=== Brute-force / unstructured attacks ===
+The attacker knows <math>\hat G</math>, the generator matrix of an <math>(n,k)</math> code <math>\hat C</math> that is combinatorially able to correct <math>t</math> errors.
+The attacker may ignore the fact that <math>\hat C</math> is really the obfuscation of a structured code chosen from a specific family, and instead just use an algorithm for decoding with any linear code. Several such algorithms exist, such as going through each codeword of the code, [[decoding methods#Syndrome decoding|syndrome decoding]], or [[decoding methods#Information set decoding|information set decoding]].
+
+Decoding a general linear code, however, is known to be [[NP-hard]],<ref name="intractability"/> and all of the above-mentioned methods have exponential running time.
+
+In 2008, Bernstein, Lange, and Peters<ref name="fix"/> described a practical attack on the original McEliece cryptosystem, using the information set decoding method by Stern.<ref>
+{{cite book
+ | author=Jacques Stern
+ | title=Coding Theory and Applications
+ | year=1989
+ | chapter=A method for finding codewords of small weight
+ | series=Lecture Notes in Computer Science
+ | publisher=Springer Verlag
+ | volume=388
+ | pages=106–113
+ | doi=10.1007/BFb0019850
+ | isbn=978-3-540-51643-9
+}}</ref>
+Using the parameters originally suggested by McEliece, the attack could be carried out in 2<sup>60.55</sup> bit operations. Since the attack is [[embarrassingly parallel]] (no communication between nodes is necessary), it can be carried out in days on modest computer clusters.
+
+=== Structural attacks ===
+
+The attacker may instead attempt to recover the "structure" of <math>C</math>, thereby recovering the efficient decoding algorithm <math>A</math> or another sufficiently strong, efficient decoding algorithm.
+
+The family of codes from which <math>C</math> is chosen completely determines whether this is possible for the attacker. Many code families have been proposed for McEliece, and most of them have been completely "broken" in the sense that attacks have been found that recover an efficient decoding algorithm, such as [[Reed–Solomon error correction|Reed-Solomon codes]].
+
+The originally proposed binary Goppa codes remain one of the few suggested families of codes that have largely resisted attempts at devising structural attacks.
+
+== Post-quantum encryption candidate ==
+
+A variant of this algorithm combined with NTS-KEM<ref>{{cite web|date=2017-12-29|title=NTS-KEM|url=https://nts-kem.io/|access-date=2020-12-09|archive-url=https://web.archive.org/web/20171229103229/https://nts-kem.io/|archive-date=29 December 2017}}</ref> was entered into and selected during the third round of the [[National Institute of Standards and Technology|NIST]] [[NIST Post-Quantum Cryptography Standardization|post-quantum encryption competition]].<ref>{{Cite journal|title=Status Report on the Third Round of the NIST Post-Quantum Cryptography Standardization Process|url=https://nvlpubs.nist.gov/nistpubs/ir/2022/NIST.IR.8413.pdf|journal=NISTIR|pages=31}}</ref>
+
+== References ==
+{{reflist}}
+
+== External links ==
+* {{cite book
+|ref={{harvid|Handbook of Applied Cryptography|1996}}
+|title=Handbook of Applied Cryptography
+|publisher=CRC Press
+|year=1996
+|chapter-url=http://cacr.uwaterloo.ca/hac/
+|author1=Alfred J. Menezes
+|author2=Scott A. Vanstone
+|author3=A. J. Menezes
+|author4=Paul C. van Oorschot
+|chapter=Chapter 8: Public-Key Encryption
+|isbn=978-0-8493-8523-0
+|url-access=registration
+|url=https://archive.org/details/handbookofapplie0000mene
+}}
+* {{cite book
+|title=McEliece Messaging: Smoke Crypto Chat - The first mobile McEliece-Messenger published as a stable prototype worldwide
+|publisher=Article TK Info Portal
+|year=2023
+|author1=Rahmschmid, Claudia
+|author2=Adams, David
+|url=https://tarnkappe.info/artikel/english/mceliece-messaging-smoke-crypto-chat-the-first-mobile-mceliece-messenger-published-as-a-stable-prototype-worldwide-279847.html
+}}
+* {{cite web
+| url=https://www.sciencedaily.com/releases/2008/10/081028132303.htm
+| title=Quantum Computers? Internet Security Code of the Future Cracked
+| date=2008-11-01
+| work=[[Science Daily]]
+| publisher=[[Eindhoven University of Technology]]
+}}
+* {{cite web
+| url=https://classic.mceliece.org/
+|  title=Classic McEliece
+}} (Submission to the NIST [[Post-Quantum Cryptography Standardization]] Project)
+
+{{Cryptography navbox | public-key}}
+
+[[Category:Public-key encryption schemes]]
+[[Category:Code-based cryptography]]
+[[Category:Post-quantum cryptography]]

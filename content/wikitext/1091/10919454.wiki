@@ -1,0 +1,192 @@
+<!-- wikipedia: en
+     page: 10919454
+     title: XXTEA
+     revision: 1373358680
+     timestamp: 2026-09-05T15:25:31Z
+     history: https://en.wikipedia.org/w/index.php?curid=10919454&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373358680 -->
+{{Short description|Block cipher}}
+{{Infobox block cipher
+| name          = Corrected Block TEA (XXTEA)
+| image         = [[File:Algorithm diagram for XXTEA cipher.svg|center]]
+| caption       = One round of XXTEA
+| designers     = [[David Wheeler (computer scientist)|David Wheeler]], [[Roger Needham]]
+| publish date  = October 1998
+| derived from  = [[XTEA|Block TEA]]
+| derived to    = 
+| key size      = 128 bits
+| block size    = arbitrary, at least two words (64 bits)
+| structure     = [[Feistel cipher|Unbalanced Feistel Network]]
+| rounds        = depends on the block size; ~52+6*''words'' (6-32 full cycles)
+| cryptanalysis =
+XXTEA is vulnerable to a [[chosen-plaintext attack]] requiring 2<sup>59</sup> queries and negligible work.<ref name=yarrkov-broken />
+}}
+
+In [[cryptography]], '''Corrected Block TEA''' (often referred to as '''XXTEA''') is a [[block cipher]] designed to correct weaknesses in the original [[Block TEA]].<ref name="tea">{{cite web
+|url=http://www-users.cs.york.ac.uk/~matthew/TEA/
+|title=Tinyness: An Overview of TEA and Related Ciphers
+|archive-url=https://web.archive.org/web/20070812222155/http://www-users.cs.york.ac.uk/~matthew/TEA/
+|archive-date=2007-08-12
+|author=Matthew D. Russell
+|date=2004-02-27
+}}</ref><ref name="xtea">{{cite web
+|url=http://www.movable-type.co.uk/scripts/xtea.pdf
+|title=Tea extensions
+|author=Roger M. Needham and David J. Wheeler
+|publisher=Computer Laboratory, Cambridge University, England
+|date=October 1997
+|access-date=2008-07-04
+}}</ref>
+
+XXTEA is vulnerable to a [[chosen-plaintext attack]] requiring 2<sup>59</sup> queries and negligible work. See cryptanalysis below.
+ 
+The [[cipher]]'s designers were [[Roger Needham]] and [[David Wheeler (computer scientist)|David Wheeler]] of the [[University of Cambridge Computer Laboratory|Cambridge Computer Laboratory]], and the algorithm was presented in an unpublished{{clarify|date=October 2007}} technical report in October 1998 (Wheeler and Needham, 1998). It is not subject to any [[patent]]s.
+
+Formally speaking, XXTEA is a consistent incomplete source-heavy heterogeneous UFN (unbalanced [[Feistel network]]) block cipher. XXTEA operates on variable-length blocks that are some arbitrary multiple of 32 bits in size (minimum 64 bits). The number of full cycles depends on the block size, but there are at least six (rising to 32 for small block sizes). The original Block TEA applies the [[XTEA]] round function to each word in the block and combines it additively with its leftmost neighbour. Slow diffusion rate of the decryption process was immediately exploited to break the cipher. Corrected Block TEA uses a more involved round function which makes use of both immediate neighbours in processing each word in the block.
+
+XXTEA is likely to be more efficient than XTEA for longer messages.{{citation needed|date=October 2010}}
+
+Needham & Wheeler make the following comments on the use of Block TEA:
+
+<blockquote>
+For ease of use and general security the large block version is to be preferred when applicable for the following reasons.
+* A single bit change will change about one half of the bits of the entire block, leaving no place where the changes start.
+* There is no choice of mode involved.
+* Even if the correct usage of always changing the data sent (possibly by a message number) is employed, only identical messages give the same result and the information leakage is minimal.
+* The message number should always be checked as this redundancy is the check against a random message being accepted.
+* Cut and join attacks do not appear to be possible.
+* If it is not acceptable to have very long messages, they can be broken into chunks say of 60 words and [[Block cipher modes of operation|chained]] analogously to the methods used for [[Data Encryption Standard|DES]].
+</blockquote>
+
+However, due to the incomplete nature of the round function, two large ciphertexts of 53 or more 32-bit words identical in all but 12 words can be found by a simple brute-force collision search requiring 2<sup>96&minus;N</sup> memory, 2<sup>N</sup> time and 2<sup>N</sup>+2<sup>96&minus;N</sup> chosen plaintexts, in other words with a total time*memory complexity of 2<sup>96</sup>, which is actually 2<sup>wordsize*fullcycles/2</sup> for any such cipher. It is currently unknown if such partial collisions pose any threat to the security of the cipher. Eight full cycles would raise the bar for such collision search above complexity of parallel brute-force attacks.{{Citation needed|date=April 2008}}
+
+The unusually small size of the XXTEA algorithm would make it a viable option in situations where there are extreme constraints e.g. very small microcontrollers where the amount of available [[random-access memory|RAM]] is minimal.
+
+==Cryptanalysis==
+An attack published in 2010 by E. Yarrkov presents a [[chosen-plaintext attack]] against full-round XXTEA with wide block, requiring 2<sup>59</sup> queries for a block size of 212 bytes or more, and negligible work. It is based on [[differential cryptanalysis]].<ref name=yarrkov-broken>{{cite journal |author=Elias Yarrkov |date=2010-05-04 |title=Cryptanalysis of XXTEA |journal=Cryptology ePrint Archive |url=http://eprint.iacr.org/2010/254 }}</ref>
+
+To cipher "212 bytes or more" algorithm performs just 6 rounds, and carefully chosen bit patterns allows to detect and analyze avalanche effect.
+
+==Reference code==
+The original formulation of the Corrected Block TEA algorithm, published by David Wheeler and Roger Needham, is as follows:<ref name="xxtea">{{cite web
+|url=http://www.movable-type.co.uk/scripts/xxtea.pdf
+|title=Correction to XTEA
+|author=David J. Wheeler and Roger M. Needham
+|publisher=Computer Laboratory, Cambridge University, England
+|date=October 1998
+|access-date=2008-07-04
+}}</ref>
+
+<syntaxhighlight lang="C">
+  #define DELTA 0x9e3779b9
+  #define MX ((z>>5^y<<2) + (y>>3^z<<4) ^ (sum^y) + (k[p&3^e]^z))
+  
+  long btea(long* v, long n, long* k) {
+    unsigned long z=v[n-1], y=v[0], sum=0, e, DELTA=0x9e3779b9;
+    long p, q ;
+    if (n > 1) {          /* Coding Part */
+      q = 6 + 52/n;
+      while (q-- > 0) {
+        sum += DELTA;
+        e = (sum >> 2) & 3;
+        for (p=0; p<n-1; p++) y = v[p+1], z = v[p] += MX;
+        y = v[0];
+        z = v[n-1] += MX;
+      }
+      return 0 ; 
+    } else if (n < -1) {  /* Decoding Part */
+      n = -n;
+      q = 6 + 52/n;
+      sum = q*DELTA ;
+      while (sum != 0) {
+        e = (sum >> 2) & 3;
+        for (p=n-1; p>0; p--) z = v[p-1], y = v[p] -= MX;
+        z = v[n-1];
+        y = v[0] -= MX;
+        sum -= DELTA;
+      }
+      return 0;
+    }
+    return 1;
+  }
+</syntaxhighlight>
+
+According to Needham and Wheeler:
+
+{{quote|BTEA will encode or decode n words as a single block where ''n'' > 1
+* v is the n word data vector
+* k is the 4 word key
+* n is negative for decoding
+* if n is zero result is 1 and no coding or decoding takes place, otherwise the result is zero
+* assumes 32 bit 'long' and same endian coding and decoding}}
+
+Note that the initialization of z is [[Undefined behavior]] for ''n'' < 1 which may cause a [[segmentation fault]] or other unwanted behavior – it would be better placed inside the 'Coding Part' block. Also, in the definition of MX some programmers would prefer to use bracketing to clarify operator precedence.
+
+A clarified version including those improvements is as follows:
+<syntaxhighlight lang="C">
+  #include <stdint.h>
+  #define DELTA 0x9e3779b9
+  #define MX (((z>>5^y<<2) + (y>>3^z<<4)) ^ ((sum^y) + (key[(p&3)^e] ^ z)))
+  
+  void btea(uint32_t *v, int n, uint32_t const key[4]) {
+    uint32_t y, z, sum;
+    unsigned p, rounds, e;
+    if (n > 1) {          /* Coding Part */
+      rounds = 6 + 52/n;
+      sum = 0;
+      z = v[n-1];
+      do {
+        sum += DELTA;
+        e = (sum >> 2) & 3;
+        for (p=0; p<n-1; p++) {
+          y = v[p+1]; 
+          z = v[p] += MX;
+        }
+        y = v[0];
+        z = v[n-1] += MX;
+      } while (--rounds);
+    } else if (n < -1) {  /* Decoding Part */
+      n = -n;
+      rounds = 6 + 52/n;
+      sum = rounds*DELTA;
+      y = v[0];
+      do {
+        e = (sum >> 2) & 3;
+        for (p=n-1; p>0; p--) {
+          z = v[p-1];
+          y = v[p] -= MX;
+        }
+        z = v[n-1];
+        y = v[0] -= MX;
+        sum -= DELTA;
+      } while (--rounds);
+    }
+  }
+</syntaxhighlight>
+
+==See also==
+* [[RC4]]: A [[stream cipher]] that, just like XXTEA, is designed to be very simple to implement.
+* [[XTEA]]: Block TEA's precursor.
+* [[Tiny Encryption Algorithm|TEA]]: XTEA's precursor.
+
+==References==
+
+{{reflist}}
+
+{{Cryptography navbox | block}}
+
+==External links==
+<!-- We suffer from a lot of self promotion here.
+ --- Please do not add a link to your own site. See http://en.wikipedia.org/w/index.php?title=WP:COI
+ --- It will be removed, and you may be blocked without further warning. -->
+* [http://www.movable-type.co.uk/scripts/tea-block.html a JavaScript implementation]
+* [https://github.com/xxtea/xxtea-php a PHP implementation]
+* [https://cliki.net/XXTEA a CL implementation]{{Dead link|date=March 2026 |bot=InternetArchiveBot }}
+
+[[Category:Broken block ciphers]]
+[[Category:Computer security in the United Kingdom]]
+[[Category:Feistel ciphers]]
+[[Category:History of computing in the United Kingdom]]
+[[Category:Science and technology in Cambridgeshire]]
+[[Category:Articles with example C code]]

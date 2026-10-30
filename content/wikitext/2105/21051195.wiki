@@ -1,0 +1,520 @@
+<!-- wikipedia: en
+     page: 21051195
+     title: Greedy coloring
+     revision: 1352725705
+     timestamp: 2026-05-05T22:27:40Z
+     history: https://en.wikipedia.org/w/index.php?curid=21051195&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1352725705 -->
+{{Short description|One-by-one assignment of colors to graph vertices}}
+{{good article}}
+[[Image:Greedy colourings.svg|thumb|right|Two greedy colorings of the same [[crown graph]] using different vertex orders. The right example generalises to 2-colorable graphs with {{mvar|n}} vertices, where the greedy algorithm expends {{math|''n''/2}} colors.]]
+In the study of [[graph coloring]] problems in [[mathematics]] and [[computer science]], a '''greedy coloring''' or '''sequential coloring'''{{sfnp|Mitchem|1976}} is a coloring of the [[vertex (graph theory)|vertices]] of a [[undirected graph|graph]] formed by a [[greedy algorithm]] that considers the vertices of the graph in sequence and assigns each [[Vertex operator algebra|vertex]] its [[Mex (mathematics)|first available]] color. Greedy colorings can be found in linear time, but they do not, in general, use the minimum number of colors possible.
+
+Different choices of the sequence of vertices will typically produce different colorings of the given graph, so much of the study of greedy colorings has concerned how to find a good ordering. There always exists an ordering that produces an optimal coloring, but although such orderings can be found for many special classes of graphs, they are hard to find in general. Commonly used strategies for vertex ordering involve placing higher-degree vertices earlier than lower-degree vertices, or choosing vertices with fewer available colors in preference to vertices that are less constrained.
+
+Variations of greedy coloring choose the colors in an [[Online algorithm|online manner]], without any knowledge of the structure of the uncolored part of the graph, or choose other colors than the first available in order to reduce the total number of colors. Greedy coloring algorithms have been applied to scheduling and [[register allocation]] problems, the analysis of combinatorial games, and the proofs of other mathematical results including [[Brooks' theorem]] on the relation between coloring and degree.
+Other concepts in graph theory derived from greedy colorings include the [[Grundy number]] of a graph (the largest number of colors that can be found by a greedy coloring), and the [[well-colored graph]]s, graphs for which all greedy colorings use the same number of colors.
+
+==Algorithm==
+The greedy coloring for a given vertex ordering can be computed by an [[algorithm]] that runs in [[linear time]]. The algorithm processes the vertices in the given ordering, assigning a color to each one as it is processed. The colors may be represented by the numbers <math>0,1,2,\dots</math> and each vertex is given the color with the [[Mex (mathematics)|smallest number that is not already used]] by one of its neighbors.
+To find the smallest available color, one may use an array to count the number of neighbors of each color (or alternatively, to represent the set of colors of neighbors), and then scan the array to find the index of its first zero.<ref name=hs>{{harvtxt|Hoàng|Sritharan|2016}}, [https://books.google.com/books?id=H_IYCwAAQBAJ&pg=PA738 Theorem 28.33, p. 738]; {{harvtxt|Husfeldt|2015}}, Algorithm G</ref>
+
+In [[Python (programming language)|Python]], the algorithm can be expressed as:
+<syntaxhighlight lang="python">
+def first_available(colors):
+    """Return smallest non-negative integer not in the given set of colors.
+    """
+    color = 0
+    while color in colors:
+        color += 1
+    return color
+
+def greedy_coloring(G, order):
+    """Find the greedy coloring of G in the given order.
+
+    The representation of G is assumed to be like
+    https://www.python.org/doc/essays/graphs/
+    in allowing neighbors of a node/vertex to be
+    iterated over by "for w in G[node]".
+    The return value is a dictionary mapping vertices to colors.
+    """
+    coloring = dict()
+    for node in order:
+        used_neighbour_colors = {coloring[nbr]
+                                 for nbr in G[node]
+                                 if nbr in coloring}
+        coloring[node] = first_available(used_neighbour_colors)
+    return coloring
+</syntaxhighlight>
+
+The <code>first_available</code> subroutine takes time proportional to the length of its argument list, because it performs two loops, one over the list itself and one over a list of counts that has the same length. The time for the overall coloring algorithm is dominated by the calls to this subroutine. Each edge in the graph contributes to only one of these calls, the one for the endpoint of the edge that is later in the vertex ordering. Therefore, the sum of the lengths of the argument lists to <code>first_available</code>, and the total time for the algorithm, are proportional to the number of edges in the graph.<ref name=hs/>
+
+An alternative algorithm, producing the same coloring,{{sfnp|Frieze|McDiarmid|1997}} is to choose the sets of vertices with each color, one color at a time. In this method, each color class <math>C</math> is chosen by scanning through the vertices in the given ordering. When this scan encounters an uncolored vertex <math>v</math> that has no neighbor in <math>C</math>, it adds <math>v</math> to <math>C</math>. In this way, <math>C</math> becomes a [[maximal independent set]] among the vertices that were not already assigned smaller colors. The algorithm repeatedly finds color classes in this way until all vertices are colored. However, it involves making multiple scans of the graph, one scan for each color class, instead of the method outlined above which uses only a single scan.{{sfnp|Welsh|Powell|1967}}
+
+==Choice of ordering==
+Different orderings of the vertices of a graph may cause the greedy coloring to use different numbers of colors, ranging from the optimal number of colors to, in some cases, a number of colors that is proportional to the number of vertices in the graph. For instance, a [[crown graph]] (a graph formed from two [[disjoint sets]] of {{math|''n''/2}} vertices {{math|{''a''<sub>1</sub>, ''a''<sub>2</sub>, ...}}} and {{math|{''b''<sub>1</sub>, ''b''<sub>2</sub>, ...}}} by connecting {{math|''a''<sub>''i''</sub>}} to {{math|''b''<sub>''j''</sub>}} whenever {{math|''i'' ≠ ''j''}}) can be a particularly bad case for greedy coloring. With the vertex ordering {{math|''a''<sub>1</sub>, ''b''<sub>1</sub>, ''a''<sub>2</sub>, ''b''<sub>2</sub>, ...}}, a greedy coloring will use {{math|''n''/2}} colors, one color for each pair {{math|(''a''<sub>''i''</sub>, ''b''<sub>''i''</sub>)}}. However, the optimal number of colors for this graph is two, one color for the vertices {{math|''a''<sub>''i''</sub>}} and another for the vertices {{math|''b''<sub>''i''</sub>}}.<ref>{{harvtxt|Johnson|1974}}; {{harvtxt|Husfeldt|2015}}.</ref> There also exist graphs such that with high probability a randomly chosen vertex ordering leads to a number of colors much larger than the minimum.<ref>{{harvtxt|Kučera|1991}}; {{harvtxt|Husfeldt|2015}}.</ref> Therefore, it is of some importance in greedy coloring to choose the vertex ordering carefully.
+
+===Good orders===
+The vertices of any graph may always be ordered in such a way that the greedy algorithm produces an optimal coloring. For, given any optimal coloring, one may order the vertices by their colors. Then when one uses a greedy algorithm with this order, the resulting coloring is automatically optimal.{{sfnp|Husfeldt|2015}} However, because optimal graph coloring is [[NP-complete]], any subproblem that would allow this problem to be solved quickly, including finding an optimal ordering for greedy coloring, is [[NP-hard]].{{sfnp|Maffray|2003}}
+
+In [[interval graph]]s and [[chordal graph]]s, if the vertices are ordered in the reverse of a [[perfect elimination ordering]],
+then the earlier neighbors of every vertex will form a [[clique (graph theory)|clique]]. This property causes the greedy coloring to produce an optimal coloring, because it never uses more colors than are required for each of these cliques. An elimination ordering can be found in linear time, when it exists.{{sfnp|Rose|Lueker|Tarjan|1976}}
+
+More strongly, any perfect elimination ordering is ''hereditarily optimal'', meaning that it is optimal both for the graph itself and for all of its [[induced subgraph]]s. The [[perfectly orderable graph]]s (which include [[chordal graph]]s, [[comparability graph]]s, and [[distance-hereditary graph]]s) are defined as graphs that have a hereditarily optimal ordering.<ref>{{harvtxt|Chvátal|1984}}; {{harvtxt|Husfeldt|2015}}.</ref> Recognizing perfectly orderable graphs is also NP-complete.{{sfnp|Middendorf|Pfeiffer|1990}}
+
+===Bad orders===
+{{main|Grundy number}}
+The number of colors produced by the greedy coloring for the worst ordering of a given graph is called its [[Grundy number]].{{sfnp|Zaker|2006}}
+Just as finding a good vertex ordering for greedy coloring is difficult, so is finding a bad vertex ordering.
+It is NP-complete to determine, for a given graph {{mvar|G}} and number {{mvar|k}}, whether there exists an ordering of the vertices of {{mvar|G}} that causes the greedy algorithm to use {{mvar|k}} or more colors. In particular, this means that it is difficult to find the worst ordering for {{mvar|G}}.{{sfnp|Zaker|2006}}
+
+===Graphs for which order is irrelevant===
+{{main|Well-colored graph}}
+The [[well-colored graph]]s are the graphs for which all vertex orderings produce the same number of colors. This number of colors, in these graphs, equals both the chromatic number and the Grundy number.{{sfnp|Zaker|2006}} They include the [[cograph]]s, which are exactly the graphs in which all [[induced subgraph]]s are well-colored.{{sfnp|Christen|Selkow|1979}} However, it is [[co-NP-complete]] to determine whether a graph is well-colored.{{sfnp|Zaker|2006}}
+
+If a [[random graph]] is drawn from the [[Erdős–Rényi model]] with constant probability of including each edge, then any vertex ordering that is chosen independently of the graph edges leads to a coloring whose number of colors is close to twice the optimal value, [[with high probability]].
+It remains unknown whether there is any polynomial time method for finding significantly better colorings of these graphs.{{sfnp|Frieze|McDiarmid|1997}}
+
+===Degeneracy===
+{{multiple image|total_width=400|image1=Triangular prism.png|image2=Square antiprism.png|footer=The triangular prism and square antiprism, graphs whose greedy colorings using the degeneracy ordering give larger-than-optimal numbers of colors}}
+Because optimal vertex orderings are hard to find, [[Heuristic|heuristics]] have been used that attempt to reduce the number of colors while not guaranteeing an optimal number of colors. A commonly used ordering for greedy coloring is to choose a vertex {{mvar|v}} of minimum [[degree (graph theory)|degree]], order the subgraph with {{mvar|v}} removed [[recursion (computer science)|recursively]], and then place {{mvar|v}} last in the ordering. The largest degree of a removed vertex that this algorithm encounters is called the [[Degeneracy (graph theory)|degeneracy]] of the graph, denoted {{mvar|d}}. In the context of greedy coloring, the same ordering strategy is also called the smallest last ordering.<ref>{{harvtxt|Mitchem|1976}}; {{harvtxt|Husfeldt|2015}}.</ref> This vertex ordering, and the degeneracy, may be computed in linear time.{{sfnp|Matula|Beck|1983}}
+It can be viewed as an improved version of an earlier vertex ordering method, the largest-first ordering, which sorts the vertices in descending order by their degrees.<ref>{{harvtxt|Welsh|Powell|1967}}; {{harvtxt|Husfeldt|2015}}.</ref>
+
+With the degeneracy ordering, the greedy coloring will use at most {{math|''d''&nbsp;+&nbsp;1}} colors. This is because, when colored, each vertex will have at most {{mvar|d}} already-colored neighbors, so one of the first {{math|''d''&nbsp;+&nbsp;1}} colors will be free for it to use.<ref>{{harvtxt|Matula|1968}}; {{harvtxt|Szekeres|Wilf|1968}}.</ref> Greedy coloring with the degeneracy ordering can find optimal colorings for certain classes of graphs, including trees, [[pseudoforest]]s, and crown graphs.{{sfnp|Kosowski|Manuszewski|2004}} {{harvtxt|Markossian|Gasparian|Reed|1996}} define a graph <math>G</math> to be <math>\beta</math>-perfect if, for <math>G</math> and every [[induced subgraph]] of <math>G</math>, the chromatic number equals the degeneracy plus one. For these graphs, the greedy algorithm with the degeneracy ordering is always optimal.<ref>{{harvtxt|Markossian|Gasparian|Reed|1996}}; {{harvtxt|Maffray|2003}}.</ref>
+Every <math>\beta</math>-perfect graph must be an [[even-hole-free graph]], because even cycles have chromatic number two and degeneracy two, not matching the equality in the definition of <math>\beta</math>-perfect graphs. If a graph and its [[complement graph]] are both even-hole-free, they are both <math>\beta</math>-perfect. The graphs that are both [[perfect graph]]s and <math>\beta</math>-perfect graphs are exactly the [[chordal graph]]s. On even-hole-free graphs more generally, the degeneracy ordering approximates the optimal coloring to within at most twice the optimal number of colors; that is, its [[approximation ratio]] is 2.{{sfnp|Markossian|Gasparian|Reed|1996}} On [[unit disk graph]]s its approximation ratio is 3.{{sfnp|Gräf|Stumpf|Weißenfels|1998}} The [[triangular prism]] is the smallest graph for which one of its degeneracy orderings leads to a non-optimal coloring, and the [[square antiprism]] is the smallest graph that cannot be optimally colored using any of its degeneracy orderings.{{sfnp|Kosowski|Manuszewski|2004}}
+
+===Adaptive orders===
+{{harvtxt|Brélaz|1979}} proposes a strategy, called [[DSatur]], for vertex ordering in greedy coloring that interleaves the construction of the ordering with the coloring process.
+In his version of the greedy coloring algorithm, the next vertex to color at each step is chosen as the one with the largest number of distinct colors in its [[Neighborhood (graph theory)|neighborhood]]. In case of ties, a vertex of maximal degree in the subgraph of uncolored vertices is chosen from the tied vertices. By keeping track of the sets of neighboring colors and their [[cardinality|cardinalities]] at each step, it is possible to implement this method in linear time.<ref>{{harvtxt|Brélaz|1979}}; {{harvtxt|Lévêque|Maffray|2005}}.</ref>
+
+This method can find the optimal colorings for [[bipartite graph]]s,{{sfnp|Brélaz|1979}} all [[cactus graph]]s, all [[wheel graph]]s, all graphs on at most six vertices, and [[almost every]] <math>k</math>-colorable graph.{{sfnp|Janczewski|Kubale|Manuszewski|Piwakowski|2001}} Although {{harvtxt|Lévêque|Maffray|2005}} originally claimed that this method finds optimal colorings for the [[Meyniel graph]]s, they later found a counterexample to this claim.{{sfnp|Lévêque|Maffray|2005}}
+
+==Alternative color selection schemes==
+It is possible to define variations of the greedy coloring algorithm in which the vertices of the given graph are colored in a given sequence but in which the color chosen for each vertex is not necessarily the first available color. These include methods in which the uncolored part of the graph is unknown to the algorithm, or in which the algorithm is given some freedom to make better coloring choices than the basic greedy algorithm would.
+
+===Online selection===
+Alternative color selection strategies have been studied within the framework of [[online algorithm]]s. In the online graph-coloring problem, vertices of a graph are presented one at a time in an arbitrary order to a coloring algorithm; the algorithm must choose a color for each vertex, based only on the colors of and adjacencies among already-processed vertices. In this context, one measures the quality of a color selection strategy by its [[Competitive analysis (online algorithm)|competitive ratio]], the ratio between the number of colors it uses and the optimal number of colors for the given graph.{{sfnp|Irani|1994}}
+
+If no additional restrictions on the graph are given, the optimal competitive ratio is only slightly sublinear.<ref>{{harvtxt|Lovász|Saks|Trotter|1989}}; {{harvtxt|Vishwanathan|1992}}.</ref> However, for [[interval graph]]s, a constant competitive ratio is possible,{{sfnp|Kierstead|Trotter|1981}} while for [[bipartite graph]]s and [[sparse graph]]s a logarithmic ratio can be achieved. Indeed, for sparse graphs, the standard greedy coloring strategy of choosing the first available color achieves this competitive ratio, and it is possible to prove a matching lower bound on the competitive ratio of any online coloring algorithm.{{sfnp|Irani|1994}}
+
+===Parsimonous coloring===
+A ''parsimonious coloring'', for a given graph and vertex ordering, has been defined to be a coloring produced by a greedy algorithm that colors the vertices in the given order, and only introduces a new color when all previous colors are adjacent to the given vertex, but can choose which color to use (instead of always choosing the smallest) when it is able to re-use an existing color. The ''ordered chromatic number'' is the smallest number of colors that can be obtained for the given ordering in this way, and the ''ochromatic number'' is the largest ordered chromatic number among all vertex colorings of a given graph. Despite its different definition, the ochromatic number always equals the Grundy number.<ref>{{harvtxt|Simmons|1982}}; {{harvtxt|Erdős|Hare|Hedetniemi|Laskar|1987}}.</ref>
+
+==Applications==
+Because it is fast and in many cases can use few colors, greedy coloring can be used in applications where a good but not optimal graph coloring is needed. One of the early applications of the greedy algorithm was to problems such as course scheduling, in which a collection of tasks must be assigned to a given set of time slots, avoiding incompatible tasks being assigned to the same time slot.{{sfnp|Welsh|Powell|1967}}
+It can also be used in [[compiler]]s for [[register allocation]], by applying it to a graph whose vertices represent values to be assigned to registers and whose edges represent conflicts between two values that cannot be assigned to the same register.<ref>{{harvtxt|Poletto|Sarkar|1999}}. Although Poletto and Sarkar describe their register allocation method as not being based on graph coloring, it appears to be the same as greedy coloring.</ref> In many cases, these interference graphs are [[chordal graph]]s, allowing greedy coloring to produce an optimal register assignment.{{sfnp|Pereira|Palsberg|2005}}
+
+In [[combinatorial game theory]], for an [[impartial game]] given in explicit form as a [[directed acyclic graph]] whose vertices represent game positions and whose edges represent valid moves from one position to another, the greedy coloring algorithm (using the reverse of a [[topological ordering]] of the graph) calculates the [[nim-value]] of each position. These values can be used to determine optimal play in any single game or any [[disjunctive sum]] of games.<ref>E.g., see Section 1.1 of {{harvtxt|Nivasch|2006}}.</ref>
+
+For a graph of maximum degree {{math|Δ}}, any greedy coloring will use at most {{math|Δ&nbsp;+&nbsp;1}} colors. [[Brooks' theorem]] states that with two exceptions ([[complete graph|cliques]] and [[cycle graph|odd cycles]]) at most {{math|Δ}} colors are needed. One proof of Brooks' theorem involves finding a vertex ordering in which the first two vertices are adjacent to the final vertex but not adjacent to each other, and each vertex other than the last one has at least one later neighbor. For an ordering with this property, the greedy coloring algorithm uses at most {{math|Δ}} colors.{{sfnp|Lovász|1975}}
+
+==Notes==
+{{reflist|25em}}
+
+==References==
+{{refbegin|25em}}
+*{{citation
+ | last = Brélaz | first = Daniel
+ | date = April 1979
+ | doi = 10.1145/359094.359101
+ | issue = 4
+ | journal = [[Communications of the ACM]]
+ | pages = 251–256
+ | title = New methods to color the vertices of a graph
+ | volume = 22| s2cid = 14838769
+ | doi-access = free
+ }}
+*{{citation
+ | last1 = Christen | first1 = Claude A.
+ | last2 = Selkow | first2 = Stanley M.
+ | doi = 10.1016/0095-8956(79)90067-4
+ | issue = 1
+ | journal = [[Journal of Combinatorial Theory]]
+ | mr = 539075
+ | pages = 49–59
+ | series = Series B
+ | title = Some perfect coloring properties of graphs
+ | volume = 27
+ | year = 1979| doi-access = free
+ }}
+*{{citation
+ | last = Chvátal | first = Václav | author-link = Vašek Chvátal
+ | contribution = Perfectly orderable graphs
+ | editor1-last = Berge | editor1-first = Claude | editor1-link = Claude Berge
+ | editor2-last = Chvátal | editor2-first = Václav | editor2-link = Vašek Chvátal
+ | location = Amsterdam
+ | pages = 63–68
+ | publisher = North-Holland
+ | series = Annals of Discrete Mathematics
+ | title = Topics in Perfect Graphs
+ | volume = 21
+ | year = 1984}}. As cited by {{harvtxt|Maffray|2003}}.
+*{{citation
+ | last1 = Erdős | first1 = P. | author1-link = Paul Erdős
+ | last2 = Hare | first2 = W. R.
+ | last3 = Hedetniemi | first3 = S. T.
+ | last4 = Laskar | first4 = R. | author4-link = Renu C. Laskar
+ | doi = 10.1002/jgt.3190110205
+ | issue = 2
+ | journal = [[Journal of Graph Theory]]
+ | mr = 889347
+ | pages = 157–159
+ | title = On the equality of the Grundy and ochromatic numbers of a graph
+ | url = https://users.renyi.hu/~p_erdos/1987-18.pdf
+ | volume = 11
+ | year = 1987}}.
+*{{citation
+ | last1 = Frieze | first1 = Alan | author1-link = Alan M. Frieze
+ | last2 = McDiarmid | first2 = Colin
+ | doi = 10.1002/(SICI)1098-2418(199701/03)10:1/2<5::AID-RSA2>3.3.CO;2-6
+ | issue = 1–2
+ | journal = Random Structures & Algorithms
+ | mr = 1611517
+ | pages = 5–42
+ | title = Algorithmic theory of random graphs
+ | volume = 10
+ | year = 1997}}.
+*{{citation
+ | last1 = Gräf | first1 = A.
+ | last2 = Stumpf | first2 = M.
+ | last3 = Weißenfels | first3 = G.
+ | doi = 10.1007/PL00009196
+ | issue = 3
+ | journal = [[Algorithmica]]
+ | mr = 1489033
+ | pages = 277–293
+ | title = On coloring unit disk graphs
+ | volume = 20
+ | year = 1998| s2cid = 36161020
+ }}.
+*{{citation
+ | last1 = Hoàng | first1 = Chinh T.
+ | last2 = Sritharan | first2 = R.
+ | editor1-last = Thulasiraman | editor1-first = Krishnaiyan
+ | editor2-last = Arumugam | editor2-first = Subramanian
+ | editor3-last = Brandstädt | editor3-first = Andreas
+ | editor4-last = Nishizeki | editor4-first = Takao
+ | contribution = Chapter 28. Perfect Graphs
+ | isbn = 9781420011074
+ | pages = 707–750
+ | publisher = CRC Press
+ | series = Chapman & Hall/CRC Computer and Information Science Series
+ | title = Handbook of Graph Theory, Combinatorial Optimization, and Algorithms
+ | volume = 34
+ | year = 2016}}.
+*{{citation
+ | last = Husfeldt | first = Thore
+ | editor1-first = Lowell W. | editor1-last = Beineke |editor-link=L. W. Beineke
+ | editor2-first = Robin J. | editor2-last = Wilson | editor2-link = Robin Wilson (mathematician)
+ | arxiv = 1505.05825
+ | contribution = Graph colouring algorithms
+ | mr = 3380176
+ | pages = 277–303
+ | publisher = Cambridge University Press
+ | series = Encyclopedia of Mathematics and its Applications
+ | title = Topics in Chromatic Graph Theory
+ | volume = 156
+ | year = 2015}}
+*{{citation
+ | last = Irani | first = Sandy
+ | doi = 10.1007/BF01294263
+ | issue = 1
+ | journal = Algorithmica
+ | mr = 1247988
+ | pages = 53–72
+ | title = Coloring inductive graphs on-line
+ | volume = 11
+ | year = 1994| s2cid = 181800
+ }}.
+*{{citation
+ | last1 = Janczewski | first1 = R.
+ | last2 = Kubale | first2 = M.
+ | last3 = Manuszewski | first3 = K.
+ | last4 = Piwakowski | first4 = K.
+ | doi = 10.1016/S0012-365X(00)00439-8
+ | issue = 1–3
+ | journal = [[Discrete Mathematics (journal)|Discrete Mathematics]]
+ | mr = 1830607
+ | pages = 151–165
+ | title = The smallest hard-to-color graph for algorithm DSATUR
+ | volume = 236
+ | year = 2001| doi-access = free
+ }}.
+*{{citation
+ | last1 = Kierstead | first1 = H. A.
+ | last2 = Trotter | first2 = W. T. | author2-link = William T. Trotter
+ | department = Proceedings of the Twelfth Southeastern Conference on Combinatorics, Graph Theory and Computing, Vol. II (Baton Rouge, La., 1981)
+ | journal = Congressus Numerantium
+ | mr = 0681909
+ | pages = 143–153
+ | title = An extremal problem in recursive combinatorics
+ | volume = 33
+ | year = 1981}}. As cited by {{harvtxt|Irani|1994}}.
+*{{citation
+ | last1 = Kosowski | first1 = Adrian
+ | last2 = Manuszewski | first2 = Krzysztof
+ | editor-first = Marek | editor-last = Kubale
+ | contribution = Classical coloring of graphs
+ | doi = 10.1090/conm/352/06369
+ | mr = 2076987
+ | pages = 1–19
+ | publisher = American Mathematical Society | location = Providence, Rhode Island
+ | series = Contemporary Mathematics
+ | title = Graph Colorings
+ | volume = 352
+ | year = 2004| isbn = 978-0-8218-3458-9
+ }}
+*{{citation
+ | last = Kučera | first = Luděk
+ | doi = 10.1016/0196-6774(91)90040-6
+ | issue = 4
+ | journal = Journal of Algorithms
+ | mr = 1130323
+ | pages = 674–684
+ | title = The greedy coloring is a bad probabilistic algorithm
+ | volume = 12
+ | year = 1991}}.
+*{{citation
+ | last = Johnson | first = David S. | author-link = David S. Johnson
+ | contribution = Worst case behavior of graph coloring algorithms
+ | location = Winnipeg, Manitoba
+ | mr = 0389644
+ | pages = 513–527
+ | publisher = Utilitas Math.
+ | series = Congressus Numerantium
+ | title = Proceedings of the Fifth Southeastern Conference on Combinatorics, Graph Theory and Computing (Florida Atlantic Univ., Boca Raton, Fla., 1974)
+ | volume = X
+ | year = 1974}}.
+*{{citation
+ | last1 = Lévêque | first1 = Benjamin
+ | last2 = Maffray | first2 = Frédéric
+ | editor1-last = Raspaud | editor1-first = André
+ | editor2-last = Delmas | editor2-first = Olivier
+ | contribution = Coloring Meyniel graphs in linear time
+ | contribution-url = https://hal.archives-ouvertes.fr/file/index/docid/30179/filename/ColMeyniel.pdf
+ | date = October 2005
+ | doi = 10.1016/j.endm.2005.06.005
+ | pages = 25–28
+ | publisher = Elsevier
+ | series = Electronic Notes in Discrete Mathematics
+ | title = 7th International Colloquium on Graph Theory (ICGT '05), 12–16 September 2005, Hyeres, France
+ | volume = 22| arxiv = cs/0405059
+ | s2cid = 6262680
+ }}. See also {{citation
+ | last1 = Lévêque | first1 = Benjamin
+ | last2 = Maffray | first2 = Frédéric
+ | title = Erratum : MCColor is not optimal on Meyniel graphs
+ | arxiv = cs/0405059
+ | date = January 9, 2006}}.
+*{{citation
+ | last = Lovász | first = L. | author-link = László Lovász
+ | journal = [[Journal of Combinatorial Theory]] | series = Series B
+ | mr = 0396344
+ | pages = 269–271
+ | title = Three short proofs in graph theory
+ | volume = 19
+ | year = 1975
+ | doi = 10.1016/0095-8956(75)90089-1
+ | issue = 3| doi-access = free
+ }}.
+*{{citation
+ | last1 = Lovász | first1 = L. | author1-link = László Lovász
+ | last2 = Saks | first2 = M. E. | author2-link = Michael Saks (mathematician)
+ | last3 = Trotter | first3 = W. T. | author3-link = William T. Trotter
+ | doi = 10.1016/0012-365X(89)90096-4
+ | issue = 1–3
+ | journal = [[Discrete Mathematics (journal)|Discrete Mathematics]]
+ | mr = 1001404
+ | pages = 319–325
+ | title = An on-line graph coloring algorithm with sublinear performance ratio
+ | volume = 75
+ | year = 1989| doi-access = free
+ }}.
+*{{citation
+ | last = Maffray | first = Frédéric
+ | contribution = On the coloration of perfect graphs
+ | doi = 10.1007/0-387-22444-0_3
+ | editor1-last = Reed | editor1-first = Bruce A. | editor1-link = Bruce Reed (mathematician)
+ | editor2-last = Sales | editor2-first = Cláudia L.
+ | mr = 1952983
+ | pages = 65–84
+ | publisher = Springer-Verlag
+ | series = CMS Books in Mathematics
+ | title = Recent Advances in Algorithms and Combinatorics
+ | volume = 11
+ | year = 2003
+ | isbn = 0-387-95434-1}}.
+*{{citation
+ | last1 = Markossian | first1 = S. E.
+ | last2 = Gasparian | first2 = G. S.
+ | last3 = Reed | first3 = B. A. | author3-link = Bruce Reed (mathematician)
+ | doi = 10.1006/jctb.1996.0030
+ | issue = 1
+ | journal = [[Journal of Combinatorial Theory]]
+ | mr = 1385380
+ | pages = 1–11
+ | series = Series B
+ | title = β-perfect graphs
+ | volume = 67
+ | year = 1996| doi-access = free
+ }}.
+*{{citation
+ | last = Matula | first = David W. | author-link = David Matula
+ | doi = 10.1137/1010115
+ | journal = [[SIAM Review]]
+ | pages = 481–482
+ | title = A min-max theorem for graphs with application to graph coloring
+ | department = SIAM 1968 National Meeting
+ | volume = 10
+ | year = 1968
+ | issue = 4}}.
+*{{citation
+ | last1 = Matula | first1 = David W. | author1-link = David Matula
+ | last2 = Beck | first2 = L. L. 
+ | doi = 10.1145/2402.322385
+ | journal = [[Journal of the ACM]]
+ | volume = 30
+ | mr = 0709826
+ | number = 3
+ | pages = 417–427
+ | title = Smallest-last ordering and clustering and graph coloring algorithms
+ | year = 1983| doi-access = free
+ }}.
+*{{citation
+ | last1 = Middendorf | first1 = Matthias
+ | last2 = Pfeiffer | first2 = Frank
+ | doi = 10.1016/0012-365X(90)90251-C
+ | issue = 3
+ | journal = [[Discrete Mathematics (journal)|Discrete Mathematics]]
+ | mr = 1049253
+ | pages = 327–333
+ | title = On the complexity of recognizing perfectly orderable graphs
+ | volume = 80
+ | year = 1990| doi-access = free
+ }}.
+*{{citation
+ | last = Mitchem | first = John
+ | doi = 10.1093/comjnl/19.2.182
+ | issue = 2
+ | journal = [[The Computer Journal]]
+ | mr = 0437376
+ | pages = 182–183
+ | title = On various algorithms for estimating the chromatic number of a graph
+ | volume = 19
+ | year = 1976| doi-access = free
+ }}.
+*{{citation
+ | last = Nivasch | first = Gabriel
+ | doi = 10.1016/j.disc.2006.04.020
+ | issue = 21
+ | journal = [[Discrete Mathematics (journal)|Discrete Mathematics]]
+ | mr = 2264378
+ | pages = 2798–2800
+ | title = The Sprague–Grundy function of the game Euclid
+ | volume = 306
+ | year = 2006| doi-access = free
+ }}.
+*{{citation
+ | last1 = Pereira | first1 = Fernando Magno Quintão
+ | last2 = Palsberg | first2 = Jens
+ | editor-last = Yi | editor-first = Kwangkeun
+ | contribution = Register allocation via coloring of chordal graphs
+ | doi = 10.1007/11575467_21
+ | pages = 315–329
+ | publisher = Springer
+ | series = Lecture Notes in Computer Science
+ | title = Programming Languages and Systems: Third Asian Symposium, APLAS 2005, Tsukuba, Japan, November 2–5, 2005, Proceedings
+ | volume = 3780
+ | year = 2005| isbn = 978-3-540-29735-2
+ }}
+*{{citation
+ | last1 = Poletto | first1 = Massimiliano
+ | last2 = Sarkar | first2 = Vivek
+ | date = September 1999
+ | doi = 10.1145/330249.330250
+ | issue = 5
+ | journal = [[ACM Transactions on Programming Languages and Systems]]
+ | pages = 895–913
+ | title = Linear scan register allocation
+ | volume = 21| s2cid = 18180752
+ | doi-access = free
+ }}.
+*{{citation
+ | last1 = Rose | first1 = D.
+ | last2 = Lueker | first2 = George
+ | last3 = Tarjan | first3 = Robert E. | author3-link = Robert E. Tarjan
+ | doi = 10.1137/0205021
+ | journal = [[SIAM Journal on Computing]]
+ | mr = 0408312
+ | pages = 266–283
+ | title = Algorithmic aspects of vertex elimination on graphs
+ | volume = 5
+ | year = 1976
+ | issue = 2}}.
+*{{citation
+ | last = Simmons | first = Gustavus J.
+ | department = Proceedings of the thirteenth Southeastern conference on combinatorics, graph theory and computing (Boca Raton, Fla., 1982)
+ | journal = Congressus Numerantium
+ | mr = 726050
+ | pages = 59–67
+ | title = The ordered chromatic number of planar maps
+ | volume = 36
+ | year = 1982}}
+*{{citation
+ | last = Sysło | first = Maciej M.
+ | doi = 10.1016/0012-365X(89)90212-4
+ | issue = 1–2
+ | journal = [[Discrete Mathematics (journal)|Discrete Mathematics]]
+ | mr = 0989136
+ | pages = 241–243
+ | title = Sequential coloring versus Welsh–Powell bound
+ | volume = 74
+ | year = 1989| doi-access = free
+ }}.
+*{{citation
+ | last1 = Szekeres | first1 = George | author1-link = George Szekeres
+ | last2 = Wilf | first2 = Herbert S. | author2-link = Herbert Wilf
+ | doi = 10.1016/S0021-9800(68)80081-X
+ | journal = [[Journal of Combinatorial Theory]]
+ | title = An inequality for the chromatic number of a graph
+ | year = 1968
+ | volume = 4
+ | pages = 1–3| doi-access = free
+ }}.
+*{{citation
+ | last = Vishwanathan | first = Sundar
+ | doi = 10.1016/0196-6774(92)90061-G
+ | issue = 4
+ | journal = Journal of Algorithms
+ | mr = 1187207
+ | pages = 657–669
+ | title = Randomized online graph coloring
+ | volume = 13
+ | year = 1992}}.
+*{{citation
+ | last1 = Welsh | first1 = D. J. A. | author1-link = Dominic Welsh
+ | last2 = Powell | first2 = M. B.
+ | doi = 10.1093/comjnl/10.1.85
+ | issue = 1
+ | journal = [[The Computer Journal]]
+ | pages = 85–86
+ | title = An upper bound for the chromatic number of a graph and its application to timetabling problems
+ | volume = 10
+ | year = 1967| doi-access = free
+ }}.
+*{{citation
+ | last = Zaker | first = Manouchehr
+ | doi = 10.1016/j.disc.2005.06.044
+ | issue = 2–3
+ | journal = [[Discrete Mathematics (journal)|Discrete Mathematics]]
+ | mr = 2273147
+ | pages = 3166–3173
+ | title = Results on the Grundy chromatic number of graphs
+ | volume = 306
+ | year = 2006| doi-access = free
+ }}.
+{{refend}}
+
+[[Category:Articles with example Python (programming language) code]]
+[[Category:Graph coloring]]

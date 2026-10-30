@@ -1,0 +1,151 @@
+<!-- wikipedia: en
+     page: 77469174
+     title: Powersort
+     revision: 1372793346
+     timestamp: 2026-09-02T08:23:21Z
+     history: https://en.wikipedia.org/w/index.php?curid=77469174&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1372793346 -->
+{{Short description|Sorting algorithm in Python}}
+{{Infobox algorithm
+|name=Powersort
+|class=Sorting algorithm
+|data=Array
+|time=<math>O(n \log n)</math>
+|space=<math>O(n)</math>
+|optimal=No; but "near-optimal" merge policy
+}}
+'''Powersort''' is an adaptive sorting algorithm designed to optimally exploit existing order in the input data with minimal overhead. Powersort is the default list-sorting algorithm in [[CPython]] since version 3.11<ref name="acmtechnews">{{Cite web|title=Computer Scientists Improve Python Sorting Function|date=2022-12-14|author=ACM Tech News|url=https://technews.acm.org/archives.cfm?fo=2022-12-dec/dec-14-2022.html#1230749}}</ref><ref name="powersort">{{Cite web|first=Mike |last=James |title=Python Now Uses Powersort |url=https://www.i-programmer.info/news/216-python/15954-python-now-uses-powersort.html |access-date=2024-06-21 |website=I Programmer}}</ref>
+and is also used in [[NumPy]]<ref name="numpy-pullrequest">{{Cite web|title=ENH: improve Timsort with powersort merge-policy|date=2026-05-31|url=https://github.com/numpy/numpy/pull/29208|website=NumPy GitHub Issue}}</ref>, [[PyPy]], [[AssemblyScript]]<ref>{{Cite web|title=Liverpool computer scientists improve Python sorting function
+|date=2022-12-12|author=University of Liverpool|work=News |url=https://news.liverpool.ac.uk/2022/12/12/liverpool-computer-scientists-improve-python-sorting-function/}}</ref>, and Apple's [[WebKit]]<ref>{{Cite web |title=WebKit/Source/JavaScriptCore/runtime/StableSort.h at 971485dda1ef78a3160a1af4469e8c145746779e · WebKit/WebKit |url=https://github.com/WebKit/WebKit/blob/971485dda1ef78a3160a1af4469e8c145746779e/Source/JavaScriptCore/runtime/StableSort.h#L122 |access-date=2026-03-13 |website=GitHub |language=en}}</ref>.
+Powersort belongs to the family of [[merge sort]] algorithms. More specifically, Powersort builds on [[Timsort]]; it is a drop-in replacement for Timsort's suboptimal heuristic merge policy.  Unlike Timsort, Powersort is derived from first principles (see connection to nearly [[optimal binary search tree]]s) and offers strong performance guarantees.
+
+Like Timsort, Powersort is [[Sorting algorithm#Stability|stable]] and [[Comparison_sort|comparison-based]]. This property is essential for many applications.<ref name="Timsort">{{cite journal |last1=Peters |first1=Tim |title=Timsort |journal=Python Mailing List |year=2002 |url=https://mail.python.org/pipermail/python-dev/2002-July/026837.html}}</ref> Powersort was proposed by J. Ian Munro and Sebastian Wild.<ref name="MunroWild2018">{{cite book |last1=Munro |first1=J. Ian |last2=Wild |first2=Sebastian |title=Nearly-Optimal Mergesorts: Fast, Practical Sorting Methods That Optimally Adapt to Existing Runs |year=2018|volume=112 |pages=63:1–63:16 |series=Leibniz International Proceedings in Informatics |publisher=Schloss Dagstuhl – Leibniz-Zentrum für Informatik |doi=10.4230/lipics.esa.2018.63 |doi-access=free |arxiv=1805.04154 |isbn=978-3-95977-081-1 }}</ref>
+
+== Overview ==
+[[File:Merge Tree Powersort.png|thumb|A merge policy is an order to do binary merges (one pair of adjacent runs in each step) that eventually produces a big sorted list. It can always be represented by a binary tree. The merge cost of an execution is the sum of all produced runs.]] Powersort is a stable mergesort variant that adapts to existing ''runs'' in the input data, i.e., ranges in the input that are already in order. It maintains a stack of runs yet to be merged and alternates between finding the next run and merging adjacent runs near the top of the run stack.
+This non-recursive mode of operation is particularly [[Locality_of_reference|cache-friendly]].
+
+[[File:Powersort in Action.gif|thumb|Powersort in action.  The “power” of a run boundary corresponds to how deep the blue line can sink down, connecting the midpoints of the two runs, before it “hits” a node of the imaginary, green perfectly balanced binary search tree. Illustration from PyCon US 2023 talk by Sebastian Wild.<ref name="powersort-pycon">{{Cite web |first=Sebastian |last=Wild |title=Quicksort, Timsort, Powersort (PyCon US 2023 talk) |url=https://www.youtube.com/watch?v=XjOnY-OLAPc |access-date=2024-10-17 |website=YouTube|date=19 June 2023 }}</ref>]]
+Like Timsort, it enforces a minimal run length by “filling up” short runs using insertion sort up to a chosen minimal run length.
+Each merge step combines two adjacent runs into a single one using a “galloping strategy”: exponential search is used to find the prefix of one run that precedes the minimum in the other run. This can save comparisons compared to a traditional linear merge.
+
+Powersort improves Timsort in terms of the ''merge policy'', i.e., the rule(s) that decides which runs on the run stack are merged before proceeding.
+Timsort's original policy used a suboptimal heuristic based solely on the lengths of runs; Powersort replaces this with a rule simulating Mehlhorn's algorithm for computing nearly optimal binary search trees with low overhead,<ref name="MunroWild2018" /> thereby achieving optimal adaptivity up to an additive linear term.
+
+The pseudocode below shows a simplified Powersort implementation.
+
+ '''algorithm''' ''PowerSort''(A[0..n))
+     S := stack of runs  // capacity ⌈lg(n)⌉ + 1
+     b<sub>1</sub> := 0;  e<sub>1</sub> := ''FirstRunOf''(A[b<sub>1</sub>..n)) 
+     // A[b<sub>1</sub>..e<sub>1</sub>) is leftmost run
+     '''while''' e<sub>1</sub> < n
+         b<sub>2</sub> := e<sub>1</sub> + 1;  e<sub>2</sub> := FirstRunOf(A[b<sub>2</sub>..n)) 
+         // A[b<sub>2</sub>..e<sub>2</sub>) next run
+         P := ''NodePower''(n, b<sub>1</sub>, e<sub>1</sub>, b<sub>2</sub>, e<sub>2</sub>) 
+         '''while''' S.top().power > P
+             (b<sub>1</sub>, e<sub>1</sub>) := ''Merge''(S.pop(), A[b<sub>1</sub>..e<sub>1</sub>))
+         '''end while'''
+         S.push((A[b<sub>1</sub>, e<sub>1</sub>), P));
+         b<sub>1</sub> := b<sub>2</sub>;  e<sub>1</sub> := e<sub>2</sub>
+     '''end while'''  // Now A[b<sub>1</sub>..e<sub>1</sub>) is the rightmost run
+     '''while''' ¬S.empty()
+         (b<sub>1</sub>, e<sub>1</sub>) := ''Merge''(S.pop(), A[b<sub>1</sub>..e<sub>1</sub>))
+     '''end while'''
+
+ '''algorithm''' ''NodePower''(n, b<sub>1</sub>, e<sub>1</sub>, b<sub>2</sub>, e<sub>2</sub>)
+     n<sub>1</sub> := e<sub>1</sub> − b<sub>1</sub>;  n<sub>2</sub> := e<sub>2</sub> − b<sub>2</sub>;  
+     a := (b<sub>1</sub> + n<sub>1</sub>/2)/n;  b := (b<sub>2</sub> + n<sub>2</sub>/2)/n
+     p := 0
+     '''while''' ⌊a · 2<sup>p</sup>⌋ == ⌊b · 2<sup>p</sup>⌋
+         p := p + 1 
+     '''end while'''
+     '''return''' p
+
+The implementation of ''Merge'' is inherited from TimSort and includes the "galloping" heuristic.
+
+== Adoption ==
+The implementation of Powersort in [[CPython]] began with version 3.11, replacing the older Timsort algorithm. The change was motivated by Powersort's superior performance and stability. The core implementation can be found in the CPython source code within the {{mono|listobject.c}} file, where the list-sorting functions are defined. The detailed merge policies and algorithm are described in {{mono|listsort.txt}}...<ref>{{cite web |title=CPython Implementation Details |url=https://github.com/python/cpython/blob/main/Objects/listobject.c |website=GitHub |access-date=2024-07-30}}</ref><ref>{{cite web |title=CPython List Sort |url=https://github.com/python/cpython/blob/main/Objects/listsort.txt#L363 |website=GitHub |access-date=2024-07-30}}</ref> The transition to Powersort involved addressing issue #78742 in the CPython repository.<ref>{{cite web |title=Issue #78742: Integrate Powersort |url=https://github.com/python/cpython/issues/78742 |website=GitHub |access-date=2024-07-30}}</ref>
+
+The [[PyPy]] project, known for its high-performance Just-In-Time (JIT) compiler for Python, also integrated Powersort. The relevant commit, identified as <code>6d2f7a78baa8d4d2f94f5fb709f697a560b45f4e</code>, details the inclusion of Powersort into PyPy's list-sorting functions.<ref>{{cite web |title=PyPy Implementation of Powersort |url=https://github.com/pypy/pypy/commit/6d2f7a78baa8d4d2f94f5fb709f697a560b45f4e |website=GitHub |access-date=2025-07-24}}</ref>
+
+In [[AssemblyScript]], Powersort was integrated to enhance the performance of WebAssembly applications. The relevant pull request, #1904, and the implementation details can be found in the {{mono|sort.ts}} file within the AssemblyScript standard library.<ref>{{cite web |title=AssemblyScript Pull Request #1904 |url=https://github.com/AssemblyScript/assemblyscript/pull/1904 |website=GitHub |access-date=2024-07-30}}</ref><ref>{{cite web |title=AssemblyScript Sort Implementation |url=https://github.com/AssemblyScript/assemblyscript/blob/main/std/assembly/util/sort.ts |website=GitHub |access-date=2024-07-30}}</ref> These implementations across different platforms highlight the adaptability and efficiency of Powersort in various programming environments.
+
+=== Implementations ===
+As with TimSort, the full implementation of Powersort is hundreds of lines and too large to fit in a Wikipedia article. Readers are advised to consult the following sources:
+* C implementation from [[CPython]] version 3.13.5. Starts on line 1577 and ends on line 3151, for a total of 1574 lines (974 excluding comments and blank lines).<ref>{{cite web |title=cpython/Objects/listobject.c at v3.13.5 · python/cpython |url=https://github.com/python/cpython/blob/v3.13.5/Objects/listobject.c#L1577 |website=GitHub |language=en}}</ref>
+* Python implementation from [[PyPy]] 3.11 version 7.3.19. 680 lines (434 excluding comments and blank lines). This code still uses the name "TimSort", but the merge strategy has been changed to "powersort".<ref>{{cite web |title=pypy/rpython/rlib/listsort.py at release-pypy3.11-v7.3.19 · pypy/pypy |url=https://github.com/pypy/pypy/blob/release-pypy3.11-v7.3.19/rpython/rlib/listsort.py |website=GitHub |language=en}}</ref>
+
+== Comparison with Timsort ==
+
+Timsort's original merge policy caused several problems before being replaced by Powersort.
+
+First, as accidentally observed during the [[Timsort#Formal verification|formal verification of Timsort]], Tim Peters's original formulation did not guarantee the desired height bound for the run stack, leaving both CPython and OpenJDK vulnerable to a [[stack overflow]]. This was eventually fixed by adding a fourth rule to Timsort but required two major patches of OpenJDK.<ref>{{cite book |title=[DROPS]|year=2018 |doi=10.4230/LIPIcs.ESA.2018.4 |url=http://drops.dagstuhl.de/opus/volltexte/2018/9467/ |access-date=1 September 2018 |last1=Auger |first1=Nicolas |last2=Jugé |first2=Vincent |last3=Nicaud |first3=Cyril |last4=Pivoteau |first4=Carine |doi-access=free |isbn=9783959770811 |s2cid=44091254 }}</ref>
+While eventually successful, the correctness proof of Timsort's stack height and the run-time analysis are very complicated.
+
+Further, it was discovered that Timsort's merge policy also has a performance blind spot: specific patterns of run lengths cause Timsort to repeatedly perform very unbalanced merges, resulting in asymptotically 50% overhead.<ref name="BussKnop2019">{{cite book |year=2019 |first1=Sam |last1=Buss |first2=Alexander |last2=Knop |url=https://epubs.siam.org/doi/abs/10.1137/1.9781611975482.78 |arxiv=1801.04641 |title=Proceedings of the Thirtieth Annual ACM-SIAM Symposium on Discrete Algorithms |chapter=Strategies for Stable Merge Sorting |pages=1272–1290 |doi=10.1137/1.9781611975482.78 |isbn=978-1-61197-548-2 }}</ref>
+
+Powersort simultaneously removes all of these limitations. Despite its advanced theoretical foundation, its analysis is much easier,<ref name="MultiwayPowersort" /> and it provably never uses more than <math> n\mathcal{H} +O(n) </math> comparisons, where <math>\mathcal{H} = \sum_{i=1}^{r} \frac{\ell_i}{n} \log_2\left({\frac n{\ell_i}}\right)</math>, for <math>\ell_1,\ldots,\ell_r</math> the lengths of the runs in the input.
+
+Powersort has been shown to outperform Timsort by up to 30% on certain types of input data that contain long runs of sorted elements.<ref name="MunroWild2018" />
+Powersort has further been extended to multiway merging, something that was not possible with Timsort.
+
+== Multiway Powersort ==
+[[File:Merge Tree Example for Powersort and Multiway Powersort.png|thumb|Example merge tree for Powersort (top) and 4- way Powersort (bottom) for an input of size n = 16.]]
+Multiway Powersort<ref name="MultiwayPowersort" /> is an extension of Powersort that generalizes the binary merging process to ''k''-way merging. This approach can reduce the number of merge operations and hence reduces the amount of memory transfer. It was proposed by William Cawley Gelling, Markus E. Nebel, Benjamin Smith, and Sebastian Wild in 2023.
+
+Multiway Powersort retains the stability and adaptiveness of the original Powersort algorithm,<ref name="MultiwayPowersort">{{cite book |last1=Gelling |first1=William Cawley|last2=Nebel|first2=Markus E. |last3=Smith |first3=Benjamin |last4=Wild |first4=Sebastian |title=2023 Proceedings of the Symposium on Algorithm Engineering and Experiments (ALENEX) |chapter=Multiway Powersort |year=2023|pages=190–200 |doi=10.1137/1.9781611977561.ch16 |arxiv=2209.06909 |isbn=978-1-61197-756-1 }}</ref> and is just as easy to analyze.
+
+The key differences to normal Powersort are:
+
+* The computation of powers uses the basis ''k'' instead of 2.
+* When merging runs, we have to pop ''all'' runs from the stack that are tied in power with the topmost run.
+
+Details are shown in the pseudocode below.
+
+ '''algorithms''' ''k-wayPowerSort''(A[0..n))
+     S := empty stack  // capacity (k − 1)⌈log<sub>k</sub>(n) + 1⌉
+     b<sub>1</sub> := 0;  e<sub>1</sub> = ''FirstRunOf''(A[b<sub>1..n</sub>))
+     '''while''' e<sub>1</sub> < n
+         b<sub>2</sub> := e<sub>1</sub>;  e<sub>2</sub> := ''FirstRunOf''(A[b<sub>2..n</sub>))
+         P := ''Power<sub>k</sub>''(n, b<sub>1</sub>, e<sub>1</sub>, b<sub>2</sub>, e<sub>2</sub>)
+         '''while''' S.top().power > P
+             P':= S.top().power
+             L := empty list;  L.append(S.pop())
+             '''while''' S.top().power == P′
+                 L.append(S.pop())
+             '''end while'''
+             // merge runs in L with A[b<sub>1</sub>..e<sub>1</sub>)
+             (b<sub>1</sub>, e<sub>1</sub>) := ''Merge''(L, A[b<sub>1</sub>..e<sub>1</sub>))
+         '''end while'''
+         S.push((A[b<sub>1</sub>, e<sub>1</sub>), P))
+         b<sub>1</sub> := b<sub>2</sub>;  e<sub>1</sub> := e<sub>2</sub>
+     '''end while''' // Now A[b<sub>1</sub>..e<sub>1</sub>) is the rightmost run
+     '''while''' ¬S.empty()
+         // pop (up to) k − 1 runs, merge with A[b<sub>1</sub>..e<sub>1</sub>)
+         (b<sub>1</sub>, e<sub>1</sub>) := ''Merge''(S.pop(k − 1), A[b<sub>1</sub>..e<sub>1</sub>))
+     '''end while'''
+
+ '''algorithm''' ''Power<sub>k</sub>''(n, b<sub>1</sub>, e<sub>1</sub>, b<sub>2</sub>, e<sub>2</sub>)
+     n<sub>1</sub> := e<sub>1</sub> − b<sub>1</sub>;  n<sub>2</sub> := e<sub>2</sub> − b<sub>2</sub>; p := 0
+     a := (b<sub>1</sub> + n<sub>1</sub>/2)/n;  b := (b<sub>2</sub> + n<sub>2</sub>/2)/n
+     '''while''' ⌊a · k<sup>p</sup>⌋ == ⌊b · k<sup>p</sup>⌋
+         p := p + 1
+     '''end while'''
+     '''return''' p
+
+== Further resources ==
+
+* Dedicated [https://powersort.github.io Powersort website] collecting resources, code, and animations
+* A playful way to understand merge policies is the game [https://www.wild-inter.net/posts/powersort-game Powersort's Pursuit]. 
+* A more graphical approach to explaining Powersort is used in Sebastian Wild's [https://www.youtube.com/watch?v=QtG858LRQI0&list=PL2Uw4_HvXqvY2zhJ9AMUa_Z6dtMGF3gtb&index=95&ab_channel=PyConUS PyCon US 2023 talk].
+
+== References ==
+
+{{reflist}}
+
+{{Sorting}}
+
+[[Category:Articles with example pseudocode]]
+[[Category:Comparison sorts]]
+[[Category:Divide-and-conquer algorithms]]

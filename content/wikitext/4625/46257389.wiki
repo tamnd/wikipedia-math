@@ -1,0 +1,96 @@
+<!-- wikipedia: en
+     page: 46257389
+     title: Entropy compression
+     revision: 1265506670
+     timestamp: 2024-12-27T07:22:33Z
+     history: https://en.wikipedia.org/w/index.php?curid=46257389&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1265506670 -->
+In mathematics and theoretical computer science, '''entropy compression''' is an [[information theory|information theoretic]] method for proving that a [[random process]] terminates, originally used by Robin Moser to prove an [[Algorithmic Lovász local lemma|algorithmic]] version of the [[Lovász local lemma]].<ref name="moser-stoc">{{citation
+ | last = Moser | first = Robin A.
+ | arxiv = 0810.4812
+ | contribution = A constructive proof of the Lovász local lemma
+ | doi = 10.1145/1536414.1536462
+ | mr = 2780080
+ | pages = 343–350
+ | publisher = ACM | location = New York
+ | title = STOC'09—Proceedings of the 2009 ACM International Symposium on Theory of Computing
+ | year = 2009| isbn = 978-1-60558-506-2
+ }}.</ref><ref>{{citation|url=https://rjlipton.wordpress.com/2009/06/02/mosers-method-of-bounding-a-program-loop/|title=Moser's Method of Bounding a Program Loop|date=June 2, 2009|work=Gödel's Lost Letter and P=NP|first=R. J.|last=Lipton|authorlink=Richard J. Lipton}}.</ref>
+
+==Description==
+To use this method, one proves that the history of the given process can be recorded in an efficient way, such that the state of the process at any past time can be recovered from the current state and this record, and such that the amount of additional information that is recorded at each step of the process is (on average) less than the amount of new information randomly generated at each step. The resulting growing discrepancy in total information content can never exceed the fixed amount of information in the current state, from which it follows that the process must eventually terminate. This principle can be formalized and made rigorous using [[Kolmogorov complexity]].<ref name="fortnow">{{citation|title=A Kolmogorov Complexity Proof of the Lovász Local Lemma|first=Lance|last=Fortnow|authorlink=Lance Fortnow|work=Computational Complexity|url=http://blog.computationalcomplexity.org/2009/06/kolmogorov-complexity-proof-of-lov.html|date=June 2, 2009}}.</ref>
+
+==Example==
+An example given by both Fortnow<ref name="fortnow"/> and Tao<ref name="Tao"/> concerns the [[Boolean satisfiability problem]] for [[Boolean expression|Boolean formulas]] in [[conjunctive normal form]], with uniform clause size. These problems can be [[parameterized complexity|parameterized]] by two numbers <math>(k,t)</math> where <math>k</math> is the number of variables per clause and <math>t</math> is the maximum number of different clauses that any variable can appear in. If the variables are assigned to be true or false randomly, then the event that a clause is unsatisfied happens with probability <math>2^{-k}</math> and each event is independent of all but <math>r=k(t-1)</math> other events. It follows from the [[Lovász local lemma]] that, if <math>t</math> is small enough to make <math>r<2^k/e</math> (where <math>e</math> is the base of the [[natural logarithm]]) then a solution always exists. The following algorithm can be shown using entropy compression to find such a solution for inputs that obey a constraint on <math>r</math> of a similar form.
+
+*Choose a random truth assignment
+*While there exists an unsatisfied clause <math>C</math>, call a recursive subroutine <code>fix</code> with <math>C</math> as its argument. This subroutine chooses a new random truth assignment for the variables in <math>C</math>, and then recursively calls the same subroutine on all unsatisfied clauses (possibly including <math>C</math> itself) that share a variable {{nowrap|with <math>C</math>,}} until none are left.
+
+This algorithm cannot terminate unless the input formula is satisfiable, so a proof that it terminates is also a proof that a solution exists. Each iteration of the outer loop reduces the number of unsatisfied clauses (it causes <math>C</math> to become satisfied without making any other clause become unsatisfied) so the key question is whether the <code>fix</code> subroutine terminates or whether it can get into an [[infinite recursion]].<ref name="fortnow"/>
+
+To answer this question, consider on the one hand the number of random bits generated in each iteration of the <code>fix</code> subroutine (<math>k</math> bits per clause) and on the other hand the number of bits needed to record the history of this algorithm in such a way that any past state can be generated. To record this history, we may store the current truth assignment (<math>n</math> bits), the sequence of arguments to the outermost calls to the <code>fix</code> subroutine (at most <math>m\log_2m</math> bits, where <math>m</math> is the number of clauses in the input), and then a sequence of records that either indicate that a recursive call to <code>fix</code> returned or that it made a recursive call, and which of the <math>r+1</math> clauses sharing a variable with the current clause was passed as an argument to that recursive call. There are <math>r+2</math> possible outcomes per record, so the number of bits needed to store a record (using a compact encoding method such as [[arithmetic coding]] that allows storage using a fractional number of bits per record) {{nowrap|is <math>\log_2(r + 2)</math>.<ref name="fortnow"/>}}
+
+This information is enough to recover the entire sequence of calls to  <code>fix</code>, including the identity of the clause given as an argument to each call. To do so, progress forward through the call sequence using the stored outermost call arguments and stored records to infer the argument of each call in turn. Once the sequence of recursive calls and their arguments has been recovered, the truth assignments at each stage of this process can also be recovered from the same information. To do so, start from the final truth assignment and then progress backwards through the sequence of randomly reassigned clauses, using the fact that each clause was previously unsatisfiable to uniquely determine the values of all of its variables prior to its random reassignment. Thus, after <math>f</math> calls to <code>fix</code>, the algorithm will have generated <math>fk</math> random bits but its entire history (including those generated bits) can be recovered from a record that uses only <math>m\log_2 m+n+f\log_2(r + 2)</math> bits. This is only possible when the number of stored bits is at least as large as the number of randomly generated bits. It follows that, when <math>r</math> is small enough to make <math>\log_2(r + 2)<k</math>, that is, when <math>r<2^k-2</math>, the <code>fix</code> subroutine can only perform <math>O(m\log_2 m+n)</math> recursive calls over the course of the whole algorithm.<ref name="fortnow"/>
+
+==History==
+The name "entropy compression" was given to this method in a blog posting by [[Terence Tao]]<ref name="Tao">{{citation|url=https://terrytao.wordpress.com/2009/08/05/mosers-entropy-compression-argument/|title=Moser's entropy compression argument|date=August 5, 2009|work=What's New|first=Terence|last=Tao|authorlink=Terence Tao}}.</ref> and has since been used for it by other researchers.<ref>{{citation
+ | last1 = Dujmović | first1 = Vida | author1-link = Vida Dujmović
+ | last2 = Joret | first2 = Gwenaël
+ | last3 = Kozik | first3 = Jakub
+ | last4 = Wood | first4 = David R. | author4-link = David Wood (mathematician)
+ | arxiv = 1112.5524
+ | title = Nonrepetitive Colouring via Entropy Compression
+ | date = 2016
+ | bibcode = 2011arXiv1112.5524D
+ | journal = Combinatorica
+ | volume = 36
+ | issue = 6
+ | pages = 661–686
+ | doi = 10.1007/s00493-015-3070-6
+}}.</ref><ref name="aec">{{citation
+ | last1 = Esperet | first1 = Louis
+ | last2 = Parreau | first2 = Aline
+ | arxiv = 1206.1535
+ | doi = 10.1016/j.ejc.2013.02.007
+ | issue = 6
+ | journal = [[European Journal of Combinatorics]]
+ | mr = 3037985
+ | pages = 1019–1027
+ | title = Acyclic edge-coloring using entropy compression
+ | volume = 34
+ | year = 2013}}.</ref><ref>{{citation
+ | last1 = Ochem | first1 = Pascal
+ | last2 = Pinlou | first2 = Alexandre
+ | arxiv = 1301.1873
+ | issue = 2
+ | journal = Electronic Journal of Combinatorics
+ | mr = 3210641
+ | at = Paper 2.7
+ | title = Application of entropy compression in pattern avoidance
+ | url = http://www.combinatorics.org/ojs/index.php/eljc/article/view/v21i2p7
+ | volume = 21
+ | year = 2014| doi = 10.37236/3038
+ | bibcode = 2013arXiv1301.1873O
+ }}.</ref>
+
+Moser's original version of the [[algorithmic Lovász local lemma]], using this method, achieved weaker bounds than the original [[Lovász local lemma]], which was originally formulated as an [[existence theorem]] without a constructive method for finding the object whose existence it proves. Later, Moser and [[Gábor Tardos]] used the same method to prove a version of the algorithmic Lovász local lemma that matches the bounds of the original lemma.<ref>{{citation
+ | last1 = Moser | first1 = Robin A.
+ | last2 = Tardos | first2 = Gábor | author2-link = Gábor Tardos
+ | arxiv = 0903.0544
+ | doi = 10.1145/1667053.1667060
+ | issue = 2
+ | journal = [[Journal of the ACM]]
+ | mr = 2606086
+ | at = Art. 11
+ | title = A constructive proof of the general Lovász local lemma
+ | volume = 57
+ | year = 2010}}.</ref>
+
+Since the discovery of the entropy compression method, it has also been used to achieve stronger bounds for some problems than would be given by the Lovász local lemma. For example, for the problem of [[Acyclic coloring|acyclic]] [[edge coloring]] of graphs with maximum [[degree (graph theory)|degree]] <math>\Delta</math>, it was first shown using the local lemma that there always exists a coloring with <math>64\Delta</math> colors, and later using a stronger version of the local lemma this was improved to <math>9.62\Delta</math>. However, a more direct argument using entropy compression shows that there exists a coloring using only <math>4\Delta-4</math> colors, and moreover this coloring can be found in randomized polynomial time.<ref name="aec"/>
+
+==References==
+{{reflist}}
+
+[[Category:Randomized algorithms]]
+[[Category:Analysis of algorithms]]

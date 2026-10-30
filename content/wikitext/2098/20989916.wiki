@@ -1,0 +1,442 @@
+<!-- wikipedia: en
+     page: 20989916
+     title: Fast inverse square root
+     revision: 1375856938
+     timestamp: 2026-09-20T14:20:48Z
+     history: https://en.wikipedia.org/w/index.php?curid=20989916&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1375856938 -->
+{{Short description|Root-finding algorithm}}
+[[File:OpenArena-Rocket.jpg|thumb|right|Lighting and reflection calculations, as in the [[video game]] ''[[OpenArena]]'', use the fast inverse square root code to compute [[angle of incidence (optics)|angles of incidence]] and reflection.]]
+
+'''Fast inverse square root''', sometimes referred to as '''{{mono|Fast InvSqrt()}}''' or by the [[hexadecimal]] constant '''{{mono|0x5F3759DF}}''', is an [[algorithm]] that estimates <math display=inline>1/\sqrt{x}</math>, the [[Multiplicative inverse|reciprocal]] (or multiplicative inverse) of the [[square root]] of a 32-[[bit]] [[floating-point]] number <math>x</math> in [[Single-precision floating-point format#IEEE 754 standard: binary32|IEEE 754 floating-point format]]. The algorithm is best known for its implementation in the 1999 [[video game]] ''[[Quake III Arena]]''. With subsequent hardware advancements, especially the [[x86]] [[Streaming SIMD Extensions|SSE]] instruction <code>rsqrtss</code>, this algorithm is not generally the best choice for modern computers,<ref name="ruskin" /> though it remains an interesting historical example.<ref name="z88dk" />
+
+The algorithm accepts a 32-bit floating-point number as the input and stores a halved value for later use. Then, treating the bits representing the floating-point number as a 32-bit integer, a [[logical shift]] right by one bit is performed and the result subtracted from the number {{mono|[[Hexadecimal#Representing hexadecimal|0x]]5F3759DF}}, which is a floating-point representation of an approximation of <math display=inline>\sqrt{2^{127}}</math>.<ref name="mrob"/> This results in an initial guess of the inverse square root of the input. Treating the bits again as a floating-point number, it runs one iteration of [[Newton's method]], yielding a more precise approximation.
+
+==History==
+
+[[William Kahan]] and K.C. Ng at Berkeley wrote an unpublished paper in May 1986 describing how to calculate the square root using [[bit fiddling]] techniques followed by [[Newton iterations]].<ref name="fdlibm" /> In the late 1980s, [[Cleve Moler]] at [[Ardent Computer]] learned about this technique<ref name="MolerResp" /> and passed it along to his coworker [[Greg Walsh]]. Greg Walsh devised the now-famous constant and fast inverse square root algorithm. Gary Tarolli was consulting for Kubota, the company funding Ardent at the time, and likely brought the algorithm to [[3dfx Interactive]] circa 1994.<ref name="Beyond3Dp2" /><ref name="Beyond3D" />
+
+[[Jim Blinn]] demonstrated a simple approximation of the inverse square root in a 1997 column for ''[[List of Institute of Electrical and Electronics Engineers publications|IEEE Computer Graphics and Applications]]''.{{Sfn|Blinn|1997|pp=80–84}} Reverse engineering of other contemporary 3D video games uncovered a variation of the algorithm in [[Activision]]'s 1997 [[Interstate '76]].<ref name="interstate76">{{Cite web |last=Peelar |first=Shane |date=1 June 2021 |title=Fast reciprocal square root... in 1997?! |url=https://inbetweennames.net/blog/2021-05-06-i76rsqrt/}}</ref>
+
+''[[Quake III Arena]]'', a [[first-person shooter]] video game, was released in 1999 by [[id Software]] and used the algorithm. Brian Hook may have brought the algorithm from 3dfx to id Software.<ref name="Beyond3Dp2" /> A discussion of the code appeared on the Chinese developer forum CSDN in 2000,<ref name="csdn" /> and [[Usenet]] and the gamedev.net forum spread the code widely in 2002 and 2003.{{Sfn|Lomont|2003|p=1-2}} Speculation arose as to who wrote the algorithm and how the constant was derived; some guessed [[John D. Carmack|John Carmack]].<ref name="Beyond3D" /> ''Quake III''{{'}}s full source code was released at [[QuakeCon 2005]], but provided no answers. The authorship question was resolved in 2006 when Greg Walsh, the original author, contacted Beyond3D after their speculation gained popularity on [[Slashdot]].<ref name="Beyond3Dp2" />
+
+In 2007 the [[algorithm]] was implemented in some dedicated hardware [[vertex shader]]s using [[field-programmable gate array]]s (FPGA).<ref>{{Cite book |last1=Zafar |first1=Saad |last2=Adapa |first2=Raviteja |title=2014 International Conference on Advances in Electrical Engineering (ICAEE) |chapter=Hardware architecture design and mapping of 'Fast Inverse Square Root' algorithm |date=January 2014 |pages=1–4 |doi=10.1109/ICAEE.2014.6838433|isbn=978-1-4799-3543-7 |s2cid=2005623 }}</ref>{{Sfn|Middendorf|2007|pp=155–164}}
+
+==Motivation==
+[[File:Surface_normals.svg|thumb|right|[[Surface normal]]s are used extensively in lighting and shading calculations, requiring the calculation of norms for vectors.  A field of vectors normal to a surface is shown here.]]
+[[File:Reflection for Semicircular Mirror.svg|thumb|right|upright=0.7|A two-dimensional example of using the normal <math>C</math> to find the angle of reflection from the angle of incidence; in this case, on light reflecting from a curved mirror. The fast inverse square root is used to generalize this calculation to three-dimensional space.]]
+
+[[Computer graphics]] frequently uses inverse [[Square root|square roots]] for [[transform, clipping, and lighting|transform, clipping]], [[computer graphics lighting|lighting]], and [[shading]] to compute [[angle of incidence (optics)|angles of incidence]] and [[Reflection (computer graphics)|reflection]]. Programs such as Quake III: Arena must perform a large number of these calculations every second to simulate lighting.<ref name="mrob"/> In particular, the operation of scaling a vector to [[length]] 1 to produce a [[unit vector]] uses the inverse square root.{{Sfn|Blinn|2003|p=130}}
+
+Specifically, the length of the [[Euclidean vector|vector]] is determined by calculating its [[Euclidean norm]]: the square root of the sum of squares of the [[vector components]]. When each component of the vector is divided by that length, the new vector will be a unit vector pointing in the same direction. In a 3D graphics program, all vectors are in three-[[Dimension (vector space)|dimensional]] space, so <math>\boldsymbol v</math> would be a vector <math>(v_1, v_2, v_3)</math>. Then,
+:<math>\|\boldsymbol{v}\| = \sqrt{v_1^2+v_2^2+v_3^2}</math>
+is the Euclidean norm of the vector, and the normalized (unit) vector is
+:<math>\begin{align}
+\boldsymbol{\hat{v}} &= \frac{1}{\left\|\boldsymbol{v}\right\|}\boldsymbol{v}\\
+                     &= \frac{1}\sqrt{v_1^2+v_2^2+v_3^2}\,\boldsymbol{v},
+\end{align}</math>
+where the fraction term is the inverse square root of <math>v_1^2+v_2^2+v_3^2</math>.
+
+When the fast inverse square root algorithm was developed in the early 1990s, most floating point processing power lagged the speed of integer processing.<ref name="Beyond3D" /> In particular the [[x87]] instruction set was very slow at the time compared to modern SSE operations.<ref name="ruskin"/> The fast inverse square generates a good approximation through integer operations by adding and subtracting the integer form of floating-point numbers, and taking a square root by dividing by two (which is just a right-shift).<ref name="mrob"/>
+
+Subsequent additions by hardware manufacturers have made this algorithm redundant for the most part. For example, on [[x86]], Intel introduced the [[Streaming SIMD Extensions|SSE]] instruction <code>rsqrtss</code> in 1999. In a 2009 benchmark on the [[Intel Core 2]], this instruction took 0.85ns per float compared to 3.54ns for the fast inverse square root algorithm, and had less error.<ref name="ruskin" />
+
+==Overview of the code==
+The following [[C (programming language)|C]] code is the fast inverse square root implementation from ''[[Quake III Arena]]'', stripped of [[C preprocessor]] directives, but including the exact original comment text:<ref name="quakesrc" /><!--
+
+The original source code includes "fuck" in the comments. [[WP:CENSOR]].
+
+-->
+<syntaxhighlight lang="c">
+float Q_rsqrt( float number )
+{
+	long i;
+	float x2, y;
+	const float threehalfs = 1.5F;
+
+	x2 = number * 0.5F;
+	y  = number;
+	i  = * ( long * ) &y;                       // evil floating point bit level hacking
+	i  = 0x5f3759df - ( i >> 1 );               // what the fuck?
+	y  = * ( float * ) &i;
+	y  = y * ( threehalfs - ( x2 * y * y ) );   // 1st iteration
+//	y  = y * ( threehalfs - ( x2 * y * y ) );   // 2nd iteration, this can be removed
+
+	return y;
+}
+</syntaxhighlight>
+
+At the time, the general method to compute the inverse square root was to calculate an approximation for <math display=inline>\frac{1}{\sqrt{x}}</math>, then revise that approximation via another method until it came within an acceptable error range of the actual result. [[Methods of computing square roots|Common software methods]] in the early 1990s drew approximations from a [[lookup table]].{{Sfn|Eberly|2001|p=504}} The key of the fast inverse square root was to directly compute an approximation by utilizing the structure of floating-point numbers, proving faster than table lookups. The algorithm was approximately four times faster than computing the square root with another method and calculating the reciprocal via floating-point division.{{Sfn|Lomont|2003|p=1}} The algorithm was designed with the [[IEEE 754-1985]] 32-bit floating-point specification in mind, but investigation from Chris Lomont showed that it could be implemented in other floating-point specifications.{{Sfn|Lomont|2003}}
+
+The advantages in speed offered by the fast inverse square root trick came from treating the 32-bit floating-point word<ref group=note>Use of the type <code>long</code> reduces the portability of this code on modern systems. For the code to execute properly, <code>[[sizeof]](long)</code> must be 4 bytes, otherwise negative outputs may result. Under many modern 64-bit systems, <code>[[sizeof]](long)</code> is 8 bytes. The more portable replacement is <code>int32_t</code>.</ref> as an [[Integer (computer science)#Long integer|integer]], then subtracting it from a [[Magic number (programming)#Unnamed numerical constants|magic constant]], {{mono|[[Hexadecimal#Distinguishing from decimal|0x]]5F3759DF}}.<ref name="Beyond3D" />{{Sfn|Lomont|2003|p=3}}{{Sfn|McEniry|2007|p=2, 16}}{{Sfn|Eberly|2001|p=2}} This integer subtraction and [[Bitwise operation#C-family|bit shift]] results in a bit pattern which, when [[Type conversion|re-defined]] as a floating-point number, is a rough approximation for the inverse square root of the number.  One iteration of Newton's method is performed to gain some accuracy, and the code is finished.  The algorithm generates reasonably accurate results using a unique first approximation for Newton's method; however, it is much slower and less accurate than using the [[Streaming SIMD Extensions|SSE]] instruction <code>rsqrtss</code> on x86 processors also released in 1999.{{r|ruskin|agner}}
+
+===Worked example===
+As an example, the number <math>x=0.15625</math> can be used to calculate <math display=inline>\frac{1}{\sqrt{x}} \approx 2.52982</math>. The first steps of the algorithm are illustrated below:
+
+ 0011_1110_0010_0000_0000_0000_0000_0000  Bit pattern of both x and i
+ 0001_1111_0001_0000_0000_0000_0000_0000  Shift right one position: (i &gt;&gt; 1)
+ 0101_1111_0011_0111_0101_1001_1101_1111  The magic number 0x5F3759DF
+ 0100_0000_0010_0111_0101_1001_1101_1111  The result of 0x5F3759DF - (i &gt;&gt; 1)
+
+Interpreting as [[IEEE 754|IEEE]] 32-bit representation:
+
+ 0_01111100_01000000000000000000000  1.25 × 2<sup>−3</sup>
+ 0_00111110_00100000000000000000000  1.125 × 2<sup>−65</sup>
+ 0_10111110_01101110101100111011111  1.432430... × 2<sup>63</sup>
+ 0_10000000_01001110101100111011111  1.307430... × 2<sup>1</sup>
+
+Reinterpreting this last bit pattern as a floating point number gives the approximation <math>y=2.61486</math>, which has an error of about 3.4%. After one iteration of Newton's method, the final result is <math>y=2.52549</math>, an error of only 0.17%.
+
+===Avoiding undefined behavior===
+{{Main|Type punning}}
+According to the C standard, reinterpreting a floating point value as an integer by casting then dereferencing the pointer to it can cause [[undefined behavior]] in case the sizes of integer and float do not match on the given architecture.<ref>{{Citation
+|title=ISO/IEC 9899:2018
+|language=English
+|chapter-url=http://www.open-std.org/jtc1/sc22/wg14/www/abq/c17_updated_proposed_fdis.pdf
+|archive-url=https://web.archive.org/web/20181230041359/http://www.open-std.org/jtc1/sc22/wg14/www/abq/c17_updated_proposed_fdis.pdf
+|archive-date=2018-12-30
+|year=2018
+|chapter=§ 6.5/7
+|page=55
+|quote=An object shall have its stored value accessed only by an lvalue expression that has one of the following types: [...]}}</ref> This can be avoided by using alternative [[type punning]] techniques such as C's unions<ref>{{Citation
+|title=ISO/IEC 9899:2018
+|language=English
+|chapter-url=http://www.open-std.org/jtc1/sc22/wg14/www/abq/c17_updated_proposed_fdis.pdf
+|archive-url=https://web.archive.org/web/20181230041359/http://www.open-std.org/jtc1/sc22/wg14/www/abq/c17_updated_proposed_fdis.pdf
+|archive-date=2018-12-30
+|year=2018
+|chapter=§ 6.5.2.3/3, footnote 97
+|page=59
+|quote=If the member used to read the contents of a union object is not the same as the member last used to store a value in the object, the appropriate part of the object representation of the value is reinterpreted as an object representation in the new type as described in 6.2.6 (''a process sometimes called "type punning"'').}}</ref> or [[C++20]]'s <code>std::bit_cast</code>.<ref>{{cite web|url=https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0476r2.html|title=Bit-casting object representations|website=www.open-std.org|access-date=2018-11-10|archive-date=2018-08-18|archive-url=https://web.archive.org/web/20180818190426/http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0476r2.html|url-status=live}}</ref>
+
+==Algorithm==
+The algorithm computes <math display=inline>\frac{1}{\sqrt{x}}</math> by performing the following steps:
+
+# Alias the argument <math>x</math> to an integer as a way to compute an approximation of the [[binary logarithm]] <math display=inline>\log_{2}(x)</math>
+# Use this approximation to compute an approximation of <math display=inline>\log_{2}\left(\frac{1}{\sqrt{x}}\right) = -\frac{1}{2} \log_{2}(x)</math>
+# Alias back to a float, as a way to compute an approximation of the base-2 exponential
+# Refine the approximation using a single iteration of Newton's method.
+
+===Floating-point representation===
+{{Main|Single-precision floating-point format}}
+
+Since this [[algorithm]] relies heavily on the bit-level representation of single-precision floating-point numbers, a short overview of this representation is provided here. To encode a non-zero [[real number]] <math>x</math> as a single precision float, the first step is to write <math>x</math> as a [[Normalized number|normalized]] binary number:{{Sfn|Goldberg|1991|p=7}}
+
+:<math>\begin{align}
+x &= \pm 1.b_1b_2b_3\ldots \times 2^{e_x}
+\end{align}</math>
+
+where the exponent <math display=inline>e_x</math> is an integer, and <math display=inline>1.b_1b_2b_3\ldots</math> is the binary representation of the [[significand]]. Since the single bit before the point in the significand is always 1, it does not need be stored. The equation can be rewritten as:
+
+:<math>\begin{align}
+x &= (-1)^{S_x} \cdot 2^{e_x} (1 + m_x)
+\end{align}</math> 
+
+where <math display=inline>m_x</math> means <math display=inline>0.b_1b_2b_3\ldots</math>, so <math display=inline>m_x \in [0, 1)</math>. From this form, three unsigned integers are computed:{{Sfn|Goldberg|1991|pp=15–20}}
+* <math display=inline>S_x</math>, the "sign bit", is <math>0</math> if <math>x</math> is positive and <math>1</math> negative or zero (1 bit)
+* <math display=inline>E_x = e_x + B</math> is the "biased exponent", where <math>B = 127</math> is the "[[exponent bias]]"<ref group="note"><math>E_x</math> should be in the range <math>[1, 254]</math> for <math>x</math> to be representable as a [[Normal number (computing)|normal number]].</ref> (8 bits)
+* <math display=inline>M_x = m_x \times L</math>, where <math display=inline>L = 2^{23}</math><ref group="note">The only real numbers that can be represented ''exactly'' as floating point are those for which <math display=inline>M_x</math> is an integer. Other numbers can only be represented approximately by rounding them to the nearest exactly representable number.</ref> (23 bits)
+Thus: <math display="inline">e_x = E_x -B</math> and <math display="inline">m_x = \frac{M_x}{L}</math>.
+
+These fields are then packed, left to right, into a 32-bit container.{{Sfn|Goldberg|1991|p=16}}
+
+As an example, consider again the number <math>x = 0.15625 = 0.00101_2</math>. Normalizing <math>x</math> yields:
+
+:<math display="inline">x = (-1)^{0} \cdot 2^{-3}(1 + 0.25) = +2^{-3}(1 + 0.25)</math>
+
+and thus, the three unsigned integer fields are:
+* <math>S = 0</math>
+* <math>E = -3 + 127 = 124 = 0111\ 1100_2</math>
+* <math>M = 0.25 \times 2^{23} = 2\ 097\ 152 = 0010\ 0000\ 0000\ 0000\ 0000\ 0000_2</math>
+
+these fields are packed as shown in the figure below:
+
+[[File:Float w significand 2.svg|center]]The number is represented in [[Binary number|binary]] as: <math>I_x = S_x \cdot 2^{31} + E_xL + M_x</math> 
+
+Also, since this algorithm works on real numbers, <math display="inline">\sqrt{x}</math> is only defined for <math display="inline">x \geq 0</math>. The code thus assumes <math display="inline">x \geq 0</math> and <math>S_x = 0</math>.
+
+The number, given to calculate the square root, could be rewritten as:
+:<math display="inline">I_x = E_xL +M_x</math>
+:<math display="inline">x = (-1)^0 \cdot 2^{e_x} (1 + m_x) = + 2^{e_x} (1 + m_x)</math>
+
+===Aliasing to an integer as an approximate logarithm===
+If <math display=inline>\frac{1}{\sqrt{x}}</math> were to be calculated without a computer or a calculator, a [[table of logarithms]] would be useful, together with the identity <math display=inline>\log_b\left(\frac{1}{\sqrt{x}}\right) = \log_b\left(x^{-\frac{1}{2}}\right) = -\frac{1}{2} \log_b(x)</math>, which is valid for every base <math>b</math>. The fast inverse square root is based on this identity, and on the fact that aliasing a float32 to an integer gives a rough approximation of its logarithm. Here is how:
+
+If <math>x</math> is a positive [[Normal number (computing)|normal number]]:
+
+:<math>x = 2^{e_x} (1 + m_x)</math>
+
+then
+
+:<math>\log_2(x) = e_x + \log_2(1 + m_x)</math>
+
+and since <math>m_x \in [0, 1)</math>, the logarithm on the right-hand side can be approximated by{{Sfn|McEniry|2007|p=3}}
+
+:<math>\log_2(1 + m_x) \approx m_x + \sigma</math>
+
+where <math>\sigma</math> is a free parameter used to tune the approximation. For example, <math>\sigma = 0</math> yields exact results at both ends of the interval, while <math display=inline>\sigma = \frac{1}{2} - \frac{1+\ln(\ln(2))}{2\ln(2)} \approx 0.0430357</math> yields the [[Approximation theory#Optimal polynomials|optimal approximation]] (the best in the sense of the [[uniform norm]] of the error). However, this value is not used by the algorithm as it does not take subsequent steps into account.
+
+[[File:Log by aliasing to int.svg|thumb|right|The integer aliased to a floating point number (in blue), compared to a scaled and shifted logarithm (in gray)]]
+
+Thus there is the approximation
+
+:<math>\log_2(x) \approx e_x + m_x + \sigma.</math>
+
+Interpreting the floating-point bit-pattern of <math>x</math> as an integer <math>I_x</math> yields<ref group="note">Since <math>x</math> is positive, <math>S_x = 0</math>.</ref>
+
+:<math>\begin{align}
+I_x &= E_x L + M_x\\
+    &= L (e_x + B + m_x)\\
+    &= L (e_x + m_x + \sigma + B - \sigma)\\
+    &\approx L \log_2(x) + L (B - \sigma).
+\end{align}</math>
+
+It then appears that <math>I_x</math> is a scaled and shifted piecewise-linear approximation of <math>\log_2(x)</math>, as illustrated in the figure on the right. In other words, <math>\log_2(x)</math> is approximated by
+
+:<math>\log_2(x) \approx \frac{I_x}{L} - (B - \sigma).</math>
+
+===First approximation of the result===
+The calculation of <math display=inline>y=\frac{1}{\sqrt{x}}</math> is based on the identity
+
+:<math>\log_2(y) = - \tfrac{1}{2}\log_2(x)</math>
+
+Using the approximation of the logarithm above, applied to both <math>x</math> and <math>y</math>, the above equation gives:
+
+:<math>\frac{I_y}{L} - (B - \sigma) \approx - \frac{1}{2}\left(\frac{I_x}{L} - (B - \sigma)\right)</math>
+Thus, an approximation of <math>I_y</math> is:
+:<math>I_y \approx \tfrac{3}{2} L (B - \sigma) - \tfrac{1}{2} I_x</math>
+
+which is written in the code as
+
+:<syntaxhighlight lang="c">
+i  = 0x5f3759df - ( i >> 1 );
+</syntaxhighlight>
+
+The first term above is the magic number
+
+:<math>\tfrac{3}{2} L (B - \sigma) = \mathtt{0x5f3759df}</math>
+
+from which it can be inferred that <math>\sigma \approx 0.0450466</math>. The second term, <math>\frac{1}{2}I_x</math>, is calculated by shifting the bits of <math>I_x</math> one position to the right.{{sfn|Hennessey|Patterson|1998|p=305}}
+
+===Newton's method===
+{{Main|Newton's method}}
+{{Multiple image
+| align =
+| direction = vertical
+| total_width =
+| image1 = First initial approximate value.png
+| image2 = Relative error between Fast inverse square root and 1-sqrt().png
+| image3 = 2nd-iter.png
+| image4 = 3rd-iter.png
+| image5 = 4th-iter.png
+| image_gap = 0
+| footer = Relative error between direct calculation and fast inverse square root carrying out 0, 1, 2, 3, and 4 iterations of Newton's root-finding method. Note that double precision is adopted and the smallest representable difference between two double precision numbers is reached after carrying out 4 iterations.
+}}
+The number <math>y=\tfrac{1}{\sqrt{x}}</math> is a solution of the equation <math>\tfrac{1}{y^2}-x=0</math>. The approximation yielded by the earlier steps can be refined by using a [[root-finding method]], a method that finds the [[zero of a function]]. The algorithm uses Newton's method: if there is an approximation, <math>y_n</math> for <math>y</math>, then a better approximation <math>y_{n+1}</math> can be calculated by taking <math>y_n - \tfrac{f(y_n)}{f'(y_n)}</math>, where <math>f'(y_n)</math> is the [[derivative]] of <math>f(y)</math> at <math>y_n</math>.{{Sfn|Hardy|1908|p=323}} Applied to the equation <math>\tfrac{1}{y^2}-x=0</math>, Newton's method gives
+
+:<math>\begin{align}
+f(y)    &= \frac{1}{y^2} - x\\
+f'(y)   &= -\frac{2}{y^3}\\
+y_{n+1} &= y_n - \frac{f(y_n)}{f'(y_n)}\\
+        &= y_n + \frac{y_n^3}{2} \left(\frac{1}{y_n^2} - x\right)\\
+        &= y_n \left(\frac{3}{2} - \frac{x}{2}y_n^2\right),
+\end{align}</math>
+
+which is written in the code as <syntaxhighlight lang="c" inline>y  = y * ( threehalfs - ( x2 * y * y ) );</syntaxhighlight>.
+
+By repeating this step, using the output of the function (<math>y_{n+1}</math>) as the input of the next iteration, the algorithm causes <math>y</math> to [[Rate of convergence|converge]] to the inverse square root.{{Sfn|McEniry|2007|p=6}} For the purposes of the [[id Tech 3|''Quake III'' engine]], only one iteration was used.  A second iteration remained in the code but was [[Comment out|commented out]].{{Sfn|Eberly|2001|p=2}}
+
+==Subsequent improvements==
+===Magic number===
+It is not known precisely how the exact value for the magic number was determined.  Chris Lomont developed a function to minimize [[approximation error]] by choosing the magic number <math>R</math> over a range. He first computed the optimal constant for the linear approximation step as {{mono|0x5F37642F}}, close to {{mono|0x5F3759DF}}, but this new constant gave slightly less accuracy after one iteration of Newton's method.{{Sfn|Lomont|2003|p=10}} Lomont then searched for a constant optimal even after one and two Newton iterations and found {{mono|0x5F375A86}}, which is more accurate than the original at every iteration stage.{{Sfn|Lomont|2003|p=10}} He concluded by asking whether the exact value of the original constant was chosen through derivation or [[trial and error]].{{Sfn|Lomont|2003|pp=10–11}}  Lomont said that the magic number for 64-bit IEEE754 size type double is {{mono|0x5FE6EC85E7DE30DA}}, but it was later shown by Matthew Robertson to be exactly {{mono|0x5FE6EB50C7B537A9}}.<ref name="robertson" />
+
+Jan Kadlec reduced the relative error by a further factor of 2.7<!--Rounded from 2.693495--> by adjusting the constants in the single Newton's method iteration as well,<ref>{{cite web |last=Kadlec |first=Jan |year=2010 |title=Řrřlog::Improving the fast inverse square root |url=http://rrrola.wz.cz/inv_sqrt.html |access-date=2020-12-14 |type=personal blog |archive-date=2018-07-09 |archive-url=https://web.archive.org/web/20180709021629/http://rrrola.wz.cz/inv_sqrt.html }}</ref> arriving after an exhaustive search at
+<syntaxhighlight lang="c">
+conv.i = 0x5F1FFFF9 - ( conv.i >> 1 );
+conv.f *= 0.703952253f * ( 2.38924456f - x * conv.f * conv.f );
+return conv.f;
+</syntaxhighlight>
+
+A complete mathematical analysis for determining the magic number is now available for single-precision floating-point numbers.{{Sfn|Moroz|Walczyk|Hrynchyshyn|Holimath|2018}}<ref name=":0">{{Cite journal|last=Muller|first=Jean-Michel|date=December 2020|title=Elementary Functions and Approximate Computing|journal=Proceedings of the IEEE|volume=108|issue=12|page=2146|doi=10.1109/JPROC.2020.2991885|s2cid=219047769 |issn=0018-9219}}</ref>
+
+==See also==
+* {{format link|Methods of computing square roots#Approximations that depend on the floating point representation}}
+* [[Magic number (programming)|Magic number]]
+
+==Notes==
+{{Reflist|group=note}}
+
+==References==
+{{Reflist|refs=
+<ref name="fdlibm">{{cite web|url=http://www.netlib.org/fdlibm/e_sqrt.c|title=sqrt implementation in fdlibm - See W. Kahan and K.C. Ng's discussion in comments in lower half of this code}}</ref>
+<ref name="MolerResp">{{cite web|last1=Moler|first1=Cleve|title=Symplectic Spacewar|url=http://blogs.mathworks.com/cleve/2012/06/19/symplectic-spacewar/#comment-13|website=MATLAB Central - Cleve's Corner|date=19 June 2012 |publisher=MATLAB|access-date=2014-07-21}}</ref>
+<ref name="Beyond3D">{{cite web|url=http://www.beyond3d.com/content/articles/8/|title=Origin of Quake3's Fast InvSqrt()|last=Sommefeldt|first=Rys|date=2006-11-29|work=Beyond3D|access-date=2009-02-12}}</ref>
+<ref name="quakesrc">{{cite web|url=https://github.com/id-Software/Quake-III-Arena/blob/master/code/game/q_math.c|title=quake3-1.32b/code/game/q_math.c|work=[[Quake III Arena]]|publisher=[[id Software]]|access-date=2017-01-21|archive-url=https://web.archive.org/web/20170729072505/https://github.com/id-Software/Quake-III-Arena/blob/master/code/game/q_math.c#L552|archive-date=2017-07-29|url-status=live}}</ref>
+<ref name="Beyond3Dp2">{{cite web|url=http://www.beyond3d.com/content/articles/15/|title=Origin of Quake3's Fast InvSqrt() - Part Two|access-date=2008-04-19|author=Sommefeldt, Rys|date=2006-12-19|publisher=Beyond3D}}</ref>
+<ref name="ruskin">{{cite web|url=http://assemblyrequired.crashworks.org/timing-square-root/ |title=Timing square root |work=Some Assembly Required |first=Elan |last=Ruskin |date=2009-10-16 |access-date=2015-05-07 |archive-url=https://web.archive.org/web/20210208132927/http://assemblyrequired.crashworks.org/timing-square-root/ | archive-date=2021-02-08}}</ref>
+<ref name="z88dk">{{cite web|url=https://github.com/z88dk/z88dk/tree/master/libsrc/_DEVELOPMENT/math/float/math32#sqrt-and-invsqrt |title=z88dk is a collection of software development tools that targets the 8080 and z80 computers. |author=feilipu|website=[[GitHub]] }}</ref>
+<ref name="agner">{{cite web|url=http://www.agner.org/optimize/instruction_tables.pdf |title=Lists of instruction latencies, throughputs and micro-operation breakdowns for Intel, AMD and VIA CPUs |access-date=2017-09-08 |first=Agner |last=Fog}}</ref>
+<ref name="robertson">{{cite web|url=https://mrober.io/papers/rsqrt.pdf|title=A Brief History of InvSqrt|author=Matthew Robertson|date=2012-04-24|publisher=UNBSJ}}</ref>
+<ref name="csdn">{{cite web|url=http://bbs.csdn.net/topics/41888 |title=Discussion on CSDN |archive-url=https://web.archive.org/web/20150702180504/http://bbs.csdn.net/topics/41888 |archive-date=2015-07-02 }}</ref>
+<ref name="mrob">{{cite web|url=https://mrob.com/pub/math/numbers-16.html#le009_16|title=Notable Properties of Specific Numbers|last=Munafo|first=Robert|website=mrob.com|archive-url=https://web.archive.org/web/20181116074733/https://mrob.com/pub/math/numbers-16.html#le009_16|archive-date=16 November 2018|url-status=live}}</ref>
+}}
+
+===Bibliography===
+{{Refbegin|30em}}
+* {{cite journal
+|last=Blinn
+|first= Jim
+|title=Floating Point Tricks
+|journal=IEEE Computer Graphics & Applications
+|date=July 1997
+|volume=17
+|issue=4
+|doi=10.1109/38.595279
+|page=80}}
+* {{cite book
+|last=Blinn
+|first=Jim
+|title=Jim Blinn's Corner: Notation, notation notation
+|publisher=Morgan Kaufmann
+|year=2003
+|isbn=1-55860-860-5}}
+* {{cite book
+|last=Eberly
+|first=David
+|title=3D Game Engine Design
+|publisher=Morgan Kaufmann
+|year=2001
+|isbn=978-1-55860-593-0
+|url-access=registration
+|url=https://archive.org/details/isbn_9781558605930
+}}
+* {{cite journal
+|last1=Goldberg
+|first1=David
+|title=What every computer scientist should know about floating-point arithmetic
+|journal=ACM Computing Surveys
+|date=1991
+|volume=23
+|issue=1
+|pages=5–48
+|doi=10.1145/103162.103163
+|s2cid=222008826
+}}
+* {{cite book|last1=Hardy|first1=Godfrey|author-link=G. H. Hardy|title=A Course of Pure Mathematics|date=1908|publisher=[[Cambridge University Press]]|location=[[Cambridge|Cambridge, UK]]|url=http://www.gutenberg.org/files/38769}} Centenary Edition, 2008, {{isbn|0-521-72055-9}}.
+* {{cite book
+|ref={{harvid|Hennessey|Patterson|1998}}
+|last=Hennessey
+|first=John
+|author2=Patterson, David A.
+ |title=Computer Organization and Design
+|url=https://archive.org/details/computerorganiz000henn
+|url-access=registration
+|publisher=Morgan Kaufmann Publishers
+|location=San Francisco, CA
+|year=1998
+|edition=2nd
+|isbn=978-1-55860-491-9}}
+* {{cite web
+|url=http://www.lomont.org/Math/Papers/2003/InvSqrt.pdf
+|title=Fast Inverse Square Root
+|last=Lomont
+|first=Chris
+|date=February 2003
+|access-date=2009-02-13}}
+* {{cite web
+|url=http://www.daxia.com/bibis/upload/406Fast_Inverse_Square_Root.pdf
+|title=The Mathematics Behind the Fast Inverse Square Root Function Code
+|last=McEniry
+|first=Charles
+|date=August 2007
+|archive-url=https://web.archive.org/web/20150511044204/http://www.daxia.com/bibis/upload/406Fast_Inverse_Square_Root.pdf
+|archive-date=2015-05-11}}
+* {{cite conference
+ | ref = {{harvid|Middendorf|2007}}
+ | last1 =Middendorf | first1 =Lars
+ | last2 = Mühlbauer |first2=Felix
+ | last3 = Umlauf |first3=George
+ | last4 = Bodba |first4=Christophe
+ | date = June 1, 2007
+ | title = Embedded Vertex Shader in FPGA
+ | conference = [[International Federation for Information Processing|IFIP]] TC10 Working Conference:International Embedded Systems Symposium (IESS)
+ | book-title = Embedded System Design: Topics, Techniques and Trends
+ | editor = Rettberg, Achin
+ | others = et al.
+ | publisher = Springer
+ | location = [[Irvine, California]]
+ | isbn = 978-0-387-72257-3
+ | doi = 10.1007/978-0-387-72258-0_14
+ | url = https://link.springer.com/content/pdf/10.1007/978-0-387-72258-0_14.pdf
+ | url-status = live
+ | archive-url = https://web.archive.org/web/20190501235316/https://link.springer.com/content/pdf/10.1007/978-0-387-72258-0_14.pdf
+ | archive-date = 2019-05-01
+| doi-access = free
+ }} {{open access}}
+<!-- no reference exists in article-->
+* {{cite web
+|archive-url=https://web.archive.org/web/20090215020337/http://www.hackszine.com/blog/archive/2008/12/quakes_fast_inverse_square_roo.html
+|url=http://www.hackszine.com/blog/archive/2008/12/quakes_fast_inverse_square_roo.html
+|title=Quake's fast inverse square root
+|last=Striegel
+|first=Jason
+|date=2008-12-04
+|work=Hackszine
+|publisher=[[O'Reilly Media]]
+|archive-date=2009-02-15
+|access-date=2013-01-07}}
+* {{Cite web
+|last=IEEE Computer Society
+|author-link=IEEE Computer Society
+|date=1985
+|title=754-1985 - IEEE Standard for Binary Floating-Point Arithmetic
+|url=https://standards.ieee.org/ieee/754/993/ |publisher=[[Institute of Electrical and Electronics Engineers]]
+|ref=ieee754}}
+* {{cite journal
+|last1=Moroz
+|first1=Leonid V.
+|last2=Walczyk|first2= Cezary J.
+|last3=Hrynchyshyn|first3= Andriy
+|last4=Holimath|first4= Vijay
+|last5=Cieslinski|first5= Jan L.
+|title=Fast calculation of inverse square root with the use of magic constant analytical approach
+|journal=Applied Mathematics and Computation
+|publisher=Elsevier Science Inc.
+|date=January 2018
+|volume=316
+|issue=C
+|doi=10.1016/j.amc.2017.08.025
+|pages=245–255|arxiv=1603.04483
+|s2cid=7494112}}
+{{Refend}}
+
+==Further reading==
+<!-- no reference exists in article-->
+* {{cite journal
+|last=Kushner
+|first=David
+|date=August 2002
+|title=The wizardry of Id
+|journal=IEEE Spectrum
+|volume=39
+|issue=8
+|pages=42–47
+|doi=10.1109/MSPEC.2002.1021943}}
+
+==External links==
+* [https://web.archive.org/web/20120920120948/http://blog.quenta.org/2012/09/0x5f3759df.html 0x5f3759df], further investigations into accuracy and generalizability of the algorithm by Christian Plesner Hansen
+* [https://www.beyond3d.com/content/articles/8/ Origin of Quake3's Fast InvSqrt()]
+* [https://github.com/id-Software/Quake-III-Arena Quake III Arena source code] ([https://archive.softwareheritage.org/swh:1:dir:c6f07c2173a458d098de45d4c459a8f1916d900f;origin=https://github.com/id-Software/Quake-III-Arena;visit=swh:1:snp:4ab9bcef131aaf449a7c01370aff8c91dcecbf5f;anchor=swh:1:rev:dbe4ddb10315479fc00086f08e25d968b4b43c49 archived in Software Heritage])
+* [https://www.desmos.com/calculator/yoz6n1wlvu Implementation of InvSqrt] in [http://www.desmos.com DESMOS]
+* [https://www.youtube.com/watch?v=p8u_k2LIZyo "Fast Inverse Square Root — A Quake III Algorithm"] ([[YouTube]])
+
+{{Quake}}
+{{Id Software}}
+
+{{Good article}}
+
+[[Category:Quake (series)]]
+[[Category:Source code]]
+[[Category:Root-finding algorithms]]
+[[Category:Articles with example C code]]

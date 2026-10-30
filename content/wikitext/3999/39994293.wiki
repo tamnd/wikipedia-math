@@ -1,0 +1,381 @@
+<!-- wikipedia: en
+     page: 39994293
+     title: Speck (cipher)
+     revision: 1373261920
+     timestamp: 2026-09-04T23:06:17Z
+     history: https://en.wikipedia.org/w/index.php?curid=39994293&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373261920 -->
+{{Short description|Family of block ciphers}}
+{{Infobox block cipher
+| name          = Speck
+| image         = [[Image:speck_block_cipher_0_indexing.svg|280px|center]]
+| caption       = 3 rounds of Speck with 2-word key schedule
+| designers     = Ray Beaulieu, Douglas Shors, Jason Smith, Stefan Treatman-Clark, Bryan Weeks, Louis Wingers [[National Security Agency|NSA]]
+| publish date  = 2013
+| derived to    =
+| related to    = [[Simon (cipher)|Simon]], [[Threefish]]
+| certification =
+| key size      = 64, 72, 96, 128, 144, 192 or 256 bits
+| block size    = 32, 48, 64, 96 or 128 bits
+| structure     = ARX
+| rounds        = 22&ndash;34 (depending on block and key size)
+| speed         = 2.6 [[cycles per byte|cpb]] (5.7 without [[Streaming SIMD Extensions|SSE]]) on Intel Xeon 5640 (Speck128/128)
+| cryptanalysis = No attacks are known on the full ciphers, but reduced-round versions have been attacked. [[Differential cryptanalysis]] can break about 70–75% of the rounds of most variants slightly faster than brute-force;<ref name="ling2016_differential">{{cite web
+ | title=Automatic Differential Analysis of ARX Block Ciphers with Application to SPECK and LEA
+ | first1=Song
+ | last1=Ling
+ | first2=Zhangjie
+ | last2=Huang
+ | first3=Qianqian
+ | last3=Yang
+ | url=https://eprint.iacr.org/2016/209.pdf
+ | date=2016-06-30
+ | access-date=2018-05-06
+ }}</ref><ref name="lee2018_differential">{{cite journal
+ | title=Calculating the Approximate Probability of Differentials for ARX-Based Cipher Using SAT Solver
+ | first1=HoChang
+ | last1=Lee
+ | first2=Seojin
+ | last2=Kim
+ | first3=HyungChul
+ | last3=Kang
+ | first4=Deukjo
+ | last4=Hong
+ | first5=Jaechul
+ | last5=Sung
+ | first6=Seokhie
+ | last6=Hong
+ | journal=Journal of the Korea Institute of Information Security and Cryptology
+ | date=February 2018
+ | volume=28
+ | number=1
+ | pages=15–24
+ | language=ko
+ | doi=10.13089/JKIISC.2018.28.1.15
+ | url=http://koreascience.or.kr/article/ArticleFullRecord.jsp?cn=JBBHCB_2018_v28n1_15
+ }}</ref> see [[#Cryptanalysis]].
+}}
+
+'''Speck''' is part of a family of lightweight [[block cipher]]s publicly released by the [[National Security Agency]] (NSA) in June 2013.<ref name="Beaulieu2013">{{cite web
+| title=The SIMON and SPECK Families of Lightweight Block Ciphers
+| first1=Ray
+| last1=Beaulieu
+| first2=Douglas
+| last2=Shors
+| first3=Jason
+| last3=Smith
+| first4=Stefan
+| last4=Treatman-Clark
+| first5=Bryan
+| last5=Weeks
+| first6=Louis
+| last6=Wingers
+| url=https://eprint.iacr.org/2013/404
+| date=2013-06-19
+| access-date=2016-09-20}}</ref> Speck has been optimized for performance in software implementations, while its sister algorithm, [[Simon (cipher)|Simon]], has been optimized for hardware implementations. Speck is an [[Block cipher#Operations|add–rotate–xor]] (ARX) cipher.
+
+The NSA began working on the Simon and Speck ciphers in 2011. The agency anticipated some agencies in the US federal government would need a cipher that would operate well on a diverse collection of [[Internet of Things]] devices while maintaining an acceptable level of security.<ref name=Beaulieu2015>{{cite web
+ | title=Simon and Speck: Block Ciphers for the Internet of Things
+ | first1=Ray
+ | last1=Beaulieu
+ | first2=Douglas
+ | last2=Shors
+ | first3=Jason
+ | last3=Smith
+ | first4=Stefan
+ | last4=Treatman-Clark
+ | first5=Bryan
+ | last5=Weeks
+ | first6=Louis
+ | last6=Winger
+ | url=https://csrc.nist.gov/csrc/media/events/lightweight-cryptography-workshop-2015/documents/papers/session1-shors-paper.pdf
+ | date=2015-07-09
+ | access-date=2017-11-23}}</ref>
+
+== Cipher description ==
+
+Speck supports a variety of block and key sizes.  A block is always two words, but the words may be 16, 24, 32, 48 or 64 bits in size.  The corresponding key is 2, 3 or 4 words.  The round function consists of two rotations, adding the right word to the left word, xoring the key into the left word, then xoring the left word into the right word.  The number of rounds depends on the parameters selected, as follows:<ref name="Beaulieu2013"/>
+{| class="wikitable"
+|-
+! Block size (bits)
+! Key size (bits)
+! Rounds
+|-
+| 2×16 = 32
+| 4×16 = 64
+| 22
+|-
+| rowspan="2" | 2×24 = 48
+| 3×24 = 72
+| 22
+|-
+| 4×24 = 96
+| 23
+|-
+| rowspan="2" | 2×32 = 64
+| 3×32 = 96
+| 26
+|-
+| 4×32 = 128
+| 27
+|-
+| rowspan="2" | 2×48 = 96
+| 2×48 = 96
+| 28
+|-
+| 3×48 = 144
+| 29
+|-
+| rowspan="3" | 2×64 = 128
+| 2×64 = 128
+| 32
+|-
+| 3×64 = 192
+| 33
+|-
+| 4×64 = 256
+| 34
+|}
+
+The [[key schedule]] uses the same round function as the main block cipher.
+
+== Reference code ==
+The following is the designers' reference implementation, written in [[C (programming language)|C]], of the Speck variant with a 128-bit block size and key, where key = (K[1], K[0]). It is adapted from their [[International Association for Cryptologic Research|IACR]] ePrint.<ref name="Beaulieu2013" />
+<syntaxhighlight lang="C">
+#include <stdint.h>
+
+#define ROR(x, r) ((x >> r) | (x << (64 - r)))
+#define ROL(x, r) ((x << r) | (x >> (64 - r)))
+#define R(x, y, k) (x = ROR(x, 8), x += y, x ^= k, y = ROL(y, 3), y ^= x)
+#define ROUNDS 32
+
+void encrypt(uint64_t ct[2],
+             uint64_t const pt[2],            
+             uint64_t const K[2])
+{
+   uint64_t y = pt[0], x = pt[1], b = K[0], a = K[1];
+
+   R(x, y, b);
+   for (int i = 0; i < ROUNDS - 1; i++) {
+      R(a, b, i);
+      R(x, y, b);
+   }
+
+   ct[0] = y;
+   ct[1] = x;
+}
+</syntaxhighlight>
+
+Note that this code computes the round keys ([[key schedule]]) on-demand.  In practice, as with other block ciphers it is common for implementations to compute the round keys just once and cache them, rather than recomputing them for every block encrypted or decrypted.  Although, as the authors point out, "Given that small code size was a major goal of the design, it made sense to reuse the round function for round key generation.  This approach enables on-the-fly round key generation for microcontroller implementations, using just the round function code, very little ROM, and no RAM beyond what is required to hold the key and plaintext."<ref>{{Cite web|url=https://eprint.iacr.org/2017/560.pdf|title=Notes on the design and analysis of Simon and Speck|website=eprint.iacr.org|language=en|access-date=2018-04-26}}</ref>
+
+For 16-bit words (Speck32), the rotates are 7 bits right and 2 bits left; for all other word sizes, they are 8 and 3 as shown here.
+
+If the key is more than 2 words long, there are 2 or 3 <code>a</code> values, which are used in rotation.
+
+=== Endianness ===
+The original Speck paper does not explicitly state the [[endianness]] of bytes when the plaintext block is interpreted as the two words used in the cipher algorithm. The test vectors given in the paper suggest big-endian order. However, the authors of the algorithm have advised some implementers<ref>{{Cite web|url=https://www.spinics.net/lists/arm-kernel/msg633602.html|title=Re: [PATCH 0/5] crypto: Speck support|website=www.mail-archive.com|language=en|access-date=2018-04-12}}</ref> that little-endian byte order is to be used for keys, plaintext, and ciphertext, and the practice was accepted by others.<ref>{{Cite web|url=https://www.cryptopp.com/wiki/SPECK|title=SPECK – Crypto++ Wiki|website=www.cryptopp.com|language=en|access-date=2018-04-12}}</ref>
+
+== Performance ==
+According to [[ECRYPT]]'s stream cipher benchmarks (eBASC), Speck is one of the fastest ciphers available, both for long as well as short messages. Some median performances for long messages (128-bit, 128-block size version) are: 1.99 [[cycles per byte]] (cpb) on an AMD Ryzen 7 1700; 1.27 cpb on an Intel Core i5-6600; 15.96 cpb on a Broadcom BCM2836 Cortex A7.<ref>{{Cite web|url=https://bench.cr.yp.to/results-stream.html|title=ECRYPT Benchmarking of Stream Ciphers|access-date=22 June 2017}}</ref> For example, on the [[ARMv7]] platform, Speck is about 3 times faster than [[AES (cipher)|AES]].<ref>{{Cite web|url=https://www.spinics.net/lists/linux-crypto/msg33000.html|title=Linux Cryptography — Re: [PATCH v2 0/5] crypto: Speck support|website=www.spinics.net|access-date=2018-08-06}}</ref>
+
+When implemented on 8-bit AVR microcontroller, Speck encryption with 64-bit blocks and 128-bit key consumes 192 bytes of [[flash memory]], temporary variables consume 112 bytes of RAM, and takes 164 cycles to encrypt each byte in the block.<ref>{{Cite web|url=https://eprint.iacr.org/2014/947.pdf|title=The Simon and Speck Block Ciphers on AVR 8-bit Microcontrollers|access-date=25 September 2017}}</ref>
+
+[[Salsa20]] is a [[stream cipher]] with comparable performance, but it is difficult to use stream ciphers securely in some applications where block ciphers like Speck work well. This led Google to add an implementation of Speck in Linux kernel version 4.17, planning to offer it as an option for disk encryption on low-end [[Android (operating system)|Android]] devices that would otherwise be unencrypted due to slow AES performance on processors that lack [[AES instruction set|AES instructions]].<ref>{{Cite web|url=https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=da7a0ab5b4babbe5d7a46f852582be06a00a28f0|title=crypto: speck – add support for the Speck block cipher|date=2018-02-14|access-date=2019-01-11|language=en-US}}</ref><ref>{{Cite news|url=https://itsfoss.com/nsas-encryption-algorithm-in-linux-kernel-is-creating-unease-in-the-community/|title=NSA's Encryption Algorithm in Linux Kernel 4.17 Leaves Users Miffed {{!}} It's FOSS|date=2018-08-04|work=It's FOSS|access-date=2018-08-06|language=en-US}}</ref> Speck was later dropped from the Linux kernel due to backlash and concerns, and Google switched to the [[Adiantum (cipher)|Adiantum algorithm]] instead.<ref>{{Cite web|url=https://www.phoronix.com/scan.php?page=news_item&px=Speck-Dropping-Next-Kernel|title=The Controversial Speck Encryption Code Will Indeed Be Dropped From The Linux Kernel – Phoronix|website=www.phoronix.com|date=2018-09-04|access-date=2018-12-08}}</ref><ref>{{Cite web|url=https://www.phoronix.com/scan.php?page=news_item&px=Adiantum-Crypto-Linux-Coming|title=Adiantum Queued Ahead Of Linux 4.21 As Google's Speck Replacement|website=www.phoronix.com|date=2018-11-29|access-date=2019-01-11}}</ref><ref name="speckremoved_2018">{{Cite web|url=https://git.kernel.org/pub/scm/linux/kernel/git/herbert/cryptodev-2.6.git/commit/?anzwix=1&id=578bdaabd015b9b164842c3e8ace9802f38e7ecc|title=kernel/git/herbert/cryptodev-2.6.git – Crypto API Dev|website=git.kernel.org|access-date=2018-12-08}}</ref>
+
+== Security ==
+
+=== Cryptanalysis ===
+
+The designers claim that Speck, though a "lightweight" cipher, is designed to have the full security possible for each block and key size, against standard [[Chosen-plaintext attack|chosen-plaintext (CPA)]] and [[Chosen-ciphertext attack|chosen-ciphertext (CCA)]] attacks.  Resistance against [[related-key attack]]s was also stated as a goal, though a less crucial one as attacks in that model are not relevant for typical use cases.<ref name="design_notes_jan2018">{{Cite web
+ | date=2018-01-19
+ | title=Notes on the design and analysis of Simon and Speck
+ | url=https://eprint.iacr.org/2017/560.pdf
+ | access-date=2018-06-13
+ }}</ref>{{rp|2}}  No effort was made to resist attacks in the [[known-key distinguishing attack]] model, nor did the designers evaluate Speck for use as a [[hash function]].<ref name=Beaulieu2013/>{{rp|8}}
+
+As of 2018, no successful attack on full-round Speck of any variant is known.  Due to interest in Simon and Speck, about 70 cryptanalysis papers have been published on them.<ref name="design_notes_jan2018"/>{{rp|10}}  As is typical for [[Block cipher#Iterated block ciphers|iterated ciphers]], reduced-round variants have been successfully attacked.  The best published attacks on Speck in the standard attack model (CPA/CCA with unknown key) are [[differential cryptanalysis]] attacks; these make it through about 70–75% of the rounds of most variants, though these best attacks are only marginally faster than [[Brute-force attacks|brute-force]].<ref name="ling2016_differential"/><ref name="lee2018_differential"/><ref name="design_notes_jan2018"/>{{rp|12}}  The design team states that while designing Speck, they found differential attacks to be the limiting attacks, i.e. the type of attack that makes it through the most rounds; they then set the number of rounds to leave a security margin similar to [[Advanced Encryption Standard|AES-128]]'s at approximately 30%.<ref name="design_notes_jan2018"/>{{rp|12–13}}
+
+{| class="wikitable"
+|+ Best known attacks on Speck (in standard attack model)
+|-
+! Variant
+! Rounds attacked
+! Time complexity
+! Data complexity
+! Space complexity
+! Attack type
+|-
+| Speck128/256
+| 25/34 (74%)
+| 2<sup>253.35</sup>
+| 2<sup>125.35</sup>
+| 2<sup>22</sup>
+| differential<ref name="ling2016_differential"/>
+|-
+| Speck128/192
+| 24/33 (73%)
+| 2<sup>189.35</sup>
+| 2<sup>125.35</sup>
+| 2<sup>22</sup>
+| differential<ref name="ling2016_differential"/>
+|-
+| Speck128/128
+| 23/32 (72%)
+| 2<sup>125.35</sup>
+| 2<sup>125.35</sup>
+| 2<sup>22</sup>
+| differential<ref name="ling2016_differential"/>
+|-
+| Speck96/144
+| 21/29 (72%)
+| 2<sup>143.94</sup>
+| 2<sup>95.94</sup>
+| 2<sup>22</sup>
+| differential<ref name="ling2016_differential"/>
+|-
+| Speck96/96
+| 20/28 (71%)
+| 2<sup>95.94</sup>
+| 2<sup>95.94</sup>
+| 2<sup>22</sup>
+| differential<ref name="ling2016_differential"/>
+|-
+| Speck64/128
+| 20/27 (74%)
+| 2<sup>125.56</sup>
+| 2<sup>61.56</sup>
+| 2<sup>22</sup>
+| differential<ref name="ling2016_differential"/>
+|-
+| Speck64/96
+| 19/26 (73%)
+| 2<sup>93.56</sup>
+| 2<sup>61.56</sup>
+| 2<sup>22</sup>
+| differential<ref name="ling2016_differential"/>
+|-
+| Speck48/96
+| 17/23 (74%)
+| 2<sup>95.8</sup>
+| 2<sup>47.8</sup>
+| 2<sup>22</sup>
+| differential<ref name="lee2018_differential"/>
+|-
+| Speck48/72
+| 16/22 (73%)
+| 2<sup>71.8</sup>
+| 2<sup>47.8</sup>
+| 2<sup>22</sup>
+| differential<ref name="lee2018_differential"/>
+|-
+| Speck32/64
+| 15/22 (68%)
+| 2<sup>63.39</sup>
+| 2<sup>31.39</sup>
+| 2<sup>22</sup>
+| differential<ref name="lee2018_differential"/>
+|}
+
+Speck has been criticized for having too small a security margin, i.e. too few rounds between the best attacks and the full cipher, in comparison to more conservative ciphers such as [[Salsa20#ChaCha variant|ChaCha20]].<ref>{{cite tweet
+ | user=hashbreaker
+ | number=719889001444839424
+ | first=Daniel J.
+ | last=Bernstein
+ | date=2016-04-12
+ | accessdate=2018-06-13
+ | title=NSA claims that having 70% of Simon+Speck broken is ok.
+ | url=https://twitter.com/hashbreaker/status/719889001444839424
+}}</ref>
+Ciphers with small security margins are more likely to be broken by future advances in [[cryptanalysis]].  Speck's design team counters that there is a real-world cost to unnecessarily large security margins, especially on lightweight devices, that cryptanalysis during the design phase allowed the number of rounds to be set appropriately, and that they targeted AES's security margin.<ref name="design_notes_jan2018"/>{{rp|17}}
+
+Speck includes a round counter in the [[key schedule]].  The designers state this was included to block [[Slide attack|slide]] and [[rotational cryptanalysis]] attacks.<ref name="design_notes_jan2018"/>{{rp|16}}  Still, rotational-XOR cryptanalysis has been used to find [[Distinguishing attack|distinguishers]] against reduced-round versions of Speck.<ref name="liu2017_rotational">{{cite web
+ | title=Rotational-XOR Cryptanalysis of Reduced-round SPECK
+ | first1=Yunwen
+ | last1=Liu
+ | first2=Glenn 
+ | last2=De Witte
+ | first3=Adrián
+ | last3=Ranea
+ | first4=Tomer
+ | last4=Ashur
+ | date=2017
+ | url=https://eprint.iacr.org/2017/1036.pdf
+ | access-date=2018-06-13
+}}</ref> Though the authors don't describe standard key-recovery attacks based on their distinguishers, their best distinguishers on Speck32 and Speck48 in the known-key distinguishing attack model for certain [[weak key]] classes make it through slightly more rounds than the best differential distinguishers.  One of the authors has said that his research was resource-constrained and that rotational-XOR distinguishers on more rounds are probably possible.<ref name="ashur_linux-crypto">{{cite mailing list
+ |date=2018-06-01 |access-date=2026-07-13
+ |title=[PATCH v2 0/5] crypto: Speck support
+ |first=Tomer |last=Ashur
+ |mailing-list=linux-crypto
+ |url=https://lore.kernel.org/linux-crypto/3cb37d45-1acf-811d-821f-2a3c8ff85b04@esat.kuleuven.be/
+}}</ref> However, this type of cryptanalysis assumes the [[Related-key attack|related-key]] or even the known-key attack models,<ref name="liu2017_rotational"/> which are not a concern in typical cryptographic protocols and solutions.<ref>{{Cite web
+ | title=Salsa20 security
+ | first1=Daniel J.
+ | last1=Bernstein
+ | date=2015-04-27
+ | url=https://cr.yp.to/snuffle/security.pdf
+ | access-date=2018-06-13
+}}</ref>{{rp|8}}  The designers also state that Speck was not designed to resist known-key distinguishing attacks (which do not directly compromise the confidentiality of ciphers).<ref name=Beaulieu2013/>{{rp|8}}
+
+The designers state that NSA cryptanalysis found the algorithms to have no weaknesses, and security commensurate with their key lengths.<ref name="Beaulieu2015"/>{{rp|2}}  The design team says that their cryptanalysis included linear and differential cryptanalysis using standard techniques such as Matsui's algorithm and SAT/SMT solvers, though a full list of techniques used is not given.<ref name=design_notes_jan2018/>{{rp|10}}  Speck's designers have been criticized for not providing more details on NSA cryptanalysis of the ciphers.<ref name="ashur_linux-crypto"/>
+
+The NSA has approved Simon128/256 and Speck128/256 for use in U.S. National Security Systems, though AES-256 is still recommended for non-constrained applications.<ref name="Algorithms-IA-Needs-2016">{{cite web
+ | title=Algorithms to Support the Evolution of Information Assurance Needs
+ | url=https://www.iad.gov/iad/library/ia-guidance/ia-solutions-for-classified/algorithm-guidance/algorithms-support-evolution-ia-needs.cfm
+ | author=National Security Agency
+ | date=2016-11-18
+}}</ref>
+
+=== [[Side-channel attacks]] ===
+
+Being an [[Block cipher#ARX (add–rotate–XOR)|ARX cipher]], Speck does not use [[S-box]]es or other lookup tables; it is therefore naturally immune to [[Timing attack|cache-timing attacks]].<ref name="Beaulieu2015"/>{{rp|12}} This contrasts with ciphers that use lookup tables such as [[Advanced Encryption Standard|AES]], which have been shown to be vulnerable to such attacks.  However, like most block ciphers (including AES) Speck is vulnerable to [[power analysis]] attacks unless hardware countermeasures are taken.<ref name="Gamaarachchi2017">{{cite journal
+ | title=Breaking Speck cryptosystem using correlation power analysis attack
+ | first1=Hasindu
+ | last1=Gamaarachchi
+ | first2=Harsha
+ | last2=Ganegoda
+ | first3=Roshan
+ | last3=Ragel
+ | doi=10.4038/jnsfsr.v45i4.8233
+ | journal=Journal of the National Science Foundation of Sri Lanka
+ | date=2017-07-20
+ | volume=45
+ | issue=4
+ | pages=393–404
+ | doi-access=free
+ }}</ref><ref name="Beaulieu2015"/>{{rp|12}}
+
+=== Block and key sizes ===
+
+Although the Speck family of ciphers includes variants with the same block and key sizes as [[Advanced Encryption Standard|AES]] (Speck128/128, Speck128/192, and Speck128/256), it also includes variants with block size as low as 32 bits and key size as low as 64 bits.  These small block and key sizes are insecure for general use, as they can allow [[birthday attack]]s and [[brute-force attack]]s, regardless of the formal security of the cipher.<ref>{{cite conference
+ | title=On the Practical (In-)Security of 64-bit Block Ciphers: Collision Attacks on HTTP over TLS and OpenVPN
+ | url=https://sweet32.info/SWEET32_CCS16.pdf
+ | first1=Karthikeyan
+ | last1=Bhargavan
+ | first2=Gaëtan
+ | last2=Leurent
+ | conference=ACM Conference on Computer and Communications Security
+ | conference-url=https://www.sigsac.org/ccs/CCS2016/
+ | pages=456–467
+ | doi=10.1145/2976749.2978423
+ | date=2016
+}}</ref>  The designers state that these block and key sizes were included for highly resource-constrained devices where nothing better is possible, or where only very small amounts of data are ever encrypted, e.g. in [[Radio-frequency identification|RFID]] protocols.<ref name="Beaulieu2015"/>{{rp|2–3}}  Only the variant with a 128-bit block size and 256-bit key size is approved for use in U.S. National Security Systems.<ref name="Algorithms-IA-Needs-2016"/>
+
+== Standardization efforts and controversies ==
+
+Initial attempts to standardise [[Simon (cipher)|Simon]] and Speck through the [[International Organization for Standardization]] (ISO) failed to meet the required super-majority vote, and the ciphers were not adopted.<ref name="ashur_linux-crypto"/> Expert delegates to the ISO from several countries including Germany, Japan and Israel opposed the NSA's efforts to standardise the ciphers, citing concerns that the NSA is pushing for their standardisation with knowledge of exploitable weaknesses in the ciphers.<ref>{{cite news|title=Distrustful U.S. allies force spy agency to back down in encryption fight|url=https://www.reuters.com/article/us-cyber-standards-insight/distrustful-u-s-allies-force-spy-agency-to-back-down-in-encryption-fight-idUSKCN1BW0GV|newspaper=Reuters|date=2017-09-21}}</ref> The position was based on partial evidence of weaknesses in the ciphers, lack of clear need for standardisation of the new ciphers, and the NSA's previous involvement in the creation and promotion of the backdoored [[Dual_EC_DRBG]] cryptographic algorithm.<ref>{{cite encyclopedia |title= An Account of the ISO/IEC Standardization of the Simon and Speck Block Cipher Families|encyclopedia= Security of Ubiquitous Computing Systems|date= 2021-01-15|author-last1= Ashur|author-given1=Tomer|author-last2=Luykx|author-given2=Atul|editor-last1=Avoine|editor-given1=Gildas |editor-last2=Hernandez-Castro|editor-given2=Julio|publisher= Springer|isbn= 978-3-030-10590-7|doi=10.1007/978-3-030-10591-4_4|pages=63–78|s2cid= 234119694|doi-access=free}}</ref>
+
+In response to concerns, the NSA stated that more than 70 security analysis papers from some of the world's leading cryptographers support NSA's conclusion that the algorithms are secure and NSA affirmed that it is not aware of any cryptanalytic techniques that would allow them or anyone else to exploit Simon or Speck.<ref>{{cite web|author=<!--none-->|publisher=NSA Cybersecurity|date=2018-08-15|access-date=2026-07-13|title=Simon and Speck Information Paper|url=https://nsacyber.github.io/simon-speck/papers/SimonandSpeckInfo-ISO-SC27-WG2.pdf}}</ref>
+
+After initial attempts to standardise the ciphers failed, the ISO standardised Simon and Speck in other working groups. As of October 2018, the Simon and Speck ciphers have been standardized by ISO as a part of the [[RFID]] air interface standard, ISO standard 29167-21 (for Simon)<ref>{{cite web|author=<!--none-->|publisher=ISO|date=March 2026|access-date=2026-07-13|title=ISO/IEC 29167-21:2026 - Information technology — Automatic identification and data capture techniques — Part 21: Crypto suite SIMON security services for air interface communications|url=https://www.iso.org/standard/89591.html?browse=ics}}</ref> and ISO standard 29167-22 (for Speck)<ref>{{cite web|author=<!--none-->|publisher=ISO|date=March 2026|access-date=2026-07-13|title=ISO/IEC 29167-22:2026 - Information technology — Automatic identification and data capture techniques — Part 22: Crypto suite SPECK security services for air interface communications|url=https://www.iso.org/standard/89591.html?browse=ics}}</ref>, making them available for use by commercial entities.
+
+On August 7, 2018, Speck was removed from the [[Linux kernel]] 4.20 release completely.<ref name="speckremoved_2018"/>{{Primary source inline|date=September 2026}}
+
+On February 7, 2023 NIST selected the [[Ascon (cipher)|Ascon]] authenticated cipher family as its Lightweight Cryptography Standard.<ref>{{cite web |title=Lightweight Cryptography Standardization Process: NIST Selects Ascon |website=nist.gov |publisher=[[National Institute of Standards and Technology]] |url=https://csrc.nist.gov/News/2023/lightweight-cryptography-nist-selects-ascon |date=February 2023}}</ref>
+
+== References ==
+{{reflist}}
+{{cryptography navbox | block}}
+
+[[Category:Block ciphers]]
+[[Category:National Security Agency cryptography]]

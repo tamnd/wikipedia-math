@@ -1,0 +1,162 @@
+<!-- wikipedia: en
+     page: 39599
+     title: Blum Blum Shub
+     revision: 1373898611
+     timestamp: 2026-09-08T16:29:19Z
+     history: https://en.wikipedia.org/w/index.php?curid=39599&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1373898611 -->
+{{Short description|Pseudorandom number generator}}
+{{multiple issues|
+{{more footnotes|date=September 2013}}
+{{primary sources|date=September 2013}}
+}}
+
+'''Blum Blum Shub''' ('''B.B.S.''') is a [[pseudorandom number generator]] proposed in 1986 by [[Lenore Blum]], [[Manuel Blum]] and [[Michael Shub]]{{sfn|Blum|Blum|Shub|1986|pp=364–383}} that is derived from [[Michael O. Rabin]]'s one-way function.
+
+Blum Blum Shub takes the form
+
+:<math>x_{n+1} = x_n^2 \bmod M</math>,
+
+where ''M'' = ''pq'' is the product of two large [[prime number|primes]] ''p'' and ''q''. At each step of the algorithm, some output is derived from ''x''<sub>''n''+1</sub>; the output is commonly either the [[parity bit|bit parity]] of ''x''<sub>''n''+1</sub> or one or more of the least significant bits of ''x''<sub>''n''+1</sub>.
+
+The [[random seed|seed]] ''x''<sub>0</sub> should be an integer that is co-prime to ''M'' (i.e. ''p'' and ''q'' are not factors of ''x''<sub>0</sub>) and not 1 or 0.
+
+The two primes, ''p'' and ''q'', should both be [[Congruence relation|congruent]] to 3 (mod 4) (this guarantees that each [[quadratic residue]] has one [[square root]] which is also a quadratic residue), and should be [[safe prime]]s with a small [[greatest common divisor|gcd]]((''p-3'')''/2'', (''q-3'')''/2'') (this makes the cycle length large).
+
+An interesting characteristic of the Blum Blum Shub generator is the possibility to calculate any ''x''<sub>''i''</sub> value directly (via [[Euler's theorem]]):
+
+:<math>x_i = \left( x_0^{2^i \bmod \lambda(M)} \right) \bmod M</math>,
+
+where <math>\lambda</math> is the [[Carmichael function]]. (Here we have <math>\lambda(M) = \lambda(p\cdot q) = \operatorname{lcm}(p-1, q-1)</math>).
+
+==Security==
+There is a proof reducing its security to the [[Computational complexity theory|computational difficulty]] of factoring.{{sfn|Blum|Blum|Shub|1986|pp=364–383}} When the primes are chosen appropriately, and [[big O notation|''O'']]([[logarithm|log]] log ''M'') lower-order bits of each ''x<sub>n</sub>'' are output, then in the limit as ''M'' grows large, distinguishing the output bits from random should be at least as difficult as solving the [[quadratic residuosity problem]] modulo ''M''.
+
+The performance of the BBS random-number generator depends on the size of the modulus ''M'' and the number of bits per iteration ''j''. While lowering ''M'' or increasing ''j'' makes the algorithm faster, doing so also reduces the security. A 2005 paper gives concrete, as opposed to asymptotic, security proof of BBS, for a given ''M'' and ''j''. The result can also be used to guide choices of the two numbers by balancing expected security against computational cost.<ref>{{cite book |last1=Sidorenko |first1=Andrey |last2=Schoenmakers |first2=Berry |chapter=Concrete Security of the Blum-Blum-Shub Pseudorandom Generator |title=Cryptography and Coding |series=Lecture Notes in Computer Science |date=2005 |volume=3796 |pages=355–375 |doi=10.1007/11586821_24|isbn=978-3-540-30276-6 }}</ref>
+
+==Example==
+Let <math>p=11</math>, <math>q=23</math> and <math>s=3</math> (where <math>s</math> is the seed). We can expect to get a large cycle length for those small numbers, because <math>{\rm gcd}((p-3)/2, (q-3)/2)=2</math>.
+The generator starts to evaluate <math>x_0</math> by using <math>x_{-1}=s</math> and creates the sequence <math>x_0</math>, <math>x_1</math>, <math>x_2</math>, <math>\ldots</math> <math>x_5</math> = 9, 81, 236, 36, 31, 202. The following table shows the output (in bits) for the different bit selection methods used to determine the output.
+
+{| class="wikitable"
+|-
+! [[Parity bit]]
+! [[Least significant bit]]
+|-
+| 0 1 1 0 1 0
+| 1 1 0 0 1 0
+|}
+
+The following is a [[Python (programming language)|Python]] implementation that does check for primality.
+
+<syntaxhighlight lang="python3">
+import sympy
+
+
+def blum_blum_shub(p1: int, p2: int, seed: int, iterations: int) -> list[int]:
+    """Blum Blum Shub is a pseudorandom number generator."""
+    assert p1 % 4 == 3
+    assert p2 % 4 == 3
+    assert sympy.isprime(p1 // 2)
+    assert sympy.isprime(p2 // 2)
+    n = p1 * p2
+    numbers = []
+    for _ in range(iterations):
+        seed = (seed**2) % n
+        if seed in numbers:
+            print(f"The RNG has fallen into a loop at {len(numbers)} steps")
+            return numbers
+        numbers.append(seed)
+    return numbers
+
+
+print(blum_blum_shub(11, 23, 3, 100))
+</syntaxhighlight>
+
+The following [[Common Lisp]] implementation provides a simple demonstration of the generator, in particular regarding the three bit selection methods. The requirements imposed upon the parameters ''p'', ''q'' and ''s'' (seed) are not checked.
+
+<syntaxhighlight lang="lisp">
+(defun get-number-of-1-bits (bits)
+  "Returns the number of 1-valued bits in the integer-encoded BITS."
+  (declare (type (integer 0 *) bits))
+  (the (integer 0 *) (logcount bits)))
+
+(defun get-even-parity-bit (bits)
+  "Returns the even parity bit of the integer-encoded BITS."
+  (declare (type (integer 0 *) bits))
+  (the bit (mod (get-number-of-1-bits bits) 2)))
+
+(defun get-least-significant-bit (bits)
+  "Returns the least significant bit of the integer-encoded BITS."
+  (declare (type (integer 0 *) bits))
+  (the bit (ldb (byte 1 0) bits)))
+
+(defun make-blum-blum-shub (&key (p 11) (q 23) (s 3))
+  "Returns a function of no arguments which represents a simple
+   Blum-Blum-Shub pseudorandom number generator, configured to use the
+   generator parameters P, Q, and S (seed), and returning three values:
+   (1) the number x[n+1],
+   (2) the even parity bit of the number,
+   (3) the least significant bit of the number.
+   ---
+   Please note that the parameters P, Q, and S are not checked in
+   accordance to the conditions described in the article."
+  (declare (type (integer 0 *) p q s))
+  (let ((M    (* p q))       ;; M  = p * q
+        (x[n] s))            ;; x0 = seed
+    (declare (type (integer 0 *) M x[n]))
+    #'(lambda ()
+        ;; x[n+1] = x[n]^2 mod M
+        (let ((x[n+1] (mod (* x[n] x[n]) M)))
+          (declare (type (integer 0 *) x[n+1]))
+          ;; Compute the random bit(s) based on x[n+1].
+          (let ((even-parity-bit       (get-even-parity-bit       x[n+1]))
+                (least-significant-bit (get-least-significant-bit x[n+1])))
+            (declare (type bit even-parity-bit))
+            (declare (type bit least-significant-bit))
+            ;; Update the state such that x[n+1] becomes the new x[n].
+            (setf x[n] x[n+1])
+            (values x[n+1]
+                    even-parity-bit
+                    least-significant-bit))))))
+
+;; Print the exemplary outputs.
+(let ((bbs (make-blum-blum-shub :p 11 :q 23 :s 3)))
+  (declare (type (function () (values (integer 0 *) bit bit)) bbs))
+  (format T "~&Keys: E = even parity, L = least significant")
+  (format T "~2%")
+  (format T "~&x[n+1] | E | L")
+  (format T "~&--------------")
+  (loop repeat 6 do
+    (multiple-value-bind (x[n+1] even-parity-bit least-significant-bit)
+        (funcall bbs)
+      (declare (type (integer 0 *) x[n+1]))
+      (declare (type bit           even-parity-bit))
+      (declare (type bit           least-significant-bit))
+      (format T "~&~6d | ~d | ~d"
+                x[n+1] even-parity-bit least-significant-bit))))
+</syntaxhighlight>
+
+==See also==
+* [[Blum–Micali algorithm]]
+
+==References==
+===Citations===
+{{Reflist}}
+
+===Sources===
+{{refbegin}}
+* {{cite book| last1=Blum | first1=Lenore | last2=Blum | first2=Manuel | last3=Shub | first3=Michael | title=Advances in Cryptology | chapter=Comparison of Two Pseudo-Random Number Generators | publisher=Springer US | publication-place=Boston, MA | year=1983 | pages=61–78 | doi=10.1007/978-1-4757-0602-4_6| isbn=978-1-4757-0604-8 |chapter-url=https://www.iacr.org/cryptodb/data/paper.php?pubkey=1751}}
+*{{cite journal | last1=Blum | first1=L. | last2=Blum | first2=M. | last3=Shub | first3=M. | title=A Simple Unpredictable Pseudo-Random Number Generator | journal=SIAM Journal on Computing | publisher=Society for Industrial & Applied Mathematics (SIAM) | volume=15 | issue=2 | year=1986 | issn=0097-5397 | doi=10.1137/0215025 | pages=364–383|url=https://shub.ccny.cuny.edu/articles/1986-A_simple_unpredictable_pseudo-random_number_generator.pdf |archive-url=https://web.archive.org/web/20210814002628/https://shub.ccny.cuny.edu/articles/1986-A_simple_unpredictable_pseudo-random_number_generator.pdf |archive-date=2021-08-14 |url-status=live}}
+* {{citation|last=Geisler|first=Martin|author2=Krøigård, Mikkel |author3=Danielsen, Andreas |title=About Random Bits|date=December 2004|url=http://www.cecm.sfu.ca/~mmonagan/teaching/CryptographyF08/random-bits.pdf |archive-url=https://web.archive.org/web/20160331173058/http://www.cecm.sfu.ca/~mmonagan/teaching/CryptographyF08/random-bits.pdf |archive-date=2016-03-31 |url-status=live}}
+{{refend}}
+
+==External links==
+* [http://sigmasec.org/2020/01/19/gmpbbs/ GMPBBS, a C-language implementation by Mark Rossmiller]
+* [http://sigmasec.org/2020/01/19/gmpbbs/ BlumBlumShub, a Java-language implementation by Mark Rossmiller]
+* [https://code.google.com/p/javarng/ An implementation in Java]
+* [http://www.ciphersbyritter.com/NEWS2/TESTSBBS.HTM Randomness tests]
+
+[[Category:Pseudorandom number generators]]
+[[Category:Cryptographically secure pseudorandom number generators]]

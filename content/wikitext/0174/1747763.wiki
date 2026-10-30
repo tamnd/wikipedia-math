@@ -1,0 +1,275 @@
+<!-- wikipedia: en
+     page: 1747763
+     title: Multigrid method
+     revision: 1332784215
+     timestamp: 2026-01-13T21:13:59Z
+     history: https://en.wikipedia.org/w/index.php?curid=1747763&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1332784215 -->
+{{Short description|Method of solving differential equations}}
+{{Infobox algorithm
+|class          = [[Differential equation]]
+|image          = <!-- filename only, no "File:" or "Image:" prefix, and no enclosing [[brackets]] -->
+|caption        =
+|data           =
+|time           = <!-- Worst time big-O notation -->
+|best-time      =
+|average-time   =
+|space          = <!-- Worst-case space complexity; auxiliary space
+                       (excluding input) if not specified -->
+}}
+In [[numerical analysis]], a '''multigrid method''' ('''MG method''') is an [[algorithm]] for solving [[differential equation]]s using a [[hierarchy]] of [[discretization]]s. They are an example of a class of techniques called [[Multiresolution analysis|multiresolution methods]], very useful in problems exhibiting [[Multiscale modeling|multiple scales]] of behavior. For example, many basic [[relaxation method]]s exhibit different rates of convergence for short- and long-wavelength components, suggesting these different scales be treated differently, as in a [[Fourier analysis]] approach to multigrid.<ref>{{cite book |title=Practical Fourier analysis for multigrid methods |author1=Roman Wienands |author2=Wolfgang Joppich |page=17 |url=https://books.google.com/books?id=IOSux5GxacsC&pg=PA17 |isbn=978-1-58488-492-7 |publisher=CRC Press |year=2005}}</ref> MG methods can be used as solvers as well as [[preconditioner]]s.
+
+The main idea of multigrid is to accelerate the convergence of a basic iterative method (known as relaxation, which generally reduces short-wavelength error) by a ''global'' correction of the fine grid solution approximation from time to time, accomplished by solving a [[coarse problem]]. The coarse problem, while cheaper to solve, is similar to the fine grid problem in that it also has short- and long-wavelength errors. It can also be solved by a combination of relaxation and appeal to still coarser grids. This recursive process is repeated until a grid is reached where the cost of direct solution there is negligible compared to the cost of one relaxation sweep on the fine grid. This multigrid cycle typically reduces all error components by a fixed amount bounded well below one, independent of the fine grid mesh size. The typical application for multigrid is in the numerical solution of [[elliptic partial differential equation]]s in two or more dimensions.<ref>{{cite book |title=Multigrid |author1=U. Trottenberg |author2=C. W. Oosterlee |author3=A. Schüller |publisher=Academic Press |year=2001 |isbn=978-0-12-701070-0 |url=https://books.google.com/books?id=-og1wD-Nx_wC&q=elliptic}}</ref>
+
+Multigrid methods can be applied in combination with any of the common discretization techniques. For example, the [[finite element method]] may be recast as a multigrid method.<ref>{{cite book |title=Multigrid finite element methods for electromagnetic field modeling |author1=Yu Zhu |author2=Andreas C. Cangellaris |url=https://books.google.com/books?id=amq9j71_nqAC&pg=PA132 |page=132 ''ff'' |isbn=978-0-471-74110-7 |year=2006 |publisher=Wiley}}</ref> In these cases, multigrid methods are among the fastest solution techniques known today. In contrast to other methods, multigrid methods are general in that they can treat arbitrary regions and [[boundary condition]]s. They do not depend on the [[Separable partial differential equation|separability of the equations]] or other special properties of the equation.  They have also been widely used for more-complicated non-symmetric and nonlinear systems of equations, like the [[Linear elasticity|Lamé equations]] of [[Elasticity (physics)|elasticity]] or the [[Navier-Stokes equations]].<ref>{{cite thesis |last=Shah |first=Tasneem Mohammad |title=Analysis of the multigrid method |bibcode=1989STIN...9123418S |publisher=Oxford University |year=1989 }}</ref>
+
+== Algorithm ==
+[[File:Multigrid_Visualization.png|alt=|456x456px|thumb|Visualization of iterative Multigrid algorithm for fast O(n) convergence.]]
+There are many variations of multigrid algorithms, but the common features are that a hierarchy of [[discretization]]s (grids) is considered. The important steps are:<ref>{{cite book |title=Scientific Computing: An Introductory Survey |chapter-url=https://books.google.com/books?id=DPkYAQAAIAAJ |author=M. T. Heath |page=478 ''ff'' |chapter=Section 11.5.7 Multigrid Methods |year=2002 |publisher=McGraw-Hill Higher Education |isbn=978-0-07-112229-0 }}</ref><ref>{{cite book |title=An Introduction to Multigrid Methods |author=P. Wesseling |year=1992 |publisher=Wiley |isbn=978-0-471-93083-9 |url=https://books.google.com/books?id=ywOzQgAACAAJ}}</ref>
+
+* '''Smoothing''' – reducing high frequency errors, for example using a few [[Iterative method|iterations]] of the [[Gauss–Seidel method]].
+* '''Residual Computation''' – computing [[Residual (numerical analysis)|residual error]] after the smoothing operation(s).
+* '''Restriction''' – downsampling the [[residual (numerical analysis)|residual]] error to a coarser grid.
+* '''[[Interpolation]]''' or '''prolongation''' – interpolating a correction computed on a coarser grid into a finer grid.
+* '''Correction''' – Adding prolongated coarser grid solution onto the finer grid.
+
+There are many choices of multigrid methods with varying trade-offs between speed of solving a single iteration and the rate of convergence with said iteration. The 3 main types are V-Cycle, F-Cycle, and W-Cycle. These differ in which and how many coarse-grain cycles are performed per fine iteration. The V-Cycle algorithm executes one coarse-grain V-Cycle. F-Cycle does a coarse-grain V-Cycle followed by a coarse-grain F-Cycle, while each W-Cycle performs two coarse-grain W-Cycles per iteration. For a [[Discrete Poisson equation#On a two-dimensional rectangular grid|discrete 2D problem]], F-Cycle takes 83% more time to compute than a V-Cycle iteration while a W-Cycle iteration takes 125% more. If the problem is set up in a 3D domain, then a F-Cycle iteration and a W-Cycle iteration take about 64% and 75% more time respectively than a V-Cycle iteration ignoring [[Overhead (computing)|overheads]]. Typically, W-Cycle produces similar convergence to F-Cycle. However, in cases of [[Convection–diffusion equation|convection-diffusion]] problems with high [[Péclet number]]s, W-Cycle can show superiority in its rate of convergence per iteration over F-Cycle. The choice of smoothing operators are extremely diverse as they include [[Krylov subspace]] methods and can be [[Preconditioner|preconditioned]].
+
+Any geometric multigrid cycle iteration is performed on a hierarchy of grids and hence it can be coded using recursion. Since the function calls itself with smaller sized (coarser) parameters, the coarsest grid is where the recursion stops. In cases where the system has a high [[condition number]], the correction procedure is modified such that only a fraction of the prolongated coarser grid solution is added onto the finer grid.
+
+{| class="wikitable"
+|-valign="top"
+| 
+These steps can be used as shown in the MATLAB style pseudo code for 1 iteration of '''V-Cycle Multigrid''':
+<!-- javascript syntax color works well for pseudocode -->
+<syntaxhighlight lang="matlab">
+function phi = V_Cycle(phi,f,h)
+    % Recursive V-Cycle Multigrid for solving the Poisson equation (\nabla^2 phi = f) on a uniform grid of spacing h
+
+    % Pre-Smoothing
+    phi = smoothing(phi,f,h);
+
+    % Compute Residual Errors
+    r = residual(phi,f,h);
+
+    % Restriction
+    rhs = restriction(r);
+
+    eps = zeros(size(rhs));
+
+    % stop recursion at smallest grid size, otherwise continue recursion
+    if smallest_grid_size_is_achieved
+        eps = coarse_level_solve(eps,rhs,2*h);
+    else
+        eps = V_Cycle(eps,rhs,2*h);
+    end
+
+    % Prolongation and Correction
+    phi = phi + prolongation(eps);
+
+    % Post-Smoothing
+    phi = smoothing(phi,f,h);
+end
+</syntaxhighlight>
+||
+The following represents '''F-cycle multigrid'''. This multigrid cycle is slower than V-Cycle per iteration but does result in faster convergence.
+<!-- javascript syntax color works well for pseudocode -->
+<syntaxhighlight lang="matlab">
+function phi = F_Cycle(phi,f,h)
+    % Recursive F-cycle multigrid for solving the Poisson equation (\nabla^2 phi = f) on a uniform grid of spacing h
+
+    % Pre-smoothing
+    phi = smoothing(phi,f,h);
+
+    % Compute Residual Errors
+    r = residual(phi,f,h);
+
+    % Restriction
+    rhs = restriction(r);
+
+    eps = zeros(size(rhs));
+
+    % stop recursion at smallest grid size, otherwise continue recursion
+    if smallest_grid_size_is_achieved
+        eps = coarse_level_solve(eps,rhs,2*h);
+    else
+        eps = F_Cycle(eps,rhs,2*h);
+    end
+
+    % Prolongation and Correction
+    phi = phi + prolongation(eps);
+
+    % Re-smoothing
+    phi = smoothing(phi,f,h);
+
+    % Compute residual errors
+    r = residual(phi,f,h);
+
+    % Restriction
+    rhs = restriction(r);
+
+    % stop recursion at smallest grid size, otherwise continue recursion
+    if smallest_grid_size_is_achieved
+        eps = coarse_level_solve(eps,rhs,2*h);
+    else
+        eps = V_Cycle(eps,rhs,2*h);
+    end
+
+    % Prolongation and Correction
+    phi = phi + prolongation(eps);
+
+    % Post-smoothing
+    phi = smoothing(phi,f,h);
+end
+</syntaxhighlight>
+|| 
+Similarly the procedures can modified as shown in the MATLAB style pseudo code for 1 iteration of '''W-cycle multigrid''' for an even superior rate of convergence in certain cases:
+<!-- javascript syntax color works well for pseudocode -->
+<syntaxhighlight lang="matlab">
+function phi = W_cycle(phi,f,h)
+    % Recursive W-cycle multigrid for solving the Poisson equation (\nabla^2 phi = f) on a uniform grid of spacing h
+
+    % Pre-smoothing
+    phi = smoothing(phi,f,h);
+
+    % Compute Residual Errors
+    r = residual(phi,f,h);
+
+    % Restriction
+    rhs = restriction(r);
+
+    eps = zeros(size(rhs));
+
+    % stop recursion at smallest grid size, otherwise continue recursion
+    if smallest_grid_size_is_achieved
+        eps = coarse_level_solve(eps,rhs,2*h);
+    else
+        eps = W_cycle(eps,rhs,2*h);
+    end
+
+    % Prolongation and correction
+    phi = phi + prolongation(eps);
+
+    % Re-smoothing
+    phi = smoothing(phi,f,h);
+
+    % Compute residual errors
+    r = residual(phi,f,h);
+
+    % Restriction
+    rhs = restriction(r);
+
+    % stop recursion at smallest grid size, otherwise continue recursion
+    if smallest_grid_size_is_achieved
+        eps = coarse_level_solve(eps,rhs,2*h);
+    else
+        eps = W_cycle(eps,rhs,2*h);
+    end
+
+    % Prolongation and correction
+    phi = phi + prolongation(eps);
+
+    % Post-smoothing
+    phi = smoothing(phi,f,h);
+end
+</syntaxhighlight>
+|}
+
+== Computational cost ==
+{{citation needed section|date = September 2021}}
+[[File:MultigridWork.svg|thumb|Assuming a 2-dimensional problem setup, the computation moves across grid hierarchy differently for various multigrid cycles.|alt=|1019x1019px]]
+
+This approach has the advantage over other methods that it often scales linearly with the number of discrete nodes used. In other words, it can solve these problems to a given accuracy in a number of operations that is proportional to the number of unknowns.
+
+Assume that one has a differential equation which can be solved approximately (with a given accuracy) on a grid <math>i</math> with a given grid point  density <math>N_i</math>. Assume furthermore that a solution on any grid <math>N_i</math> may be obtained with a given effort <math>W_i = \rho K N_i</math> from a solution on a coarser grid <math>i+1</math>. Here, <math>\rho = N_{i+1} / N_i < 1</math> is the ratio of grid points on "neighboring" grids and is assumed to be constant throughout the grid hierarchy, and <math>K</math> is some constant modeling the effort of computing the result for one grid point.
+
+The following recurrence relation is then obtained for the effort of obtaining the solution on grid <math>k</math>:
+<math display="block">W_k = W_{k+1} + \rho K N_k</math>
+[[File:Convergence Rate of Multigrid Cycles.svg|alt=Convergence Rate of Multigrid Cycles in comparison to other smoothing operators. Multigrid converges faster than typical smoothing operators. F-Cycle and W-Cycle perform with near equal robustness.|thumb|438x438px|Example of Convergence Rates of Multigrid Cycles in comparison to other smoothing operators.]]
+And in particular, we find for the finest grid <math>N_1</math> that
+<math display="block">W_1 = W_2 + \rho K N_1</math>
+Combining these two expressions (and using <math>N_k = \rho^{k-1} N_1</math>) gives
+<math display="block">W_1 = K N_1 \sum_{p=0}^n \rho^p </math>
+
+Using the [[geometric series]], we then find (for finite <math>n</math>)
+<math display="block">W_1 < K N_1 \frac{1}{1 - \rho}</math>
+
+that is, a solution may be obtained in <math>O(N)</math> time. It should be mentioned that there is one exception to the <math>O(N)</math> i.e. W-cycle multigrid used on a 1D problem; it would result in <math>O(N \log N)</math> complexity.{{Citation needed|date=September 2021}}
+
+==Multigrid preconditioning==
+
+A multigrid method with an intentionally reduced tolerance can be used as an efficient [[preconditioning|preconditioner]] for an external iterative solver, e.g.,<ref>Andrew V Knyazev, Klaus Neymeyr. [http://etna.mcs.kent.edu/volumes/2001-2010/vol15/abstract.php?vol=15&pages=38-55 Efficient solution of symmetric eigenvalue problems using multigrid preconditioners in the locally optimal block conjugate gradient method]. Electronic Transactions on Numerical Analysis, 15, 38–55, 2003.</ref> The solution may still be obtained in <math>O(N)</math> time as well as in the case where the multigrid method is used as a solver. Multigrid preconditioning is used in practice even for linear systems, typically with one cycle per iteration, e.g., in [[Hypre]]. Its main advantage versus a purely multigrid solver is particularly clear for nonlinear problems, e.g., [[eigenvalue]] problems.
+
+If the matrix of the original equation or an eigenvalue problem is symmetric positive definite (SPD), the preconditioner is commonly constructed to be SPD as well, so that the standard [[conjugate gradient]] (CG) [[iterative methods]] can still be used. Such imposed SPD constraints may complicate the construction of the preconditioner, e.g., requiring coordinated pre- and post-smoothing. However, [[preconditioning|preconditioned]] [[steepest descent]] and [[Conjugate gradient method#The flexible preconditioned conjugate gradient method|flexible CG methods]] for SPD linear systems and [[LOBPCG]] for symmetric eigenvalue problems are all shown<ref>{{cite journal | doi=10.1016/j.procs.2015.05.241 | title=Nonsymmetric Preconditioning for Conjugate Gradient and Steepest Descent Methods 1 | year=2015 | last1=Bouwmeester | first1=Henricus | last2=Dougherty | first2=Andrew | last3=Knyazev | first3=Andrew V. | journal=Procedia Computer Science | volume=51 | pages=276–285 | s2cid=51978658 | doi-access=free | arxiv=1212.6680 }}</ref> to be robust if the preconditioner is not SPD.
+
+==Bramble–Pasciak–Xu preconditioner==
+Originally described in Xu’s Ph.D. thesis<ref>Xu, Jinchao. Theory of multilevel methods. Vol. 8924558. Ithaca, NY: Cornell University, 1989.</ref> and later published in Bramble-Pasciak-Xu,<ref>Bramble, James H., Joseph E. Pasciak, and Jinchao Xu. "Parallel multilevel preconditioners." Mathematics of Computation 55, no. 191 (1990): 1–22.</ref> the BPX-preconditioner is one of the two major multigrid approaches (the other is the classic multigrid algorithm such as V-cycle) for solving large-scale algebraic systems that arise from the discretization of models in science and engineering described by partial differential equations. In view of the subspace correction framework,<ref>Xu, Jinchao. "Iterative methods by space decomposition and subspace correction." SIAM review 34, no. 4 (1992): 581-613.</ref> BPX preconditioner is a parallel subspace correction method whereas the classic V-cycle is a successive subspace correction method.  The BPX-preconditioner is known to be naturally more parallel and in some applications more robust than the classic V-cycle multigrid method.  The method has been widely used by researchers and practitioners since 1990.
+
+==Generalized multigrid methods==
+
+Multigrid methods can be generalized in many different ways.  They can be applied naturally in a time-stepping solution of [[parabolic partial differential equation]]s, or they can be applied directly to time-dependent [[partial differential equation]]s.<ref>{{cite book |chapter-url=https://books.google.com/books?id=GKDQUXzLTkIC&pg=PA165 |editor1=Are Magnus Bruaset |editor2=Aslak Tveito |title=Numerical solution of partial differential equations on parallel computers |page=165 |chapter=Parallel geometric multigrid |author1=F. Hülsemann |author2=M. Kowarschik |author3=M. Mohr |author4=U. Rüde |publisher=Birkhäuser |year=2006 |isbn=978-3-540-29076-6}}</ref>  Research on multilevel techniques for [[hyperbolic partial differential equation]]s is underway.<ref>For example, {{cite book |title=Computational fluid dynamics: principles and applications |page=305 |url=https://books.google.com/books?id=asWGy362QFIC&q=%22The+goal+of+the+current+research+is+the+significant+improvement+of+the+efficiency+of+multigrid+for+hyperbolic+flow+problems%22&pg=PA305 |author= J. Blaz̆ek |year=2001 |isbn=978-0-08-043009-6 |publisher=Elsevier}} and {{cite book |chapter-url=https://books.google.com/books?id=TapltAX3ry8C&pg=PA369 |author=Achi Brandt and Rima Gandlin |chapter=Multigrid for Atmospheric Data Assimilation: Analysis |page=369 |editor1=Thomas Y. Hou |editor2=Eitan Tadmor |editor2-link=Eitan Tadmor |title=Hyperbolic problems: theory, numerics, applications: proceedings of the Ninth International Conference on Hyperbolic Problems of 2002 |year=2003 |isbn=978-3-540-44333-9 |publisher=Springer}}</ref> Multigrid methods can also be applied to [[integral equation]]s, or for problems in [[statistical physics]].<ref>{{cite book |title=Multiscale and multiresolution methods: theory and applications |author=Achi Brandt |chapter-url=https://books.google.com/books?id=mtsy6Ci2TRoC&pg=PA53 |editor1=Timothy J. Barth |editor2=Tony Chan |editor3=Robert Haimes |page=53 |chapter=Multiscale scientific computation: review |isbn=978-3-540-42420-8 |year=2002 |publisher=Springer}}</ref>
+
+Another set of multiresolution methods is based upon [[wavelets]]. These wavelet methods can be combined with multigrid methods.<ref>{{cite book |chapter-url=https://books.google.com/books?id=mtsy6Ci2TRoC&pg=PA140 |author1=Björn Engquist |author2=Olof Runborg |editor1=Timothy J. Barth |editor2=Tony Chan |editor3=Robert Haimes |chapter=Wavelet-based numerical homogenization with applications |title=Multiscale and Multiresolution Methods |isbn=978-3-540-42420-8 |volume=20 of Lecture Notes in Computational Science and Engineering |publisher=Springer |year=2002 |page=140 ''ff''}}</ref><ref>{{cite book |url=https://books.google.com/books?id=-og1wD-Nx_wC&q=wavelet+ |author1=U. Trottenberg |author2=C. W. Oosterlee |author3=A. Schüller |title=Multigrid |isbn=978-0-12-701070-0|year=2001 |publisher=Academic Press }}</ref> For example, one use of wavelets is to reformulate the finite element approach in terms of a multilevel method.<ref>{{cite book |title=Numerical Analysis of Wavelet Methods |author=Albert Cohen |url=https://books.google.com/books?id=Dz9RnDItrAYC&pg=PA44 |page=44 |publisher=Elsevier |year=2003 |isbn=978-0-444-51124-9}}</ref>
+
+'''Adaptive multigrid''' exhibits [[adaptive mesh refinement]], that is, it adjusts the grid as the computation proceeds, in a manner dependent upon the computation itself.<ref>{{cite book |author1=U. Trottenberg |author2=C. W. Oosterlee |author3=A. Schüller |title=Multigrid |chapter=Chapter 9: Adaptive Multigrid |chapter-url=https://books.google.com/books?id=-og1wD-Nx_wC&pg=PA356 |page=356 |isbn=978-0-12-701070-0|year=2001 |publisher=Academic Press }}</ref> The idea is to increase resolution of the grid only in regions of the solution where it is needed.
+
+==Algebraic multigrid (AMG)==
+Practically important extensions of multigrid methods include techniques where no partial differential equation nor geometrical problem background is used to construct the multilevel hierarchy.<ref>{{cite book |title=Matrix-based multigrid: theory and applications |author=Yair Shapira |chapter-url=https://books.google.com/books?id=lCDGhpDDk5IC&pg=PA66 |chapter=Algebraic multigrid |page=66 |isbn=978-1-4020-7485-1 |publisher=Springer |year=2003}}</ref> Such '''algebraic multigrid methods''' (AMG) construct their hierarchy of operators directly from the system matrix. In classical AMG, the levels of the hierarchy are simply subsets of unknowns without any geometric interpretation. (More generally, coarse grid unknowns can be particular linear combinations of fine grid unknowns.) Thus, AMG methods become black-box solvers for certain classes of [[sparse matrices]]. AMG is regarded as advantageous mainly where geometric multigrid is too difficult to apply,<ref>{{cite book |author1=U. Trottenberg |author2=C. W. Oosterlee |author3=A. Schüller |title=Multigrid |url=https://books.google.com/books?id=-og1wD-Nx_wC&pg=PA417 |page=417 |isbn=978-0-12-701070-0|year=2001 |publisher=Academic Press }}</ref> but is often used simply because it avoids the coding necessary for a true multigrid implementation. While classical AMG was developed first, a related algebraic method is known as smoothed aggregation (SA).
+
+In an overview paper<ref>Xu, J. and Zikatanov, L., 2017. Algebraic multigrid methods. Acta Numerica, 26, pp.591-721. [https://arxiv.org/pdf/1611.01917.pdf]</ref> by Jinchao Xu and Ludmil Zikatanov, the "algebraic multigrid" methods are understood from an abstract point of view. They developed a unified framework and existing algebraic multigrid methods can be derived coherently. Abstract theory about how to construct optimal coarse space as well as quasi-optimal spaces was derived. 
+We note that this result appeared first in a note on Algebraic Multigrid by Brannick and Zikatanov and was just rewritten in the overview paper. 
+Also, they proved that, under appropriate assumptions, the abstract two-level AMG method converges uniformly with respect to the size of the linear system, the coefficient variation, and the anisotropy. Their abstract framework covers most existing AMG methods, such as classical AMG, energy-minimization AMG, unsmoothed and smoothed aggregation AMG, and spectral AMGe.
+
+== Multigrid in time methods ==
+Multigrid methods have also been adopted for the solution of [[initial value problem]]s.<ref>{{cite journal
+| last       = Hackbusch
+| first      =  Wolfgang
+| date       = 1985
+| title      = Parabolic multi-grid methods
+| url        = http://dl.acm.org/citation.cfm?id=4673.4714
+| journal    = Computing Methods in Applied Sciences and Engineering, VI
+| pages      = 189–197 
+| isbn = 9780444875976
+| access-date = 1 August 2015
+}}</ref>
+Of particular interest here are parallel-in-time multigrid methods:<ref>{{cite journal
+| last       = Horton
+| first      =  Graham
+| date       = 1992
+| title      = The time-parallel multigrid method
+| journal    = Communications in Applied Numerical Methods
+| volume     = 8
+| issue      = 9
+| pages      =  585–595
+| doi        = 10.1002/cnm.1630080906
+}}</ref>
+in contrast to classical [[Runge–Kutta methods|Runge–Kutta]] or [[Linear multistep method|linear multistep]] methods, they can offer [[Parallel computing|concurrency]] in temporal direction.
+The well known [[Parareal]] parallel-in-time integration method can also be reformulated as a two-level multigrid in time.
+
+== Multigrid for nearly singular problems ==
+Nearly singular problems arise in a number of important physical and engineering applications. Simple, but important example of nearly singular problems can be found at the displacement formulation of [[linear elasticity]] for nearly incompressible materials. Typically, the major problem to solve such nearly singular systems boils down to treat the nearly singular operator given by <math>A + \varepsilon M</math> robustly with respect to the positive, but small parameter <math>\varepsilon</math>. Here <math>A</math> is symmetric [[Positive semidefinite matrix|semidefinite]] operator with large [[Kernel (linear algebra)|null space]], while <math>M</math> is a symmetric [[Definiteness of a matrix|positive definite]] operator. There were many works to attempt to design a robust and fast multigrid method for such nearly singular problems. A general guide has been provided as a design principle to achieve parameters (e.g., mesh size and physical parameters such as [[Poisson's ratio]] that appear in the nearly singular operator) independent convergence rate of the multigrid method applied to such nearly singular systems,<ref>Young-Ju Lee, Jinbiao Wu, Jinchao Xu and Ludmil Zikatanov, Robust Subspace Correction Methods for Nearly Singular Systems, Mathematical Models and Methods in Applied Sciences, Vol. 17, No 11, pp. 1937-1963 (2007)</ref> i.e., in each grid, a space decomposition based on which the smoothing is applied, has to be constructed so that the null space of the singular part of the nearly singular operator has to be included in the sum of the local null spaces, the intersection of the null space and the local spaces resulting from the space decompositions.
+
+==Notes==
+{{Reflist|30em}}
+
+== References ==
+{{refbegin}}
+* {{cite journal | first = G. P. | last = Astrachancev | year = 1971 | url = https://www.sciencedirect.com/science/article/pii/0041555371901704 | title = An iterative method of solving elliptic net problems | journal = USSR Comp. Math. Math. Phys. | volume = 11 | issue = 2 | pages = 171–182 }}
+* {{cite journal | first = N. S. | last = Bakhvalov | author-link = Nikolai Bakhvalov | year = 1966 | url = https://www.sciencedirect.com/science/article/pii/0041555366901182 | title = On the convergence of a relaxation method with natural constraints on the elliptic operator | journal = USSR Comp. Math. Math. Phys. | volume = 6 | issue = 5 | pages = 101–113 }}
+* {{cite journal | first = Achi | last = Brandt | author-link = Achi Brandt | date = April 1977 | url = https://www.jstor.org/stable/2006422 | title = Multi-Level Adaptive Solutions to Boundary-Value Problems | journal = Mathematics of Computation | volume = 31 | issue = 138 | pages = 333–390 }}
+* {{cite book | first1 = William L. | last1 = Briggs | first2 = Van Emden | last2 = Henson | first3 = Steve F. | last3 = McCormick | year = 2000 | url = http://www.llnl.gov/casc/people/henson/mgtut/welcome.html | title = A Multigrid Tutorial | edition = 2nd | location = Philadelphia | publisher = [[Society for Industrial and Applied Mathematics]] | isbn = 0-89871-462-1 | archive-date = 2006-10-06 | access-date = 2018-01-24 | archive-url = https://web.archive.org/web/20061006153457/http://www.llnl.gov/casc/people/henson/mgtut/welcome.html | url-status = bot: unknown }}
+* {{cite journal | first = R. P. | last = Fedorenko | year = 1961 | url = http://www.mathnet.ru/eng/zvmmf8014 | title = A relaxation method for solving elliptic difference equations | journal = USSR Comput. Math. Math. Phys. | volume = 1 | issue = 4 | page = 1092 }}
+* {{cite journal | first = R. P. | last = Fedorenko | year = 1964 | title = The speed of convergence of one iterative process | journal = USSR Comput. Math. Math. Phys. | volume = 4 | page = 227 }}
+* {{cite book | last1 = Press | first1 = W. H. | last2 = Teukolsky | first2 = S. A. | last3 = Vetterling | first3 = W. T. | last4 = Flannery | first4 = B. P. | year = 2007 | title = Numerical Recipes: The Art of Scientific Computing | edition = 3rd | publisher = Cambridge University Press | location = New York | isbn = 978-0-521-88068-8 | chapter = Section 20.6. Multigrid Methods for Boundary Value Problems | chapter-url = http://apps.nrbook.com/empanel/index.html#pg=1066 }}
+{{refend}}
+
+== External links ==
+*[https://web.archive.org/web/20100527194456/https://computation.llnl.gov/casc/linear_solvers/present.html Links to AMG presentations]
+
+{{Numerical PDE}}
+
+{{DEFAULTSORT:Multigrid Method}}
+[[Category:Numerical analysis]]
+[[Category:Partial differential equations]]
+[[Category:Wavelets]]

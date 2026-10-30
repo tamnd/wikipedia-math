@@ -1,0 +1,135 @@
+<!-- wikipedia: en
+     page: 32164063
+     title: Hamiltonian Monte Carlo
+     revision: 1342547030
+     timestamp: 2026-03-09T15:33:36Z
+     history: https://en.wikipedia.org/w/index.php?curid=32164063&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1342547030 -->
+{{Short description|Sampling algorithm}}
+[[File:Hamiltonian Monte Carlo.gif|right|thumb|300px|Hamiltonian Monte Carlo sampling a two-dimensional probability distribution]]
+
+The '''Hamiltonian Monte Carlo''' algorithm (originally known as '''hybrid Monte Carlo''') is a [[Markov chain Monte Carlo]] method for obtaining a sequence of [[Sampling (statistics)|random samples]] whose distribution [[Convergence of random variables|converges]] to a target [[probability distribution]] that is difficult to sample directly. This sequence can be used to estimate [[integrals]] of the target distribution, such as [[expected values]] and [[Moment (mathematics)|moments]].
+
+Hamiltonian Monte Carlo corresponds to an instance of the [[Metropolis–Hastings algorithm]], with a [[Hamiltonian mechanics|Hamiltonian dynamics]] evolution simulated using a [[Time reversibility|time-reversible]] and volume-preserving numerical integrator (typically the [[Leapfrog integration|leapfrog integrator]]) to propose a move to a new point in the state space. Compared to using a [[Random walk#Gaussian random walk|Gaussian random walk]] proposal distribution in the Metropolis–Hastings algorithm, Hamiltonian Monte Carlo reduces the correlation between successive sampled states by proposing moves to distant states which maintain a high probability of acceptance due to the approximate [[Conservation of energy|energy conserving]] properties of the simulated Hamiltonian dynamic when using a [[symplectic integrator]].{{cn|date=April 2025}} The reduced correlation means fewer [[Markov chain]] samples are needed to approximate integrals with respect to the target probability distribution for a given [[Monte Carlo integration|Monte Carlo]] error.
+
+The algorithm was originally proposed by Simon Duane, Anthony Kennedy, Brian Pendleton and Duncan Roweth in 1987 for calculations in [[lattice QCD|lattice quantum chromodynamics]].<ref>{{cite journal|last=Duane|first=Simon|author2=Kennedy, Anthony D.|author3=Pendleton, Brian J.|author4=Roweth, Duncan|title=Hybrid Monte Carlo|journal=Physics Letters B|date=1987|volume=195|issue=2|pages=216–222|doi=10.1016/0370-2693(87)91197-X |bibcode=1987PhLB..195..216D}}</ref> In 1996, [[Radford M. Neal]] showed how the method could be used for a broader class of statistical problems, in particular [[artificial neural network]]s.<ref>{{cite book |first=Radford M. |last=Neal |title=Bayesian Learning for Neural Networks |location= |publisher=Springer |year=1996 |isbn=0-387-94724-8 |chapter=Monte Carlo Implementation |series=Lecture Notes in Statistics |volume=118 |pages=55–98 |doi=10.1007/978-1-4612-0745-0_3 }}</ref> But the burden of having to provide the algorithm with [[gradient]]s of the [[Graphical model|model graph]] delayed its wider adoption in statistics and other quantitative disciplines, until in the mid-2010s the developers of [[Stan (software)|Stan]] implemented HMC in combination with [[automatic differentiation]].<ref>{{cite journal |first1=Andrew |last1=Gelman |first2=Daniel |last2=Lee |first3=Jiqiang |last3=Guo  |title=Stan: A Probabilistic Programming Language for Bayesian Inference and Optimization |journal=Journal of Educational and Behavioral Statistics |volume=40 |issue=5 |pages=530–543 |year=2015 |doi=10.3102/1076998615606113 |s2cid=18351694 }}</ref>
+
+==Algorithm==
+Suppose the target distribution to sample is <math>f(\mathbf{x})</math> for <math>\mathbf{x} \in \mathbb{R}^d</math> (<math>d \ge 1 </math>) and a chain of samples <math>\mathbf{X}_0,\mathbf{X}_1,\mathbf{X}_2,\ldots</math> is required.
+
+[[Hamiltonian mechanics|Hamilton's equations]] are
+:<math>\frac{\text{d} x_i}{\text{d} t}=\frac{\partial H}{\partial p_i} \quad \text{and} \quad \dfrac{\text{d} p_i}{\text{d} t}=-\dfrac{\partial H}{\partial x_i}</math>
+where <math>x_i</math> and <math>p_i</math> are the <math>i</math>th component of the [[Position (geometry)|position]] and [[momentum]] vector respectively and <math>H</math> is the Hamiltonian. Let <math>M</math> be a [[mass matrix]] which is symmetric and positive definite, then the Hamiltonian is
+:<math>H(\mathbf{x},\mathbf{p})=U(\mathbf{x}) + \dfrac{1}{2}\mathbf{p}^\text{T} M^{-1}\mathbf{p}</math>
+where <math>U(\mathbf{x})</math> is the [[potential energy]]. The potential energy for a target is given as
+:<math>U(\mathbf{x}) = -\ln f(\mathbf{x})</math>
+which comes from the [[Boltzmann distribution|Boltzmann's factor]]. Note that the Hamiltonian <math>H</math> is dimensionless in this formulation because the exponential probability weight <math>\exp\left(-H\right)</math> has to be well defined. For example, in simulations at finite [[temperature]] <math>T</math> the factor <math>k_{\text{B}}T</math> (with the [[Boltzmann constant]] <math>k_{\text{B}}</math>) is directly absorbed into <math>U</math> and <math>M</math>.
+
+The algorithm requires a positive integer for number of leapfrog steps <math>L</math> and a positive number for the step size <math>\Delta t</math>. Suppose the chain is at <math>\mathbf{X}_n=\mathbf{x}_n</math>. Let <math>\mathbf{x}_n(0) = \mathbf{x}_n</math>. First, a [[Random variable|random]] [[Normal distribution|Gaussian]] momentum <math>\mathbf{p}_n(0)</math> is drawn from <math>\text{N}\left(\mathbf{0},M\right)</math>. Next, the particle will run under Hamiltonian dynamics for time <math>L\Delta t</math>, this is done by solving the Hamilton's equations numerically using the [[Leapfrog integration|leapfrog algorithm]]. The position and momentum vectors after time <math>\Delta t</math> using the leapfrog algorithm are:<ref>{{cite arXiv|last=Betancourt |first=Michael |title=A Conceptual Introduction to Hamiltonian Monte Carlo |date=2018-07-15 |class=stat.ME |eprint=1701.02434}}</ref> 
+:<math>\mathbf{p}_n\left(t+\dfrac{\Delta t}{2}\right) = \mathbf{p}_n(t) - \dfrac{\Delta t}{2}\nabla \left.U(\mathbf{x})\right|_{\mathbf{x} = \mathbf{x}_n(t)}</math>
+:<math>\mathbf{x}_n(t+\Delta t) = \mathbf{x}_n(t)+\Delta t M^{-1}\mathbf{p}_n\left(t+\dfrac{\Delta t}{2}\right)</math>
+:<math>\mathbf{p}_n(t+\Delta t) =
+\mathbf{p}_n\left(t+\dfrac{\Delta t}{2}\right)
+-\dfrac{\Delta t}{2}\nabla \left.U(\mathbf{x})\right|_{\mathbf{x} = \mathbf{x}_n(t+\Delta t)}
+</math>
+These equations are to be applied to <math>\mathbf{x}_n(0)</math> and <math>\mathbf{p}_n(0)</math> <math>L</math> times to obtain <math>\mathbf{x}_n(L\Delta t)</math> and <math>\mathbf{p}_n(L\Delta t)</math>.
+
+The leapfrog algorithm is an approximate solution to the motion of non-interacting classical particles. If exact, the solution will never change the initial randomly-generated energy distribution, as energy is conserved for each particle in the presence of a classical potential energy field. In order to reach a [[thermodynamic equilibrium]] distribution, particles must have some sort of interaction with, for example, a surrounding heat bath, so that the entire system can take on different energies with probabilities according to the Boltzmann distribution.
+
+One way to move the system towards a thermodynamic equilibrium distribution is to change the state of the particles using the [[Metropolis–Hastings algorithm]]. So first, one applies the leapfrog step, then a Metropolis-Hastings step.
+
+The transition from <math>\mathbf{X}_n = \mathbf{x}_n</math> to <math>\mathbf{X}_{n+1}</math> is
+:<math>\mathbf{X}_{n+1}|\mathbf{X}_{n}=\mathbf{x}_n
+= 
+\begin{cases}
+	\mathbf{x}_{n}(L\Delta t) & \text{with probability } \alpha\left(\mathbf{x}_{n}(0),\mathbf{x}_{n}(L\Delta t)\right) \\
+	\mathbf{x}_n(0) & \text{otherwise}
+	\end{cases}
+</math>
+where
+:<math>
+\alpha\left(\mathbf{x}_{n}(0),\mathbf{x}_{n}(L\Delta t)\right)=
+\text{min}\left(
+1,
+\dfrac{
+  \exp\left[
+    -H(
+      \mathbf{x}_n(L\Delta t),\mathbf{p}_n(L\Delta t)
+    )
+  \right]
+}
+{
+  \exp\left[
+    -H(
+      \mathbf{x}_n(0),\mathbf{p}_n(0)
+    )
+  \right]
+}
+\right).
+</math>
+
+A full update consists of first randomly sampling the momenta <math>\mathbf{p}</math> (independently of the previous iterations), then integrating the equations of motion (e.g. with leapfrog), and finally obtaining the new configuration from the Metropolis-Hastings accept/reject step. This updating mechanism is repeated to obtain <math>\mathbf{X}_{n+1},\mathbf{X}_{n+2},\mathbf{X}_{n+3},\ldots</math>.
+
+==No U-Turn Sampler==
+The No U-Turn Sampler (NUTS)<ref>{{cite journal |last1=Hoffman |first1=Matthew D |last2=Gelman |first2=Andrew |title=The No-U-turn sampler: adaptively setting path lengths in Hamiltonian Monte Carlo |journal=Journal of Machine Learning Research |date=2014 |volume=15 |issue=1 |pages=1593–1623 |url=http://jmlr.org/papers/v15/hoffman14a.html |access-date=2024-03-28 }}</ref> is an extension by controlling the number of steps <math>L</math> automatically. Tuning <math>L</math> is critical. For example, in the one dimensional <math>\text{N}(0,1/\sqrt{k})</math> case, the potential is <math>U(x)=kx^2/2</math> which corresponds to the potential of a [[Harmonic oscillator|simple harmonic oscillator]]. For <math>L</math> too large, the particle will oscillate and thus waste computational time. For <math>L</math> too small, the particle will behave like a random walk.
+
+Loosely, NUTS runs the Hamiltonian dynamics both forwards and backwards in time randomly until a U-Turn condition is satisfied. When that happens, a random point from the path is chosen for the MCMC sample and the process is repeated from that new point.
+
+In detail, a [[binary tree]] is constructed to trace the path of the leap frog steps. To produce a MCMC sample, an iterative procedure is conducted. A slice variable <math>U_n\sim\text{Uniform}(0,\exp(-H[\mathbf{x}_n(0),\mathbf{p}_n(0)]))</math> is sampled. Let <math>\mathbf{x}_n^+</math> and <math>\mathbf{p}_n^+</math> be the position and momentum of the forward particle respectively. Similarly, <math>\mathbf{x}_n^-</math> and <math>\mathbf{p}_n^-</math> for the backward particle. In each iteration, the binary tree selects at random uniformly to move the forward particle forwards in time or the backward particle backwards in time. Also for each iteration, the number of leap frog steps increase by a factor of 2. For example, in the first iteration, the forward particle moves forwards in time using 1 leap frog step. In the next iteration, the backward particle moves backwards in time using 2 leap frog steps.
+
+The iterative procedure continues until the U-Turn condition is met, that is
+:<math>(\mathbf{x}_n^+ - \mathbf{x}_n^-)\cdot \mathbf{p}_n^- < 0
+\quad \text{or} \quad. 
+(\mathbf{x}_n^+ - \mathbf{x}_n^-)\cdot \mathbf{p}_n^+ < 0
+</math>
+or when the Hamiltonian becomes inaccurate
+:<math>
+\exp\left[-H(\mathbf{x}_n^{+},\mathbf{p}_n^{+})+\delta\right]<U_n
+</math>
+or
+:<math>
+\exp\left[-H(\mathbf{x}_n^{-},\mathbf{p}_n^{-})+\delta\right]<U_n
+</math>
+where, for example, <math>\delta = 1000</math>.
+
+Once the U-Turn condition is met, the next MCMC sample, <math>\mathbf{x}_{n+1}</math>, is obtained by sampling uniformly the leap frog path traced out by the binary tree <math>\{\mathbf{x}_n^-,\ldots,\mathbf{x}_n(-\Delta t),\mathbf{x}_n(0),\mathbf{x}_n(\Delta t),\ldots,\mathbf{x}_n^+\}</math> which satisfies
+:<math>
+U_n<\exp\left[-H(\mathbf{x_{n+1}},\mathbf{p_{n+1})}\right]
+</math>.
+This is usually satisfied if the remaining HMC parameters are sensible.{{cn|date=April 2025}}
+
+==See also==
+* [[Dynamic Monte Carlo method]]
+* [[List of software for Monte Carlo molecular modeling|Software for Monte Carlo molecular modeling]]
+* [[Stan (software)|Stan]], a probabilistic programing language implementing HMC.
+* [[PyMC]], a probabilistic programming language implementing HMC.
+* [[Metropolis-adjusted Langevin algorithm]]
+* [[Turing.jl]], a probabilistic programming language in Julia implementing HMC.
+
+== References ==
+{{Reflist}}
+
+== Further reading ==
+* {{cite book |first1=Michael |last1=Betancourt |first2=Mark |last2=Girolami |year=2015 |chapter=Hamiltonian Monte Carlo for Hierarchical Models |pages=79–101 |title=Current Trends in Bayesian Methodology with Applications |editor1-first=Satyanshu Kumar |editor1-last=Upadhyay |editor2-first=Umesh |editor2-last=Singh |editor3-first=Dipak K. |editor3-last=Dey |editor4-first=Appaia |editor4-last=Loganathan |display-editors=1 |location= |publisher=CRC Press |isbn=978-1-4822-3511-1 }}
+* {{Cite arXiv |title=A Conceptual Introduction to Hamiltonian Monte Carlo |first=Michael |last=Betancourt |year=2018 |class=stat.ME |eprint=1701.02434 }}
+* {{cite book |first1=Adrian |last1=Barbu |first2=Song-Chun |last2=Zhu |title=Monte Carlo Methods |location=Singapore |publisher=Springer |year=2020 |chapter=Hamiltonian and Langevin Monte Carlo |pages=281–326 |isbn=978-981-13-2970-8 }}
+* {{cite book
+    |last=Neal
+    |first=Radford M
+    |title=Handbook of Markov Chain Monte Carlo
+    |year=2011
+    |publisher=Chapman and Hall/CRC
+    |isbn=9781420079418
+    |editor=Steve Brooks |editor2=Andrew Gelman |editor3=Galin L. Jones |editor4=Xiao-Li Meng
+    |chapter=MCMC Using Hamiltonian Dynamics
+    |chapter-url=http://www.mcmchandbook.net/HandbookChapter5.pdf}}
+
+== External links ==
+* {{Cite web |title=Efficient Bayesian inference with Hamiltonian Monte Carlo |first=Michael |last=Betancourt |work=MLSS Iceland 2014 |date=17 November 2014 |via=[[YouTube]] |url=https://www.youtube.com/watch?v=pHsuIaPbNbY&list=PLqdbxUnkqOw2nKn7VxYqIrKWcqRkQYOsF&index=11 }}
+* {{cite web |title=Markov chain Monte Carlo |work=[[Statistical Rethinking]] 2022 |first=Richard |last=McElreath |date=25 January 2022 |via=[[YouTube]] |url=https://www.youtube.com/watch?v=Qqz5AJjyugM&list=PLDcUM9US4XdMROZ57-OIRtIK0aOynbgZN&index=9}}
+*[https://colindcarroll.com/blog/hmc_from_scratch.html/ Hamiltonian Monte Carlo from scratch]
+*[https://www.cs.cmu.edu/~epxing/Class/10708-17/notes-17/10708-scribe-lecture17.pdf Optimization and Monte Carlo Methods]
+
+[[Category:Monte Carlo methods]]
+[[Category:Markov chain Monte Carlo]]

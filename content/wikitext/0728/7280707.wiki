@@ -1,0 +1,96 @@
+<!-- wikipedia: en
+     page: 7280707
+     title: Variable-length encoding
+     revision: 1365342874
+     timestamp: 2026-07-21T20:28:21Z
+     history: https://en.wikipedia.org/w/index.php?curid=7280707&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1365342874 -->
+{{short description|Encoding which maps information to a variable number of bits}}
+{{Use dmy dates|date=December 2021|cs1-dates=y}}{{more citations needed|date=December 2009}}
+In [[coding theory]], '''variable-length encoding''' is a symbol encoding scheme in which codes of differing lengths are used to encode symbols for representation through a communication channel or in a storage medium.<ref>{{Cite RFC|last=Crispin|first=M.|date=1 April 2005|title=UTF-9 and UTF-18 Efficient Transformation Formats of Unicode|doi=10.17487/rfc4042|doi-access=}}</ref> The equivalent concept in [[computer science]] is ''[[bit string]]''. 
+
+Variable-length codes can allow sources to be [[data compression|compressed]] and decompressed with ''zero'' error ([[lossless data compression]]) and still be read back symbol by symbol. An [[independent and identically-distributed random variables|independent and identically-distributed source]] may be compressed almost arbitrarily close to its [[information entropy|entropy]]. This is in contrast to fixed-length coding methods, for which data compression is only possible for large blocks of data, and any compression beyond the logarithm of the total number of possibilities comes with a finite (though perhaps arbitrarily small) probability of failure.
+
+For these reasons, they were sometimes used to pack English text into fewer bytes in [[Adventure game|adventure games]] for early [[Microcomputer|microcomputers]]. However, [[Disk storage|disks]], increases in computer memory, and general purpose [[Compression algorithm|compression algorithms]] have rendered such methods obsolete.
+
+Multibyte encodings are usually the result of a need to increase the number of characters which can be encoded without breaking [[backward compatibility]] with an existing constraint. For example, with one byte (8&nbsp;bits) per character, one can encode 256 possible characters; in order to encode more than 256 characters, the obvious choice would be to use two or more bytes per encoding unit, two bytes (16&nbsp;bits) would allow 65,536 possible characters, but such a change would break compatibility with existing systems and therefore might not be feasible at all.{{efn|As a real-life example of this, [[UTF-16]], which represents the most common characters in exactly the manner just described (and uses pairs of 16-bit code units for less-common characters) never gained traction as an encoding for text intended for interchange due to its incompatibility with the ubiquitous 7-/8-bit [[ASCII]] encoding, with its intended role instead being taken by [[UTF-8]], which ''does'' preserve ASCII compatibility.}}
+
+Unlikely source symbols can be assigned longer codewords while likely source symbols can be assigned shorter codewords, thus giving a low [[Expected value|''expected'']] codeword length. Some examples of well-known variable-length coding strategies are [[Huffman coding]], [[Lempel–Ziv coding]], [[arithmetic coding]], and [[context-adaptive variable-length coding]].
+
+== General structure ==
+A multibyte encoding system minimises disruption to existing software by keeping some characters as single-unit codes, while others require multiple units. This creates three unit types: singletons (which consist of a single unit), lead units (which come first in a multiunit sequence), and trail units (which come afterwards in a multiunit sequence). Input and display systems must handle these structures, though most other software does not.
+
+For example, the four character string "[[I Love New York|{{mono|I♥NY}}]]" is encoded in [[UTF-8]] like this (shown as [[hexadecimal]] byte values): {{mono|49 {{maroon|E2}} {{navy (color)|99}} {{navy (color)|A5}} 4E 59}}. Of the six units in that sequence, {{mono|49}}, {{mono|4E}}, and {{mono|59}} are singletons (for {{mono|I}}, {{mono|N}}, and {{mono|Y}}), {{mono|{{maroon|E2}}}} is a lead unit and {{mono|{{navy (color)|99}}}} and {{mono|{{navy (color)|A5}}}} are trail units.  The heart symbol is represented by the combination of the lead unit and the two trail units.
+
+UTF-8 clearly distinguishes singletons, leads, and trails with non-overlapping value ranges. By contrast, older encodings often reuse values, making it harder to parse text correctly. This can cause false positives in searches or make a corrupted byte disrupt long sequences. In well-designed encodings like UTF-8, searching works reliably, and corruption affects only the character containing the bad unit.
+
+== Codes and their extensions ==
+The extension of a code is the mapping of finite length source sequences to finite length bit strings, that is obtained by concatenating for each symbol of the source sequence the corresponding codeword produced by the original code. Using terms from [[formal language theory]], the precise mathematical definition is as follows: Let <math>S</math> and <math>T</math> be two finite sets, called the source and target [[alphabet (computer science)|alphabets]], respectively. A '''code''' <math>C: S \to T^*</math> is a total function<ref name=":0" /> mapping each symbol from <math>S</math> to a [[Word (data type)|sequence of symbols]] over <math>T</math>, and the extension of <math>C</math> to a [[Homomorphism#Formal language theory|homomorphism]] of <math>S^*</math> into <math>T^*</math>, which naturally maps each sequence of source symbols to a sequence of target symbols, is referred to as its '''extension'''.
+
+Variable-length codes can be strictly nested in order of decreasing generality as non-singular codes, uniquely decodable codes, and prefix codes. Prefix codes are always uniquely decodable, and these in turn are always non-singular:
+
+=== Non-singular codes ===
+A code is '''non-singular''' if each source symbol is mapped to a different non-empty bit string; that is, the mapping from source symbols to bit strings is [[injective]].
+
+For example, the mapping <math>M_1 = \{\, \texttt{a}\mapsto \texttt{0}, \texttt{b}\mapsto \texttt{0}, \texttt{c}\mapsto \texttt{1}\,\}</math> is ''not'' non-singular because both {{mono|a}} and {{mono|b}} map to the same bit string {{mono|0}}; any extension of this mapping will generate a lossy (non-lossless) coding. Such singular coding may still be useful when some loss of information is acceptable (for example, when such code is used in audio or video compression, where a lossy coding becomes equivalent to source [[Quantization (signal processing)|quantization]]).
+
+However, the mapping <math>M_2 = \{\, \texttt{a} \mapsto \texttt{1}, \texttt{b} \mapsto \texttt{011}, \texttt{c}\mapsto \texttt{01110}, \texttt{d}\mapsto \texttt{1110}, \texttt{e}\mapsto \texttt{10011}, \texttt{f}\mapsto\texttt{0}\}</math> ''is'' non-singular; its extension will generate a lossless coding, which will be useful for general data transmission (but this feature is not always required). It is not necessary for the non-singular code to be more compact than the source (and in many applications, a larger code is useful, for example as a way to detect or recover from encoding or transmission errors, or in security applications to protect a source from undetectable tampering).
+
+=== Uniquely decodable codes ===
+A code is '''uniquely decodable''' if its extension is [[#Non-singular codes|§ non-singular]]. Whether a given code is uniquely decodable can be decided with the [[Sardinas–Patterson algorithm]]. 
+
+The mapping <math>M_3 = \{\, \texttt{a}\mapsto \texttt{0}, \texttt{b}\mapsto \texttt{01}, \texttt{c}\mapsto \texttt{011}\,\}</math> is uniquely decodable (this can be demonstrated by looking at the ''follow-set'' after each target bit string in the map, because each bitstring is terminated as soon as we see a <math>\texttt{0}</math> bit which cannot follow any existing code to create a longer valid code in the map, but unambiguously starts a new code). 
+
+Consider again the code  <math>M_2</math> from the previous section.<ref name=":0">This code is based on an example found in Berstel et al. (2009), Example 2.3.1, p. 63.</ref> This code is ''not'' uniquely decodable, since the string {{mono|011101110011}} can be interpreted as the sequence of codewords {{mono|01110 – 1110 – 011}}, but also as the sequence of codewords {{mono|011 – 1 – 011 – 10011}}. Two possible decodings of this encoded string are thus given by {{mono|cdb}} and {{mono|babe}}. However, such a code is useful when the set of all possible source symbols is completely known and finite, or when there are restrictions (such as a formal syntax) that determine if source elements of this extension are acceptable. Such restrictions permit the decoding of the original message by checking which of the possible source symbols mapped to the same symbol are valid under those restrictions.
+
+=== Prefix codes ===
+{{Main|Prefix code}}
+
+A code is a '''prefix code''' if no target bit string in the mapping is a prefix of the target bit string of a different source symbol in the same mapping. This means that symbols can be decoded instantaneously after their entire codeword is received. Other commonly used names for this concept are ''prefix-free code'', ''instantaneous code'', or ''context-free code''. A special case of prefix codes are [[block code]]s, [[LEB128]], and [[variable-length quantity]] (VLQ) codes.
+
+For example, the mapping <math>M_3</math> above is ''not'' a prefix code because we do not know after reading the bit string {{mono|0}} whether it encodes an {{mono|a}} source symbol, or if it is the prefix of the encodings of the {{mono|b}} or {{mono|c}} symbols. An example of a prefix code is shown below.
+{| class="wikitable" style="text-align:center; position: relative; left: 1in;" |
+|-
+! Symbol !! Codeword
+|-
+| {{mono|a}} || {{mono|0}}
+|-
+| {{mono|b}} || {{mono|10}}
+|-
+| {{mono|c}} || {{mono|110}}
+|-
+| {{mono|d}} || {{mono|111}}
+|}
+:: Example of encoding and decoding:
+::: {{mono|aabacdab}} → {{mono|00100110111010}} → {{mono|&#124;0&#124;0&#124;10&#124;0&#124;110&#124;111&#124;0&#124;10&#124;}} → {{mono|aabacdab}}
+
+For this example, if the probabilities of <math>(\texttt{a}, \texttt{b}, \texttt{c}, \texttt{d})</math> were <math>\textstyle\left(\frac{1}{2}, \frac{1}{4}, \frac{1}{8}, \frac{1}{8}\right)</math>, the expected number of bits used to represent a source symbol using the code above would be:
+:: <math>1\times\frac{1}{2}+2\times\frac{1}{4}+3\times\frac{1}{8}+3\times\frac{1}{8}=\frac{7}{4}</math>.
+As the entropy of this source is 1.75 bits per symbol, this code compresses the source as much as possible so that the source can be recovered with ''zero'' error.
+
+== See also ==
+* [[Golomb code]]
+* [[Kruskal count]]
+* {{Section link|Instruction set architecture#Instruction length}} in computing
+* {{mono|[[wchar_t]]}} wide characters
+* [[Lotus Multi-Byte Character Set]] (LMBCS)
+* [[Triple-Byte Character Set]] (TBCS)
+* [[Double-byte character set|Double-Byte Character Set]] (DBCS)
+* [[SBCS|Single-Byte Character Set]] (SBCS)
+
+== Notes ==
+{{notelist}}
+
+== References ==
+{{reflist}}
+
+== Further reading ==
+* {{cite book |title=Variable-Length Codes for Data Compression |author-first=David |author-last=Salomon |publisher=[[Springer Verlag]] |date=September 2007 |edition=1 |isbn=978-1-84628-958-3}} (xii+191 pages) [https://web.archive.org/web/20230920174349/https://www.davidsalomon.name/VLCadvertis/VLCerrata.html Errata 1][https://web.archive.org/web/20230920175457/https://www.davidsalomon.name/VLCadvertis/phasedin.pdf Errata 2]
+* {{cite book |title=Codes and automata |author-last1=Berstel |author-first1=Jean |author-last2=Perrin |author-first2=Dominique |author-last3=Reutenauer |author-first3=Christophe |series=Encyclopedia of Mathematics and its Applications |volume=129 |location=Cambridge, UK |publisher=[[Cambridge University Press]] |date=2010 |isbn=978-0-521-88831-8 |zbl=1187.94001}} [http://www-igm.univ-mlv.fr/~berstel/LivreCodes/Codes.html Draft available online]
+
+{{Compression Methods}}
+
+[[Category:Coding theory]]
+[[Category:Entropy coding]]
+[[Category:Data compression]]

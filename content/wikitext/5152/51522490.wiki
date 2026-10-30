@@ -1,0 +1,137 @@
+<!-- wikipedia: en
+     page: 51522490
+     title: Hoshen–Kopelman algorithm
+     revision: 1292086968
+     timestamp: 2025-05-25T04:02:56Z
+     history: https://en.wikipedia.org/w/index.php?curid=51522490&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1292086968 -->
+{{short description|Algorithm for labeling clusters on a grid}}
+{{Machine learning bar}}
+The '''Hoshen–Kopelman algorithm''' is a simple and efficient [[algorithm]] for labeling [[Cluster analysis|clusters]] on a grid, where the grid is a regular [[Network theory|network]] of cells, with the cells being either occupied or unoccupied. This algorithm is based on a well-known [[Disjoint-set data structure|union-finding algorithm]].<ref>{{Cite web |title=Union-Find Algorithms |url=https://www.cs.princeton.edu/~rs/AlgsDS07/01UnionFind.pdf |url-status=usurped |archive-url=https://web.archive.org/web/20210530054627/https://www.cs.princeton.edu/~rs/AlgsDS07/01UnionFind.pdf |archive-date=2021-05-30 |website=Princeton Computer Science}}</ref> The algorithm was originally described by Joseph Hoshen and [[Raoul Kopelman]] in their 1976 paper "Percolation and Cluster Distribution. I. Cluster Multiple Labeling Technique and Critical Concentration Algorithm".<ref>{{cite journal|url=http://link.aps.org/doi/10.1103/PhysRevB.14.3438|title=Percolation and cluster distribution. I. Cluster multiple labeling technique and critical concentration algorithm|first1=J.|last1=Hoshen|first2=R.|last2=Kopelman|date=15 October 1976|journal=Phys. Rev. B|volume=14|issue=8|pages=3438–3445|via=APS|doi=10.1103/PhysRevB.14.3438|bibcode=1976PhRvB..14.3438H|url-access=subscription}}</ref>
+
+== Percolation theory ==
+[[Percolation theory]] is the study of the behavior and [[statistics]] of [[cluster analysis|clusters]] on [[Lattice graph|lattices]]. Suppose we have a large square lattice where each cell can be occupied with the [[probability]] <code>p</code> and can be empty with the probability <code>1&nbsp;–&nbsp;''p''</code>. Each group of neighboring occupied cells forms a cluster. Neighbors are defined as cells having a common side but not those sharing only a corner i.e. we consider the [[Pixel connectivity|4-connected neighborhood]] that is top, bottom, left and right. Each occupied cell is independent of the status of its neighborhood. The number of clusters, the size of each cluster and their distribution are important topics in percolation theory.
+
+{| style="margin: auto;"
+|-
+| <gallery>
+Occupied_Grids_P_%3D_0.24.png | {{center|'''Figure (a)'''}}
+</gallery>||<gallery>
+Occupied_Grids_P_%3D_0.64.png | {{center|'''Figure (b)'''}}
+</gallery>|| Consider <code>5x5</code> grids in figures (a) and (b).<br /> In figure (a), the probability of occupancy is <code>p = 6/25 = 0.24</code>.<br /> In figure (b), the probability of occupancy is <code>p = 16/25 = 0.64</code>.
+|}
+
+== Hoshen–Kopelman algorithm for cluster finding ==
+In this algorithm, we scan through a grid looking for occupied cells and labeling them with cluster labels. The scanning process is called a [[raster scan]]. The algorithm begins with scanning the grid cell by cell and checking whether the cell is occupied or not. If the cell is occupied, then it must be labeled with a cluster label. This cluster label is assigned based on the neighbors of that cell. (For this we are going to use [[Union-find algorithm|Union-Find Algorithm]] which is explained in the next section.) If the cell doesn’t have any occupied neighbors, then a new label is assigned to the cell.<ref name=":0" />
+
+== Union-find algorithm ==
+This algorithm is used to represent disjoint sets.  Calling the function <code>union(x,y)</code> places items <code>x</code> and <code>y</code> into the same set. A second function <code>find(x)</code> returns a representative member of the set to which <code>x</code> belongs.  The representative member of the set containing <code>x</code> is the label we will apply to the cluster to which <code>x</code> belongs.  A key to the efficiency of the [[Union-find algorithm|Union-Find Algorithm]] is that the <code>find</code> operation improves the underlying forest data structure that represents the sets, making future <code>find</code> queries more efficient.
+
+== Pseudocode ==
+During the [[raster scan]] of the grid, whenever an occupied cell is encountered, neighboring cells are scanned to check whether any of them have already been scanned. If we find already scanned neighbors, the <code>union</code> operation is performed, to specify that these neighboring cells are in fact members of the same set. Then the<code>find</code> operation is performed to find a representative member of that set with which the current cell will be labeled.  
+
+On the other hand, if the current cell has no neighbors, it is assigned a new, previously unused, label. The entire grid is processed in this way.
+
+Following [[pseudocode]] is referred from [https://www.ocf.berkeley.edu/~fricke/ Tobin Fricke's] implementation of the same algorithm.<ref name=":0">{{cite web|url=https://www.ocf.berkeley.edu/~fricke/projects/hoshenkopelman/hoshenkopelman.html |title=The Hoshen-Kopelman Algorithm for cluster identification|first=Tobin |last=Fricke |website=ocf.berkeley.edu |date=2004-04-21 |access-date=2016-09-17}}</ref>  On completion, the cluster labels may be found in <code>labels</code>.  Not shown is the second raster scan of the grid needed to produce the example output.  In that scan, the value at <code>label[x,y]</code> is replaced by <code>find(label[x,y])</code>.
+
+ '''Raster Scan and Labeling on the Grid'''
+ largest_label = 0;
+ label = zeros[n_columns, n_rows]
+ labels = [0:n_columns*n_rows] /* Array containing integers from 0 to the size of the image. */
+ 
+ for x in 0 to n_columns {
+     for y in 0 to n_rows {
+         if occupied[x, y] then
+             left = label[x-1, y];
+             above = label[x, y-1];
+             if (left == 0) and (above == 0) then /* Neither a label above nor to the left. */
+                 largest_label = largest_label + 1; /* Make a new, as-yet-unused cluster label. */
+                 label[x, y] = largest_label;
+             else if (left != 0) and (above == 0) then /* One neighbor, to the left. */
+                 label[x, y] = find(left);
+             else if (left == 0) and (above != 0) then /* One neighbor, above. */
+                 label[x, y] = find(above);
+             else /* Neighbors BOTH to the left and above. */
+                 union(left,above); /* Link the left and above clusters. */
+                 label[x, y] = find(left);
+     }
+ }
+ 
+ '''Union'''
+ void union(int x, int y) {
+     labels[find(x)] = find(y);
+ }
+ 
+ '''Find'''
+ int find(int x) {
+     int y = x;
+ 
+     while (labels[y] != y)
+         y = labels[y];
+ 
+     while (labels[x] != x)  {
+         int z = labels[x];
+         labels[x] = y;
+         x = z;
+     }
+ 
+     return y;
+ }
+
+== Example ==
+Consider the following example. The dark cells in the grid in Figure (c) represent that they are occupied and the white ones are empty. So by running H–K algorithm on this input we would get the output as shown in Figure (d) with all the clusters labeled.
+
+The algorithm processes the input grid, cell by cell, as follows: Let's say that grid is a two-dimensional array.
+* Starting from cell <code>grid[0][0]</code> i.e. the first cell. The cell is occupied and it doesn't have cells to the left or above so we will label this cell with a new label say <code>1</code>.  
+* <code>grid[0][1]</code> and <code>grid[0][2]</code> both are unoccupied so they are not labeled.  
+* <code>grid[0][3]</code> is occupied so check cell to the left which is unoccupied so we increment the current label value and assign the label to the cell as <code>2</code>.  
+* <code>grid[0][4]</code>, <code>grid[0][5]</code> and <code>grid[1][0]</code> are unoccupied so they are not labeled.  
+* <code>grid[1][1]</code> is occupied so check cell to the left and above, both the cells are unoccupied so assign a new label <code>3</code>.  
+* <code>grid[1][2]</code> is occupied so check cell to the left and above, only the cell to the left is occupied so assign the label of a cell on the left to this cell <code>3</code>.  
+* <code>grid[1][3]</code> is occupied so check cell to the left and above, both the cells are occupied, so merge the two clusters and assign the cluster label of the cell above to the cell on the left and to this cell i.e. <code>2</code>. (Merging using union algorithm will  label all the cells with label <code>3</code> to <code>2</code>)  
+* <code>grid[1][4]</code> is occupied so check cell to the left and above, only the cell to the left is occupied so assign the label of a cell on the left to this cell <code>2</code>.  
+* <code>grid[1][5]</code> , <code>grid[2][0]</code> and <code>grid[2][1]</code> are unoccupied so they are not labeled.  
+* <code>grid[2][2]</code> is occupied so check cell to the left and above, only cell above is occupied so assign the label of the cell above to this cell <code>2</code>.  
+* <code>grid[2][3]</code> , <code>grid[2][4]</code> and <code>grid[2][5]</code> are unoccupied so they are not labeled.  
+* <code>grid[3][0]</code> is occupied so check cell above which is unoccupied so we increment the current label value and assign the label to the cell as <code>4</code>.  
+* <code>grid[3][1]</code> is occupied so check cell to the left and above, only the cell to the left is occupied so assign the label of the cell on the left to this cell <code>4</code>.  
+* <code>grid[3][2]</code> is unoccupied so it is not labeled.  
+* <code>grid[3][3]</code> is occupied so check cell to the left and above, both the cells are unoccupied so assign a new label <code>5</code>.  
+* <code>grid[3][4]</code> is occupied so check cell to the left and above, only the cell to the left is occupied so assign the label of the cell on the left to this cell <code>5</code>.  
+* <code>grid[3][5]</code> , <code>grid[4][0]</code> and <code>grid[4][1]</code> are unoccupied so they are not labeled.  
+* <code>grid[4][2]</code> is occupied so check cell to the left and above, both the cells are unoccupied so assign a new label <code>6</code>.  
+* <code>grid[4][3]</code> is occupied so check cell to the left and above, both, cell to the left and above are occupied so merge the two clusters and assign the cluster label of the cell above to the cell on the left and to this cell i.e. <code>5</code>. (Merging using union algorithm will  label all the cells with label <code>6</code> to <code>5</code>).  
+* <code>grid[4][4]</code> is unoccupied so it is not labeled.  
+* <code>grid[4][5]</code> is occupied so check cell to the left and above, both the cells are unoccupied so assign a new label <code>7</code>.  
+* <code>grid[5][0]</code> , <code>grid[5][1]</code> , <code>grid[5][2]</code> and <code>grid[5][3]</code> are unoccupied so they are not labeled.  
+* <code>grid[5][4]</code> is occupied so check cell to the left and above, both the cells are unoccupied so assign a new label <code>8</code>.  
+* <code>grid[5][5]</code> is occupied so check cell to the left and above, both, cell to the left and above are occupied so merge the two clusters and assign the cluster label of the cell above to the cell on the left and to this cell i.e. <code>7</code>. (Merging using union algorithm will  label all the cells with label <code>8</code> to <code>7</code>).  
+
+{| style="margin: auto;"
+|-
+| <gallery>
+H-K algorithm Input.png | {{center|'''Figure (c)'''}}
+</gallery>||<gallery>
+H-K algorithm output.png | {{center|'''Figure (d)'''}}
+</gallery>|| Consider <code>6x6</code> grids in figure (c) and (d).<br /> Figure (c) is the input to the Hoshen–Kopelman algorithm.<br /> Figure (b) is the output of the algorithm with all the clusters labeled.
+|}
+
+== Applications ==
+* Determination of Nodal Domain Area and Nodal Line Lengths <ref>{{cite web|url=https://webhome.weizmann.ac.il/home/feamit/nodalweek/c_joas_nodalweek.pdf |title=Introduction to the Hoshen-Kopelman algorithm and its application to nodal domain statistics |author=Christian Joas |website=Webhome.weizmann.ac.il |access-date=2016-09-17}}</ref>
+* [[Connectivity (graph theory)|Nodal Connectivity Information]]
+* Modeling of [[Electrical resistivity and conductivity|electrical conduction]]
+
+== See also ==
+* [[K-means clustering|K-means clustering algorithm]]
+* [[Fuzzy clustering|Fuzzy clustering algorithm]]
+* Gaussian ([[Expectation–maximization algorithm|Expectation Maximization]]) clustering algorithm
+* Clustering Methods <ref>{{Cite web|url=https://web.stanford.edu/class/cs345a/slides/12-clustering.pdf|title=Clustering}}</ref>
+* C-means Clustering Algorithm <ref>{{Cite web|url=https://sites.google.com/site/dataclusteringalgorithms/fuzzy-c-means-clustering-algorithm|title=Fuzzy c-means clustering}}</ref>
+* [[Connected-component labeling]]
+
+== References ==
+{{Reflist}}
+
+{{DEFAULTSORT:Hoshen-Kopelman algorithm}}
+[[Category:Cluster analysis algorithms]]

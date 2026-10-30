@@ -1,0 +1,202 @@
+<!-- wikipedia: en
+     page: 33829132
+     title: Differential dynamic programming
+     revision: 1307759774
+     timestamp: 2025-08-25T14:49:51Z
+     history: https://en.wikipedia.org/w/index.php?curid=33829132&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1307759774 -->
+{{Short description|Algorithm for trajectory optimization}}
+'''Differential dynamic programming''' ('''DDP''') is an [[optimal control]] algorithm of the [[trajectory optimization]] class.  The algorithm was introduced in 1966 by [[David Mayne|Mayne]]<ref>{{Cite journal
+| volume = 3
+| pages = 85–95
+| last = Mayne
+| first = D. Q.
+| author-link=David Mayne 
+| title = A second-order gradient method of optimizing non-linear discrete time systems
+| journal = Int J Control
+| year = 1966
+| doi = 10.1080/00207176608921369
+}}</ref> and subsequently analysed in Jacobson and Mayne's eponymous book.<ref>{{cite book|last1=Mayne|first1= David Q.|last2= Jacobson|first2= David H.|title=Differential dynamic programming|year=1970|publisher=American Elsevier Pub. Co.|location=New York|isbn=978-0-444-00070-5|url=https://books.google.com/books?id=tA-oAAAAIAAJ}}</ref> The algorithm uses locally-quadratic models of the dynamics and cost functions, and displays [[Rate of convergence|quadratic convergence]]. It is closely related to Pantoja's step-wise Newton's method.<ref>{{Cite journal
+| doi = 10.1080/00207178808906114
+| issn = 0020-7179
+| volume = 47
+| issue = 5
+| pages = 1539–1553
+| last = de O. Pantoja
+| first = J. F. A.
+| title = Differential dynamic programming and Newton's method
+| journal = International Journal of Control
+| year = 1988
+}}</ref><ref>{{Cite journal 
+| last = Liao
+| first = L. Z.
+|author2=C. A Shoemaker | author2-link = Christine Shoemaker
+| title = Advantages of differential dynamic programming over Newton's method for discrete-time optimal control problems
+|website=Cornell University
+| year = 1992
+|url=https://hdl.handle.net/1813/5474
+| hdl = 1813/5474 |hdl-access=free
+}}</ref>
+
+== Finite-horizon discrete-time problems ==
+The dynamics
+
+{{NumBlk|:|<math>\mathbf{x}_{i+1} = \mathbf{f}(\mathbf{x}_i,\mathbf{u}_i)</math>|{{EquationRef|1}}}}
+
+describe the evolution of the state <math>\textstyle\mathbf{x}</math> given the control <math>\mathbf{u}</math> from time <math>i</math> to time <math>i+1</math>. The ''total cost'' <math>J_0</math> is the sum of running costs <math>\textstyle\ell</math> and final cost <math>\ell_f</math>, incurred when starting from state <math>\mathbf{x}</math> and applying the control sequence <math>\mathbf{U} \equiv \{\mathbf{u}_0,\mathbf{u}_1\dots,\mathbf{u}_{N-1}\}</math> until the horizon is reached:
+
+:<math>J_0(\mathbf{x},\mathbf{U})=\sum_{i=0}^{N-1}\ell(\mathbf{x}_i,\mathbf{u}_i) + \ell_f(\mathbf{x}_N),</math>
+
+where <math>\mathbf{x}_0\equiv\mathbf{x}</math>, and the <math>\mathbf{x}_i</math> for <math>i>0</math> are given by {{EquationNote|1|Eq. 1}}. The solution of the optimal control problem is the minimizing control sequence
+<math>\mathbf{U}^*(\mathbf{x})\equiv \operatorname{argmin}_{\mathbf{U}} J_0(\mathbf{x},\mathbf{U}).</math>
+''Trajectory optimization'' means finding <math>\mathbf{U}^*(\mathbf{x})</math> for a particular <math>\mathbf{x}_0</math>, rather than for all possible initial states.
+
+== Dynamic programming ==
+Let <math>\mathbf{U}_i</math> be the partial control sequence <math>\mathbf{U}_i \equiv \{\mathbf{u}_i,\mathbf{u}_{i+1}\dots,\mathbf{u}_{N-1}\}</math> and define the ''cost-to-go'' <math>J_i</math> as the partial sum of costs from <math>i</math> to <math>N</math>:
+
+:<math>J_i(\mathbf{x},\mathbf{U}_i)=\sum_{j=i}^{N-1}\ell(\mathbf{x}_j,\mathbf{u}_j) + \ell_f(\mathbf{x}_N).</math>
+
+The optimal cost-to-go or ''value function'' at time <math>i</math> is the cost-to-go given the minimizing control sequence:
+
+:<math>V(\mathbf{x},i)\equiv \min_{\mathbf{U}_i}J_i(\mathbf{x},\mathbf{U}_i).</math>
+
+Setting <math>V(\mathbf{x},N)\equiv \ell_f(\mathbf{x}_N)</math>, the [[Dynamic programming|dynamic programming principle]] reduces the minimization over an entire sequence of controls to a sequence of minimizations over a single control, proceeding backwards in time:
+
+{{NumBlk|:|<math>V(\mathbf{x},i)= \min_{\mathbf{u}}[\ell(\mathbf{x},\mathbf{u}) + V(\mathbf{f}(\mathbf{x},\mathbf{u}),i+1)].</math>|{{EquationRef|2}}}}
+
+This is the [[Bellman equation]].
+
+== Differential dynamic programming ==
+DDP proceeds by iteratively performing a backward pass on the nominal trajectory to generate a new control sequence, and then a forward-pass to compute and evaluate a new nominal trajectory. We begin with the backward pass. If
+
+:<math>\ell(\mathbf{x},\mathbf{u}) + V(\mathbf{f}(\mathbf{x},\mathbf{u}),i+1)</math>
+
+is the argument of the <math>\min[\cdot]</math> operator in {{EquationNote|2|Eq. 2}}, let <math>Q</math> be the variation of this quantity around the <math>i</math>-th <math>(\mathbf{x},\mathbf{u})</math> pair:
+
+:<math>\begin{align}Q(\delta\mathbf{x},\delta\mathbf{u})\equiv &\ell(\mathbf{x}+\delta\mathbf{x},\mathbf{u}+\delta\mathbf{u})&&{}+V(\mathbf{f}(\mathbf{x}+\delta\mathbf{x},\mathbf{u}+\delta\mathbf{u}),i+1)
+\\
+-&\ell(\mathbf{x},\mathbf{u})&&{}-V(\mathbf{f}(\mathbf{x},\mathbf{u}),i+1)
+\end{align}
+</math>
+
+and expand to second order
+
+{{NumBlk|:|<math>
+\approx\frac{1}{2}
+\begin{bmatrix}
+1\\
+\delta\mathbf{x}\\
+\delta\mathbf{u}
+\end{bmatrix}^\mathsf{T}
+\begin{bmatrix}
+0 & Q_\mathbf{x}^\mathsf{T} & Q_\mathbf{u}^\mathsf{T}\\
+Q_\mathbf{x} & Q_{\mathbf{x}\mathbf{x}} & Q_{\mathbf{x}\mathbf{u}}\\
+Q_\mathbf{u} & Q_{\mathbf{u}\mathbf{x}} & Q_{\mathbf{u}\mathbf{u}}
+\end{bmatrix}
+\begin{bmatrix}
+1\\
+\delta\mathbf{x}\\
+\delta\mathbf{u}
+\end{bmatrix}
+</math>|{{EquationRef|3}}}}
+
+The <math>Q</math> notation used here is a variant of the notation of Morimoto where subscripts denote differentiation in denominator layout.<ref>{{Cite conference
+| volume = 2
+| pages = 1927–1932
+| last = Morimoto
+| first = J. |author2=G. Zeglin |author3=C.G. Atkeson
+| title = Minimax differential dynamic programming: Application to a biped walking robot
+| book-title = Intelligent Robots and Systems, 2003.(IROS 2003). Proceedings. 2003 IEEE/RSJ International Conference on
+| date = 2003
+}}</ref>
+<!-- | url = www.cs.cmu.edu/~cga/papers/morimoto-iros03.pdf -->
+Dropping the index <math>i</math> for readability, primes denoting the next time-step  <math>V'\equiv V(i+1)</math>, the expansion coefficients are
+
+:<math>
+\begin{alignat}{2}
+Q_\mathbf{x} &= \ell_\mathbf{x}+ \mathbf{f}_\mathbf{x}^\mathsf{T} V'_\mathbf{x} \\
+Q_\mathbf{u} &= \ell_\mathbf{u}+ \mathbf{f}_\mathbf{u}^\mathsf{T} V'_\mathbf{x} \\
+Q_{\mathbf{x}\mathbf{x}} &= \ell_{\mathbf{x}\mathbf{x}} + \mathbf{f}_\mathbf{x}^\mathsf{T} V'_{\mathbf{x}\mathbf{x}}\mathbf{f}_\mathbf{x}+V_\mathbf{x}'\cdot\mathbf{f}_{\mathbf{x}\mathbf{x}}\\
+Q_{\mathbf{u}\mathbf{u}} &= \ell_{\mathbf{u}\mathbf{u}} + \mathbf{f}_\mathbf{u}^\mathsf{T} V'_{\mathbf{x}\mathbf{x}}\mathbf{f}_\mathbf{u}+{V'_\mathbf{x}} \cdot\mathbf{f}_{\mathbf{u} \mathbf{u}}\\
+Q_{\mathbf{u}\mathbf{x}} &= \ell_{\mathbf{u}\mathbf{x}} + \mathbf{f}_\mathbf{u}^\mathsf{T} V'_{\mathbf{x}\mathbf{x}}\mathbf{f}_\mathbf{x} + {V'_\mathbf{x}} \cdot \mathbf{f}_{\mathbf{u} \mathbf{x}}.
+\end{alignat}
+</math>
+
+The last terms in the last three equations denote contraction of a vector with a tensor. Minimizing the quadratic approximation {{EquationNote|3|(3)}} with respect to <math>\delta\mathbf{u}</math> we have
+
+{{NumBlk|:|<math>
+{\delta \mathbf{u}}^* = \operatorname{argmin}\limits_{\delta \mathbf{u}}Q(\delta \mathbf{x},\delta
+\mathbf{u})=-Q_{\mathbf{u}\mathbf{u}}^{-1}(Q_\mathbf{u}+Q_{\mathbf{u}\mathbf{x}}\delta \mathbf{x}),
+</math>|{{EquationRef|4}}}}
+
+giving an open-loop term <math>\mathbf{k}=-Q_{\mathbf{u}\mathbf{u}}^{-1}Q_\mathbf{u}</math> and a feedback gain term <math>\mathbf{K}=-Q_{\mathbf{u}\mathbf{u}}^{-1}Q_{\mathbf{u}\mathbf{x}}</math>. Plugging the result back into {{EquationNote|3|(3)}}, we now have a quadratic model of the value at time <math>i</math>:
+
+:<math>
+\begin{alignat}{2}
+\Delta V(i) &= &{} -\tfrac{1}{2}Q^T_\mathbf{u} Q_{\mathbf{u}\mathbf{u}}^{-1}Q_\mathbf{u}\\
+V_\mathbf{x}(i) &= Q_\mathbf{x} & {}- Q_\mathbf{xu} Q_{\mathbf{u}\mathbf{u}}^{-1}Q_{\mathbf{u}}\\
+V_{\mathbf{x}\mathbf{x}}(i) &= Q_{\mathbf{x}\mathbf{x}} &{} - Q_{\mathbf{x}\mathbf{u}}Q_{\mathbf{u}\mathbf{u}}^{-1}Q_{\mathbf{u}\mathbf{x}}.
+\end{alignat}
+</math>
+
+Recursively computing the local quadratic models of <math>V(i)</math> and the control modifications <math>\{\mathbf{k}(i),\mathbf{K}(i)\}</math>, from <math>i=N-1</math> down to <math>i=1</math>, constitutes the backward pass. As above, the Value is initialized with <math>V(\mathbf{x},N)\equiv \ell_f(\mathbf{x}_N)</math>. Once the backward pass is completed, a forward pass computes a new trajectory:
+
+:<math>
+\begin{align}
+\hat{\mathbf{x}}(1)&=\mathbf{x}(1)\\
+\hat{\mathbf{u}}(i)&=\mathbf{u}(i) + \mathbf{k}(i) +\mathbf{K}(i)(\hat{\mathbf{x}}(i) - \mathbf{x}(i))\\
+\hat{\mathbf{x}}(i+1)&=\mathbf{f}(\hat{\mathbf{x}}(i),\hat{\mathbf{u}}(i))
+\end{align}
+</math>
+
+The backward passes and forward passes are iterated until convergence.
+If the Hessians <math>Q_{\mathbf{x}\mathbf{x}}, Q_{\mathbf{u}\mathbf{u}}, Q_{\mathbf{u}\mathbf{x}}, Q_{\mathbf{x}\mathbf{u}}</math> are replaced by their Gauss-Newton approximation, the method reduces to the iterative Linear Quadratic Regulator (iLQR).<ref>{{Cite conference
+| pages = 1–7
+| last = Baumgärtner
+| first = K.
+| title = A Unified Local Convergence Analysis of Differential Dynamic Programming, Direct Single Shooting, and Direct Multiple Shooting
+| conference = 2023 European Control Conference (ECC)
+| year = 2023
+| doi = 10.23919/ECC57647.2023.10178367
+| url = https://ieeexplore.ieee.org/document/10178367
+| url-access = subscription
+}}</ref>
+
+== Regularization and line-search ==
+Differential dynamic programming is a second-order algorithm like [[Newton's method]]. It therefore takes large steps toward the minimum and often requires [[regularization (mathematics)|regularization]] and/or [[line-search]] to achieve convergence.<ref>
+{{Cite journal |last=Liao |first=L. Z |author2=C. A Shoemaker |author2-link=Christine Shoemaker |year=1991 |title=Convergence in unconstrained discrete-time differential dynamic programming |journal=IEEE Transactions on Automatic Control |volume=36 |issue=6 |page=692 |doi=10.1109/9.86943}}
+</ref><ref>{{Cite thesis
+| publisher = Hebrew University
+| last = Tassa
+| first = Y.
+| title = Theory and implementation of bio-mimetic motor controllers
+| date = 2011
+| url = http://icnc.huji.ac.il/phd/theses/files/YuvalTassa.pdf
+| access-date = 2012-02-27
+| archive-url = https://web.archive.org/web/20160304023026/http://icnc.huji.ac.il/phd/theses/files/YuvalTassa.pdf
+| archive-date = 2016-03-04
+}}</ref> Regularization in the DDP context means ensuring that the <math>Q_{\mathbf{u}\mathbf{u}}</math> matrix in {{EquationNote|4|Eq. 4}} is [[positive definite matrix|positive definite]]. Line-search in DDP amounts to scaling the open-loop control modification <math>\mathbf{k}</math> by some <math>0<\alpha<1</math>.
+
+== Monte Carlo version ==
+Sampled differential dynamic programming (SaDDP) is a Monte Carlo variant of differential dynamic programming.<ref>{{Cite conference |title=Sampled differential dynamic programming |book-title=2016 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS) |language=en-US|doi=10.1109/IROS.2016.7759229|s2cid=1338737}}</ref><ref>{{Cite conference|last1=Rajamäki|first1=Joose|first2=Perttu|last2=Hämäläinen|url=https://ieeexplore.ieee.org/document/8430799|title=Regularizing Sampled Differential Dynamic Programming - IEEE Conference Publication|conference=2018 Annual American Control Conference (ACC)|date=June 2018 |pages=2182–2189 |doi=10.23919/ACC.2018.8430799 |s2cid=243932441 |language=en-US|access-date=2018-10-19|url-access=subscription}}</ref><ref>{{Cite book|first=Joose|last=Rajamäki|date=2018|title=Random Search Algorithms for Optimal Control|url=http://urn.fi/URN:ISBN:978-952-60-8156-4|language=en|issn=1799-4942|isbn=978-952-60-8156-4|publisher=Aalto University}}</ref> It is based on treating the quadratic cost of differential dynamic programming as the energy of a [[Boltzmann distribution]]. This way the quantities of DDP can be matched to the statistics of a [[Multivariate normal distribution|multidimensional normal distribution]]. The statistics can be recomputed from sampled trajectories without differentiation.
+
+Sampled differential dynamic programming has been extended to Path Integral Policy Improvement with Differential Dynamic Programming.<ref>{{Cite book|last1=Lefebvre|first1=Tom|last2=Crevecoeur|first2=Guillaume|title=2019 IEEE/ASME International Conference on Advanced Intelligent Mechatronics (AIM) |chapter=Path Integral Policy Improvement with Differential Dynamic Programming |date=July 2019|chapter-url=https://ieeexplore.ieee.org/document/8868359|pages=739–745|doi=10.1109/AIM.2019.8868359|hdl=1854/LU-8623968|isbn=978-1-7281-2493-3|s2cid=204816072|url=https://biblio.ugent.be/publication/8623968 |hdl-access=free}}</ref> This creates a link between differential dynamic programming and path integral control,<ref>{{Cite book|last1=Theodorou|first1=Evangelos|last2=Buchli|first2=Jonas|last3=Schaal|first3=Stefan|title=2010 IEEE International Conference on Robotics and Automation |chapter=Reinforcement learning of motor skills in high dimensions: A path integral approach |date=May 2010|pages=2397–2403|doi=10.1109/ROBOT.2010.5509336|isbn=978-1-4244-5038-1|s2cid=15116370}}</ref> which is a framework of stochastic optimal control.
+
+== Constrained problems ==
+Interior Point Differential dynamic programming (IPDDP) is an [[interior-point method]] generalization of DDP that can address the optimal control problem with nonlinear state and input constraints.<ref>{{cite journal |last1=Pavlov |first1=Andrei|last2=Shames|first2=Iman| last3=Manzie|first3=Chris|date=2020 |title=Interior Point Differential Dynamic Programming |journal=IEEE Transactions on Control Systems Technology |volume=29 |issue=6 |page=2720 |doi=10.1109/TCST.2021.3049416 |arxiv=2004.12710 |bibcode=2021ITCST..29.2720P }}</ref>
+
+== See also ==
+* [[Optimal control]]
+
+== References ==
+{{Reflist}}
+
+== External links ==
+* [http://www.ros.org/wiki/color_DDP A Python implementation of DDP]
+* [http://www.mathworks.com/matlabcentral/fileexchange/52069-ilqg-ddp-trajectory-optimization A MATLAB implementation of DDP]
+
+* The open-source software framework [https://github.com/acados/acados acados] provides an efficient and embeddable implementation of DDP.
+
+<!--- Categories --->
+[[Category:Dynamic programming]]
