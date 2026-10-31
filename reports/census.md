@@ -1,6 +1,6 @@
 # The census of the Wikipedia corpus
 
-This report is made by `m2 wp census report` from the records of the corpus (WP4.9). The scope list has 38854 articles. 38852 of them are parsed, 0 are fetched and not parsed, 0 are only listed, and 2 are stopped.
+This report is made by `m2 wp census report` from the records of the corpus (WP4.9). The scope list has 38854 articles. 38853 of them are parsed, 0 are fetched and not parsed, 0 are only listed, and 1 are stopped.
 
 ## The four numbers
 
@@ -10,7 +10,7 @@ The Wikipedia part of the textbook layer is complete only when each number is 0 
 |---|---:|---|
 | articles in scope that are not parsed or stopped | 0 | rule Y01 and rule Y02 |
 | census gaps: cues and pointers with no object | 0 | rule Y03 |
-| items with no outcome | 110064 | rule Y18 comes with the assembly, so each item counts |
+| items with no outcome | 110065 | rule Y18 comes with the assembly, so each item counts |
 | open rows of the inventory | not measured | the inventory of K04 does not read the corpus yet |
 
 ## By article type
@@ -18,13 +18,13 @@ The Wikipedia part of the textbook layer is complete only when each number is 0 
 | Type | In scope | Parsed | Objects | Items | Gaps | Strong | Normal | Weak |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | biography | 10088 | 10088 | 202536 | 647 | 0 | 9930 | 110 | 48 |
-| concept | 22584 | 22582 | 602218 | 51204 | 0 | 19856 | 2538 | 188 |
+| concept | 22583 | 22582 | 602218 | 51204 | 0 | 19856 | 2538 | 188 |
 | field | 456 | 456 | 21598 | 985 | 0 | 352 | 101 | 3 |
 | list | 507 | 507 | 63637 | 45402 | 0 | 457 | 44 | 6 |
 | method | 1081 | 1081 | 27329 | 1843 | 0 | 992 | 82 | 7 |
 | object | 575 | 575 | 11760 | 1770 | 0 | 499 | 72 | 4 |
 | problem | 687 | 687 | 19781 | 1226 | 0 | 623 | 59 | 5 |
-| statement | 2876 | 2876 | 57840 | 6987 | 0 | 2706 | 149 | 21 |
+| statement | 2877 | 2877 | 57871 | 6988 | 0 | 2707 | 149 | 21 |
 
 ## By MSC code
 
@@ -32,11 +32,11 @@ No metadata file has an MSC code yet, so this table is empty.
 
 ## Census strength
 
-A census is strong when W-text, W-html and W-in were read and agree, normal when W-text and one more witness agree, and weak in the other cases (WP4.5). Of the 38852 parsed articles, W-html was read for 38845 and W-in for 38852.
+A census is strong when W-text, W-html and W-in were read and agree, normal when W-text and one more witness agree, and weak in the other cases (WP4.5). Of the 38853 parsed articles, W-html was read for 38846 and W-in for 38853.
 
 | Strength | Articles |
 |---|---:|
-| strong | 35415 |
+| strong | 35416 |
 | normal | 3155 |
 | weak | 282 |
 
@@ -44,11 +44,11 @@ A census is strong when W-text, W-html and W-in were read and agree, normal when
 
 No census has a gap.
 
-The censuses have 69682 incoming pointers. 12648 of them point to an anchor that the article does not have (`broken-anchor`), and 539 to an anchor that only the Parsoid HTML has (`template-anchor`).
+The censuses have 69684 incoming pointers. 12648 of them point to an anchor that the article does not have (`broken-anchor`), and 539 to an anchor that only the Parsoid HTML has (`template-anchor`).
 
 ## Differences of the readings
 
-282 of the 38845 articles with the witness W-html have a difference of rule Y07, which is 0.7%. The target is below 2%.
+282 of the 38846 articles with the witness W-html have a difference of rule Y07, which is 0.7%. The target is below 2%.
 
 | Cause | Articles | Articles | Examples |
 |---|---:|---:|---|
@@ -117,7 +117,7 @@ The table shows the 50 names with the most uses of the 6067 names.
 
 ## Unmapped headings
 
-The table shows the 50 names with the most uses of the 97356 names.
+The table shows the 50 names with the most uses of the 97358 names.
 
 | Heading | Uses | Articles | Examples |
 |---|---:|---:|---|
