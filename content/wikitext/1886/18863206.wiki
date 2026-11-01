@@ -1,0 +1,306 @@
+<!-- wikipedia: en
+     page: 18863206
+     title: Vincenty's formulae
+     revision: 1362852778
+     timestamp: 2026-07-06T16:40:30Z
+     history: https://en.wikipedia.org/w/index.php?curid=18863206&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1362852778 -->
+{{Short description|Methods in geodesy}}
+{{for|the mathematical background to this problem|Geodesics on an ellipsoid}}
+'''Vincenty's formulae''' are two related [[iterative method]]s used in [[geodesy]] to calculate the [[distance]] between two [[Point (geometry)|point]]s on the surface of a [[spheroid]], developed by [[Thaddeus Vincenty]] (1975a). They are based on the assumption that the [[figure of the Earth]] is an oblate spheroid, and hence are more accurate than methods that assume a [[spherical]] Earth, such as [[great-circle distance]].
+
+The first (direct) method computes the location of a point that is a given distance and [[azimuth]] (direction) from another point. The second (inverse) method computes the [[geographical distance]] and [[azimuth]] between two given points. They have been widely used in geodesy because they are accurate to within 0.5&nbsp;mm (0.020{{nbsp}}in) on the [[Earth ellipsoid]].
+
+== Background ==
+
+Vincenty's goal was to express existing algorithms for [[geodesics on an ellipsoid]] in a form that minimized the program length (Vincenty 1975a). His unpublished report (1975b) mentions the use of a [[Wang Laboratories#Calculators|Wang]] 720 desk calculator, which had only a few kilobytes of memory. To obtain good accuracy for long lines, the solution uses the classical solution of Legendre (1806), Bessel (1825), and Helmert (1880) based on the auxiliary sphere. Vincenty relied on formulation of this method given by Rainsford, 1955. Legendre showed that an ellipsoidal geodesic can be exactly mapped to a great circle on the auxiliary sphere by mapping the geographic latitude to reduced latitude and setting the azimuth of the great circle equal to that of the geodesic. The longitude on the ellipsoid and the distance along the geodesic are then given in terms of the longitude on the sphere and the arc length along the great circle by simple integrals. Bessel and Helmert gave rapidly converging series for these integrals, which allow the geodesic to be computed with arbitrary accuracy.
+
+In order to minimize the program size, Vincenty took these series, re-expanded them using the first term of each series as the small parameter,{{clarify|date=May 2019}} and truncated them to [[Big O notation|<math>O(f^3)</math>]]. This resulted in compact expressions for the longitude and distance integrals. The expressions were put in [[Horner scheme|Horner]] (or ''nested'') form, since this allows polynomials to be evaluated using only a single temporary register. Finally, simple iterative techniques were used to solve the implicit equations in the direct and inverse methods; even though these are slow (and in the case of the inverse method it sometimes does not converge), they result in the least increase in code size.
+
+== Notation ==
+Define the following notation:
+{|class="wikitable"
+|-
+! Notation
+! Definition
+! Value
+|-
+| ''a'' || length of semi-[[major axis]] of the ellipsoid (radius at equator); || (6378137.0 metres in [[WGS-84]])
+|-
+| ''&fnof;'' || [[flattening]] of the ellipsoid; || (1/298.257223563 in [[WGS-84]])
+|-
+| {{math|1=''b'' = (1 − ''&fnof;'') ''a''}} || length of semi-[[minor axis]] of the ellipsoid (radius at the poles); || (6356752.314245 meters in [[WGS-84]])
+|-
+| ''Φ''<sub>1</sub>, ''Φ''<sub>2</sub> || [[Latitude#Geodetic_and_geocentric_latitudes|geodetic latitude]] of the points; ||
+|-
+| {{math|1=''U''<sub>1</sub> = arctan( (1 − ''ƒ'') tan ''Φ''<sub>1</sub> ), <br/> ''U''<sub>2</sub> = arctan( (1 − ''ƒ'') tan ''Φ''<sub>2</sub> )}} || [[Latitude#Parametric (or reduced) latitude|reduced latitude]] (latitude on the auxiliary sphere);||
+|-
+| ''L''{{sub|1}}, ''L''{{sub|2}} || [[longitude]] of the points;||
+|-
+|  {{math|1=''L'' = ''L''<sub>2</sub> − ''L''<sub>1</sub>}} || difference in [[longitude]] of two points;||
+|-
+| ''λ'' || Difference in longitude of the points on the auxiliary sphere;||
+|-
+| ''α''<sub>1</sub>, ''α''<sub>2</sub> || forward [[azimuth]]s at the points;||
+|-
+| ''α'' || forward [[azimuth]] of the geodesic at the equator, if it were extended that far;||
+|-
+| ''s'' || ellipsoidal distance between the two points;||
+|-
+| ''σ'' || angular separation between points||
+|-
+| ''σ''{{sub|1}} || angular separation between the point and the equator||
+|-
+| ''σ''{{sub|m}} || angular separation between the midpoint of the line and the equator||
+|}
+
+== Inverse problem==
+Given the coordinates of the two points (''Φ''<sub>1</sub>,&nbsp;''L''<sub>1</sub>) and (''Φ''<sub>2</sub>,&nbsp;''L''<sub>2</sub>), the [[inverse problem]] finds the azimuths ''α''<sub>1</sub>, ''α''<sub>2</sub> and the ellipsoidal distance ''s''.
+
+Calculate ''U''<sub>1</sub>, ''U''<sub>2</sub> and ''L'', and set initial value of ''λ'' = ''L''. Then iteratively evaluate the following equations until ''λ'' converges:
+
+: <math>\sin\sigma = \sqrt{\left(\cos U_2 \sin\lambda\right)^2 + \left(\cos U_1 \sin U_2 - \sin U_1 \cos U_2 \cos\lambda\right)^2}</math><ref>or <math>\sin\sigma = \sqrt{\frac{1}{2} (\cos^2U_1+\cos^2U_2) \sin^2\lambda + \sin^2 (U_1 - U_2) \cos^2\lambda}</math></ref>
+: <math>\cos\sigma = \sin U_1 \sin U_2 + \cos U_1 \cos U_2 \cos\lambda\,</math>
+: <math>\sigma = \operatorname{arctan2}\left(\sin\sigma, \cos\sigma\right)</math><ref>''σ'' is not evaluated directly from sin&nbsp;''σ'' or cos&nbsp;''σ'' to preserve numerical accuracy near the poles and equator</ref>
+: <math>\sin\alpha = \frac{\cos U_1 \cos U_2 \sin\lambda}{\sin\sigma}</math><ref name="opposite">If sin ''&sigma; = 0'' the value of sin ''α'' is indeterminate. It represents an end point coincident with, or diametrically opposed to, the start point.</ref>
+: <math>\cos^2\alpha = 1 - \sin^2\alpha</math>
+: <math>\cos\left(2\sigma_\text{m}\right) = \cos\sigma - \frac{2\sin U_1 \sin U_2}{\cos^2\alpha} = \cos\sigma - \frac{2\sin U_1 \sin U_2}{1 - \sin^2\alpha}</math><ref name="equator">Where the start and end point are on the equator, {{nowrap|''C'' {{=}} 0}} and the value of <math>\cos\left(2\sigma_\text{m}\right)</math> is not used. The limiting value is <math>\cos\left(2\sigma_\text{m}\right) = -1</math>.</ref>
+: <math>C = \frac{f}{16} \cos^2\alpha \left[4 + f\left(4 - 3\cos^2 \alpha\right)\right]</math>
+: <math>\lambda = L + (1 - C)f \sin \alpha \left\{ \sigma + C \sin \sigma \left[\cos\left(2\sigma_\text{m}\right) + C \cos\sigma \left(-1 + 2\cos^2\left(2\sigma_\text{m}\right)\right)\right]\right\}</math>
+
+When ''λ'' has converged to the desired degree of accuracy (10<sup>−12</sup> corresponds to approximately 0.006{{nbsp}}mm), evaluate the following:
+
+: <math>\begin{align}
+           u^2 &= \cos^2\alpha \left(\frac{a^2 - b^2}{b^2}\right) \\
+             A &= 1 + \frac{u^2}{16384} \left(4096 + u^2 \left[-768 + u^2 \left(320 - 175u^2\right)\right]\right) \\
+             B &= \frac{u^2}{1024} \left(256 + u^2 \left[-128 + u^2 \left(74 - 47u^2\right)\right]\right) \\
+  \Delta\sigma &= B \sin\sigma \left\{
+                    \cos(2\sigma_\text{m}) + \frac{1}{4} B \left(
+                      \cos\sigma \left[-1 + 2 \cos^2\left(2\sigma_\text{m}\right)\right] -
+                      \frac{1}{6} B \cos\left[2\sigma_\text{m}\right]\left[-3 + 4\sin^2\sigma\right]
+                        \left[-3 + 4\cos^2\left(2\sigma_\text{m}\right)\right]
+                    \right)
+                  \right\}  \\
+             s &= b A(\sigma - \Delta \sigma) \, \\
+      \alpha_1 &= \operatorname{arctan2}\left(
+                    \cos U_2 \sin\lambda, \cos U_1 \sin U_2 - \sin U_1 \cos U_2 \cos\lambda
+                  \right) \\
+      \alpha_2 &= \operatorname{arctan2}\left(
+                    \cos U_1 \sin\lambda, -\sin U_1 \cos U_2 + \cos U_1 \sin U_2 \cos\lambda
+                  \right)
+\end{align}</math>
+
+Between two nearly antipodal points, the iterative formula may fail to converge; this will occur when the first guess at ''λ'' as computed by the equation above is greater than ''π'' in [[absolute value]].
+
+==Direct problem==
+Given an initial point (''Φ''<sub>1</sub>, ''L''<sub>1</sub>) and initial azimuth, ''α''<sub>1</sub>, and a distance, ''s'', along the geodesic the problem is to find the end point (''Φ''<sub>2</sub>, ''L''<sub>2</sub>) and azimuth, ''α''<sub>2</sub>.
+
+Start by calculating the following:
+
+: <math>\begin{align}
+           U_1 &= \arctan\left[(1 - f)\tan\phi_1\right] \\
+      \sigma_1 &= \operatorname{arctan2}\left(\tan U_1, \cos\alpha_1\right) \\
+    \sin\alpha &= \cos U_1 \sin\alpha_1 \\
+           u^2 &= \cos^2\alpha \left(\frac{a^2 - b^2}{b^2}\right)
+                = \left(1 - \sin^2\alpha\right)\left(\frac{a^2 - b^2}{b^2}\right) \\
+             A &= 1 + \frac{u^2}{16384} \left(4096 + u^2 \left[-768 + u^2(320 - 175u^2)\right]\right) \\
+             B &= \frac{u^2}{1024} \left(256 + u^2\left[-128 + u^2\left(74 - 47u^2\right)\right]\right)
+\end{align}</math>
+
+Then, using an initial value <math> \sigma = \tfrac{s}{bA} </math>, iterate the following equations until there is no significant change in ''σ'':
+
+:<math>\begin{align}
+  2\sigma_\text{m} &= 2\sigma_1 + \sigma \\
+      \Delta\sigma &= B \sin\sigma \left\{
+                          \cos\left(2\sigma_\text{m}\right) + \frac{1}{4} B \left(
+                            \cos\sigma \left[-1 + 2\cos^2\left(2\sigma_\text{m}\right)\right] -
+                            \frac{1}{6} B \cos\left[2\sigma_\text{m}\right]\left[-3 + 4\sin^2\sigma\right]
+                              \left[-3 + 4\cos^2\left(2\sigma_\text{m}\right)\right]
+                          \right)
+                        \right\} \\
+            \sigma &= \frac{s}{bA} + \Delta\sigma
+\end{align}</math>
+
+Once ''σ'' is obtained to sufficient accuracy evaluate:
+
+: <math>\begin{align}
+    \phi_2 &= \operatorname{arctan2}\left(
+                \sin U_1 \cos\sigma + \cos U_1 \sin\sigma \cos\alpha_1,
+                (1 - f) \sqrt{\sin^2\alpha + \left(\sin U_1 \sin\sigma - \cos U_1 \cos\sigma \cos\alpha_1\right)^2}
+              \right) \\
+   \lambda &= \operatorname{arctan2}\left(
+                \sin\sigma \sin\alpha_1,
+                \cos U_1 \cos\sigma - \sin U_1 \sin\sigma \cos\alpha_1
+              \right) \\
+         C &= \frac{f}{16} \cos^2\alpha \left[4 + f\left(4 - 3\cos^2\alpha\right)\right] \\
+         L &= \lambda - (1 - C)f \sin\alpha \left\{\sigma + C\sin\sigma \left(\cos\left[2\sigma_\text{m}\right] + C\cos\sigma\left[-1 + 2\cos^2\left(2\sigma_\text{m}\right)\right]\right)\right\} \\
+       L_2 &= L + L_1 \\
+  \alpha_2 &= \operatorname{arctan2}\left(
+                 \sin\alpha,
+                -\sin U_1 \sin\sigma + \cos U_1 \cos\sigma \cos\alpha_1
+              \right)
+\end{align}</math>
+
+If the initial point is at the North or South pole, then the first equation is indeterminate. If the initial azimuth is due East or West, then the second equation is indeterminate. If the standard 2-argument arctangent [[atan2]] function is used, then these values are usually handled correctly.{{clarify|date=May 2019}}
+
+==Vincenty's modification==
+
+In his letter to Survey Review in 1976, Vincenty suggested replacing his series expressions for ''A'' and ''B'' with simpler formulas using Helmert's expansion parameter ''k''<sub>1</sub>:
+
+: <math>A = \frac{1 + \frac{1}{4} {k_1}^2}{1 - k_1}</math>
+: <math>B = {k_1}\left(1 - \frac{3}{8}{k_1}^2\right)</math>
+
+where
+: <math>k_1 = \frac{\sqrt{1 + u^2} - 1}{\sqrt{1 + u^2} + 1}</math>
+
+==Nearly antipodal points==
+
+As noted above, the iterative solution to the inverse problem fails to converge or converges slowly for nearly antipodal points. An example of slow convergence is (''Φ''<sub>1</sub>,&nbsp;''L''<sub>1</sub>) = (0°,&nbsp;0°) and (''Φ''<sub>2</sub>,&nbsp;''L''<sub>2</sub>) = (0.5°,&nbsp;179.5°) for the WGS84 ellipsoid. This requires about 130 iterations to give a result accurate to 1&nbsp;mm. Depending on how the inverse method is implemented, the algorithm might return the correct result (19936288.579&nbsp;m), an incorrect result, or an error indicator. An example of an incorrect result is provided by the [http://www.ngs.noaa.gov/TOOLS/Inv_Fwd/Inv_Fwd.html NGS online utility], which returns a distance that is about 5&nbsp;km too long. Vincenty suggested a method of accelerating the convergence in such cases (Rapp, 1993).
+
+An example of a failure of the inverse method to converge is (''Φ''<sub>1</sub>,&nbsp;''L''<sub>1</sub>) = (0°,&nbsp;0°) and (''Φ''<sub>2</sub>,&nbsp;''L''<sub>2</sub>) = (0.5°,&nbsp;179.7°) for the WGS84 ellipsoid. In an unpublished report, Vincenty (1975b) gave an alternative iterative scheme to handle such cases. This converges to the correct result 19944127.421&nbsp;m after about 60 iterations; however, in other cases many thousands of iterations are required.
+
+Karney (2013) reformulated the inverse problem as a one-dimensional [[root-finding algorithms|root-finding problem]]; this can be rapidly solved with [[Newton's method]] for all pairs of input points.
+
+==See also==
+*[[Geographical distance]]
+*[[Great-circle distance]]
+*[[Meridian arc]]
+*[[Geodesics on an ellipsoid]]
+*[[Thaddeus Vincenty]]
+*[[Geodesy]]
+*[[Haversine formula]]
+
+==Notes==
+{{reflist}}
+
+==References==
+{{refbegin|2|indent=yes}}
+* {{cite journal
+ |first=Friedrich Wilhelm |last=Bessel |author-link=Friedrich Bessel
+ |title=The calculation of longitude and latitude from geodesic measurements (1825)
+ |journal=Astron. Nachr.
+ |year=2010
+ |volume=331 |issue=8 |pages=852–861
+ |doi=10.1002/asna.201011352
+ |arxiv=0908.1824
+ |bibcode=2010AN....331..852K
+ |s2cid=118760590 
+}} English translation of Astron. Nachr. '''4''', 241&ndash;254 (1825).
+* {{cite book
+ |first=Friedrich R.
+ |last=Helmert
+ |author-link=Friedrich Robert Helmert
+ |title=Mathematical and Physical Theories of Higher Geodesy, Part 1 (1880)
+ |publisher=Aeronautical Chart and Information Center
+ |year=1964
+ |location=St. Louis
+ |url=https://geographiclib.sourceforge.io/geodesic-papers/helmert80-en.html
+ |access-date=2011-07-30
+ }}  English translation of ''Die Mathematischen und Physikalischen Theorieen der Höheren Geodäsie'', Vol. 1 (Teubner, Leipzig, 1880).
+* {{Cite journal
+ |last1=Karney
+ |first1=Charles F. F.
+ |doi=10.1007/s00190-012-0578-z
+ |doi-access=free
+ |title=Algorithms for geodesics
+ |url=https://geographiclib.sourceforge.io/geod.html
+ |journal=Journal of Geodesy
+ |volume=87
+ |issue=1
+ |pages=43–55
+ |date=January 2013
+ |arxiv=1109.4448
+ |bibcode=2013JGeod..87...43K
+ }} [https://geographiclib.sourceforge.io/geod-addenda.html Addenda].
+* {{cite journal
+ |first=Adrien-Marie
+ |last=Legendre
+ |author-link=Adrien-Marie Legendre
+ |title=Analyse des triangles tracės sur la surface d'un sphėroïde
+ |journal=Mémoires de la classe des sciences mathématiques et physiques de l'Institut National de France
+ |year=1806
+ |issue=1st sem
+ |pages=130–161
+ |url=https://books.google.com/books?id=-d0EAAAAQAAJ&pg=PA130-IA4
+ |access-date=2011-07-30
+ }}
+* {{Cite journal |last1=Rainsford |first1=H. F.
+ |doi=10.1007/BF02527187
+ |title=Long geodesics on the ellipsoid
+ |journal=[[Bulletin Géodésique]]
+ |volume=37 |pages=12–22 |year=1955
+ |bibcode=1955BGeod..29...12R
+ |issue = <!-- do not add, bibcode data is wrong -->
+|s2cid=122111614
+ }}
+* {{cite tech report
+ |first=Richard H.
+ |last=Rapp
+ |title=Geometric Geodesy, Part II
+ |institution=Ohio State University
+ |date=March 1993
+ |url=http://hdl.handle.net/1811/24409
+ |access-date=2011-08-01
+ }}
+* {{cite journal
+ |first=Thaddeus
+ |last=Vincenty
+ |author-link=Thaddeus Vincenty
+ |title=Direct and Inverse Solutions of Geodesics on the Ellipsoid with application of nested equations
+ |journal=Survey Review
+ |volume=XXIII <!--Volume 23 was issues 175–182 (1975–1976), inclusive-->
+ |issue=176
+ |date=April 1975a
+ |pages=88–93
+ |doi=10.1179/sre.1975.23.176.88
+ |bibcode=1975SurRv..23...88V
+ |url=http://www.ngs.noaa.gov/PUBS_LIB/inverse.pdf
+ |access-date=2009-07-11
+ |quote=In selecting a formula for the solution of geodesics it is of primary importance to consider the length of the program, that is the amount of core which it will occupy in the computer along with trigonometric and other required functions.
+ }}
+* {{cite tech report
+ |first=Thaddeus
+ |last=Vincenty
+ |author-link=Thaddeus Vincenty
+ |title=Geodetic inverse solution between antipodal points
+ |institution=DMAAC Geodetic Survey Squadron
+ |date=August 1975b
+ |url=https://geographiclib.sourceforge.io/geodesic-papers/vincenty75b.pdf
+ |doi=10.5281/zenodo.32999
+ }}
+* {{cite journal
+ |first=Thaddeus |last=Vincenty |author-link=Thaddeus Vincenty
+ |title=Correspondence
+ |journal=Survey Review
+ |volume=XXIII |issue=180 |date=April 1976 |pages=294
+}}
+* {{cite book
+ |publisher=Intergovernmental committee on survey and mapping (ICSM)
+ |date=February 2006
+ |isbn=0-9579951-0-5
+ |title=Geocentric Datum of Australia (GDA) Reference Manual
+ |url=http://www.icsm.gov.au/gda/gdatm/index.html
+ |format=PDF
+ |access-date=2009-07-11
+ |archive-date=2009-06-26
+ |archive-url=https://web.archive.org/web/20090626162756/http://www.icsm.gov.au/gda/gdatm/index.html
+ |url-status=dead
+ }}
+{{refend}}
+
+==External links==
+* Online calculators from [[Geoscience Australia]]:
+** [http://www.ga.gov.au/geodesy/datums/vincenty_direct.jsp Vincenty Direct] (destination point)
+** [http://www.ga.gov.au/geodesy/datums/vincenty_inverse.jsp Vincenty Inverse] (distance between points)
+* Calculators from the [[U.S. National Geodetic Survey]]:
+** [http://www.ngs.noaa.gov/TOOLS/Inv_Fwd/Inv_Fwd.html Online and downloadable PC-executable calculation utilities], including forward (direct) and inverse problems, in both two and three dimensions (accessed 2011-08-01).
+* Online calculators with JavaScript source code by Chris Veness (Creative Commons Attribution license):
+** [http://www.movable-type.co.uk/scripts/latlong-vincenty-direct.html Vincenty Direct] (destination point)
+** [http://www.movable-type.co.uk/scripts/latlong-vincenty.html Vincenty Inverse] (distance between points)
+* [https://geographiclib.sourceforge.io GeographicLib] provides a utility GeodSolve (with MIT/X11 licensed source code) for solving direct and inverse geodesic problems. Compared to Vincenty, this is about 1000 times more accurate (error = 15&nbsp;nm) and the inverse solution is complete. Here is an [https://geographiclib.sourceforge.io/cgi-bin/GeodSolve online version of GeodSolve].
+* [https://github.com/tdjastrzebski/Vincenty-Excel Complete Vincenty's direct and inverse formulae implementation with source code, Excel VBA implementation by Tomasz Jastrzębski]
+
+{{DEFAULTSORT:Vincenty's Formulae}}
+[[Category:Geodesy]]
+[[Category:Distance]]
