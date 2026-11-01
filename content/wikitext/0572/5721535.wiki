@@ -1,0 +1,78 @@
+<!-- wikipedia: en
+     page: 5721535
+     title: Godunov's scheme
+     revision: 1351521712
+     timestamp: 2026-04-28T14:09:11Z
+     history: https://en.wikipedia.org/w/index.php?curid=5721535&action=history
+     licence: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+     source: https://en.wikipedia.org/w/index.php?oldid=1351521712 -->
+{{Short description|Conservative numerical scheme}}
+In [[numerical analysis]] and [[computational fluid dynamics]], '''Godunov's scheme''' is a [[Conservation law|conservative]] [[numerical analysis|numerical scheme]], suggested by [[Sergei Godunov]] in 1959,<ref>{{cite journal |last=Godunov |first=S. K. |year=1959 |title=Разностный метод численного расчета разрывных решений уравнений гидродинамики |trans-title=A Difference Scheme for Numerical Solution of Discontinuous Solution of Hydrodynamic Equations |journal=[[Matematicheskii Sbornik|Mat. Sbornik]] |volume=47 |pages=271–306 |mr=119433 |zbl=0171.46204 }} Translated US Joint Publ. Res. Service, JPRS 7226, 1969.</ref> for solving [[Partial differential equation|partial differential equations]]. One can think of this method as a conservative [[finite volume method]] which solves exact, or approximate [[Riemann problem]]s at each inter-cell boundary. In its basic form, Godunov's method is first order accurate in both space and time, yet can be used as a base scheme for developing higher-order methods.
+
+==Basic scheme==
+
+Following the classical [[finite volume method]] framework, we seek to track a finite set of discrete unknowns,
+<math display="block"> Q^{n}_i = \frac{1}{\Delta x} \int_{x_{i-1/2}} ^ { x_{i+1/2} } q(t^n, x)\, dx </math>
+where the <math> x_{i-1/2} = x_{\text{low}} + \left( i - 1/2 \right) \Delta x </math> and <math> t^n = n \Delta t </math> form a discrete set of points for the hyperbolic problem:
+<math display="block"> q_t + ( f( q ) )_x = 0, </math>
+where the indices <math> t </math> and <math> x </math> indicate the derivatives in time and space, respectively. If we integrate the [[Hyperbolic partial differential equation|hyperbolic]] problem over a control volume <math> [x_{i-1/2}, x_{i+1/2}], </math> we obtain a [[method of lines]] (MOL) formulation for the spatial cell averages:
+<math display="block"> \frac{\partial}{\partial t} Q_i( t ) = -\frac{1}{\Delta x} \left( f( q( t, x_{i+1/2} ) ) - f( q( t, x_{i-1/2} ) ) \right), </math>
+which is a classical description of the first order, upwinded finite volume method.<ref>{{cite book |last=Leveque |first=Randy J. |year=2002 |title=Finite Volume Methods for Hyperbolic Problems |publisher=Cambridge University Press |isbn=0-521-81087-6 }}</ref>
+
+Exact time integration of the above formula from time <math> t = t^n </math> to time <math> t = t^{n+1} </math> yields the exact update formula:
+<math display="block"> Q^{n+1}_i = Q^n_i - \frac{1}{\Delta x } \int_{ t^n }^{t^{n+1} } \left( f( q( t, x_{i+1/2} ) ) - f( q( t, x_{i-1/2} ) ) \right)\, dt. </math>
+
+Godunov's method replaces the time integral of each
+<math display="block"> \int_{t^n}^{t^{n+1} }  f( q( t, x_{i-1/2} ) )\, dt </math>
+with a forward [[Euler method]] which yields a fully discrete update formula for each of the unknowns <math> Q^n_i </math>. That is, we approximate the integrals with
+<math display="block"> \int_{t^n}^{t^{n+1} }  f( q( t, x_{i-1/2} ) )\, dt \approx \Delta t f^\downarrow\left( Q^n_{i-1}, Q^n_i \right), </math>
+where <math> f^\downarrow\left( q_l, q_r \right) </math> is an approximation to the exact solution of the Riemann problem. For consistency, one assumes that
+<math display="block"> f^\downarrow( q_l , q_r ) = f( q_l ) \quad \text{ if } \quad q_l = q_r, </math>
+and that <math> f^\downarrow </math> is increasing in the first argument, and decreasing in the second argument. For scalar problems where <math> f'( q ) > 0 </math>, one can use the simple [[Upwind scheme]], which defines <math> f^\downarrow( q_l, q_r ) = f( q_l ) </math>.
+
+The full Godunov scheme requires the definition of an approximate, or an exact [[Riemann solver]], but in its most basic form, is given by:
+<math display="block"> Q^{n+1}_i = Q^n_i - \lambda \left( \hat{f}^n_{i+1/2} - \hat{f}^n_{i-1/2}  \right), \quad \lambda = \frac{\Delta t}{\Delta x}, \quad \hat{f}^n_{i-1/2} = f^\downarrow\left( Q^n_{i-1}, Q^n_i \right) </math>
+
+==Linear problem==
+
+In the case of a linear problem, where <math> f(q) = a q </math>, and without loss of generality, we'll assume that <math> a > 0 </math>, the upwinded Godunov method yields:
+<math display="block"> Q^{n+1}_i = Q^n_i - \nu \left( Q^{n}_i - Q^n_{i-1} \right), \quad \nu = a \frac{\Delta t } {\Delta x }, </math>
+which yields the classical first-order, upwinded Finite Volume scheme whose stability requires <math> \nu  = \left| a \frac{\Delta t}{\Delta x} \right| \leq 1 </math>.
+
+==Three-step algorithm==
+
+Following Hirsch,<ref>{{cite book |last=Hirsch |first=C. |year=1990 |title=Numerical Computation of Internal and External Flows |volume=2 |publisher=Wiley |isbn=0-471-92452-0 }}</ref> the scheme involves three distinct steps to obtain the solution at <math> t = (n+1) \Delta t \,</math> from the known solution at <math> {t = n \Delta t} \,</math>, as follows:
+
+#Define piecewise constant approximation of the solution at <math> {t = (n+1) \Delta t} \,</math>. Since the piecewise constant approximation is an average of the solution over the cell of size <math> {\Delta x} \,</math>, the spatial error is of order <math> {\Delta x} \, </math>, and hence the resulting scheme will be first-order accurate in space. Note that this approximation corresponds to a [[finite volume method]] representation whereby the discrete values represent averages of the state variables over the cells. Exact relations for the averaged cell values can be obtained from the integral conservation laws.
+#Obtain the solution for the local [[Riemann problem]] at the cell interfaces. This is the only physical step of the whole procedure. The discontinuities at the interfaces are resolved in a superposition of waves satisfying locally the conservation equations. The original Godunov method is based upon the exact solution of the Riemann problems. However, approximate solutions can be applied as an alternative.
+#Average the state variables after a time interval <math> {\Delta t} \,</math>. The state variables obtained after Step 2 are averaged over each cell defining a new piecewise constant approximation resulting from the wave propagation during the time interval <math> {\Delta t} \,</math>. To be consistent, the time interval <math> {\Delta t} \,</math> should be limited such that the waves emanating from an interface do not interact with waves created at the adjacent interfaces. Otherwise the situation inside a cell would be influenced by interacting Riemann problems. This leads to the [[Courant–Friedrichs–Lewy condition|CFL]] condition <math>| a_\max | \Delta t <  \Delta x/2 \, </math> where <math> | a_\max | \, </math> is the maximum wave speed obtained from the cell eigenvalue(s) of the local ''[[Jacobian matrix and determinant|Jacobian]] matrix''.
+
+The first and third steps are solely of a numerical nature and can be considered as a ''projection stage'', independent of the second, physical step, the ''evolution stage''. Therefore, they can be modified without influencing the physical input, for instance by replacing the piecewise constant approximation by a piecewise linear variation inside each cell, leading to the definition of second-order space-accurate schemes, such as the [[MUSCL scheme]].
+
+==See also==
+{{div col|colwidth=25em}}
+* [[Godunov's theorem]]
+* [[High-resolution scheme]]
+* [[Lax–Friedrichs method]]
+* [[MUSCL scheme]]
+* [[Sergei Godunov]]
+* [[Total variation diminishing]]
+* [[Lax&ndash;Wendroff theorem]]
+* [[Advection upstream splitting method]]
+{{Div col end}}
+* [[Method of lines]]
+
+==References==
+{{Reflist}}
+
+==Further reading==
+*{{cite book |last=Laney |first=Culbert B. |year=1998 |title=Computational Gasdynamics |publisher=Cambridge University Press |isbn=0-521-57069-7 }}
+*{{cite book |last=Toro |first=E. F. |year=1999 |title=Riemann Solvers and Numerical Methods for Fluid Dynamics |location=Berlin |publisher=Springer-Verlag |isbn=3-540-65966-8 }}
+*{{cite book |last=Tannehill |first=John C. |first2=Dale A. |last2=Anderson |first3=Richard H. |last3=Pletcher |display-authors=1 |year=1997 |title=Computational Fluid Mechanics and Heat Transfer |url=https://archive.org/details/computationalflu0000tann |url-access=registration |edition=2nd |location=Washington |publisher=Taylor and Francis |isbn=1-56032-046-X }}
+*{{cite book |last=Wesseling |first=Pieter |year=2001 |title=Principles of Computational Fluid Dynamics |location=Berlin |publisher=Springer-Verlag |isbn=3-540-67853-0 }}
+
+{{Numerical PDE}}
+
+[[Category:Computational fluid dynamics]]
+[[Category:Conservation equations]]
+[[Category:Numerical differential equations]]
